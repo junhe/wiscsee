@@ -439,12 +439,22 @@ explore.mail01 <- function()
             geom_line() +
             xlab('x is access count, y is number of blocks having this count')
 
+
         p2 = ggplot(cnt, aes(x=Freq)) +
             stat_ecdf() +
             xlab('access count for each block') +
             scale_y_continuous(breaks=seq(0, 1, 0.1)) +
             scale_x_continuous(breaks=seq(0, 5000, 100)) + 
-            theme(axis.text.x = element_text(angle=90))
+            theme(axis.text.x = element_text(angle=90)) 
+
+        p3 = ggplot(cnt, aes(x=Freq)) +
+            stat_ecdf() +
+            xlab('access count for each block') +
+            scale_y_continuous(breaks=seq(0, 1, 0.1)) +
+            # scale_x_continuous(breaks=seq(0, 5000, 100)) + 
+            scale_x_continuous(breaks=seq(0, 10, 1)) + 
+            theme(axis.text.x = element_text(angle=90)) +
+            coord_cartesian(xlim = c(0, 10))
         
         return(list(p1, p2))
     }
@@ -452,8 +462,8 @@ explore.mail01 <- function()
     do_main2 <- function()
     {
         dirpath = "./data/mail-01/"
-        files = list.files(dirpath, pattern='10-million')
-        # files = list.files(dirpath, pattern='sample')
+        # files = list.files(dirpath, pattern='10-million')
+        files = list.files(dirpath, pattern='sample')
         print(files)
         plist = list()
         for ( f in files ) {
