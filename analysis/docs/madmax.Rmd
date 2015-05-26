@@ -1,0 +1,1263 @@
+---
+title: "madmax analysis"
+author: "Jun He"
+date: "May 25, 2015"
+output: html_document
+---
+
+### code template
+{r fig.height=10, cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
+
+### FIU madmax analysis
+##### Environment Description
+##### Generator Description
+##### Analysis Script
+##### Figures
+
+``` {r fig.height=100, cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
+# libraries
+library(ggplot2)
+library(plyr)
+library(reshape2)
+library(gridExtra)
+
+# copy the following so you can do sme()
+WORKDIRECTORY= "/Users/junhe/BoxSync/0-MyResearch/Doraemon/workdir/doraemon/analysis"
+THISFILE     ='analyzer.r'
+setwd(WORKDIRECTORY)
+sme <- function()
+{
+    setwd(WORKDIRECTORY)
+    source(THISFILE)
+}
+
+explore.FSJ386323 <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function()
+    {
+        d = read.csv('./myresult2', header=T, sep=';')
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        d$blockstart = d$blockstart*512
+        d$blockstar = factor(d$blockstart)
+        print(summary(d))
+        levels(d$blockstart) = seq_along(levels(d$blockstart))
+        p = ggplot(d,aes(x=time, y=blockstart)) +
+            # geom_linerange(aes(x=time, ymin=blockstart, ymax=blockstart+size),
+                           # size=5) 
+            geom_point()
+        print(p)
+    }
+
+    do_main <- function()
+    {
+        d = load()
+        d = clean(d)
+        func(d)
+    }
+    do_main()
+}
+
+
+explore.FIU <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(fpath)
+    {
+        d = read.table(fpath, header=F, 
+           col.names = c('timestamp', 'pid', 'cmd', 'blocknum',  
+                         'size', 'action', 'x', 'y', 'z'),
+                       )
+        d$x = NULL
+        d$y = NULL
+        d$z = NULL
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        print(head(d))
+        print(summary(d))
+
+        d$blocknum = d$blocknum * 512/2^30
+        p = ggplot(d, aes(x=timestamp, y=blocknum)) +
+            geom_point()
+        print(p)
+        return(p)
+    }
+
+    do_main <- function()
+    {
+        myfiles = list.files('./madmax')
+        for (f in myfiles) {
+            ff = paste('./madmax/', f, sep='')
+            print(ff)
+            d <- load(ff)
+            d = clean(d)
+            p = func(d)
+            ggsave(paste(f, '.pdf', sep=''), plot=p)
+            # a = readline()
+            # if (a == 'a')
+                # break
+        }
+    }
+    do_main()
+}
+
+
+# Sort levels of col1 by col2
+sort_levels <- function(d, col1, col2)
+{
+    tmpfactor = as.character(d[, col1])
+    # order tmpfactor by col2
+    tmpfactor = tmpfactor[ order(d[, col2]) ]
+    # get new sorted levels
+    newlevels = unique(tmpfactor)
+    # make a new factor
+    d[, col1] = factor(d[, col1], levels=newlevels)
+
+    return(d)
+}
+
+
+explore.madmax.1.blkparse <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(fpath)
+    {
+        d = read.table(fpath, header=F, 
+           col.names = c('timestamp', 'pid', 'cmd', 'blocknum',  
+                         'size', 'action', 'x', 'y', 'z'),
+                       )
+        d$x = NULL
+        d$y = NULL
+        d$z = NULL
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        # who issued the most requests
+        count_cmd <- function(d)
+        {
+            cnt = as.data.frame(table(d$cmd))
+            # cnt = arrange(cnt, Freq)
+            cnt = sort_levels(cnt, 'Var1', 'Freq')
+            print(cnt)
+
+            p = ggplot(cnt, aes(x=Var1, y=Freq)) +
+                geom_bar(stat='identity') +
+                coord_flip()
+            # print(p)
+            return(p)
+        }
+
+
+        blocknum.time.plot <- function(d) 
+        {
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=timestamp, y=blocknum)) +
+                geom_point()
+            # print(p)
+            return(p)
+        }
+
+        hot.addresses <- function(d)
+        {
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=blocknum)) +
+                geom_histogram() +
+                xlab('address (GB)')
+            # print(p)
+            return(p)
+        }
+
+        p1 = count_cmd(d)
+        p2 = blocknum.time.plot(d)
+        p3 = hot.addresses(d)
+        grid.arrange(p1, p2, p3)
+        return()
+    }
+
+    do_main <- function()
+    {
+        f = c("./data/madmax/madmax-110108-112108.1.blkparse")
+        # d <<- load(f)
+        d = clean(d)
+        p = func(d)
+    }
+    do_main()
+}
+
+explore.madmax.iterate <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(fpath)
+    {
+        d = read.table(fpath, header=F, 
+           col.names = c('timestamp', 'pid', 'cmd', 'blocknum',  
+                         'size', 'action', 'x', 'y', 'z'),
+                       )
+        d$x = NULL
+        d$y = NULL
+        d$z = NULL
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        # who issued the most requests
+        count_cmd <- function(d)
+        {
+            cnt = as.data.frame(table(d$cmd))
+            # cnt = arrange(cnt, Freq)
+            cnt = sort_levels(cnt, 'Var1', 'Freq')
+            print(cnt)
+
+            p = ggplot(cnt, aes(x=Var1, y=Freq)) +
+                geom_bar(stat='identity') +
+                coord_flip()
+            # print(p)
+            return(p)
+        }
+
+
+        blocknum.time.plot <- function(d) 
+        {
+            # find top 5 cmds
+            cnt = as.data.frame(table(d$cmd))
+            cnt = arrange(cnt, Freq)
+            tops = tail(cnt$Var1, 5)
+
+            d = subset(d, cmd %in% tops)
+
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=timestamp, y=blocknum, color=cmd)) +
+                geom_point()
+            # print(p)
+            return(p)
+        }
+
+        hot.addresses <- function(d)
+        {
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=blocknum)) +
+                geom_histogram() +
+                xlab('address (GB)')
+            # print(p)
+            return(p)
+        }
+
+        p1 = count_cmd(d)
+        p2 = blocknum.time.plot(d)
+        p3 = hot.addresses(d)
+        return(list(p1, p2, p3))
+    }
+
+    do_main <- function()
+    {
+        dirpath = "./data/madmax/"
+        files = list.files(dirpath)
+        plist = list()
+        for ( f in files ) {
+            f = paste(dirpath, f, sep='')
+            d <- load(f)
+            d = clean(d)
+            ps = func(d)
+            plist = append(plist, ps)
+        }
+        do.call('grid.arrange', c(plist, ncol=1))
+    }
+    do_main()
+}
+
+
+
+main <- function()
+{
+    # explore.FSJ386323()
+    # explore.FIU()
+    # explore.madmax.1.blkparse()
+    explore.madmax.iterate()
+}
+main()
+```
+
+The colorful figure shows the top 5 command writing to disk.
+
+Observation:
+the file system journal (kjournald) does most of the writing, so we could simply do optimization for it (make the common cases fast). 
+
+The whole set of data we see here have very similar patterns. pdflush writes have pretty good locality (it tends to write the same places)
+
+##### Comments
+
+### FIU mail-01 analysis
+
+``` {r fig.height=8, cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
+# libraries
+library(ggplot2)
+library(plyr)
+library(reshape2)
+library(gridExtra)
+
+# copy the following so you can do sme()
+WORKDIRECTORY= "/Users/junhe/BoxSync/0-MyResearch/Doraemon/workdir/doraemon/analysis"
+THISFILE     ='analyzer.r'
+setwd(WORKDIRECTORY)
+sme <- function()
+{
+    setwd(WORKDIRECTORY)
+    source(THISFILE)
+}
+
+explore.FSJ386323 <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function()
+    {
+        d = read.csv('./myresult2', header=T, sep=';')
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        d$blockstart = d$blockstart*512
+        d$blockstar = factor(d$blockstart)
+        print(summary(d))
+        levels(d$blockstart) = seq_along(levels(d$blockstart))
+        p = ggplot(d,aes(x=time, y=blockstart)) +
+            # geom_linerange(aes(x=time, ymin=blockstart, ymax=blockstart+size),
+                           # size=5) 
+            geom_point()
+        print(p)
+    }
+
+    do_main <- function()
+    {
+        d = load()
+        d = clean(d)
+        func(d)
+    }
+    do_main()
+}
+
+
+explore.FIU <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(fpath)
+    {
+        d = read.table(fpath, header=F, 
+           col.names = c('timestamp', 'pid', 'cmd', 'blocknum',  
+                         'size', 'action', 'x', 'y', 'z'),
+                       )
+        d$x = NULL
+        d$y = NULL
+        d$z = NULL
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        print(head(d))
+        print(summary(d))
+
+        d$blocknum = d$blocknum * 512/2^30
+        p = ggplot(d, aes(x=timestamp, y=blocknum)) +
+            geom_point()
+        print(p)
+        return(p)
+    }
+
+    do_main <- function()
+    {
+        myfiles = list.files('./madmax')
+        for (f in myfiles) {
+            ff = paste('./madmax/', f, sep='')
+            print(ff)
+            d <- load(ff)
+            d = clean(d)
+            p = func(d)
+            ggsave(paste(f, '.pdf', sep=''), plot=p)
+            # a = readline()
+            # if (a == 'a')
+                # break
+        }
+    }
+    do_main()
+}
+
+
+load_file_from_cache <- function(fpath, reader.funcname)
+{
+    # This function creates a cache using memory
+    # if fpath is not in memory, it reads the file
+    # into a data frame and return it. 
+    # if fpath is in memory, it simply return it
+    
+    # reader.funcname is the name of the function used to 
+    # read fpath to a data frame, it takes fpath as the only
+    # parameter
+    # Example
+    # 
+    # myreader <- function(fpath)
+    # {
+    #     return(1000)   
+    # }
+    # 
+    # load_file_from_cache('file03', 'myreader')
+    
+    if ( exists('filecache') == FALSE ) {
+        print('filecache not exist')
+        filecache <<- list()
+    } else {
+        print('filecache exist')
+    }
+    
+    if ( exists(fpath, where=filecache) == TRUE ) {
+        print('in cache')
+        return(filecache[[fpath]])
+    } else {
+        # not in cache
+        print('not in cache')
+        f = match.fun(reader.funcname)
+        d = f(fpath)
+        filecache[[fpath]] <<- d
+        return(d)
+    }
+    
+}
+
+
+# Sort levels of col1 by col2
+sort_levels <- function(d, col1, col2)
+{
+    tmpfactor = as.character(d[, col1])
+    # order tmpfactor by col2
+    tmpfactor = tmpfactor[ order(d[, col2]) ]
+    # get new sorted levels
+    newlevels = unique(tmpfactor)
+    # make a new factor
+    d[, col1] = factor(d[, col1], levels=newlevels)
+
+    return(d)
+}
+
+
+explore.madmax.1.blkparse <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(fpath)
+    {
+        d = read.table(fpath, header=F, 
+           col.names = c('timestamp', 'pid', 'cmd', 'blocknum',  
+                         'size', 'action', 'x', 'y', 'z'),
+                       )
+        d$x = NULL
+        d$y = NULL
+        d$z = NULL
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        # who issued the most requests
+        count_cmd <- function(d)
+        {
+            cnt = as.data.frame(table(d$cmd))
+            # cnt = arrange(cnt, Freq)
+            cnt = sort_levels(cnt, 'Var1', 'Freq')
+            print(cnt)
+
+            p = ggplot(cnt, aes(x=Var1, y=Freq)) +
+                geom_bar(stat='identity') +
+                coord_flip()
+            # print(p)
+            return(p)
+        }
+
+
+        blocknum.time.plot <- function(d) 
+        {
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=timestamp, y=blocknum)) +
+                geom_point()
+            # print(p)
+            return(p)
+        }
+
+        hot.addresses <- function(d)
+        {
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=blocknum)) +
+                geom_histogram() +
+                xlab('address (GB)')
+            # print(p)
+            return(p)
+        }
+
+        p1 = count_cmd(d)
+        p2 = blocknum.time.plot(d)
+        p3 = hot.addresses(d)
+        grid.arrange(p1, p2, p3)
+        return()
+    }
+
+    do_main <- function()
+    {
+        f = c("./data/madmax/madmax-110108-112108.1.blkparse")
+        # d <<- load(f)
+        d = clean(d)
+        p = func(d)
+    }
+    do_main()
+}
+
+explore.madmax.iterate <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(fpath)
+    {
+        d = read.table(fpath, header=F, 
+           col.names = c('timestamp', 'pid', 'cmd', 'blocknum',  
+                         'size', 'action', 'x', 'y', 'z'),
+                       )
+        d$x = NULL
+        d$y = NULL
+        d$z = NULL
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        # who issued the most requests
+        count_cmd <- function(d)
+        {
+            cnt = as.data.frame(table(d$cmd))
+            # cnt = arrange(cnt, Freq)
+            cnt = sort_levels(cnt, 'Var1', 'Freq')
+            print(cnt)
+
+            p = ggplot(cnt, aes(x=Var1, y=Freq)) +
+                geom_bar(stat='identity') +
+                coord_flip()
+            # print(p)
+            return(p)
+        }
+
+
+        blocknum.time.plot <- function(d) 
+        {
+            # find top 5 cmds
+            cnt = as.data.frame(table(d$cmd))
+            cnt = arrange(cnt, Freq)
+            tops = tail(cnt$Var1, 5)
+
+            d = subset(d, cmd %in% tops)
+
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=timestamp, y=blocknum, color=cmd)) +
+                geom_point()
+            # print(p)
+            return(p)
+        }
+
+        hot.addresses <- function(d)
+        {
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=blocknum)) +
+                geom_histogram() +
+                xlab('address (GB)')
+            # print(p)
+            return(p)
+        }
+
+        p1 = count_cmd(d)
+        p2 = blocknum.time.plot(d)
+        p3 = hot.addresses(d)
+        return(list(p1, p2, p3))
+    }
+
+    do_main <- function()
+    {
+        dirpath = "./data/madmax/"
+        files = list.files(dirpath)
+        plist = list()
+        for ( f in files ) {
+            f = paste(dirpath, f, sep='')
+            d <- load(f)
+            d = clean(d)
+            ps = func(d)
+            plist = append(plist, ps)
+            a = readline()
+            if ( a == 'a')
+                break
+        }
+        do.call('grid.arrange', c(plist, ncol=1))
+    }
+    do_main()
+}
+
+explore.mail01 <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(fpath)
+    {
+        d = read.table(fpath, header=F, 
+           col.names = c('timestamp', 'pid', 'cmd', 'blocknum',  
+                         'size', 'action', 'x', 'y', 'z'),
+                       )
+        d$x = NULL
+        d$y = NULL
+        d$z = NULL
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        # who issued the most requests
+        count_cmd <- function(d)
+        {
+            cnt = as.data.frame(table(d$cmd))
+            # cnt = arrange(cnt, Freq)
+            cnt = sort_levels(cnt, 'Var1', 'Freq')
+            print(cnt)
+
+            p = ggplot(cnt, aes(x=Var1, y=Freq)) +
+                geom_bar(stat='identity') +
+                coord_flip()
+            # print(p)
+            return(p)
+        }
+
+
+        blocknum.time.plot <- function(d) 
+        {
+            # find top 5 cmds
+            cnt = as.data.frame(table(d$cmd))
+            cnt = arrange(cnt, Freq)
+            tops = tail(cnt$Var1, 5)
+
+            d = subset(d, cmd %in% tops)
+
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=timestamp, y=blocknum, color=cmd)) +
+                geom_point(size=1) +
+                expand_limits(y=0) +
+                ylab('LBA (GB)')
+            # print(p)
+            return(p)
+        }
+
+        hot.addresses <- function(d)
+        {
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=blocknum)) +
+                geom_histogram() +
+                xlab('LBA (GB)') +
+                expand_limits(x=0) +
+                coord_flip()
+            # print(p)
+            return(p)
+        }
+
+        p1 = count_cmd(d)
+        p2 = blocknum.time.plot(d)
+        p3 = hot.addresses(d)
+        return(list(p1, p2, p3))
+    }
+
+    do_main <- function()
+    {
+        dirpath = "./data/mail-01/"
+        files = list.files(dirpath, pattern='10-million')
+        # files = list.files(dirpath, pattern='sample')
+        print(files)
+        plist = list()
+        for ( f in files ) {
+            f = paste(dirpath, f, sep='')
+            # d <- load(f)
+            d <- load_file_from_cache(f, 'load')
+            d = clean(d)
+            ps = func(d)
+            plist = append(plist, ps)
+            # a = readline()
+            # if ( a == 'a')
+                # break
+        }
+        do.call('grid.arrange', c(plist, ncol=1))
+    }
+    do_main()
+}
+
+
+
+main <- function()
+{
+    # explore.FSJ386323()
+    # explore.FIU()
+    # explore.madmax.1.blkparse()
+    # explore.madmax.iterate()
+    explore.mail01()
+}
+main()
+
+```
+
+#### count the frequence of access for each block
+``` {r cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
+# libraries
+library(ggplot2)
+library(plyr)
+library(reshape2)
+library(gridExtra)
+
+# copy the following so you can do sme()
+WORKDIRECTORY= "/Users/junhe/BoxSync/0-MyResearch/Doraemon/workdir/doraemon/analysis"
+THISFILE     ='analyzer.r'
+setwd(WORKDIRECTORY)
+sme <- function()
+{
+    setwd(WORKDIRECTORY)
+    source(THISFILE)
+}
+
+explore.FSJ386323 <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function()
+    {
+        d = read.csv('./myresult2', header=T, sep=';')
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        d$blockstart = d$blockstart*512
+        d$blockstar = factor(d$blockstart)
+        print(summary(d))
+        levels(d$blockstart) = seq_along(levels(d$blockstart))
+        p = ggplot(d,aes(x=time, y=blockstart)) +
+            # geom_linerange(aes(x=time, ymin=blockstart, ymax=blockstart+size),
+                           # size=5) 
+            geom_point()
+        print(p)
+    }
+
+    do_main <- function()
+    {
+        d = load()
+        d = clean(d)
+        func(d)
+    }
+    do_main()
+}
+
+
+explore.FIU <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(fpath)
+    {
+        d = read.table(fpath, header=F, 
+           col.names = c('timestamp', 'pid', 'cmd', 'blocknum',  
+                         'size', 'action', 'x', 'y', 'z'),
+                       )
+        d$x = NULL
+        d$y = NULL
+        d$z = NULL
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        print(head(d))
+        print(summary(d))
+
+        d$blocknum = d$blocknum * 512/2^30
+        p = ggplot(d, aes(x=timestamp, y=blocknum)) +
+            geom_point()
+        print(p)
+        return(p)
+    }
+
+    do_main <- function()
+    {
+        myfiles = list.files('./madmax')
+        for (f in myfiles) {
+            ff = paste('./madmax/', f, sep='')
+            print(ff)
+            d <- load(ff)
+            d = clean(d)
+            p = func(d)
+            ggsave(paste(f, '.pdf', sep=''), plot=p)
+            # a = readline()
+            # if (a == 'a')
+                # break
+        }
+    }
+    do_main()
+}
+
+
+load_file_from_cache <- function(fpath, reader.funcname)
+{
+    # This function creates a cache using memory
+    # if fpath is not in memory, it reads the file
+    # into a data frame and return it. 
+    # if fpath is in memory, it simply return it
+    
+    # reader.funcname is the name of the function used to 
+    # read fpath to a data frame, it takes fpath as the only
+    # parameter
+    # Example
+    # 
+    # myreader <- function(fpath)
+    # {
+    #     return(1000)   
+    # }
+    # 
+    # load_file_from_cache('file03', 'myreader')
+    
+    if ( exists('filecache') == FALSE ) {
+        print('filecache not exist')
+        filecache <<- list()
+    } else {
+        print('filecache exist')
+    }
+    
+    if ( exists(fpath, where=filecache) == TRUE ) {
+        print('in cache')
+        return(filecache[[fpath]])
+    } else {
+        # not in cache
+        print('not in cache')
+        f = match.fun(reader.funcname)
+        d = f(fpath)
+        filecache[[fpath]] <<- d
+        return(d)
+    }
+    
+}
+
+
+# Sort levels of col1 by col2
+sort_levels <- function(d, col1, col2)
+{
+    tmpfactor = as.character(d[, col1])
+    # order tmpfactor by col2
+    tmpfactor = tmpfactor[ order(d[, col2]) ]
+    # get new sorted levels
+    newlevels = unique(tmpfactor)
+    # make a new factor
+    d[, col1] = factor(d[, col1], levels=newlevels)
+
+    return(d)
+}
+
+
+explore.madmax.1.blkparse <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(fpath)
+    {
+        d = read.table(fpath, header=F, 
+           col.names = c('timestamp', 'pid', 'cmd', 'blocknum',  
+                         'size', 'action', 'x', 'y', 'z'),
+                       )
+        d$x = NULL
+        d$y = NULL
+        d$z = NULL
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        # who issued the most requests
+        count_cmd <- function(d)
+        {
+            cnt = as.data.frame(table(d$cmd))
+            # cnt = arrange(cnt, Freq)
+            cnt = sort_levels(cnt, 'Var1', 'Freq')
+            print(cnt)
+
+            p = ggplot(cnt, aes(x=Var1, y=Freq)) +
+                geom_bar(stat='identity') +
+                coord_flip()
+            # print(p)
+            return(p)
+        }
+
+
+        blocknum.time.plot <- function(d) 
+        {
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=timestamp, y=blocknum)) +
+                geom_point()
+            # print(p)
+            return(p)
+        }
+
+        hot.addresses <- function(d)
+        {
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=blocknum)) +
+                geom_histogram() +
+                xlab('address (GB)')
+            # print(p)
+            return(p)
+        }
+
+        p1 = count_cmd(d)
+        p2 = blocknum.time.plot(d)
+        p3 = hot.addresses(d)
+        grid.arrange(p1, p2, p3)
+        return()
+    }
+
+    do_main <- function()
+    {
+        f = c("./data/madmax/madmax-110108-112108.1.blkparse")
+        # d <<- load(f)
+        d = clean(d)
+        p = func(d)
+    }
+    do_main()
+}
+
+explore.madmax.iterate <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(fpath)
+    {
+        d = read.table(fpath, header=F, 
+           col.names = c('timestamp', 'pid', 'cmd', 'blocknum',  
+                         'size', 'action', 'x', 'y', 'z'),
+                       )
+        d$x = NULL
+        d$y = NULL
+        d$z = NULL
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        # who issued the most requests
+        count_cmd <- function(d)
+        {
+            cnt = as.data.frame(table(d$cmd))
+            # cnt = arrange(cnt, Freq)
+            cnt = sort_levels(cnt, 'Var1', 'Freq')
+            print(cnt)
+
+            p = ggplot(cnt, aes(x=Var1, y=Freq)) +
+                geom_bar(stat='identity') +
+                coord_flip()
+            # print(p)
+            return(p)
+        }
+
+
+        blocknum.time.plot <- function(d) 
+        {
+            # find top 5 cmds
+            cnt = as.data.frame(table(d$cmd))
+            cnt = arrange(cnt, Freq)
+            tops = tail(cnt$Var1, 5)
+
+            d = subset(d, cmd %in% tops)
+
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=timestamp, y=blocknum, color=cmd)) +
+                geom_point()
+            # print(p)
+            return(p)
+        }
+
+        hot.addresses <- function(d)
+        {
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=blocknum)) +
+                geom_histogram() +
+                xlab('address (GB)')
+            # print(p)
+            return(p)
+        }
+
+        p1 = count_cmd(d)
+        p2 = blocknum.time.plot(d)
+        p3 = hot.addresses(d)
+        return(list(p1, p2, p3))
+    }
+
+    do_main <- function()
+    {
+        dirpath = "./data/madmax/"
+        files = list.files(dirpath)
+        plist = list()
+        for ( f in files ) {
+            f = paste(dirpath, f, sep='')
+            d <- load(f)
+            d = clean(d)
+            ps = func(d)
+            plist = append(plist, ps)
+            a = readline()
+            if ( a == 'a')
+                break
+        }
+        do.call('grid.arrange', c(plist, ncol=1))
+    }
+    do_main()
+}
+
+explore.mail01 <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(fpath)
+    {
+        d = read.table(fpath, header=F, 
+           col.names = c('timestamp', 'pid', 'cmd', 'blocknum',  
+                         'size', 'action', 'x', 'y', 'z'),
+                       )
+        d$x = NULL
+        d$y = NULL
+        d$z = NULL
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        # who issued the most requests
+        count_cmd <- function(d)
+        {
+            cnt = as.data.frame(table(d$cmd))
+            # cnt = arrange(cnt, Freq)
+            cnt = sort_levels(cnt, 'Var1', 'Freq')
+            print(cnt)
+
+            p = ggplot(cnt, aes(x=Var1, y=Freq)) +
+                geom_bar(stat='identity') +
+                coord_flip()
+            # print(p)
+            return(p)
+        }
+
+
+        blocknum.time.plot <- function(d) 
+        {
+            # find top 5 cmds
+            cnt = as.data.frame(table(d$cmd))
+            cnt = arrange(cnt, Freq)
+            tops = tail(cnt$Var1, 5)
+
+            d = subset(d, cmd %in% tops)
+
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=timestamp, y=blocknum, color=cmd)) +
+                geom_point(size=1) +
+                expand_limits(y=0) +
+                ylab('LBA (GB)')
+            # print(p)
+            return(p)
+        }
+
+        hot.addresses <- function(d)
+        {
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=blocknum)) +
+                geom_histogram() +
+                xlab('LBA (GB)') +
+                expand_limits(x=0) +
+                coord_flip()
+            # print(p)
+            return(p)
+        }
+
+        p1 = count_cmd(d)
+        p2 = blocknum.time.plot(d)
+        p3 = hot.addresses(d)
+        return(list(p1, p2, p3))
+    }
+
+    do_main <- function()
+    {
+        dirpath = "./data/mail-01/"
+        # files = list.files(dirpath, pattern='1-million')
+        files = list.files(dirpath, pattern='sample')
+        print(files)
+        plist = list()
+        for ( f in files ) {
+            f = paste(dirpath, f, sep='')
+            # d <- load(f)
+            d <- load_file_from_cache(f, 'load')
+            d = clean(d)
+            ps = func(d)
+            plist = append(plist, ps)
+            # a = readline()
+            # if ( a == 'a')
+                # break
+        }
+        do.call('grid.arrange', c(plist, ncol=1))
+    }
+
+    count_block_accesses <- function(d)
+    {
+        cnt = as.data.frame(table(d$blocknum))
+        freqdist = as.data.frame(table(cnt$Freq))
+        print(summary(freqdist))
+        freqdist$Var1 = as.numeric(freqdist$Var1)
+
+        p1 = ggplot(freqdist, aes(x=Var1, y=log10(Freq))) +
+            geom_point() +
+            geom_line()
+
+        p2 = ggplot(cnt, aes(x=Freq)) +
+            stat_ecdf() +
+            xlab('access count for each block')
+        
+        return(list(p1, p2))
+    }
+
+    do_main2 <- function()
+    {
+        dirpath = "./data/mail-01/"
+        files = list.files(dirpath, pattern='10-million')
+        # files = list.files(dirpath, pattern='sample')
+        print(files)
+        plist = list()
+        for ( f in files ) {
+            f = paste(dirpath, f, sep='')
+            d <- load_file_from_cache(f, 'load')
+            d = clean(d)
+            plots = count_block_accesses(d)
+            plist = append(plist, plots)
+        }
+        do.call('grid.arrange', c(plist, ncol=1))
+    }
+ 
+    # do_main()
+    do_main2()
+}
+
+
+
+main <- function()
+{
+    # explore.FSJ386323()
+    # explore.FIU()
+    # explore.madmax.1.blkparse()
+    # explore.madmax.iterate()
+    explore.mail01()
+}
+main()
+
+```
+
+The lower figure is the ECDF of the access count for each block. It tells us that:
+- the median of access count for each block is quite small.
+- the 90th percentile is about 50. That means 90% of the blocks has less than 50 accesses. That also means about 10% of the blocks have over 50 accesses.
+
+
