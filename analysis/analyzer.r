@@ -443,7 +443,8 @@ explore.mail01 <- function()
             stat_ecdf() +
             xlab('access count for each block') +
             scale_y_continuous(breaks=seq(0, 1, 0.1)) +
-            scale_x_continuous(breaks=seq(0, 5000, 100))
+            scale_x_continuous(breaks=seq(0, 5000, 100)) + 
+            theme(axis.text.x = element_text(angle=90))
         
         return(list(p1, p2))
     }
