@@ -401,16 +401,16 @@ explore.mail01 <- function()
         }
 
         p1 = count_cmd(d)
-        p2 = blocknum.time.plot(d)
-        p3 = hot.addresses(d)
+        # p2 = blocknum.time.plot(d)
+        # p3 = hot.addresses(d)
         return(list(p1, p2, p3))
     }
 
     do_main <- function()
     {
         dirpath = "./data/mail-01/"
-        # files = list.files(dirpath, pattern='1-million')
-        files = list.files(dirpath, pattern='sample')
+        files = list.files(dirpath, pattern='10-million')
+        # files = list.files(dirpath, pattern='sample')
         print(files)
         plist = list()
         for ( f in files ) {
@@ -456,14 +456,14 @@ explore.mail01 <- function()
             theme(axis.text.x = element_text(angle=90)) +
             coord_cartesian(xlim = c(0, 10))
         
-        return(list(p1, p2))
+        return(list(p1, p2, p3))
     }
 
     do_main2 <- function()
     {
         dirpath = "./data/mail-01/"
-        # files = list.files(dirpath, pattern='10-million')
-        files = list.files(dirpath, pattern='sample')
+        files = list.files(dirpath, pattern='10-million')
+        # files = list.files(dirpath, pattern='sample')
         print(files)
         plist = list()
         for ( f in files ) {
@@ -476,8 +476,23 @@ explore.mail01 <- function()
         do.call('grid.arrange', c(plist, ncol=1))
     }
  
+    do_main3 <- function()
+    {
+        dirpath = "./data/mail-01/"
+        files = list.files(dirpath, pattern='10-million')
+        # files = list.files(dirpath, pattern='sample')
+        for ( f in files ) {
+            f = paste(dirpath, f, sep='')
+            d <- load_file_from_cache(f, 'load')
+            d = clean(d)
+            print(count(d$size))
+        }
+    }
+ 
+
     # do_main()
-    do_main2()
+    # do_main2()
+    do_main3()
 }
 
 
