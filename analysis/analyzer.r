@@ -462,8 +462,8 @@ explore.mail01 <- function()
     do_main2 <- function()
     {
         dirpath = "./data/mail-01/"
-        files = list.files(dirpath, pattern='10-million')
-        # files = list.files(dirpath, pattern='sample')
+        # files = list.files(dirpath, pattern='10-million')
+        files = list.files(dirpath, pattern='sample')
         print(files)
         plist = list()
         for ( f in files ) {
@@ -491,8 +491,8 @@ explore.mail01 <- function()
  
 
     # do_main()
-    # do_main2()
-    do_main3()
+    do_main2()
+    # do_main3()
 }
 
 
