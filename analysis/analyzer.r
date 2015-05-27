@@ -496,6 +496,171 @@ explore.mail01 <- function()
 }
 
 
+explore.websearch <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(fpath)
+    {
+        d = read.table(fpath, header=F, 
+           col.names = c('timestamp', 'pid', 'cmd', 'blocknum',  
+                         'size', 'action', 'x', 'y', 'z'),
+                       )
+        d$x = NULL
+        d$y = NULL
+        d$z = NULL
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        # who issued the most requests
+        count_cmd <- function(d)
+        {
+            cnt = as.data.frame(table(d$cmd))
+            # cnt = arrange(cnt, Freq)
+            cnt = sort_levels(cnt, 'Var1', 'Freq')
+            print(cnt)
+
+            p = ggplot(cnt, aes(x=Var1, y=Freq)) +
+                geom_bar(stat='identity') +
+                coord_flip()
+            # print(p)
+            return(p)
+        }
+
+
+        blocknum.time.plot <- function(d) 
+        {
+            # find top 5 cmds
+            cnt = as.data.frame(table(d$cmd))
+            cnt = arrange(cnt, Freq)
+            tops = tail(cnt$Var1, 5)
+
+            d = subset(d, cmd %in% tops)
+
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=timestamp, y=blocknum, color=cmd)) +
+                geom_point(size=1) +
+                expand_limits(y=0) +
+                ylab('LBA (GB)')
+            # print(p)
+            return(p)
+        }
+
+        hot.addresses <- function(d)
+        {
+            d$blocknum = d$blocknum * 512/2^30
+            p = ggplot(d, aes(x=blocknum)) +
+                geom_histogram() +
+                xlab('LBA (GB)') +
+                expand_limits(x=0) +
+                coord_flip()
+            # print(p)
+            return(p)
+        }
+
+        p1 = count_cmd(d)
+        p2 = blocknum.time.plot(d)
+        p3 = hot.addresses(d)
+        return(list(p1, p2, p3))
+    }
+
+    do_main <- function()
+    {
+        dirpath = "./data/webresearch/"
+        files = list.files(dirpath, pattern='blkparse')
+        # files = list.files(dirpath, pattern='sample')
+        print(files)
+        plist = list()
+        for ( f in files ) {
+            f = paste(dirpath, f, sep='')
+            d <- load_file_from_cache(f, 'load')
+            d = clean(d)
+            ps = func(d)
+            plist = append(plist, ps)
+            # a = readline()
+            # if ( a == 'a')
+                # break
+        }
+        do.call('grid.arrange', c(plist, ncol=1))
+    }
+
+    count_block_accesses <- function(d)
+    {
+        cnt = as.data.frame(table(d$blocknum))
+        freqdist = as.data.frame(table(cnt$Freq))
+        print(summary(freqdist))
+        freqdist$Var1 = as.numeric(freqdist$Var1)
+
+        p1 = ggplot(freqdist, aes(x=Var1, y=log10(Freq))) +
+            geom_point() +
+            geom_line() +
+            xlab('x is access count, y is number of blocks having this count')
+
+
+        p2 = ggplot(cnt, aes(x=Freq)) +
+            stat_ecdf() +
+            xlab('access count for each block') +
+            scale_y_continuous(breaks=seq(0, 1, 0.1)) +
+            scale_x_continuous(breaks=seq(0, 5000, 100)) + 
+            theme(axis.text.x = element_text(angle=90)) 
+
+        p3 = ggplot(cnt, aes(x=Freq)) +
+            stat_ecdf() +
+            xlab('access count for each block') +
+            scale_y_continuous(breaks=seq(0, 1, 0.1)) +
+            # scale_x_continuous(breaks=seq(0, 5000, 100)) + 
+            scale_x_continuous(breaks=seq(0, 10, 1)) + 
+            theme(axis.text.x = element_text(angle=90)) +
+            coord_cartesian(xlim = c(0, 10))
+        
+        return(list(p1, p2, p3))
+    }
+
+    do_main2 <- function()
+    {
+        dirpath = "./data/mail-01/"
+        files = list.files(dirpath, pattern='10-million')
+        # files = list.files(dirpath, pattern='sample')
+        print(files)
+        plist = list()
+        for ( f in files ) {
+            f = paste(dirpath, f, sep='')
+            d <- load_file_from_cache(f, 'load')
+            d = clean(d)
+            plots = count_block_accesses(d)
+            plist = append(plist, plots)
+        }
+        do.call('grid.arrange', c(plist, ncol=1))
+    }
+ 
+    do_main3 <- function()
+    {
+        dirpath = "./data/mail-01/"
+        files = list.files(dirpath, pattern='10-million')
+        # files = list.files(dirpath, pattern='sample')
+        for ( f in files ) {
+            f = paste(dirpath, f, sep='')
+            d <- load_file_from_cache(f, 'load')
+            d = clean(d)
+            print(count(d$size))
+        }
+    }
+ 
+
+    do_main()
+    # do_main2()
+    # do_main3()
+}
+
+
 
 main <- function()
 {
@@ -503,6 +668,7 @@ main <- function()
     # explore.FIU()
     # explore.madmax.1.blkparse()
     # explore.madmax.iterate()
-    explore.mail01()
+    # explore.mail01()
+    explore.websearch()
 }
 main()
