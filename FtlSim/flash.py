@@ -1,13 +1,11 @@
+import recorder
 
 def page_read(pagenum):
-    print 'I am page read'
-    pass
+    recorder.put('page_read', pagenum)
 
 def page_write(pagenum):
-    print 'I am page write'
-    pass
+    recorder.put('page_write', pagenum)
 
 def block_erase(blocknum):
-    print 'I am page erase'
-    pass
+    recorder.put('block_erase', blocknum)
 
