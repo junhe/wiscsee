@@ -1,11 +1,11 @@
 import dmftl
 
-def lba_read(offset, size):
-    return dmftl.lba_read(offset, size)
+def lba_read(pagenum):
+    return dmftl.lba_read(pagenum)
 
-def lba_write(offset, size):
-    return dmftl.lba_write(offset, size)
+def lba_write(pagenum):
+    return dmftl.lba_write(pagenum)
 
-def lba_discard(offset, size):
-    return dmftl.lba_discard(offset, size)
+def lba_discard(pagenum):
+    return dmftl.lba_discard(pagenum)
 

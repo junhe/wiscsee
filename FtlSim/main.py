@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import ftl
+from common import byte_to_pagenum
 
 # TODO
 # 1. read LBA layer trace
@@ -22,11 +23,11 @@ def read_lba_events(fpath):
 
 def process_event(event):
     if event['operation'] == 'read':
-        ftl.lba_read(event['offset'], event['size'])
+        ftl.lba_read(byte_to_pagenum(event['offset']))
     elif event['operation'] == 'write':
-        ftl.lba_write(event['offset'], event['size'])
+        ftl.lba_write(byte_to_pagenum(event['offset']))
     elif event['operation'] == 'discard':
-        ftl.lba_discard(event['offset'], event['size'])
+        ftl.lba_discard(byte_to_pagenum(event['offset']))
 
 def main():
     input_events = read_lba_events('./misc/lbaevents.sample')

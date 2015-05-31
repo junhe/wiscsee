@@ -1,13 +1,12 @@
 import flash
 import common
 
-def lba_read(offset, size):
-    pagenum = common.byte_to_pagenum(offset)
+def lba_read(pagenum):
     flash.page_read(pagenum)
 
-def lba_write(offset, size):
+def lba_write(pagenum):
     pass
 
-def lba_discard(offset, size):
+def lba_discard(pagenum):
     pass
 
