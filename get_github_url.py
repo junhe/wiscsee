@@ -13,9 +13,10 @@ def run_and_get_output(cmd):
     return p.stdout.readlines()
 
 def commit_file(fpath):
+    rootdir = get_root_dir_path()
     cmd = ['git', 'commit',
            '-m', 'update '+fpath,
-           fpath]
+           os.path.join(rootdir, fpath)]
     print cmd
     ret = subprocess.call(cmd)
     if ret != 0:
@@ -23,8 +24,10 @@ def commit_file(fpath):
         print 'command not succeed'
 
 def get_lastest_hash(fpath):
+    rootdir = get_root_dir_path()
     cmd = ['git', 'log', '--pretty=format:"%H"',
-            '-n', '1', fpath]
+            '-n', '1',
+            os.path.join(rootdir, fpath)]
     print cmd
     proc = subprocess.Popen(cmd,
                             stdout=subprocess.PIPE)
@@ -41,9 +44,12 @@ def to_clipboard(s):
     print s, 'copied to clipboard'
     return()
 
-def get_root_dir_name():
+def get_root_dir_path():
     path = run_and_get_output("git rev-parse --show-toplevel")
-    path = path[0].strip()
+    return path[0].strip()
+
+def get_root_dir_name():
+    path = get_root_dir_path()
     dirname = os.path.basename(path)
     return dirname
 
@@ -53,8 +59,18 @@ def compose_url(hash, fpath):
     repname = get_root_dir_name()
 
     hash = hash.strip('"')
-    url_base = "https://github.com/junhe/{rep}/blob/{hash}/{fpath}"
-    url = url_base.format(hash=hash, fpath=fpath, rep=repname)
+
+    # need_raw = True
+    need_raw = False
+    if need_raw == True:
+        # https://raw.githubusercontent.com/junhe/doraemon/6d06b0dcf8193a26100804d1a6dd06ea22b88ff8/analysis/analyzer.r?token=AAmfJeReIQX2oaVbztHhUhYzD9z82o1Sks5VbnLHwA%3D%3D
+        mytoken = 'AAmfJeReIQX2oaVbztHhUhYzD9z82o1Sks5VbnLHwA%3D%3D'
+        url_base_raw = "https://raw.githubusercontent.com/junhe/{rep}/{hash}/{fpath}?token={token}"
+        url = url_base_raw.format(hash=hash, fpath=fpath, rep=repname, token=mytoken)
+    else:
+        url_base = "https://github.com/junhe/{rep}/blob/{hash}/{fpath}"
+        url = url_base.format(hash=hash, fpath=fpath, rep=repname)
+
     return url
 
 def git_push():
@@ -65,6 +81,8 @@ def git_push():
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print "Usage:", sys.argv[0], "filepath"
+        print "filepath should be a relative path to repository root dir"
+        print "This script can be executed anywhere within the repository"
         exit(1)
     fpath = sys.argv[1]
 

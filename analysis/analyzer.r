@@ -488,11 +488,52 @@ explore.mail01 <- function()
             print(count(d$size))
         }
     }
- 
+  
+    do_main_vis_lives <- function()
+    {
+        ddply_timeextent <- function(d, globaltimeend)
+        {
+            tmpend = c(d$timestamp[-1], globaltimeend)
+            d$endtimestampe = tmpend
+            d$reincarnation = seq_along(d$timestamp)
+            return(d)
+        }
+
+        plot_life <- function(d)
+        {
+            d$blocknum = as.factor(d$blocknum)
+            p = ggplot(d, aes(x=timestamp, xend=endtimestampe,
+                              y=blocknum,  yend=blocknum, color=reincarnation)) +
+                geom_segment()
+            # print(p)
+            ggsave(file='mail01-lives-1-30000.pdf', p, w=6, h=100, limitsize=FALSE)
+        }
+
+        dirpath = "./data/mail-01/"
+        files = list.files(dirpath, pattern='1-million')
+        for ( f in files ) {
+            f = paste(dirpath, f, sep='')
+            d <- load_file_from_cache(f, 'load')
+            d = clean(d)
+
+            d = d[1:30000, ]
+            globaltimeend = tail(d$timestamp, 1)
+            d = ddply(d, .(blocknum), ddply_timeextent, globaltimeend)
+            d$reincarnation = factor(d$reincarnation)
+            d$reincarnation = factor(d$reincarnation, levels=sample(levels(d$reincarnation)))
+            plot_life(d)
+            print('done')
+
+            a = readline()
+            if ( a == 'a')
+                break
+        }
+    }
 
     # do_main()
-    do_main2()
+    # do_main2()
     # do_main3()
+    do_main_vis_lives()
 }
 
 
@@ -654,10 +695,51 @@ explore.websearch <- function()
         }
     }
  
+    do_main_vis_lives <- function()
+    {
+        ddply_timeextent <- function(d, globaltimeend)
+        {
+            tmpend = c(d$timestamp[-1], globaltimeend)
+            d$endtimestampe = tmpend
+            d$reincarnation = seq_along(d$timestamp)
+            return(d)
+        }
 
-    do_main()
+        plot_life <- function(d)
+        {
+            d$blocknum = as.factor(d$blocknum)
+            p = ggplot(d, aes(x=timestamp, xend=endtimestampe,
+                              y=blocknum,  yend=blocknum, color=reincarnation)) +
+                geom_segment()
+            # print(p)
+            ggsave(file='websearch-lives.pdf', p, w=6, h=80, limitsize=FALSE)
+        }
+
+        dirpath = "./data/webresearch/"
+        files = list.files(dirpath, pattern='blkparse')
+        for ( f in files ) {
+            f = paste(dirpath, f, sep='')
+            d <- load_file_from_cache(f, 'load')
+            d = clean(d)
+
+            d = d[10000:20000, ]
+            globaltimeend = tail(d$timestamp, 1)
+            d = ddply(d, .(blocknum), ddply_timeextent, globaltimeend)
+            d$reincarnation = factor(d$reincarnation)
+            d$reincarnation = factor(d$reincarnation, levels=sample(levels(d$reincarnation)))
+            plot_life(d)
+
+            a = readline()
+            if ( a == 'a')
+                break
+        }
+    }
+ 
+
+    # do_main()
     # do_main2()
     # do_main3()
+    do_main_vis_lives()
 }
 
 
@@ -668,7 +750,7 @@ main <- function()
     # explore.FIU()
     # explore.madmax.1.blkparse()
     # explore.madmax.iterate()
-    # explore.mail01()
-    explore.websearch()
+    explore.mail01()
+    # explore.websearch()
 }
 main()
