@@ -89,5 +89,5 @@ def lba_write(pagenum):
     ftl.write_page(pagenum)
 
 def lba_discard(pagenum):
-    pass
+    ftl.invalidate_page(pagenum)
 

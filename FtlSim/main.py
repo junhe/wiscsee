@@ -30,11 +30,13 @@ def process_event(event):
         ftl.lba_discard(byte_to_pagenum(event['offset']))
 
 def main():
-    # input_events = read_lba_events('./misc/lbaevents.sample')
-    input_events = read_lba_events('./misc/lbawrite.sample')
+    input_events = read_lba_events('./misc/lbaevents.sample')
+    # input_events = read_lba_events('./misc/lbawrite.sample')
 
     for event in input_events:
         process_event(event)
+        ftl.debug_after_processing()
+
 
 if __name__ == '__main__':
     main()
