@@ -2,7 +2,8 @@ from config import *
 
 def byte_to_pagenum(offset):
     "offset to page number"
-    assert offset % flash_page_size == 0
+    assert offset % flash_page_size == 0, \
+            'offset: {off}, page_size: {ps}'.format(off=offset, ps = flash_page_size)
     return offset / flash_page_size
 
 def page_to_block(pagenum):
