@@ -107,9 +107,8 @@ def generate_lba_workload_seq(flash_page_size,
                          ):
     f = open(tofile, 'w')
     totalpages = flash_npage_per_block * flash_num_blocks
-    print totalpages
-    raw_input()
-    for page in range(0, int(totalpages * 0.8)):
+    for page in range(0, totalpages * 2):
+        page = page % totalpages
         offset = page * flash_page_size
         size = flash_page_size
         event = 'write {} {}'.format(offset, size)
@@ -124,9 +123,7 @@ def generate_lba_workload_random(flash_page_size,
                          ):
     f = open(tofile, 'w')
     totalpages = flash_npage_per_block * flash_num_blocks
-    print totalpages
-    raw_input()
-    for page in range(0, int(totalpages * 0.8)):
+    for page in range(0, totalpages * 2):
         page = int(random.random() * totalpages)
         offset = page * flash_page_size
         size = flash_page_size
@@ -135,19 +132,30 @@ def generate_lba_workload_random(flash_page_size,
 
     f.close()
 
-def generate_lba_workload():
+def generate_lba_workload(pattern):
     workloadfile = 'misc/tmpworkload'
-    generate_lba_workload_seq(config.flash_page_size,
-                              config.flash_npage_per_block,
-                              config.flash_num_blocks,
-                              workloadfile
-                              )
-    # shcmd('./main.py -e {}'.format(workloadfile))
-    main.sim_run(workloadfile)
+    if pattern == 'seq':
+        generate_lba_workload_seq(config.flash_page_size,
+                                  config.flash_npage_per_block,
+                                  config.flash_num_blocks,
+                                  workloadfile
+                                  )
+    elif pattern == 'random':
+        generate_lba_workload_random(config.flash_page_size,
+                                  config.flash_npage_per_block,
+                                  config.flash_num_blocks,
+                                  workloadfile
+                                  )
+
+    simmain.sim_run(workloadfile)
+
+def run_r_script(scriptpath):
+    shcmd('Rscript {}'.format(scriptpath))
 
 def main():
     #function you want to call
-    generate_lba_workload()
+    generate_lba_workload('random')
+    # run_r_script('../analysis/analyzer.r')
 
 def _main():
     parser = argparse.ArgumentParser(

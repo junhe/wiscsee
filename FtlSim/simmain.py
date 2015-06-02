@@ -2,6 +2,7 @@
 
 import ftl
 import argparse
+import recorder
 from common import byte_to_pagenum
 
 # TODO
@@ -46,12 +47,11 @@ def process_event(event):
         ftl.lba_discard(byte_to_pagenum(event['offset']))
 
 def sim_run(eventfile):
-    input_events = read_lba_events(args.events)
+    input_events = read_lba_events(eventfile)
 
     for event in input_events:
         process_event(event)
         ftl.debug_after_processing()
-        raw_input()
 
 def main():
     parser = argparse.ArgumentParser(

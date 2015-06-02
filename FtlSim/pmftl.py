@@ -80,21 +80,21 @@ class Ftl:
         self.validbitmap[start : end] = False
 
     # basic operations
-    def read_page(self, pagenum):
-        flash.page_read(pagenum)
+    def read_page(self, pagenum, cat):
+        flash.page_read(pagenum, cat)
 
-    def read_block(self, blocknum):
+    def read_block(self, blocknum, cat):
         start, end = block_to_page_range(blocknum)
         for pagenum in range(start, end):
-            flash.page_read(pagenum)
+            flash.page_read(pagenum, cat)
 
-    def program_block(self, blocknum):
+    def program_block(self, blocknum, cat):
         start, end = block_to_page_range(blocknum)
         for pagenum in range(start, end):
-            flash.page_write(pagenum)
+            flash.page_write(pagenum, cat)
 
-    def erase_block(self, blocknum):
-        flash.block_erase(blocknum)
+    def erase_block(self, blocknum, cat):
+        flash.block_erase(blocknum, cat)
 
     def modify_page_in_ram(self, pagenum):
         "this is a dummy function"
@@ -119,8 +119,8 @@ class Ftl:
         self.freeblocks.append(blocknum)
 
     def show_map(self):
-        print self.l2p
-        print self.p2l
+        recorder.debug(self.l2p)
+        recorder.debug(self.p2l)
 
     def invalidate_lba_page(self, lbapagenum):
         "invalidate bitmap and remove the mapping"
@@ -156,7 +156,7 @@ class Ftl:
             start, end = block_to_page_range(block)
             return start
 
-    def write_page(self, lba_pagenum, garbage_collect_enable=True):
+    def write_page(self, lba_pagenum, garbage_collect_enable=True, cat='user'):
         """
         1. find the next flash page to write, write it
         2. if exists, find and invalidate the old flash page of the LBA page
@@ -165,7 +165,7 @@ class Ftl:
         toflashpage = self.next_page_to_program()
         recorder.debug('Writing LBA {} to {}'.format(lba_pagenum, toflashpage))
         assert self.validbitmap[toflashpage] == False
-        flash.page_write(toflashpage)
+        flash.page_write(toflashpage, cat)
         self.log_end_pagenum = toflashpage
 
         # if there is a flash page for this LBA, invalidate the flash page
@@ -230,7 +230,7 @@ class Ftl:
         for page in range(start, end):
             if self.validbitmap[page] == True:
                 lba = self.p2l[page]
-                self.write_page(lba, garbage_collect_enable=False)
+                self.write_page(lba, garbage_collect_enable=False, cat='amplified')
 
 
     def used_to_free(self, blocknum):
@@ -250,7 +250,7 @@ class Ftl:
 
         lastfree = len(self.freeblocks)
         cnt = 0
-        while len(self.freeblocks) < self.low_num_blocks*2:
+        while len(self.freeblocks) < self.low_num_blocks * 1.5:
             # while we still can find victim blocks
             # 1. read valid pages from the victim block
             # 2. write the valid pages as if the are new
@@ -261,16 +261,17 @@ class Ftl:
                 # if next_victim_block() return None, it means
                 # no block can be a victim
                 break
-            print 'next victimblock:', victimblock, \
-                    'invaratio', self.block_invalid_ratio(victimblock)
+            recorder.debug( 'next victimblock:', victimblock,
+                    'invaratio', self.block_invalid_ratio(victimblock))
             # self.debug()
 
             self.move_valid_pages(victimblock)
-            self.erase_block(victimblock)
+            #block erasure is always counted as amplified
+            self.erase_block(victimblock, 'amplified')
             self.used_to_free(victimblock)
 
-            print 'freeblocks', self.freeblocks
-            print 'usedblocks', self.usedblocks
+            recorder.debug( 'freeblocks', self.freeblocks)
+            recorder.debug( 'usedblocks', self.usedblocks)
 
             cnt += 1
             if cnt % 10 == 0:
@@ -285,9 +286,9 @@ class Ftl:
 
     def debug(self):
         self.show_map()
-        print 'VALIDBITMAP', self.validbitmap
-        print 'FREEBLOCKS ', self.freeblocks
-        print 'USEDBLOCKS ', self.usedblocks
+        recorder.debug( 'VALIDBITMAP', self.validbitmap)
+        recorder.debug( 'FREEBLOCKS ', self.freeblocks)
+        recorder.debug( 'USEDBLOCKS ', self.usedblocks)
 
 
 ftl = Ftl(config.flash_page_size,
@@ -295,15 +296,15 @@ ftl = Ftl(config.flash_page_size,
           config.flash_num_blocks)
 
 def lba_read(pagenum):
-    recorder.debug('lba_read '+str(pagenum))
-    flash.page_read(pagenum)
+    recorder.put('lba_read', pagenum, 'user')
+    flash.page_read(pagenum, 'user')
 
 def lba_write(pagenum):
-    recorder.debug('lba_write '+str(pagenum))
+    recorder.put('lba_write', pagenum, 'user')
     ftl.write_page(pagenum)
 
 def lba_discard(pagenum):
-    recorder.debug('lba_discard '+str(pagenum))
-    ftl.invalidate_lba_page(pagenum)
+    recorder.put('lba_discard ', pagenum, 'user')
+    ftl.invalidate_lba_page(pagenum, 'user')
 
 

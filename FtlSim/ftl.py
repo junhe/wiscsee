@@ -1,5 +1,6 @@
 import dmftl
 import pmftl
+import recorder
 import config
 
 def lba_read(pagenum):
@@ -22,7 +23,7 @@ def lba_discard(pagenum):
 
 def debug_after_processing():
     pmftl.ftl.show_map()
-    print 'VALIDBITMAP', pmftl.ftl.validbitmap
-    print 'FREEBLOCKS ', pmftl.ftl.freeblocks
-    print 'USEDBLOCKS ', pmftl.ftl.usedblocks
+    recorder.debug( 'VALIDBITMAP', pmftl.ftl.validbitmap)
+    recorder.debug( 'FREEBLOCKS ', pmftl.ftl.freeblocks)
+    recorder.debug( 'USEDBLOCKS ', pmftl.ftl.usedblocks)
 

@@ -1,11 +1,20 @@
-def debug(msg):
-    print msg
 
-def put(operation, parameter):
-    print operation, parameter
+output_method = 'stdout'
 
-def warning(msg):
-    print 'WARNING', msg
+def debug(*args):
+    return
+    line = ' '.join( str(x) for x in args)
+    print 'DEBUG', line
 
-def error(msg):
-    print 'ERROR', msg
+def put(*msg):
+    line = ' '.join( str(x) for x in msg)
+    print 'RECORD', line
+
+def warning(*msg):
+    line = ' '.join( str(x) for x in msg)
+    print 'WARNING', line
+
+def error(*msg):
+    line = ' '.join( str(x) for x in msg)
+    print 'ERROR', line
+

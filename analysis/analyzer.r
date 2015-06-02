@@ -742,6 +742,47 @@ explore.websearch <- function()
     do_main_vis_lives()
 }
 
+explore.sim.results <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function()
+    {
+        d = read.table('./data/sim.result.sample', header=F,
+                       col.names = c('type', 'operation', 'pagenum')
+                       )
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        # print(head(d))
+        d$seqid = seq_along(d$operation)
+
+        quartz()
+        p = ggplot(d, aes(x=seqid, y=pagenum)) +
+            geom_point() +
+            facet_grid(operation~.)
+        print(p)
+        z = grid.locator()
+    }
+
+    do_main <- function()
+    {
+        d = load()
+        d = clean(d)
+        func(d)
+    }
+    do_main()
+}
+
+
 
 
 main <- function()
@@ -750,7 +791,8 @@ main <- function()
     # explore.FIU()
     # explore.madmax.1.blkparse()
     # explore.madmax.iterate()
-    explore.mail01()
+    # explore.mail01()
     # explore.websearch()
+    explore.sim.results()
 }
 main()
