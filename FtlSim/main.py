@@ -14,8 +14,10 @@ def read_lba_events(fpath):
     keys = ['operation', 'offset', 'size']
     for i, event in enumerate(events):
         event = event.strip('\n').split()
-        event[1] = int(event[1]) # offset
-        event[2] = int(event[2]) # size
+        # event[1] = eval(event[1]) # offset
+        # for debug
+        event[1] = eval(event[1])%(4096*4*16) #
+        event[2] = eval(event[2]) # size
         events[i] = event
 
     events = [dict(zip(keys, e)) for e in events]
@@ -30,12 +32,13 @@ def process_event(event):
         ftl.lba_discard(byte_to_pagenum(event['offset']))
 
 def main():
-    input_events = read_lba_events('./misc/lbaevents.sample')
-    # input_events = read_lba_events('./misc/lbawrite.sample')
+    # input_events = read_lba_events('./misc/lbaevents.sample')
+    input_events = read_lba_events('./misc/lbawrite.sample')
 
     for event in input_events:
         process_event(event)
         ftl.debug_after_processing()
+        raw_input()
 
 
 if __name__ == '__main__':

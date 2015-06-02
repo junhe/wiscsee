@@ -22,5 +22,7 @@ def lba_discard(pagenum):
 
 def debug_after_processing():
     pmftl.ftl.show_map()
-    print pmftl.ftl.validbitmap
-    print pmftl.ftl.freeblocks
+    print 'VALIDBITMAP', pmftl.ftl.validbitmap
+    print 'FREEBLOCKS ', pmftl.ftl.freeblocks
+    print 'USEDBLOCKS ', pmftl.ftl.usedblocks
+
