@@ -7,3 +7,5 @@ def put(operation, parameter):
 def warning(msg):
     print 'WARNING', msg
 
+def error(msg):
+    print 'ERROR', msg

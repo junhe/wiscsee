@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import ftl
+import argparse
 from common import byte_to_pagenum
 
 # TODO
@@ -27,9 +28,9 @@ def read_lba_events(fpath):
     keys = ['operation', 'offset', 'size']
     for i, event in enumerate(events):
         event = event.strip('\n').split()
-        # event[1] = eval(event[1]) # offset
+        event[1] = eval(event[1]) # offset
         # for debug
-        event[1] = eval(event[1])%(4096*4*16) #
+        # event[1] = eval(event[1])%(4096*4*16) #
         event[2] = eval(event[2]) # size
         events[i] = event
 
@@ -45,8 +46,19 @@ def process_event(event):
         ftl.lba_discard(byte_to_pagenum(event['offset']))
 
 def main():
+    parser = argparse.ArgumentParser(
+            description="It takes event input file."
+            )
+    parser.add_argument('-e', '--events', action='store', help='event file')
+    args = parser.parse_args()
+
+    if args.events == None:
+        parser.print_help()
+        exit(1)
+
+    input_events = read_lba_events(args.events)
     # input_events = read_lba_events('./misc/lbaevents.sample')
-    input_events = read_lba_events('./misc/lbawrite.sample')
+    # input_events = read_lba_events('./misc/lbawrite.sample')
 
     for event in input_events:
         process_event(event)

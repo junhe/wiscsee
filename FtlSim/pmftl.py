@@ -102,7 +102,10 @@ class Ftl:
 
     def pop_a_free_block(self):
         # take a block from free block queue
-        assert len(self.freeblocks) > 0, 'No free blocks in device!!!'
+        # assert len(self.freeblocks) > 0, 'No free blocks in device!!!'
+        if len(self.freeblocks) == 0:
+            recorder.error('No free blocks in device!!!!')
+            exit(1)
 
         blocknum = self.freeblocks.popleft()
         # now the block is busy, we put it to the used list.

@@ -10,6 +10,7 @@ import shlex
 import time
 import glob
 from time import localtime, strftime
+import config
 
 def shcmd(cmd, ignore_error=False):
     print 'Doing:', cmd
@@ -98,9 +99,33 @@ def table_to_file(table, filepath, adddic=None):
             rowstr = ';'.join(rowstr) + '\n'
             f.write(rowstr)
 
+def generate_lba_workload_seq(flash_page_size,
+                         flash_npage_per_block,
+                         flash_num_blocks,
+                         tofile
+                         ):
+    f = open(tofile, 'w')
+    totalpages = flash_npage_per_block * flash_num_blocks
+    print totalpages
+    raw_input()
+    for page in range(0, int(totalpages * 0.8)):
+        offset = page * flash_page_size
+        size = flash_page_size
+        event = 'write {} {}'.format(offset, size)
+        f.write(event + '\n')
+
+    f.close()
+
+def generate_lba_workload():
+    generate_lba_workload_seq(config.flash_page_size,
+                              config.flash_npage_per_block,
+                              config.flash_num_blocks,
+                              'misc/tmpworkload'
+                              )
+
 def main():
     #function you want to call
-    pass
+    generate_lba_workload()
 
 def _main():
     parser = argparse.ArgumentParser(
