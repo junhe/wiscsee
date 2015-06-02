@@ -8,6 +8,19 @@ from common import byte_to_pagenum
 # 2. implement dmftl in ftl module
 # 3. implement recorder.py
 
+
+# finish the testing chain
+# - LBA pattern workload generator
+# - seq, random, stride
+# - pattern visualizor
+# - LBA
+# - flash page
+
+# do sanity check with the above
+
+# - block mapping
+# - hybrid mapping
+
 def read_lba_events(fpath):
     with open(fpath, 'r') as f:
         events = f.readlines()
