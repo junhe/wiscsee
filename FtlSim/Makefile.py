@@ -11,6 +11,7 @@ import time
 import glob
 from time import localtime, strftime
 import config
+import simmain
 
 def shcmd(cmd, ignore_error=False):
     print 'Doing:', cmd
@@ -116,12 +117,33 @@ def generate_lba_workload_seq(flash_page_size,
 
     f.close()
 
+def generate_lba_workload_random(flash_page_size,
+                         flash_npage_per_block,
+                         flash_num_blocks,
+                         tofile
+                         ):
+    f = open(tofile, 'w')
+    totalpages = flash_npage_per_block * flash_num_blocks
+    print totalpages
+    raw_input()
+    for page in range(0, int(totalpages * 0.8)):
+        page = int(random.random() * totalpages)
+        offset = page * flash_page_size
+        size = flash_page_size
+        event = 'write {} {}'.format(offset, size)
+        f.write(event + '\n')
+
+    f.close()
+
 def generate_lba_workload():
+    workloadfile = 'misc/tmpworkload'
     generate_lba_workload_seq(config.flash_page_size,
                               config.flash_npage_per_block,
                               config.flash_num_blocks,
-                              'misc/tmpworkload'
+                              workloadfile
                               )
+    # shcmd('./main.py -e {}'.format(workloadfile))
+    main.sim_run(workloadfile)
 
 def main():
     #function you want to call

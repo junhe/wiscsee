@@ -45,6 +45,14 @@ def process_event(event):
     elif event['operation'] == 'discard':
         ftl.lba_discard(byte_to_pagenum(event['offset']))
 
+def sim_run(eventfile):
+    input_events = read_lba_events(args.events)
+
+    for event in input_events:
+        process_event(event)
+        ftl.debug_after_processing()
+        raw_input()
+
 def main():
     parser = argparse.ArgumentParser(
             description="It takes event input file."
@@ -56,15 +64,7 @@ def main():
         parser.print_help()
         exit(1)
 
-    input_events = read_lba_events(args.events)
-    # input_events = read_lba_events('./misc/lbaevents.sample')
-    # input_events = read_lba_events('./misc/lbawrite.sample')
-
-    for event in input_events:
-        process_event(event)
-        ftl.debug_after_processing()
-        raw_input()
-
+    sim_run(args.events)
 
 if __name__ == '__main__':
     main()
