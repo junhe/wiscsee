@@ -1,9 +1,11 @@
+from collections import deque
+
+import bitarray
+
+from common import *
+import config
 import flash
 import recorder
-import config
-from common import *
-import bitarray
-from collections import deque
 
 class Ftl:
     """

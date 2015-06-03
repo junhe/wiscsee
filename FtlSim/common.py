@@ -17,6 +17,10 @@ def page_to_block_off(pagenum):
     return pagenum / flash_npage_per_block, \
             pagenum % flash_npage_per_block
 
+def block_off_to_page(blocknum, pageoff):
+    "convert block number and page offset to page number"
+    return blocknum * flash_npage_per_block + pageoff
+
 def block_to_page_range(blocknum):
     return blocknum * flash_npage_per_block, \
             (blocknum + 1) * flash_npage_per_block
