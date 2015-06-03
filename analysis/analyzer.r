@@ -750,7 +750,7 @@ explore.sim.results <- function()
     load <- function()
     {
         d = read.table('./data/sim.result.sample', header=F,
-                       col.names = c('type', 'operation', 'pagenum')
+                       col.names = c('type', 'operation', 'pagenum', 'cat')
                        )
         return(d)
     }
@@ -765,8 +765,12 @@ explore.sim.results <- function()
         # print(head(d))
         d$seqid = seq_along(d$operation)
 
+        d$operation = factor(d$operation, levels=c('lba_write', 'page_write', 'block_erase'))
+
+        d[d$operation == 'block_erase', 'pagenum'] = d[d$operation == 'block_erase', 'pagenum'] * 4
+
         quartz()
-        p = ggplot(d, aes(x=seqid, y=pagenum)) +
+        p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
             geom_point() +
             facet_grid(operation~.)
         print(p)
