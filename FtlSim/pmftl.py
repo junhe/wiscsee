@@ -213,7 +213,11 @@ class Ftl:
                 maxratio = invratio
 
         if maxratio == 0:
+            recorder.debug("Cannot find victimblock maxratio is", maxratio)
             return None
+
+        if maxblock == None:
+            recorder.debug("no block in usedblocks[]")
 
         return maxblock
 
@@ -251,6 +255,7 @@ class Ftl:
         lastfree = len(self.freeblocks)
         cnt = 0
         while len(self.freeblocks) < self.low_num_blocks * 1.5:
+        # while True:
             # while we still can find victim blocks
             # 1. read valid pages from the victim block
             # 2. write the valid pages as if the are new
@@ -260,9 +265,12 @@ class Ftl:
             if victimblock == None:
                 # if next_victim_block() return None, it means
                 # no block can be a victim
+                recorder.debug( self.validbitmap )
+                recorder.debug('Cannot find a victim block')
                 break
             recorder.debug( 'next victimblock:', victimblock,
                     'invaratio', self.block_invalid_ratio(victimblock))
+            recorder.debug( self.validbitmap )
             # self.debug()
 
             self.move_valid_pages(victimblock)
@@ -278,6 +286,8 @@ class Ftl:
                 # time to check
                 if len(self.freeblocks) >= lastfree:
                     # Not making progress
+                    recorder.debug( self.validbitmap )
+                    recorder.debug('GC is not making progress! End GC')
                     break
                 else:
                     lastfree = len(self.freeblocks)

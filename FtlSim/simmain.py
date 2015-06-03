@@ -2,7 +2,6 @@
 
 import ftl
 import argparse
-import recorder
 from common import byte_to_pagenum
 
 # TODO

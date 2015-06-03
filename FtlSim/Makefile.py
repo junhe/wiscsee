@@ -108,13 +108,16 @@ def generate_lba_workload_seq(flash_page_size,
     f = open(tofile, 'w')
     totalpages = flash_npage_per_block * flash_num_blocks
     for page in range(0, totalpages * 2):
-        page = page % totalpages
+        page = int(page % (totalpages * 0.3))
         offset = page * flash_page_size
         size = flash_page_size
         event = 'write {} {}'.format(offset, size)
         f.write(event + '\n')
 
     f.close()
+
+def get_github_url():
+    shcmd('../get_github_url.py analysis/analyzer.r')
 
 def generate_lba_workload_random(flash_page_size,
                          flash_npage_per_block,
@@ -123,6 +126,7 @@ def generate_lba_workload_random(flash_page_size,
                          ):
     f = open(tofile, 'w')
     totalpages = flash_npage_per_block * flash_num_blocks
+    random.seed(1)
     for page in range(0, totalpages * 2):
         page = int(random.random() * totalpages)
         offset = page * flash_page_size
@@ -147,15 +151,18 @@ def generate_lba_workload(pattern):
                                   workloadfile
                                   )
 
-    simmain.sim_run(workloadfile)
+    # simmain.sim_run(workloadfile)
 
 def run_r_script(scriptpath):
     shcmd('Rscript {}'.format(scriptpath))
 
 def main():
     #function you want to call
-    generate_lba_workload('random')
-    # run_r_script('../analysis/analyzer.r')
+    # generate_lba_workload('random')
+    generate_lba_workload('seq')
+    shcmd('./simmain.py -e misc/tmpworkload |tee tmp2')
+    shcmd('grep RECORD tmp2 > ../analysis/data/sim.result.sample')
+    run_r_script('../analysis/analyzer.r')
 
 def _main():
     parser = argparse.ArgumentParser(
