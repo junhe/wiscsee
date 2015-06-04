@@ -317,6 +317,6 @@ def lba_write(pagenum):
 
 def lba_discard(pagenum):
     recorder.put('lba_discard ', pagenum, 'user')
-    ftl.invalidate_lba_page(pagenum, 'user')
+    ftl.invalidate_lba_page(pagenum)
 
 
