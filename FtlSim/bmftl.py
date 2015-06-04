@@ -214,6 +214,9 @@ class Ftl:
                     cat = 'amplified'
                 flash.page_write(pagenum, cat)
 
+        if len(self.freeblocks) < self.low_num_blocks:
+            self.garbage_collect()
+
     def block_invalid_ratio(self, blocknum):
         start, end = block_to_page_range(blocknum)
         return self.validbitmap[start:end].count(False) / float(config.flash_npage_per_block)
@@ -225,7 +228,7 @@ class Ftl:
 
         for blocknum in self.usedblocks:
             invratio = self.block_invalid_ratio(blocknum)
-            if invaratio == 1:
+            if invratio == 1:
                 return blocknum
 
         return None
@@ -258,6 +261,7 @@ class Ftl:
 
             block_to_clean = self.next_victim_block()
 
+        recorder.debug('===================================garbage collecting ends')
 
     def debug(self):
         self.show_map()

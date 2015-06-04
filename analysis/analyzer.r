@@ -762,10 +762,11 @@ explore.sim.results <- function()
 
     func <- function(d)
     {
-        # print(head(d))
+        # print((d))
         d$seqid = seq_along(d$operation)
 
-        d$operation = factor(d$operation, levels=c('lba_write', 'page_write', 'block_erase'))
+        print(levels(d$operation))
+        d$operation = factor(d$operation, levels=c('lba_write', 'page_read', 'page_write', 'block_erase'))
 
         d[d$operation == 'block_erase', 'pagenum'] = d[d$operation == 'block_erase', 'pagenum'] * 4
 
