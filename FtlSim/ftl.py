@@ -29,8 +29,14 @@ def lba_discard(pagenum):
         return bmftl.lba_discard(pagenum)
 
 def debug_after_processing():
-    pmftl.ftl.show_map()
-    recorder.debug( 'VALIDBITMAP', pmftl.ftl.validbitmap)
-    recorder.debug( 'FREEBLOCKS ', pmftl.ftl.freeblocks)
-    recorder.debug( 'USEDBLOCKS ', pmftl.ftl.usedblocks)
+    if config.ftl_type == 'pagemap':
+        pmftl.ftl.show_map()
+        recorder.debug( 'VALIDBITMAP', pmftl.ftl.validbitmap)
+        recorder.debug( 'FREEBLOCKS ', pmftl.ftl.freeblocks)
+        recorder.debug( 'USEDBLOCKS ', pmftl.ftl.usedblocks)
+    elif config.ftl_type == 'blockmap':
+        bmftl.ftl.show_map()
+        recorder.debug( 'VALIDBITMAP', bmftl.ftl.validbitmap)
+        recorder.debug( 'FREEBLOCKS ', bmftl.ftl.freeblocks)
+        recorder.debug( 'USEDBLOCKS ', bmftl.ftl.usedblocks)
 
