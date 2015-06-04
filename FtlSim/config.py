@@ -9,6 +9,7 @@ flash_num_blocks      = 16
 
 
 # directmap pagemap blockmap hybridmap
-ftl_type = 'pagemap'
+# ftl_type = 'pagemap'
+ftl_type = 'blockmap'
 
 

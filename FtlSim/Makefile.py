@@ -157,12 +157,12 @@ def run_r_script(scriptpath):
     shcmd('Rscript {}'.format(scriptpath))
 
 def main():
-    #function you want to call
-    # generate_lba_workload('random')
-    generate_lba_workload('seq')
-    shcmd('./simmain.py -e misc/tmpworkload |tee tmp2')
-    shcmd('grep RECORD tmp2 > ../analysis/data/sim.result.sample')
-    run_r_script('../analysis/analyzer.r')
+    # generate_lba_workload('seq')
+    # shcmd('./simmain.py -e misc/tmpworkload |tee tmp2')
+    # shcmd('grep RECORD tmp2 > ../analysis/data/sim.result.sample')
+    # run_r_script('../analysis/analyzer.r')
+
+    shcmd('./simmain.py -e misc/lbaevents.sample')
 
 def _main():
     parser = argparse.ArgumentParser(
