@@ -55,8 +55,13 @@ class Ftl:
             self.num_log_blocks + self.num_data_blocks))
         self.data_usedblocks = []
 
-        self.log_low_num_blocks = 0.5 * self.num_log_blocks
-        self.data_low_num_blocks = 0.5 * self.num_data_blocks
+        # self.log_low_num_blocks = int(0.5 * self.num_log_blocks)
+        # self.data_low_num_blocks = int(0.5 * self.num_data_blocks)
+        self.log_low_num_blocks = 2
+        self.data_low_num_blocks = 2
+
+        recorder.debug('log_low_num_blocks', self.log_low_num_blocks)
+        recorder.debug('data_low_num_blocks', self.data_low_num_blocks)
 
     # bitmap operations
     def validate_flash_page(self, pagenum):
@@ -137,6 +142,7 @@ class Ftl:
             del self.log_page_l2p[lbapagenum]
         elif self.data_blk_l2p.has_key(lba_block):
             # in data block
+            flashpagenum = self.lba_page_to_flash_page(lbapagenum)
             self.invalidate_flash_page(flashpagenum)
         else:
             recorder.warning('trying to invalidate a page not in page map')
@@ -165,12 +171,12 @@ class Ftl:
             return start
 
     def lba_page_to_flash_page(self, lba_pagenum):
-        lba_block, lba_off = page_to_block_off(lbapagenum)
+        lba_block, lba_off = page_to_block_off(lba_pagenum)
 
         if self.log_page_l2p.has_key(lba_pagenum):
             return self.log_page_l2p[lba_pagenum]
         elif self.data_blk_l2p.has_key(lba_block):
-            flash_block = self.blk_l2p[lba_block]
+            flash_block = self.data_blk_l2p[lba_block]
             return block_off_to_page(flash_block, lba_off)
         else:
             return None
@@ -229,13 +235,40 @@ class Ftl:
         self.validate_flash_page(toflashpage)
 
         # do garbage collection if necessary
-        if len(self.log_freeblocks) < self.log_low_num_blocks or \
+        if garbage_collect_enable and \
+                len(self.log_freeblocks) < self.log_low_num_blocks or \
                 len(self.data_freeblocks) < self.data_low_num_blocks:
             self.garbage_collect()
+
+    def garbage_collect(self):
+        recorder.debug('************************************************************')
+        recorder.debug('****************** start ***********************************')
+        self.garbage_collect_log_blocks()
+        self.garbage_collect_merge()
+        self.garbage_collect_data_blocks()
+        recorder.debug('******************** end *********************************')
+        recorder.debug('**********************************************************')
 
     def block_invalid_ratio(self, blocknum):
         start, end = block_to_page_range(blocknum)
         return self.validbitmap[start:end].count(False) / float(config.flash_npage_per_block)
+
+    def next_victim_log_block_to_merge(self):
+        # use stupid for the prototype
+        maxratio = -1
+        maxblock = None
+        # we don't want usedblocks[-1] because it is the one in use, newly popped block
+        # is appended to the used block list
+        for blocknum in self.log_usedblocks[0:-1]:
+            invratio = self.block_invalid_ratio(blocknum)
+            if invratio > maxratio:
+                maxblock = blocknum
+                maxratio = invratio
+
+        if maxblock == None:
+            recorder.debug("no block in log_usedblocks[]")
+
+        return maxblock
 
     def next_victim_log_block(self):
         # use stupid for the prototype
@@ -307,8 +340,8 @@ class Ftl:
     def flash_page_to_lba_page(self, flash_page):
         flash_block, flash_off = page_to_block_off(flash_page)
 
-        if self.log_page_p2l.has_key[flash_page]:
-            return log_page_p2l[flash_page]
+        if self.log_page_p2l.has_key(flash_page):
+            return self.log_page_p2l[flash_page]
         elif self.data_blk_p2l.has_key[flash_block]:
             lba_block = self.data_blk_p2l[flash_block]
             return block_off_to_page(lba_block, flash_off)
@@ -354,24 +387,25 @@ class Ftl:
     def aggregate_lba_block(self, lba_block, target_flash_block):
         """
         Given a lba block number, this function finds all its pages on flash,
-        read them to memory, and write them to flash_block flash_block has to
+        read them to memory, and write them to flash_block. flash_block has to
         be erased and writable.
         """
+        recorder.debug('In aggregate_lba_block')
         lba_start, lba_end = block_to_page_range(lba_block)
         moved = False
         for lba_page in range(lba_start, lba_end):
-            page_off = lba_page % self.flash_npage_per_block
+            page_off = lba_page % self.npages_per_block
             flash_page = self.lba_page_to_flash_page(lba_page)
 
             if flash_page != None:
                 # mapping exists (this lba page is on device)
                 moved = True
 
-                flash.page_read(flash_page)
+                flash.page_read(flash_page, 'amplified')
                 self.invalidate_flash_page(flash_page)
 
                 target_page = block_off_to_page(target_flash_block, page_off)
-                flash.page_write(target_page)
+                flash.page_write(target_page, 'amplified')
                 self.validate_flash_page(target_page)
 
                 if self.log_page_l2p.has_key(lba_page):
@@ -390,13 +424,44 @@ class Ftl:
                 self.data_blk_l2p[lba_block] = target_flash_block
                 self.data_blk_p2l[target_flash_block] = lba_block
                 del self.data_blk_p2l[flash_block]
+            else:
+                self.data_blk_l2p[lba_block] = target_flash_block
+                self.data_blk_p2l[target_flash_block] = lba_block
 
-    def full_merge(self, blocknum):
+        self.debug()
+        recorder.debug('End aggregate_lba_block:')
+
+    def full_merge(self, flash_blocknum):
         """
         For each valid flash page, we find all other pages in the same lba
         block with it and move them to a new flash block.
+        We need to add mapping for the new flash block
         """
-        pass
+        recorder.debug('I am in full_merge()')
+
+        flash_start, flash_end = block_to_page_range(flash_blocknum)
+
+        # find all the lba blocks of the pages in flash_blocknum
+        lbablocks = set()
+        for flash_pg in range(flash_start, flash_end):
+            if self.validbitmap[flash_pg] == True:
+                lba_pg = self.flash_page_to_lba_page(flash_pg)
+                lba_blk, off = page_to_block_off(lba_pg)
+                lbablocks.add(lba_blk)
+
+        # aggregate all the lba blocks
+        for lba_block in lbablocks:
+            new_data_block = self.pop_a_free_data_block()
+            self.aggregate_lba_block(lba_block, new_data_block)
+
+        # Now block flash_blocknum should have no valid pages
+        # we can now erase it and put it to free list
+        # flash_blocknum is a log block, and all its page mapping
+        # have been handled above, so we don't need to worry about
+        # page mapping.
+        self.erase_block(flash_blocknum, 'amplified')
+        self.log_usedblocks.remove(flash_blocknum)
+        self.log_freeblocks.append(flash_blocknum)
 
     def is_partial_mergable(self, flash_blocknum):
         """
@@ -414,15 +479,17 @@ class Ftl:
         try partial merge
         try full merge
         """
-        if is_switch_mergable(blocknum):
-            switch_merge(blocknum)
-        elif is_partial_mergable(blocknum):
+        recorder.debug('I am in merge_log_block()')
+
+        if self.is_switch_mergable(flash_blocknum):
+            self.switch_merge(flash_blocknum)
+        elif self.is_partial_mergable(flash_blocknum):
             # let us do full mergen even the block is partial mergable for now
             # but this branch will never be entered because
             # is_partial_mergable() always return false
-            full_merge(blocknum)
+            self.full_merge(flash_blocknum)
         else:
-            full_merge(blocknum)
+            self.full_merge(flash_blocknum)
 
     def garbage_collect_log_blocks(self):
         """
@@ -435,7 +502,7 @@ class Ftl:
             3. clean data blocks: this removes data blocks without valid pages
                 - garbage_collect_data_blocks()
         """
-        recorder.debug('------------------------------------garbage collecting')
+        recorder.debug('-----------garbage_collect_log_blocks-------------------------garbage collecting')
 
         lastfree = len(self.log_freeblocks)
         cnt = 0
@@ -460,9 +527,6 @@ class Ftl:
             self.log_usedblocks.remove(victimblock)
             self.log_freeblocks.append(victimblock)
 
-            recorder.debug( 'freeblocks', self.freeblocks)
-            recorder.debug( 'usedblocks', self.usedblocks)
-
             cnt += 1
             if cnt % 10 == 0:
                 # time to check
@@ -474,13 +538,33 @@ class Ftl:
                 else:
                     lastfree = len(self.log_freeblocks)
 
-        recorder.debug('==================================garbage collecting ends')
+        recorder.debug('============garbage_collect_log_blocks======================garbage collecting ends')
+
+    def garbage_collect_merge(self):
+        recorder.debug('-----------garbage_collect_merge()-------------------------garbage collecting')
+        self.debug()
+        while len(self.log_freeblocks) < self.log_low_num_blocks * 1.5:
+            recorder.debug(len(self.log_freeblocks), self.log_low_num_blocks*1.5)
+
+            victimblock = self.next_victim_log_block_to_merge()
+            if victimblock == None:
+                recorder.debug( self.validbitmap )
+                recorder.debug('Cannot find a victim block')
+                break
+            recorder.debug( 'next victimblock:', victimblock,
+                    'invaratio', self.block_invalid_ratio(victimblock))
+            recorder.debug( self.validbitmap )
+
+            self.merge_log_block(victimblock)
+
+            #
+        recorder.debug('============garbage_collect_merge()======================garbage collecting ends')
 
     def garbage_collect_data_blocks(self):
         """
         When needed, we recall all blocks with no valid page
         """
-        recorder.debug('------------------------------------garbage collecting')
+        recorder.debug('-----------------garbage_collect_data_blocks-------------------garbage collecting')
 
         block_to_clean = self.next_victim_data_block()
         while block_to_clean != None:
@@ -497,7 +581,7 @@ class Ftl:
 
             block_to_clean = self.next_victim_block()
 
-        recorder.debug('===================================garbage collecting ends')
+        recorder.debug('=============garbage_collect_data_blocks======================garbage collecting ends')
 
     def debug(self):
         self.show_map()
