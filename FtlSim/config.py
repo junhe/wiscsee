@@ -10,7 +10,8 @@ flash_num_blocks      = 16
 
 # directmap pagemap blockmap hybridmap
 # ftl_type = 'pagemap'
-ftl_type = 'blockmap'
+# ftl_type = 'blockmap'
+ftl_type = 'hybridmap'
 
 # for hybrid mapping
 # Note that log_block_ratio + data_block_ratio does not necessary

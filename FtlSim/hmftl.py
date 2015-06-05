@@ -28,8 +28,8 @@ class Ftl:
         self.npages_per_block = npages_per_block
         self.flash_num_blocks = num_blocks
 
-        self.num_log_blocks = config.log_block_ratio * self.flash_num_blocks
-        self.num_data_blocks =  config.data_block_ratio * self.flash_num_blocks
+        self.num_log_blocks = int(config.log_block_ratio * self.flash_num_blocks)
+        self.num_data_blocks =  int(config.data_block_ratio * self.flash_num_blocks)
 
 
         # initialize bitmap 1: valid, 0: invalid
@@ -119,11 +119,11 @@ class Ftl:
         return blocknum
 
     def show_map(self):
-        recorder.debug(self.log_page_l2p)
-        recorder.debug(self.log_page_p2l)
+        recorder.debug('log_page_l2p', self.log_page_l2p)
+        recorder.debug('log_page_p2l', self.log_page_p2l)
 
-        recorder.debug(self.data_page_l2p)
-        recorder.debug(self.data_page_p2l)
+        recorder.debug('data_blk_l2p', self.data_blk_l2p)
+        recorder.debug('data_blk_p2l', self.data_blk_p2l)
 
     def invalidate_lba_page(self, lbapagenum):
         "invalidate bitmap and remove the mapping"
@@ -134,8 +134,7 @@ class Ftl:
             flashpagenum = self.log_page_l2p[lbapagenum]
             assert self.validbitmap[flashpagenum], 'WTF, in map but not valid?'
             self.invalidate_flash_page(flashpagenum)
-            del self.l2p[lbapagenum]
-            # del self.p2l[flashpagenum]
+            del self.log_page_l2p[lbapagenum]
         elif self.data_blk_l2p.has_key(lba_block):
             # in data block
             self.invalidate_flash_page(flashpagenum)
@@ -219,10 +218,10 @@ class Ftl:
         self.log_end_pagenum = toflashpage
 
         if self.log_page_l2p.has_key(lba_pagenum):
-            oldflashpage = self.l2p[lba_pagenum]
+            oldflashpage = self.log_page_l2p[lba_pagenum]
             self.invalidate_flash_page(oldflashpage)
         elif self.data_blk_l2p.has_key(lba_block):
-            oldflashpage = lba_page_to_flash_page(lba_pagenum):
+            oldflashpage = lba_page_to_flash_page(lba_pagenum)
             self.invalidate_flash_page(oldflashpage)
 
         self.log_page_l2p[lba_pagenum] = toflashpage
@@ -230,7 +229,7 @@ class Ftl:
         self.validate_flash_page(toflashpage)
 
         # do garbage collection if necessary
-        if len(self.log_freeblocks < self.log_low_num_blocks or
+        if len(self.log_freeblocks) < self.log_low_num_blocks or \
                 len(self.data_freeblocks) < self.data_low_num_blocks:
             self.garbage_collect()
 
@@ -301,7 +300,7 @@ class Ftl:
             lba_pg = self.log_page_p2l[flash_pg]
             if lba_pg % self.npages_per_block != \
                 flash_pg % self.npages_per_block:
-                returnn False
+                return False
 
         return True
 
@@ -502,9 +501,11 @@ class Ftl:
 
     def debug(self):
         self.show_map()
-        recorder.debug( 'VALIDBITMAP', self.validbitmap)
-        recorder.debug( 'FREEBLOCKS ', self.freeblocks)
-        recorder.debug( 'USEDBLOCKS ', self.usedblocks)
+        recorder.debug('* VALIDBITMAP', self.validbitmap)
+        recorder.debug('* log_freeblocks ', self.log_freeblocks)
+        recorder.debug('* log_usedblocks ', self.log_usedblocks)
+        recorder.debug('* data_freeblocks', self.data_freeblocks)
+        recorder.debug('* data_usedblocks', self.data_usedblocks)
 
 
 ftl = Ftl(config.flash_page_size,
