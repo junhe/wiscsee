@@ -283,7 +283,8 @@ class Ftl:
         # The loop below will invalidate all pages in this block
         for page in range(start, end):
             if self.validbitmap[page] == True:
-                lba = self.p2l[page]
+                # lba = self.p2l[page]
+                lba = self.flash_page_to_lba_page(page)
                 self.write_page(lba, garbage_collect_enable=False, cat='amplified')
 
     def is_switch_mergable(self, flash_blocknum):
@@ -417,27 +418,30 @@ class Ftl:
         if is_switch_mergable(blocknum):
             switch_merge(blocknum)
         elif is_partial_mergable(blocknum):
-            pass
+            # let us do full mergen even the block is partial mergable for now
+            # but this branch will never be entered because
+            # is_partial_mergable() always return false
+            full_merge(blocknum)
         else:
             full_merge(blocknum)
 
-    def garbage_collect(self):
+    def garbage_collect_log_blocks(self):
         """
-        this function is called when len(self.freeblocks) is
-        smaller than a threshold.
+        There will be three types of garbage collection:
+            1. garbage collection within log blocks: this is the same as the
+            garbage collection in page mapping. Data blocks are not involved.
+                - garbage_collect_log_blocks()
+            2. merging log blocks to be data blocks
+                - merge_log_block()
+            3. clean data blocks: this removes data blocks without valid pages
+                - garbage_collect_data_blocks()
         """
         recorder.debug('------------------------------------garbage collecting')
 
-        lastfree = len(self.freeblocks)
+        lastfree = len(self.log_freeblocks)
         cnt = 0
-        while len(self.freeblocks) < self.low_num_blocks * 1.5:
-        # while True:
-            # while we still can find victim blocks
-            # 1. read valid pages from the victim block
-            # 2. write the valid pages as if the are new
-            # 3. erase the victimblock
-
-            victimblock = self.next_victim_block()
+        while len(self.log_freeblocks) < self.log_low_num_blocks * 1.5:
+            victimblock = self.next_victim_log_block()
             if victimblock == None:
                 # if next_victim_block() return None, it means
                 # no block can be a victim
@@ -452,7 +456,10 @@ class Ftl:
             self.move_valid_pages(victimblock)
             #block erasure is always counted as amplified
             self.erase_block(victimblock, 'amplified')
-            self.used_to_free(victimblock)
+
+            # move from used to free
+            self.log_usedblocks.remove(victimblock)
+            self.log_freeblocks.append(victimblock)
 
             recorder.debug( 'freeblocks', self.freeblocks)
             recorder.debug( 'usedblocks', self.usedblocks)
@@ -460,15 +467,38 @@ class Ftl:
             cnt += 1
             if cnt % 10 == 0:
                 # time to check
-                if len(self.freeblocks) >= lastfree:
+                if len(self.log_freeblocks) >= lastfree:
                     # Not making progress
                     recorder.debug( self.validbitmap )
                     recorder.debug('GC is not making progress! End GC')
                     break
                 else:
-                    lastfree = len(self.freeblocks)
+                    lastfree = len(self.log_freeblocks)
 
         recorder.debug('==================================garbage collecting ends')
+
+    def garbage_collect_data_blocks(self):
+        """
+        When needed, we recall all blocks with no valid page
+        """
+        recorder.debug('------------------------------------garbage collecting')
+
+        block_to_clean = self.next_victim_data_block()
+        while block_to_clean != None:
+            self.erase_block(block_to_clean, 'amplified')
+
+            # now remove the mappings
+            lba_block = self.data_blk_p2l[block_to_clean]
+            del self.data_blk_p2l[block_to_clean]
+            del self.data_blk_l2p[lba_block]
+
+            # move it to free list
+            self.data_usedblocks.remove(block_to_clean)
+            self.data_freeblocks.append(block_to_clean)
+
+            block_to_clean = self.next_victim_block()
+
+        recorder.debug('===================================garbage collecting ends')
 
     def debug(self):
         self.show_map()
