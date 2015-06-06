@@ -157,7 +157,8 @@ def run_r_script(scriptpath):
     shcmd('Rscript {}'.format(scriptpath))
 
 def main():
-    generate_lba_workload('random')
+    generate_lba_workload('seq')
+    # generate_lba_workload('random')
     shcmd('./simmain.py -e misc/tmpworkload |tee tmp2')
     shcmd('grep RECORD tmp2 > ../analysis/data/sim.result.sample')
     run_r_script('../analysis/analyzer.r')

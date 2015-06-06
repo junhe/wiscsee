@@ -227,7 +227,7 @@ class Ftl:
             oldflashpage = self.log_page_l2p[lba_pagenum]
             self.invalidate_flash_page(oldflashpage)
         elif self.data_blk_l2p.has_key(lba_block):
-            oldflashpage = lba_page_to_flash_page(lba_pagenum)
+            oldflashpage = self.lba_page_to_flash_page(lba_pagenum)
             self.invalidate_flash_page(oldflashpage)
 
         self.log_page_l2p[lba_pagenum] = toflashpage
@@ -243,9 +243,10 @@ class Ftl:
     def garbage_collect(self):
         recorder.debug('************************************************************')
         recorder.debug('****************** start ***********************************')
-        self.garbage_collect_log_blocks()
+        # self.garbage_collect_log_blocks()
         self.garbage_collect_merge()
-        self.garbage_collect_data_blocks()
+        # self.garbage_collect_data_blocks()
+        self.debug()
         recorder.debug('******************** end *********************************')
         recorder.debug('**********************************************************')
 
@@ -365,6 +366,7 @@ class Ftl:
         At beginning, the pages in flash_blocknum have mapping in log map
         you want to remove those and add block mapping in block map
         """
+        recorder.debug("I am in switch_merge()-~~~~~~~~~~-")
         flash_pg_start, flash_pg_end = block_to_page_range(flash_blocknum)
         lba_pg_start = self.flash_page_to_lba_page(flash_pg_start)
         lba_block, lba_off = page_to_block_off(lba_pg_start)
@@ -376,7 +378,7 @@ class Ftl:
         # removing log page mapping
         for pg in range(flash_pg_start, flash_pg_end):
             if self.validbitmap[pg] == True:
-                remove_log_mapping_by_flash_page_num(pg)
+                self.remove_log_mapping_by_flash_page_num(pg)
 
         # valid bitmap does not change
 
@@ -390,7 +392,8 @@ class Ftl:
         read them to memory, and write them to flash_block. flash_block has to
         be erased and writable.
         """
-        recorder.debug('In aggregate_lba_block')
+        recorder.debug('In aggregate_lba_block from lba_block', lba_block,
+                'to', target_flash_block)
         lba_start, lba_end = block_to_page_range(lba_block)
         moved = False
         for lba_page in range(lba_start, lba_end):
@@ -400,6 +403,7 @@ class Ftl:
             if flash_page != None:
                 # mapping exists (this lba page is on device)
                 moved = True
+
 
                 flash.page_read(flash_page, 'amplified')
                 self.invalidate_flash_page(flash_page)
@@ -414,6 +418,9 @@ class Ftl:
                     # later we will establish block mapping
                     del self.log_page_l2p[lba_page]
                     del self.log_page_p2l[flash_page]
+
+                recorder.debug('move lba', lba_page, '(flash:', flash_page,
+                        ') to flash', target_page)
 
         # Now all pages of lba_block is in target_flash_block
         # we now need to handle the mappings
@@ -437,7 +444,7 @@ class Ftl:
         block with it and move them to a new flash block.
         We need to add mapping for the new flash block
         """
-        recorder.debug('I am in full_merge()')
+        recorder.debug('I am in full_merge()!!!!!!!!~~~~~~~~~~-!')
 
         flash_start, flash_end = block_to_page_range(flash_blocknum)
 
