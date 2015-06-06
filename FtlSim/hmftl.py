@@ -55,10 +55,8 @@ class Ftl:
             self.num_log_blocks + self.num_data_blocks))
         self.data_usedblocks = []
 
-        # self.log_low_num_blocks = int(0.5 * self.num_log_blocks)
-        # self.data_low_num_blocks = int(0.5 * self.num_data_blocks)
-        self.log_low_num_blocks = 2
-        self.data_low_num_blocks = 2
+        self.log_low_num_blocks = int(0.5 * self.num_log_blocks)
+        self.data_low_num_blocks = int(0.5 * self.num_data_blocks)
 
         recorder.debug('log_low_num_blocks', self.log_low_num_blocks)
         recorder.debug('data_low_num_blocks', self.data_low_num_blocks)
@@ -102,23 +100,31 @@ class Ftl:
         pass
 
     def pop_a_free_log_block(self):
-        if not self.log_freeblocks:
+        if self.log_freeblocks:
+            blocknum = self.log_freeblocks.popleft()
+        elif self.data_freeblocks:
+            # get some free blocks from data block
+            recorder.debug('borrow from data blocks')
+            blocknum = self.data_freeblocks.popleft()
+        else:
+            # nobody has free block
             recorder.error('No free log blocks in device!!!!')
             # TODO: maybe try garbage collecting here
             exit(1)
-
-        blocknum = self.log_freeblocks.popleft()
 
         self.log_usedblocks.append(blocknum)
         return blocknum
 
     def pop_a_free_data_block(self):
-        if not self.data_freeblocks:
-            recorder.error('No free data blocks in device!!!!')
+        if self.data_freeblocks:
+            blocknum = self.data_freeblocks.popleft()
+        elif self.log_freeblocks:
+            blocknum = self.log_freeblocks.popleft()
+        else:
+            # nobody has free block
+            recorder.error('No free log blocks in device!!!!')
             # TODO: maybe try garbage collecting here
             exit(1)
-
-        blocknum = self.data_freeblocks.popleft()
 
         self.data_usedblocks.append(blocknum)
         return blocknum
@@ -181,7 +187,7 @@ class Ftl:
         else:
             return None
 
-    def write_page(self, lba_pagenum, garbage_collect_enable=True, cat='user'):
+    def write_page(self, lba_pagenum, garbage_collect_enable, cat):
         """
         to write a page:
             1. find a new page in log blocks by next_page_to_program()
@@ -236,16 +242,16 @@ class Ftl:
 
         # do garbage collection if necessary
         if garbage_collect_enable and \
-                len(self.log_freeblocks) < self.log_low_num_blocks or \
-                len(self.data_freeblocks) < self.data_low_num_blocks:
+            (len(self.log_freeblocks) < self.log_low_num_blocks or \
+            len(self.data_freeblocks) < self.data_low_num_blocks):
             self.garbage_collect()
 
     def garbage_collect(self):
         recorder.debug('************************************************************')
         recorder.debug('****************** start ***********************************')
-        # self.garbage_collect_log_blocks()
+        self.garbage_collect_log_blocks()
         self.garbage_collect_merge()
-        # self.garbage_collect_data_blocks()
+        self.garbage_collect_data_blocks()
         self.debug()
         recorder.debug('******************** end *********************************')
         recorder.debug('**********************************************************')
@@ -578,15 +584,17 @@ class Ftl:
             self.erase_block(block_to_clean, 'amplified')
 
             # now remove the mappings
-            lba_block = self.data_blk_p2l[block_to_clean]
-            del self.data_blk_p2l[block_to_clean]
-            del self.data_blk_l2p[lba_block]
+            # some blocks may be used by has no mapping
+            if self.data_blk_p2l.has_key(block_to_clean):
+                # lba_block = self.data_blk_p2l[block_to_clean]
+                del self.data_blk_p2l[block_to_clean]
+                # del self.data_blk_l2p[lba_block]
 
             # move it to free list
             self.data_usedblocks.remove(block_to_clean)
             self.data_freeblocks.append(block_to_clean)
 
-            block_to_clean = self.next_victim_block()
+            block_to_clean = self.next_victim_data_block()
 
         recorder.debug('=============garbage_collect_data_blocks======================garbage collecting ends')
 
@@ -609,7 +617,7 @@ def lba_read(pagenum):
 
 def lba_write(pagenum):
     recorder.put('lba_write', pagenum, 'user')
-    ftl.write_page(pagenum)
+    ftl.write_page(pagenum, garbage_collect_enable=True, cat='user')
 
 def lba_discard(pagenum):
     recorder.put('lba_discard ', pagenum, 'user')
