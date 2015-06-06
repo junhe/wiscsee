@@ -28,10 +28,6 @@ class Ftl:
         self.npages_per_block = npages_per_block
         self.flash_num_blocks = num_blocks
 
-        self.num_log_blocks = int(config.log_block_ratio * self.flash_num_blocks)
-        self.num_data_blocks =  int(config.data_block_ratio * self.flash_num_blocks)
-
-
         # initialize bitmap 1: valid, 0: invalid
         # valid means a page has data, invalid means it has garbage
         npages = num_blocks * npages_per_block
@@ -46,20 +42,23 @@ class Ftl:
 
         self.log_end_pagenum = -1 # the page number of the last write
 
-        # initialize log free and used list
-        self.log_freeblocks = deque(range(self.num_log_blocks))
+        # initialize free list
+        self.freeblocks = deque(range(self.flash_num_blocks))
+        # initialize usedblocks
         self.log_usedblocks = []
-
-        # initialize data free and used list
-        self.data_freeblocks = deque(range(self.num_log_blocks,
-            self.num_log_blocks + self.num_data_blocks))
         self.data_usedblocks = []
 
-        self.log_low_num_blocks = int(0.5 * self.num_log_blocks)
-        self.data_low_num_blocks = int(0.5 * self.num_data_blocks)
+        # self.log_low_num_blocks = int(config.low_log_block_ratio
+            # * self.flash_num_blocks)
+        # self.data_low_num_blocks = int(config.low_data_block_ratio
+            # * self.flash_num_blocks)
+        self.log_high_num_blocks = int(config.high_log_block_ratio
+            * self.flash_num_blocks)
+        self.data_high_num_blocks = int(config.high_data_block_ratio
+            * self.flash_num_blocks)
 
-        recorder.debug('log_low_num_blocks', self.log_low_num_blocks)
-        recorder.debug('data_low_num_blocks', self.data_low_num_blocks)
+        recorder.debug('log_high_num_blocks', self.log_high_num_blocks)
+        recorder.debug('data_high_num_blocks', self.data_high_num_blocks)
 
     # bitmap operations
     def validate_flash_page(self, pagenum):
@@ -99,33 +98,24 @@ class Ftl:
         "this is a dummy function"
         pass
 
-    def pop_a_free_log_block(self):
-        if self.log_freeblocks:
-            blocknum = self.log_freeblocks.popleft()
-        elif self.data_freeblocks:
-            # get some free blocks from data block
-            recorder.debug('borrow from data blocks')
-            blocknum = self.data_freeblocks.popleft()
+    def pop_a_free_block(self):
+        if self.freeblocks:
+            blocknum = self.freeblocks.popleft()
         else:
             # nobody has free block
-            recorder.error('No free log blocks in device!!!!')
+            recorder.error('No free blocks in device!!!!')
             # TODO: maybe try garbage collecting here
             exit(1)
 
+        return blocknum
+
+    def pop_a_free_block_to_log(self):
+        blocknum = self.pop_a_free_block()
         self.log_usedblocks.append(blocknum)
         return blocknum
 
-    def pop_a_free_data_block(self):
-        if self.data_freeblocks:
-            blocknum = self.data_freeblocks.popleft()
-        elif self.log_freeblocks:
-            blocknum = self.log_freeblocks.popleft()
-        else:
-            # nobody has free block
-            recorder.error('No free log blocks in device!!!!')
-            # TODO: maybe try garbage collecting here
-            exit(1)
-
+    def pop_a_free_block_to_data(self):
+        blocknum = self.pop_a_free_block()
         self.data_usedblocks.append(blocknum)
         return blocknum
 
@@ -172,7 +162,7 @@ class Ftl:
         if curblock == nextblock:
             return nextpage
         else:
-            block = self.pop_a_free_log_block()
+            block = self.pop_a_free_block_to_log()
             start, end = block_to_page_range(block)
             return start
 
@@ -242,8 +232,8 @@ class Ftl:
 
         # do garbage collection if necessary
         if garbage_collect_enable and \
-            (len(self.log_freeblocks) < self.log_low_num_blocks or \
-            len(self.data_freeblocks) < self.data_low_num_blocks):
+            (len(self.log_usedblocks) >= self.log_high_num_blocks or \
+            len(self.data_usedblocks) >= self.data_high_num_blocks):
             self.garbage_collect()
 
     def garbage_collect(self):
@@ -278,7 +268,7 @@ class Ftl:
         return maxblock
 
     def next_victim_log_block(self):
-        # use stupid for the prototype
+        # Greedy algorithm
         maxratio = -1
         maxblock = None
         # we don't want usedblocks[-1] because it is the one in use, newly popped block
@@ -392,6 +382,8 @@ class Ftl:
         self.log_usedblocks.remove(flash_blocknum)
         self.data_usedblocks.append(flash_blocknum)
 
+        recorder.debug('SWITCH MERGE IS DONE')
+
     def aggregate_lba_block(self, lba_block, target_flash_block):
         """
         Given a lba block number, this function finds all its pages on flash,
@@ -464,7 +456,7 @@ class Ftl:
 
         # aggregate all the lba blocks
         for lba_block in lbablocks:
-            new_data_block = self.pop_a_free_data_block()
+            new_data_block = self.pop_a_free_block_to_data()
             self.aggregate_lba_block(lba_block, new_data_block)
 
         # Now block flash_blocknum should have no valid pages
@@ -474,7 +466,7 @@ class Ftl:
         # page mapping.
         self.erase_block(flash_blocknum, 'amplified')
         self.log_usedblocks.remove(flash_blocknum)
-        self.log_freeblocks.append(flash_blocknum)
+        self.freeblocks.append(flash_blocknum)
 
     def is_partial_mergable(self, flash_blocknum):
         """
@@ -517,9 +509,11 @@ class Ftl:
         """
         recorder.debug('-----------garbage_collect_log_blocks-------------------------garbage collecting')
 
-        lastfree = len(self.log_freeblocks)
+        lastused = len(self.log_usedblocks)
         cnt = 0
-        while len(self.log_freeblocks) < self.log_low_num_blocks * 1.5:
+        while len(self.log_usedblocks) >= self.log_high_num_blocks:
+            # used too many log blocks, need to garbage collect some to
+            # free some, hopefully
             victimblock = self.next_victim_log_block()
             if victimblock == None:
                 # if next_victim_block() return None, it means
@@ -530,7 +524,6 @@ class Ftl:
             recorder.debug( 'next victimblock:', victimblock,
                     'invaratio', self.block_invalid_ratio(victimblock))
             recorder.debug( self.validbitmap )
-            # self.debug()
 
             self.move_valid_pages(victimblock)
             #block erasure is always counted as amplified
@@ -538,27 +531,24 @@ class Ftl:
 
             # move from used to free
             self.log_usedblocks.remove(victimblock)
-            self.log_freeblocks.append(victimblock)
+            self.freeblocks.append(victimblock)
 
             cnt += 1
             if cnt % 10 == 0:
                 # time to check
-                if len(self.log_freeblocks) >= lastfree:
+                if len(self.log_usedblocks) >= lastused:
                     # Not making progress
                     recorder.debug( self.validbitmap )
                     recorder.debug('GC is not making progress! End GC')
                     break
-                else:
-                    lastfree = len(self.log_freeblocks)
+                lastused = len(self.log_usedblocks)
 
         recorder.debug('============garbage_collect_log_blocks======================garbage collecting ends')
 
     def garbage_collect_merge(self):
         recorder.debug('-----------garbage_collect_merge()-------------------------garbage collecting')
         self.debug()
-        while len(self.log_freeblocks) < self.log_low_num_blocks * 1.5:
-            recorder.debug(len(self.log_freeblocks), self.log_low_num_blocks*1.5)
-
+        while len(self.log_usedblocks) >= self.log_high_num_blocks:
             victimblock = self.next_victim_log_block_to_merge()
             if victimblock == None:
                 recorder.debug( self.validbitmap )
@@ -592,7 +582,7 @@ class Ftl:
 
             # move it to free list
             self.data_usedblocks.remove(block_to_clean)
-            self.data_freeblocks.append(block_to_clean)
+            self.freeblocks.append(block_to_clean)
 
             block_to_clean = self.next_victim_data_block()
 
@@ -601,9 +591,8 @@ class Ftl:
     def debug(self):
         self.show_map()
         recorder.debug('* VALIDBITMAP', self.validbitmap)
-        recorder.debug('* log_freeblocks ', self.log_freeblocks)
+        recorder.debug('* freeblocks ', self.freeblocks)
         recorder.debug('* log_usedblocks ', self.log_usedblocks)
-        recorder.debug('* data_freeblocks', self.data_freeblocks)
         recorder.debug('* data_usedblocks', self.data_usedblocks)
 
 
