@@ -390,13 +390,15 @@ class Ftl:
         read them to memory, and write them to flash_block. flash_block has to
         be erased and writable.
         """
-        recorder.debug('In aggregate_lba_block from lba_block', lba_block,
+        recorder.debug2('In aggregate_lba_block from lba_block', lba_block,
                 'to', target_flash_block)
         lba_start, lba_end = block_to_page_range(lba_block)
         moved = False
         for lba_page in range(lba_start, lba_end):
             page_off = lba_page % self.npages_per_block
             flash_page = self.lba_page_to_flash_page(lba_page)
+            recorder.debug2('trying to move lba_page', lba_page,
+                    '(flash_page:', flash_page, ')')
 
             if flash_page != None:
                 # mapping exists (this lba page is on device)
@@ -417,15 +419,18 @@ class Ftl:
                     del self.log_page_l2p[lba_page]
                     del self.log_page_p2l[flash_page]
 
-                recorder.debug('move lba', lba_page, '(flash:', flash_page,
+                recorder.debug2('move lba', lba_page, '(flash:', flash_page,
                         ') to flash', target_page)
 
         # Now all pages of lba_block is in target_flash_block
         # we now need to handle the mappings
         if moved:
             if self.data_blk_l2p.has_key(lba_block):
+                self.debug2()
                 # the lba block was in the mapping
                 flash_block = self.data_blk_l2p[lba_block]
+                recorder.debug2('lba_block', lba_block,
+                                'flash_block', flash_block)
                 self.data_blk_l2p[lba_block] = target_flash_block
                 self.data_blk_p2l[target_flash_block] = lba_block
                 del self.data_blk_p2l[flash_block]
@@ -589,12 +594,28 @@ class Ftl:
         recorder.debug('=============garbage_collect_data_blocks======================garbage collecting ends')
 
     def debug(self):
-        self.show_map()
+        recorder.debug('log_page_l2p', self.log_page_l2p)
+        recorder.debug('log_page_p2l', self.log_page_p2l)
+
+        recorder.debug('data_blk_l2p', self.data_blk_l2p)
+        recorder.debug('data_blk_p2l', self.data_blk_p2l)
+
         recorder.debug('* VALIDBITMAP', self.validbitmap)
         recorder.debug('* freeblocks ', self.freeblocks)
         recorder.debug('* log_usedblocks ', self.log_usedblocks)
         recorder.debug('* data_usedblocks', self.data_usedblocks)
 
+    def debug2(self):
+        recorder.debug2('log_page_l2p', self.log_page_l2p)
+        recorder.debug2('log_page_p2l', self.log_page_p2l)
+
+        recorder.debug2('data_blk_l2p', self.data_blk_l2p)
+        recorder.debug2('data_blk_p2l', self.data_blk_p2l)
+
+        recorder.debug2('* VALIDBITMAP', self.validbitmap)
+        recorder.debug2('* freeblocks ', self.freeblocks)
+        recorder.debug2('* log_usedblocks ', self.log_usedblocks)
+        recorder.debug2('* data_usedblocks', self.data_usedblocks)
 
 ftl = Ftl(config.flash_page_size,
           config.flash_npage_per_block,
