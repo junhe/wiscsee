@@ -77,6 +77,50 @@ class Ftl:
         start, end = block_to_page_range(blocknum)
         self.validbitmap[start : end] = False
 
+    # mapping operations
+    def add_data_blk_mapping(self, lba_block, flash_block):
+        """
+        we don't want l2p and p2l to be asymmetric, so we assert
+        The assertion will make sure that we increase both mappings
+        by one after the function.
+        """
+        assert not self.data_blk_l2p.has_key(lba_block)
+        assert not self.data_blk_p2l.has_key(flash_block)
+
+        self.data_blk_l2p[lba_block] = flash_block
+        self.data_blk_p2l[flash_block] = lba_block
+
+    def remove_data_blk_mapping_by_lba(self, lba_block):
+        "The mapping must exist"
+        flash_block = self.data_blk_l2p[lba_block]
+        del self.data_blk_l2p[lba_block]
+        del self.data_blk_p2l[flash_block]
+
+    def remove_data_blk_mapping_by_flash(self, flash_block):
+        "The mapping must exist"
+        lba_block = self.data_blk_p2l[flash_block]
+        del self.data_blk_l2p[lba_block]
+        del self.data_blk_p2l[flash_block]
+
+    def add_log_page_mapping(self, lba_page, flash_page):
+        assert not self.log_page_l2p.has_key(lba_page)
+        assert not self.log_page_p2l.has_key(flash_page)
+
+        self.log_page_l2p[lba_page] = flash_page
+        self.log_page_p2l[flash_page] = lba_page
+
+    def remove_log_page_mapping_by_lba(self, lba_page):
+        "The mapping must exist"
+        flash_page = self.log_page_l2p[lba_page]
+        del self.log_page_l2p[lba_page]
+        del self.log_page_p2l[flash_page]
+
+    def remove_log_page_mapping_by_flash(self, flash_page):
+        "The mapping must exist"
+        lba_page = self.log_page_p2l[flash_page]
+        del self.log_page_l2p[lba_page]
+        del self.log_page_p2l[flash_page]
+
     # basic operations
     def read_page(self, pagenum, cat):
         flash.page_read(pagenum, cat)
@@ -119,13 +163,6 @@ class Ftl:
         self.data_usedblocks.append(blocknum)
         return blocknum
 
-    def show_map(self):
-        recorder.debug('log_page_l2p', self.log_page_l2p)
-        recorder.debug('log_page_p2l', self.log_page_p2l)
-
-        recorder.debug('data_blk_l2p', self.data_blk_l2p)
-        recorder.debug('data_blk_p2l', self.data_blk_p2l)
-
     def invalidate_lba_page(self, lbapagenum):
         "invalidate bitmap and remove the mapping"
         lba_block, lba_off = page_to_block_off(lbapagenum)
@@ -135,10 +172,11 @@ class Ftl:
             flashpagenum = self.log_page_l2p[lbapagenum]
             assert self.validbitmap[flashpagenum], 'WTF, in map but not valid?'
             self.invalidate_flash_page(flashpagenum)
-            del self.log_page_l2p[lbapagenum]
+            remove_log_page_mapping_by_lba(lbapagenum)
         elif self.data_blk_l2p.has_key(lba_block):
             # in data block
             flashpagenum = self.lba_page_to_flash_page(lbapagenum)
+            assert self.validbitmap[flashpagenum], 'WTF, in map but not valid?'
             self.invalidate_flash_page(flashpagenum)
         else:
             recorder.warning('trying to invalidate a page not in page map')
@@ -222,12 +260,12 @@ class Ftl:
         if self.log_page_l2p.has_key(lba_pagenum):
             oldflashpage = self.log_page_l2p[lba_pagenum]
             self.invalidate_flash_page(oldflashpage)
+            self.remove_log_page_mapping_by_lba(lba_pagenum)
         elif self.data_blk_l2p.has_key(lba_block):
             oldflashpage = self.lba_page_to_flash_page(lba_pagenum)
             self.invalidate_flash_page(oldflashpage)
 
-        self.log_page_l2p[lba_pagenum] = toflashpage
-        self.log_page_p2l[toflashpage] = lba_pagenum
+        self.add_log_page_mapping(lba_page=lba_pagenum, flash_page=toflashpage)
         self.validate_flash_page(toflashpage)
 
         # do garbage collection if necessary
@@ -346,16 +384,6 @@ class Ftl:
             recorder.error("Cannot find flash page in any mapping table")
             exit(1)
 
-    def remove_log_mapping_by_flash_page_num(self, flash_pagenum):
-        lba_pagenum = self.log_page_p2l[flash_pagenum]
-        del self.log_page_p2l[flash_pagenum]
-        del self.log_page_l2p[lba_pagenum]
-
-    def remove_log_mapping_by_lba_page_num(self, lba_pagenum):
-        flash_pagenum = self.log_page_l2p[lba_pagenum]
-        del self.log_page_l2p[flash_pagenum]
-        del self.log_page_p2l[lba_pagenum]
-
     def switch_merge(self, flash_blocknum):
         """
         Before calling, you need to make sure that flash_block is switch mergable
@@ -368,13 +396,13 @@ class Ftl:
         lba_block, lba_off = page_to_block_off(lba_pg_start)
 
         # add data block mapping
-        self.data_blk_l2p[lba_block] = flash_blocknum
-        self.data_blk_p2l[flash_blocknum] = lba_block
+        self.add_data_blk_mapping(lba_block=lba_block,
+            flash_block=flash_blocknum)
 
         # removing log page mapping
         for pg in range(flash_pg_start, flash_pg_end):
             if self.validbitmap[pg] == True:
-                self.remove_log_mapping_by_flash_page_num(pg)
+                self.remove_log_page_mapping_by_flash(pg)
 
         # valid bitmap does not change
 
@@ -416,8 +444,7 @@ class Ftl:
                     # handle the page mapping case
                     # you only need to delete the page mapping because
                     # later we will establish block mapping
-                    del self.log_page_l2p[lba_page]
-                    del self.log_page_p2l[flash_page]
+                    self.remove_log_page_mapping_by_lba(lba_page)
 
                 recorder.debug2('move lba', lba_page, '(flash:', flash_page,
                         ') to flash', target_page)
@@ -431,12 +458,12 @@ class Ftl:
                 flash_block = self.data_blk_l2p[lba_block]
                 recorder.debug2('lba_block', lba_block,
                                 'flash_block', flash_block)
-                self.data_blk_l2p[lba_block] = target_flash_block
-                self.data_blk_p2l[target_flash_block] = lba_block
-                del self.data_blk_p2l[flash_block]
+                self.remove_data_blk_mapping_by_lba(lba_block)
+                self.add_data_blk_mapping(lba_block=lba_block,
+                    flash_block=target_flash_block)
             else:
-                self.data_blk_l2p[lba_block] = target_flash_block
-                self.data_blk_p2l[target_flash_block] = lba_block
+                self.add_data_blk_mapping(lba_block=lba_block,
+                    flash_block=target_flash_block)
 
         self.debug()
         recorder.debug('End aggregate_lba_block:')
@@ -581,9 +608,7 @@ class Ftl:
             # now remove the mappings
             # some blocks may be used by has no mapping
             if self.data_blk_p2l.has_key(block_to_clean):
-                # lba_block = self.data_blk_p2l[block_to_clean]
-                del self.data_blk_p2l[block_to_clean]
-                # del self.data_blk_l2p[lba_block]
+                self.remove_data_blk_mapping_by_flash(block_to_clean)
 
             # move it to free list
             self.data_usedblocks.remove(block_to_clean)
@@ -616,6 +641,14 @@ class Ftl:
         recorder.debug2('* freeblocks ', self.freeblocks)
         recorder.debug2('* log_usedblocks ', self.log_usedblocks)
         recorder.debug2('* data_usedblocks', self.data_usedblocks)
+
+    def show_map(self):
+        recorder.debug('log_page_l2p', self.log_page_l2p)
+        recorder.debug('log_page_p2l', self.log_page_p2l)
+
+        recorder.debug('data_blk_l2p', self.data_blk_l2p)
+        recorder.debug('data_blk_p2l', self.data_blk_p2l)
+
 
 ftl = Ftl(config.flash_page_size,
           config.flash_npage_per_block,
