@@ -5,7 +5,7 @@
 # for debugging
 flash_page_size       = 4096
 flash_npage_per_block = 16
-flash_num_blocks      = 16
+flash_num_blocks      = 32
 
 
 # directmap pagemap blockmap hybridmap

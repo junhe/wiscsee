@@ -107,7 +107,7 @@ def generate_lba_workload_seq(flash_page_size,
                          ):
     f = open(tofile, 'w')
     totalpages = flash_npage_per_block * flash_num_blocks
-    for page in range(0, totalpages * 2):
+    for page in range(1, totalpages * 2):
         page = int(page % (totalpages * 0.3))
         offset = page * flash_page_size
         size = flash_page_size
