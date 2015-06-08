@@ -3,6 +3,7 @@
 import ftl
 import argparse
 from common import byte_to_pagenum
+import sys
 
 # TODO
 # 1. read LBA layer trace
@@ -48,9 +49,14 @@ def process_event(event):
 def sim_run(eventfile):
     input_events = read_lba_events(eventfile)
 
+    cnt = 0
     for event in input_events:
         process_event(event)
         ftl.debug_after_processing()
+        cnt += 1
+        if cnt % 10 == 0:
+            print 'currnt count', cnt
+            sys.stdout.flush()
 
 def main():
     parser = argparse.ArgumentParser(

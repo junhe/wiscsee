@@ -127,8 +127,8 @@ def generate_lba_workload_random(flash_page_size,
     f = open(tofile, 'w')
     totalpages = flash_npage_per_block * flash_num_blocks
     random.seed(1)
-    for page in range(0, totalpages * 2):
-        page = int(random.random() * totalpages)
+    for page in range(0, totalpages * 3):
+        page = int(random.random() * totalpages * 0.5)
         offset = page * flash_page_size
         size = flash_page_size
         event = 'write {} {}'.format(offset, size)
@@ -159,8 +159,11 @@ def run_r_script(scriptpath):
 def main():
     generate_lba_workload('seq')
     # generate_lba_workload('random')
-    shcmd('./simmain.py -e misc/tmpworkload |tee tmp2')
+    print 'workload generated'
+    shcmd('./simmain.py -e misc/tmpworkload > tmp2')
+    shcmd('sync')
     shcmd('grep RECORD tmp2 > ../analysis/data/sim.result.sample')
+    shcmd('sync')
     run_r_script('../analysis/analyzer.r')
 
     # shcmd('./simmain.py -e misc/lbaevents.sample')

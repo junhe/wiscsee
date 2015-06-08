@@ -15,8 +15,8 @@ def run_and_get_output(cmd):
 def commit_file(fpath):
     rootdir = get_root_dir_path()
     cmd = ['git', 'commit',
-           '-am', 'update '+fpath,
-           os.path.join(rootdir, fpath)]
+           '-am', 'update '+fpath]
+           # os.path.join(rootdir, fpath)]
     print cmd
     ret = subprocess.call(cmd)
     if ret != 0:

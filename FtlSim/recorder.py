@@ -1,12 +1,12 @@
-
 output_method = 'stdout'
 
 def debug(*args):
-    return
+    # return
     line = ' '.join( str(x) for x in args)
     print 'DEBUG', line
 
 def debug2(*args):
+    return
     line = ' '.join( str(x) for x in args)
     print 'DEBUG', line
 

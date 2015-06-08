@@ -30,8 +30,8 @@ class Ftl:
 
         # initialize bitmap 1: valid, 0: invalid
         # valid means a page has data, invalid means it has garbage
-        npages = num_blocks * npages_per_block
-        self.validbitmap = bitarray.bitarray(npages)
+        self.npages = num_blocks * npages_per_block
+        self.validbitmap = bitarray.bitarray(self.npages)
         self.validbitmap.setall(False)
 
         self.log_page_l2p = {}
@@ -121,6 +121,14 @@ class Ftl:
         del self.log_page_l2p[lba_page]
         del self.log_page_p2l[flash_page]
 
+    def is_log_map_overflow(self):
+        "it checks if there are too many log page mapping"
+        if len(self.log_usedblocks) > \
+            config.log_block_upperbound_ratio * self.flash_num_blocks:
+            return True
+        else:
+            return False
+
     # basic operations
     def read_page(self, pagenum, cat):
         flash.page_read(pagenum, cat)
@@ -156,6 +164,7 @@ class Ftl:
     def pop_a_free_block_to_log(self):
         blocknum = self.pop_a_free_block()
         self.log_usedblocks.append(blocknum)
+        assert self.is_log_map_overflow() == False
         return blocknum
 
     def pop_a_free_block_to_data(self):
@@ -172,11 +181,13 @@ class Ftl:
             flashpagenum = self.log_page_l2p[lbapagenum]
             assert self.validbitmap[flashpagenum], 'WTF, in map but not valid?'
             self.invalidate_flash_page(flashpagenum)
-            remove_log_page_mapping_by_lba(lbapagenum)
+            self.remove_log_page_mapping_by_lba(lbapagenum)
         elif self.data_blk_l2p.has_key(lba_block):
             # in data block
+            # In this case, it is OK to be in map but not valid, because this
+            # is block map
             flashpagenum = self.lba_page_to_flash_page(lbapagenum)
-            assert self.validbitmap[flashpagenum], 'WTF, in map but not valid?'
+            # assert self.validbitmap[flashpagenum], 'WTF, in map but not valid?'
             self.invalidate_flash_page(flashpagenum)
         else:
             recorder.warning('trying to invalidate a page not in page map')
@@ -269,10 +280,24 @@ class Ftl:
         self.validate_flash_page(toflashpage)
 
         # do garbage collection if necessary
-        if garbage_collect_enable and \
-            (len(self.log_usedblocks) >= self.log_high_num_blocks or \
-            len(self.data_usedblocks) >= self.data_high_num_blocks):
+        if garbage_collect_enable and self.need_garbage_collection():
             self.garbage_collect()
+
+        assert self.is_sanity_check_ok()
+
+    ############################# Garbage Collection ##########################
+    def need_garbage_collection(self):
+        if len(self.log_usedblocks) >= self.log_high_num_blocks or \
+            len(self.data_usedblocks) >= self.data_high_num_blocks:
+            return True
+        else:
+            return False
+
+    def need_garbage_collect_log(self):
+        if len(self.log_usedblocks) >= self.log_high_num_blocks:
+            return True
+        else:
+            return False
 
     def garbage_collect(self):
         recorder.debug('************************************************************')
@@ -351,6 +376,7 @@ class Ftl:
         for page in range(start, end):
             if self.validbitmap[page] == True:
                 # lba = self.p2l[page]
+                flash.page_read(page, 'amplified')
                 lba = self.flash_page_to_lba_page(page)
                 self.write_page(lba, garbage_collect_enable=False, cat='amplified')
 
@@ -543,7 +569,7 @@ class Ftl:
 
         lastused = len(self.log_usedblocks)
         cnt = 0
-        while len(self.log_usedblocks) >= self.log_high_num_blocks:
+        while self.need_garbage_collect_log():
             # used too many log blocks, need to garbage collect some to
             # free some, hopefully
             victimblock = self.next_victim_log_block()
@@ -580,7 +606,7 @@ class Ftl:
     def garbage_collect_merge(self):
         recorder.debug('-----------garbage_collect_merge()-------------------------garbage collecting')
         self.debug()
-        while len(self.log_usedblocks) >= self.log_high_num_blocks:
+        while self.need_garbage_collect_log():
             victimblock = self.next_victim_log_block_to_merge()
             if victimblock == None:
                 recorder.debug( self.validbitmap )
@@ -590,9 +616,9 @@ class Ftl:
                     'invaratio', self.block_invalid_ratio(victimblock))
             recorder.debug( self.validbitmap )
 
+            # The following function may trigger any type of merge
             self.merge_log_block(victimblock)
 
-            #
         recorder.debug('============garbage_collect_merge()======================garbage collecting ends')
 
     def garbage_collect_data_blocks(self):
@@ -648,6 +674,97 @@ class Ftl:
 
         recorder.debug('data_blk_l2p', self.data_blk_l2p)
         recorder.debug('data_blk_p2l', self.data_blk_p2l)
+
+    # Sanity checks
+    def is_page_mapping_ok(self, flash_pg):
+        if self.log_page_p2l.has_key(flash_pg):
+            lba_pg = self.log_page_p2l[flash_pg]
+        else:
+            return False
+
+        if self.log_page_l2p.has_key(lba_pg):
+            flash_page2 = self.log_page_l2p[lba_pg]
+            if flash_page2 != flash_pg:
+                return False
+        else:
+            recorder.error('lba_pg', lba_pg, 'is not in log_page_l2p')
+            return False
+
+        return True
+
+    def is_block_mapping_ok(self, flash_block):
+        if self.data_blk_p2l.has_key(flash_block):
+            lba_block = self.data_blk_p2l[flash_block]
+        else:
+            return False
+
+        if self.data_blk_l2p.has_key(lba_block):
+            flash_block2 = self.data_blk_l2p[lba_block]
+            if flash_block2 != flash_block:
+                return False
+        else:
+            return False
+        return True
+
+    def is_mapping_size_ok(self):
+        if len(self.log_page_l2p) != len(self.log_page_p2l):
+            recorder.error('log page sizes are not equal')
+            return False
+        if len(self.data_blk_l2p) != len(self.data_blk_p2l):
+            recorder.error('data block sizes are not equal')
+            return False
+
+    def is_mapping_reverse_ok(self):
+        for k, v in self.log_page_l2p.items():
+            if self.log_page_p2l[v] != k:
+                return False
+
+        for k, v in self.data_blk_l2p.items():
+            if self.data_blk_p2l[v] != k:
+                return False
+
+        return True
+
+    def is_block_total_ok(self):
+        if len(self.freeblocks) + len(self.log_usedblocks) + \
+            len(self.data_usedblocks) == self.flash_num_blocks:
+            return True
+        return False
+
+
+    def is_sanity_check_ok(self):
+        # if a page in valid, it must have mapping,
+        # either block or page mapping
+        for pg in range(self.npages):
+            flash_block, off = page_to_block_off(pg)
+            if self.validbitmap[pg] == True and \
+                not self.is_page_mapping_ok(pg) and \
+                not self.is_block_mapping_ok(flash_block):
+                "page is valid but could not find mapping"
+                return False
+
+        # l2p and p2l have the same size
+        if self.is_mapping_size_ok() == False:
+            recorder.debug("self.is_mapping_size_ok() is False")
+            return False
+
+        # p2l is the reverse of l2p
+        if self.is_mapping_reverse_ok() == False:
+            recorder.debug("self.is_mapping_reverse_ok()  is False")
+            return False
+
+        # the sum of freeblock, data_usedblocks, log_usedblocks
+        # should be flash_num_blocks
+        if self.is_block_total_ok() == False:
+            recorder.debug("self.is_block_total_ok() is False")
+            return False
+
+        # log block is not overflow
+        if self.is_log_map_overflow() == True:
+            recorder.debug("self.is_log_map_overflow() is True")
+            return False
+
+        return True
 
 
 ftl = Ftl(config.flash_page_size,
