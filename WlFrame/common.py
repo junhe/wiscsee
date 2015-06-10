@@ -85,7 +85,7 @@ def umountFS(mountpoint):
     print "umountFS:", p.returncode
     return p.returncode
 
-def makeLoopDevice(devname, tmpfs_mountpoint, sizeMB, img_file=None):
+def make_loop_device(devname, tmpfs_mountpoint, sizeMB, img_file=None):
     "size is in MB. The tmpfs for this device might be bigger than sizeMB"
     if not devname.startswith('/dev/loop'):
         print 'you are requesting to create loop device on a non-loop device path'
@@ -97,7 +97,7 @@ def makeLoopDevice(devname, tmpfs_mountpoint, sizeMB, img_file=None):
     # umount the FS mounted on loop dev
     if isMounted(devname):
         if umountFS(devname) != 0:
-            print "unable to umount", devname
+            print "!!!!!!!!!!!!!!!!!! unable to umount", devname
             exit(1)
         else:
             print devname, 'umounted'
@@ -107,8 +107,10 @@ def makeLoopDevice(devname, tmpfs_mountpoint, sizeMB, img_file=None):
     # delete the loop device
     if isLoopDevUsed(devname):
         if delLoopDev(devname) != 0:
-            print "Failed to delete loop device"
+            print "!!!!!!!!!!!!! Failed to delete loop device"
             exit(1)
+        else:
+            print devname, 'is deleted'
     else:
         print devname, "is not in use"
 
@@ -116,7 +118,7 @@ def makeLoopDevice(devname, tmpfs_mountpoint, sizeMB, img_file=None):
     # umount the tmpfs the loop device is on
     if isMounted(tmpfs_mountpoint):
         if umountFS(tmpfs_mountpoint) != 0:
-            print "unable to umount tmpfs at", tmpfs_mountpoint
+            print "!!!!!!!!!!!!!!!!!! unable to umount tmpfs at", tmpfs_mountpoint
             exit(1)
         print tmpfs_mountpoint, "umounted"
     else:
@@ -132,7 +134,10 @@ def makeLoopDevice(devname, tmpfs_mountpoint, sizeMB, img_file=None):
         print 'doing...', cmd
         subprocess.call(cmd)
 
-    mkLoopDevOnFile(devname, imgpath)
+    ret = mkLoopDevOnFile(devname, imgpath)
+    if ret != 0:
+        print "!!!!!!!!!!!!!!!!! failed at losetup"
+        exit(1)
 
 def mkImageFile(filepath, size):
     "size is in MB"

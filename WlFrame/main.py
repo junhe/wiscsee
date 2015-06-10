@@ -10,8 +10,7 @@ from conf import config
 def main():
     fs.prepare_loop()
 
-    trace_proc = bt.start_blktrace_on_bg(dev='/dev/loop0', resultdir='/tmp/',
-        basename='tmptrace')
+    trace_proc = bt.start_blktrace_on_bg(dev='/dev/loop0', resultpath='/tmp/tmptrace')
 
     fs.ext4_make_simple()
     fs.ext4_mount_simple()
@@ -20,6 +19,9 @@ def main():
     shcmd("cp /boot/vmlinuz-3.16.0-30-generic {}".format(config["fs_mount_point"]))
 
     bt.stop_blktrace_on_bg(trace_proc)
+    # try to kill by shell
+    shcmd('pkill blktrace', ignore_error=True)
+    shcmd('pkill blkparse', ignore_error=True)
 
     # parse the result here
 

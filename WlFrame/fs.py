@@ -34,17 +34,23 @@ def ext4_mount(devname, mountpoint):
     print "mountExt4:", p.returncode
     return p.returncode
 
-def ext4_create_on_loop():
-    makeLoopDevice(conf["loop_path"], conf["tmpfs_mount_point"], 4096, img_file=None)
-    ext4_make(conf["loop_path"], blocksize=4096, makeopts=None)
-    ext4_mount(devname=conf["loop_path"], mountpoint=conf["fs_mount_point"])
+# def ext4_create_on_loop():
+    # makeLoopDevice(conf["loop_path"], conf["tmpfs_mount_point"], 4096, img_file=None)
+    # ext4_make(conf["loop_path"], blocksize=4096, makeopts=None)
+    # ext4_mount(devname=conf["loop_path"], mountpoint=conf["fs_mount_point"])
 
 def ext4_make_simple():
-    ext4_make(conf["loop_path"], blocksize=4096, makeopts=None)
+    ret = ext4_make(conf["loop_path"], blocksize=4096, makeopts=None)
+    if ret != 0:
+        print 'error in ext4_make_simple()'
+        exit(1)
 
 def ext4_mount_simple():
-    ext4_mount(devname=conf["loop_path"], mountpoint=conf["fs_mount_point"])
+    ret = ext4_mount(devname=conf["loop_path"], mountpoint=conf["fs_mount_point"])
+    if ret != 0:
+        print 'error in ext4_mount_simple()'
+        exit(1)
 
 def prepare_loop():
-    makeLoopDevice(conf["loop_path"], conf["tmpfs_mount_point"], 4096, img_file=None)
+    make_loop_device(conf["loop_path"], conf["tmpfs_mount_point"], 4096, img_file=None)
 
