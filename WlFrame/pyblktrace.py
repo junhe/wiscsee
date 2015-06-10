@@ -8,6 +8,8 @@ def start_blktrace_on_bg(dev, basename, resultdir):
         basename = basename))
     print cmd
     p = subprocess.Popen(cmd)
+    time.sleep(0.3) # wait to see if there's any immediate error.
+    assert p.poll() == None
     return p
 
 def stop_blktrace_on_bg(proc):
