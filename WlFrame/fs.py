@@ -1,5 +1,11 @@
 #!/usr/bin/env python
+import json
 from common import *
+
+conf = load_json('config')
+print conf
+
+exit(1)
 
 def ext4_make(devname, blocksize=4096, makeopts=None):
 
@@ -31,7 +37,14 @@ def ext4_mount(devname, mountpoint):
     return p.returncode
 
 def ext4_create_on_loop():
-    makeLoopDevice("/dev/loop0", "/mnt/tmpfs", 4096, img_file=None)
-    ext4_make("/dev/loop0", blocksize=4096, makeopts=None)
+    makeLoopDevice(loop_path, tmpfs_mount_point, 4096, img_file=None)
+    ext4_make(loop_path, blocksize=4096, makeopts=None)
+    ext4_mount(devname=loop_path, mountpoint=fs_mount_point)
+
+def ext4_make_and_mount():
+    ext4_make(config.loop_path, blocksize=4096, makeopts=None)
     ext4_mount(devname="/dev/loop0", mountpoint="/mnt/fsonloop")
+
+def prepare_loop():
+    makeLoopDevice("/dev/loop0", "/mnt/tmpfs", 4096, img_file=None)
 

@@ -3,7 +3,6 @@
 import fs
 
 def main():
-    fs.ext4_create_on_loop()
 
 if __name__ == '__main__':
     main()

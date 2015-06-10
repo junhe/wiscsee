@@ -1,4 +1,5 @@
 import itertools
+import json
 import random
 import argparse
 import re
@@ -155,4 +156,7 @@ def mountTmpfs(mountpoint, size):
 
     return proc.returncode
 
+def load_json(fpath):
+    decoded = json.load(open(fpath, 'r'))
+    return decoded
 
