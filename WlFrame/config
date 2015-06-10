@@ -1,0 +1,6 @@
+{
+    'loop_path' : '/dev/loop0',
+    'tmpfs_mount_point' : "/mnt/tmpfs",
+    'fs_mount_point' = "/mnt/fsonloop"
+}
+
