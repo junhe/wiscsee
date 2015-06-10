@@ -1,6 +1,8 @@
 {
-    "loop_path" : "/dev/loop0",
-    "tmpfs_mount_point" : "/mnt/tmpfs",
-    "fs_mount_point" : "/mnt/fsonloop"
+    "loop_path"             : "/dev/loop0",
+    "tmpfs_mount_point"     : "/mnt/tmpfs",
+    "fs_mount_point"        : "/mnt/fsonloop",
+    "blkparse_result_path"  : "/tmp/myblkparse.out",
+    "final_table_path"      : "/tmp/finaltable.txt"
 }
 

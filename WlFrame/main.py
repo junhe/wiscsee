@@ -10,20 +10,25 @@ from conf import config
 def main():
     fs.prepare_loop()
 
-    trace_proc = bt.start_blktrace_on_bg(dev='/dev/loop0', resultpath='/tmp/tmptrace')
+    trace_proc = bt.start_blktrace_on_bg(dev=config['loop_path'],
+        resultpath=config['blkparse_result_path'])
 
     fs.ext4_make_simple()
     fs.ext4_mount_simple()
 
     # run workload here
-    shcmd("cp /boot/vmlinuz-3.16.0-30-generic {}".format(config["fs_mount_point"]))
+    shcmd("cp -r /boot {}".format(config["fs_mount_point"]))
+    shcmd("sync")
 
-    bt.stop_blktrace_on_bg(trace_proc)
+    # bt.stop_blktrace_on_bg(trace_proc)
     # try to kill by shell
-    shcmd('pkill blktrace', ignore_error=True)
     shcmd('pkill blkparse', ignore_error=True)
+    shcmd('pkill blktrace', ignore_error=True)
+    shcmd('sync')
 
     # parse the result here
+    bt.blkparse_to_table_file(config['blkparse_result_path'],
+        config['final_table_path'])
 
 if __name__ == '__main__':
     main()
