@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
-from common import byte_to_pagenum
+from common import byte_to_pagenum, off_size_to_page_list
 import sys
 
 import ftl
