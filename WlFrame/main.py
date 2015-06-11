@@ -17,9 +17,10 @@ def main():
     fs.ext4_mount_simple()
 
     # run workload here
-    shcmd("cp -r /boot {}".format(config["fs_mount_point"]))
     shcmd("sync")
+    shcmd("cp -r /boot {}".format(config["fs_mount_point"]))
     shcmd("rm -r {}/*".format(config["fs_mount_point"]))
+    shcmd("sync")
 
     # bt.stop_blktrace_on_bg(trace_proc)
     # try to kill by shell

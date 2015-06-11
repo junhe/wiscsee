@@ -43,21 +43,21 @@ def parse_blkparse_to_table(line_iter):
         dic = dict(zip(names, items))
         assert len(items) >= len(names)
 
-        if 'W' in dic['RWBS']:
-            # We only need writes
-            return dic
-        else:
-            return None
+        return dic
 
     table = []
     for line in line_iter:
         line = line.strip()
+        # print is_data_line(line), line
         if not is_data_line(line):
             continue
         ret = line2dic(line)
         if ret != None:
             table.append(ret)
     return table
+
+# pprint( parse_blkparse_to_table(open('/tmp/myblkparse.out', 'r')) )
+# exit(1)
 
 ########################################################
 # table = [
@@ -120,4 +120,8 @@ def finaltable_to_ftlsim_input(table, out_path):
 
 # time.sleep(2)
 # stop_blktrace_on_bg(p)
+
+
+# blkparse_to_table_file(config['blkparse_result_path'],
+    # config['final_table_path'])
 
