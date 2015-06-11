@@ -17,12 +17,16 @@ def start_blktrace_on_bg(dev, resultpath):
     assert p.poll() == None
     return p
 
-def stop_blktrace_on_bg(proc):
-    try:
-        proc.terminate()
-    except Exception, e:
-        print e
-        exit(1)
+def stop_blktrace_on_bg():
+    shcmd('pkill blkparse', ignore_error=True)
+    shcmd('pkill blktrace', ignore_error=True)
+    shcmd('sync')
+
+    # try:
+        # proc.terminate()
+    # except Exception, e:
+        # print e
+        # exit(1)
 
 def is_data_line(line):
     #                       devid    blockstart + nblocks
