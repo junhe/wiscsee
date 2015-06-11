@@ -19,6 +19,7 @@ def main():
     # run workload here
     shcmd("cp -r /boot {}".format(config["fs_mount_point"]))
     shcmd("sync")
+    shcmd("rm -r {}/*".format(config["fs_mount_point"]))
 
     # bt.stop_blktrace_on_bg(trace_proc)
     # try to kill by shell

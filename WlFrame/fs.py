@@ -28,7 +28,7 @@ def ext4_mount(devname, mountpoint):
     if not os.path.exists(mountpoint):
         os.makedirs(mountpoint)
 
-    cmd = ["mount", "-t", "ext4", devname, mountpoint]
+    cmd = ["mount", "-t", "ext4", "-o", "discard", devname, mountpoint]
     p = subprocess.Popen(cmd)
     p.wait()
     print "mountExt4:", p.returncode

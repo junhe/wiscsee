@@ -1,3 +1,4 @@
+import os
 from pprint import pprint
 import re
 import shlex
@@ -5,6 +6,7 @@ import subprocess
 import time
 
 from common import shcmd
+from conf import config
 
 def start_blktrace_on_bg(dev, resultpath):
     cmd = "sudo blktrace -a write -d {dev} -o - | blkparse -i - > "\
@@ -84,7 +86,35 @@ def table_to_file(table, filepath, adddic=None):
 def blkparse_to_table_file(blkparse_path, table_path):
     table = parse_blkparse_to_table(open(blkparse_path, 'r'))
     table_to_file(table, table_path)
+    finaltable_to_ftlsim_input(table, config['ftlsim_formatted_path'])
 
+def finaltable_to_ftlsim_input(table, out_path):
+    out = open(out_path, 'w')
+    for row in table:
+        blk_start = int(row['blockstart'])
+        size = int(row['size'])
+        secsize = config['sector_size']
+
+        byte_offset = blk_start * secsize
+        byte_size = size * secsize
+
+        if row['RWBS'] == 'D':
+            operation = 'discard'
+        elif 'W' in row['RWBS']:
+            operation = 'write'
+        elif 'R' in row['RWBS']:
+            operation = 'read'
+        else:
+            print 'unknow operation'
+            exit(1)
+
+        items = [str(x) for x in [operation, byte_offset, byte_size]]
+        line = ' '.join(items)+'\n'
+        out.write( line )
+
+    out.flush()
+    os.fsync(out)
+    out.close()
 
 # pprint( parse_blkparse_to_table(open('/tmp/myblkparse.out'), '/tmp/result') )
 
