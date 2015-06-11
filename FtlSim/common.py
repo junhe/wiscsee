@@ -28,3 +28,10 @@ def block_to_page_range(blocknum):
 def total_num_pages():
     return flash_npage_per_block * flash_num_blocks
 
+def off_size_to_page_list(off, size):
+    assert size % flash_page_size == 0
+    npages = size / flash_page_size
+    start_page = byte_to_pagenum(off)
+
+    return range(start_page, start_page+npages)
+

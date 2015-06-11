@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
-import ftl
 import argparse
-from common import byte_to_pagenum
+from common import byte_to_pagenum, off_size_to_page_list
 import sys
+
+import config
+import ftl
+import recorder
 
 # TODO
 # 1. read LBA layer trace
@@ -39,12 +42,17 @@ def read_lba_events(fpath):
     return events
 
 def process_event(event):
+    pages = off_size_to_page_list(event['offset'], event['size'])
+
     if event['operation'] == 'read':
-        ftl.lba_read(byte_to_pagenum(event['offset']))
+        for page in pages:
+            ftl.lba_read(page)
     elif event['operation'] == 'write':
-        ftl.lba_write(byte_to_pagenum(event['offset']))
+        for page in pages:
+            ftl.lba_write(page)
     elif event['operation'] == 'discard':
-        ftl.lba_discard(byte_to_pagenum(event['offset']))
+        for page in pages:
+            ftl.lba_discard(page)
 
 def sim_run(eventfile):
     input_events = read_lba_events(eventfile)
@@ -55,7 +63,7 @@ def sim_run(eventfile):
         ftl.debug_after_processing()
         cnt += 1
         if cnt % 10 == 0:
-            print 'currnt count', cnt
+            recorder.warning('currnt count', cnt)
             sys.stdout.flush()
 
 def main():
@@ -63,11 +71,15 @@ def main():
             description="It takes event input file."
             )
     parser.add_argument('-e', '--events', action='store', help='event file')
+    parser.add_argument('-v', '--verbose', action='store', help='verbose level: 0-minimum, 1-more')
     args = parser.parse_args()
 
     if args.events == None:
         parser.print_help()
         exit(1)
+
+    if args.verbose != None:
+        config.verbose_level = int(args.verbose)
 
     sim_run(args.events)
 
