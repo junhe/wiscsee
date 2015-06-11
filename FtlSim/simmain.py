@@ -6,6 +6,7 @@ import sys
 
 import config
 import ftl
+import recorder
 
 # TODO
 # 1. read LBA layer trace
@@ -62,7 +63,7 @@ def sim_run(eventfile):
         ftl.debug_after_processing()
         cnt += 1
         if cnt % 10 == 0:
-            print 'currnt count', cnt
+            recorder.warning('currnt count', cnt)
             sys.stdout.flush()
 
 def main():
