@@ -4,6 +4,7 @@ import argparse
 from common import byte_to_pagenum, off_size_to_page_list
 import sys
 
+import config
 import ftl
 
 # TODO
@@ -69,11 +70,15 @@ def main():
             description="It takes event input file."
             )
     parser.add_argument('-e', '--events', action='store', help='event file')
+    parser.add_argument('-v', '--verbose', action='store', help='verbose level: 0-minimum, 1-more')
     args = parser.parse_args()
 
     if args.events == None:
         parser.print_help()
         exit(1)
+
+    if args.verbose != None:
+        config.verbose_level = int(args.verbose)
 
     sim_run(args.events)
 

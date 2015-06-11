@@ -126,7 +126,8 @@ def parse_blkparse(fpath, resultpath):
 
 def main():
     #function you want to call
-    parse_blkparse('./bigsample', 'myresult')
+    # parse_blkparse('./bigsample', 'myresult')
+    shcmd("scp jun@192.168.56.102:/tmp/ftlsim.in ./FtlSim/misc/")
 
 def _main():
     parser = argparse.ArgumentParser(
