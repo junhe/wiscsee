@@ -787,8 +787,39 @@ explore.sim.results <- function()
     do_main()
 }
 
+explore.mywl <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function()
+    {
+        d = read.csv('./data/finaltable.txt', header=T, sep=';')
+        print(head(d))
+        return(d)
+    }
 
+    clean <- function(d)
+    {
+        return(d)
+    }
 
+    func <- function(d)
+    {
+        print(summary(d))
+        p = ggplot(d, aes(x=time, y=blockstart)) +
+            geom_point()
+        print(p)
+    }
+
+    do_main <- function()
+    {
+        d = load()
+        d = clean(d)
+        func(d)
+    }
+    do_main()
+}
 
 main <- function()
 {
@@ -798,6 +829,7 @@ main <- function()
     # explore.madmax.iterate()
     # explore.mail01()
     # explore.websearch()
-    explore.sim.results()
+    # explore.sim.results()
+    explore.mywl()
 }
 main()

@@ -102,7 +102,9 @@ def table_to_file(table, filepath, adddic=None):
 def main():
     #function you want to call
     # shcmd('scp jhe@users.emulab.net:/users/jhe/workdir/doraemon/myresult ./myresult2')
-    shcmd('scp -r jhe@users.emulab.net:/users/jhe/workdir/doraemon/madmax ./')
+    # shcmd('scp -r jhe@users.emulab.net:/users/jhe/workdir/doraemon/madmax ./')
+    shcmd("scp jun@192.168.56.102:/tmp/finaltable.txt ./data/")
+
 
 def _main():
     parser = argparse.ArgumentParser(
