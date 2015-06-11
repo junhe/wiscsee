@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
-import ftl
 import argparse
 from common import byte_to_pagenum
 import sys
+
+import ftl
 
 # TODO
 # 1. read LBA layer trace
@@ -39,12 +40,17 @@ def read_lba_events(fpath):
     return events
 
 def process_event(event):
+    pages = off_size_to_page_list(event['offset'], event['size'])
+
     if event['operation'] == 'read':
-        ftl.lba_read(byte_to_pagenum(event['offset']))
+        for page in pages:
+            ftl.lba_read(page)
     elif event['operation'] == 'write':
-        ftl.lba_write(byte_to_pagenum(event['offset']))
+        for page in pages:
+            ftl.lba_write(page)
     elif event['operation'] == 'discard':
-        ftl.lba_discard(byte_to_pagenum(event['offset']))
+        for page in pages:
+            ftl.lba_discard(page)
 
 def sim_run(eventfile):
     input_events = read_lba_events(eventfile)
