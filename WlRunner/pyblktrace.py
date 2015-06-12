@@ -5,8 +5,8 @@ import shlex
 import subprocess
 import time
 
-from common import shcmd
-from conf import config
+from common import shcmd, prepare_dir_for_path
+import conf
 
 def start_blktrace_on_bg(dev, resultpath):
     cmd = "sudo blktrace -a write -d {dev} -o - | blkparse -i - > "\
@@ -60,8 +60,6 @@ def parse_blkparse_to_table(line_iter):
             table.append(ret)
     return table
 
-# pprint( parse_blkparse_to_table(open('/tmp/myblkparse.out', 'r')) )
-# exit(1)
 
 ########################################################
 # table = [
@@ -71,6 +69,7 @@ def parse_blkparse_to_table(line_iter):
 #         ]
 def table_to_file(table, filepath, adddic=None):
     'save table to a file with additional columns'
+    prepare_dir_for_path(filepath)
     with open(filepath, 'w') as f:
         colnames = table[0].keys()
         if adddic != None:
@@ -87,17 +86,20 @@ def table_to_file(table, filepath, adddic=None):
             rowstr = ';'.join(rowstr) + '\n'
             f.write(rowstr)
 
-def blkparse_to_files(blkparse_path, table_path):
+def blkparse_to_files(blkparse_path):
     table = parse_blkparse_to_table(open(blkparse_path, 'r'))
     # table_to_file(table, table_path)
-    finaltable_to_ftlsim_input(table, config.get_ftlsim_events_output_path())
+    table_path = conf.get_ftlsim_events_output_path()
+    prepare_dir_for_path(table_path)
+    finaltable_to_ftlsim_input(table, table_path)
 
 def finaltable_to_ftlsim_input(table, out_path):
+    prepare_dir_for_path(out_path)
     out = open(out_path, 'w')
     for row in table:
         blk_start = int(row['blockstart'])
         size = int(row['size'])
-        secsize = config['sector_size']
+        secsize = conf.config['sector_size']
 
         byte_offset = blk_start * secsize
         byte_size = size * secsize
@@ -119,13 +121,4 @@ def finaltable_to_ftlsim_input(table, out_path):
     out.flush()
     os.fsync(out)
     out.close()
-
-# pprint( parse_blkparse_to_table(open('/tmp/myblkparse.out'), '/tmp/result') )
-
-# time.sleep(2)
-# stop_blktrace_on_bg(p)
-
-
-# blkparse_to_table_file(config.get_blkparse_result_path(),
-    # config.get_blkparse_result_table_path())
 
