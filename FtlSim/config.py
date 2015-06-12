@@ -1,3 +1,5 @@
+import os
+
 # flash_page_size       = 4096
 # flash_npage_per_block = 128
 # flash_num_blocks      = 8*2**30 / (flash_page_size * flash_npage_per_block)
@@ -23,6 +25,9 @@ assert high_log_block_ratio < log_block_upperbound_ratio
 
 # for general
 verbose_level = 1
+output_target = 'file' # stdout or file
+# output_target = 'stdout' # stdout or file
+output_dir = '/tmp/exp001/'
 
-
-
+def get_output_file_path():
+    return os.path.join(output_dir, 'ftlsim.out')

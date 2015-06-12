@@ -1,29 +1,45 @@
 import config
+import sys
 
-output_method = 'stdout'
+class Outfile(object):
+    def __init__(self, path):
+        self.fhandle = open(path, 'w')
+
+    def __del__(self):
+        self.fhandle.close()
+
+    def write(self, line):
+        self.fhandle.write(line)
+
+if config.output_target == 'file':
+    outfile = Outfile(config.get_output_file_path())
+
+def output(*args):
+    line = ' '.join( str(x) for x in args)
+    line += '\n'
+    if config.output_target == 'file':
+        outfile.write(line)
+    else:
+        sys.stdout.write(line)
 
 def debug(*args):
     if config.verbose_level >= 3:
-        line = ' '.join( str(x) for x in args)
-        print 'DEBUG', line
+        args = ' '.join( str(x) for x in args)
+        output( 'DEBUG', *args )
 
 def debug2(*args):
     if config.verbose_level >= 3:
-        line = ' '.join( str(x) for x in args)
-        print 'DEBUG', line
+        output( 'DEBUG', *args )
 
-def put(*msg):
+def put(*args):
     if config.verbose_level >= 1:
-        line = ' '.join( str(x) for x in msg)
-        print 'RECORD', line
+        output( 'DEBUG', *args )
 
-def warning(*msg):
+def warning(*args):
     if config.verbose_level >= 2:
-        line = ' '.join( str(x) for x in msg)
-        print 'WARNING', line
+        output( 'DEBUG', *args )
 
-def error(*msg):
+def error(*args):
     if config.verbose_level >= 0:
-        line = ' '.join( str(x) for x in msg)
-        print 'ERROR', line
+        output( 'DEBUG', *args )
 
