@@ -35,7 +35,7 @@ def run_workload():
     shcmd("sync")
 
 def process_data():
-    bt.blkparse_to_files(conf.get_blkparse_result_path())
+    bt.blkparse_to_parsed_files(conf.get_blkparse_result_path())
 
 def main():
     try:
@@ -53,7 +53,10 @@ def run():
     main()
     with open(conf.get_ftlsim_events_output_path(), 'r') as f:
         for line in f:
-            yield line.strip()
+            line = line.strip()
+            yield line
+            # print line.strip()
+            # pass
 
 if __name__ == '__main__':
     main()

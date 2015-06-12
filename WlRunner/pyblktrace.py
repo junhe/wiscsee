@@ -87,7 +87,7 @@ def table_to_file(table, filepath, adddic=None):
             rowstr = ';'.join(rowstr) + '\n'
             f.write(rowstr)
 
-def blkparse_to_files(blkparse_path):
+def blkparse_to_parsed_files(blkparse_path):
     table = parse_blkparse_to_table(open(blkparse_path, 'r'))
     # table_to_file(table, table_path)
     table_path = conf.get_ftlsim_events_output_path()

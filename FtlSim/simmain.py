@@ -106,7 +106,6 @@ def main():
         parser.print_help()
         exit(1)
 
-
     # You need to load config before everything else happen
     # (but you have already imported the modules)
     dic = common.load_json(args.configfile)

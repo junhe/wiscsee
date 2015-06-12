@@ -64,8 +64,10 @@ class Outfile(object):
     def write(self, line):
         self.fhandle.write(line)
 
+outfile = None
 
 def initialize():
+    global outfile
     if config.output_target == 'file':
         outfile = Outfile(config.get_output_file_path())
 
