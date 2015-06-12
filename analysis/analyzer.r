@@ -749,7 +749,8 @@ explore.sim.results <- function()
     }
     load <- function()
     {
-        d = read.table('./data/sim.result.sample', header=F,
+        # d = read.table('./data/sim.result.sample', header=F,
+        d = read.table('./../FtlSim/f2fs.ftlpattern', header=F,
                        col.names = c('type', 'operation', 'pagenum', 'cat')
                        )
         return(d)
@@ -829,7 +830,7 @@ main <- function()
     # explore.madmax.iterate()
     # explore.mail01()
     # explore.websearch()
-    # explore.sim.results()
-    explore.mywl()
+    explore.sim.results()
+    # explore.mywl()
 }
 main()
