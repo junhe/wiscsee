@@ -99,7 +99,7 @@ def main():
     if args.verbose != None:
         config.verbose_level = int(args.verbose)
 
-    config.load_from_json(args.configfile)
+    config.load_from_json_file(args.configfile)
     # sim_run(open(args.events, 'r'))
 
 if __name__ == '__main__':
