@@ -79,7 +79,6 @@ def output(*args):
 
 def debug(*args):
     if config.verbose_level >= 3:
-        args = ' '.join( str(x) for x in args)
         output( 'DEBUG', *args )
 
 def debug2(*args):
