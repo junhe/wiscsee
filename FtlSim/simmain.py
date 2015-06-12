@@ -41,6 +41,14 @@ def read_lba_events(fpath):
     events = [dict(zip(keys, e)) for e in events]
     return events
 
+def event_line_to_dic(line):
+    keys = ['operation', 'offset', 'size']
+    items = line.strip('\n').split()
+    items[1] = eval(items[1]) # offset
+    items[2] = eval(items[2]) # size
+    event = dict(zip(keys, items))
+    return event
+
 def process_event(event):
     pages = off_size_to_page_list(event['offset'], event['size'])
 
@@ -54,11 +62,10 @@ def process_event(event):
         for page in pages:
             ftl.lba_discard(page)
 
-def sim_run(eventfile):
-    input_events = read_lba_events(eventfile)
-
+def sim_run(event_line_iter):
     cnt = 0
-    for event in input_events:
+    for event_line in event_line_iter:
+        event = event_line_to_dic(event_line)
         process_event(event)
         ftl.debug_after_processing()
         cnt += 1
@@ -81,7 +88,7 @@ def main():
     if args.verbose != None:
         config.verbose_level = int(args.verbose)
 
-    sim_run(args.events)
+    sim_run(open(args.events, 'r'))
 
 if __name__ == '__main__':
     main()
