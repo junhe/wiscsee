@@ -78,7 +78,8 @@ def main():
             description="It takes event input file."
             )
     parser.add_argument('-e', '--events', action='store', help='event file')
-    parser.add_argument('-v', '--verbose', action='store', help='verbose level: 0-minimum, 1-more')
+    parser.add_argument('-v', '--verbose', action='store',
+        help='verbose level: 0-minimum, 1-more')
     args = parser.parse_args()
 
     if args.events == None:

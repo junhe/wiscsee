@@ -3,9 +3,7 @@
     "tmpfs_mount_point"     : "/mnt/tmpfs",
     "fs_mount_point"        : "/mnt/fsonloop",
 
-    "blkparse_result_path"  : "/tmp/myblkparse.out",
-    "final_table_path"      : "/tmp/finaltable.txt",
-    "ftlsim_formatted_path" : "/tmp/ftlsim.in",
+    "result_dir"            : "/tmp/exp001",
 
     "sector_size"           : 512,
 

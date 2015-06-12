@@ -5,14 +5,14 @@ import time
 from common import *
 import fs
 import pyblktrace as bt
-from conf import config
+import config
 
 def prepare_dev():
     fs.prepare_loop()
 
 def start_blktrace():
     return bt.start_blktrace_on_bg(dev=config['loop_path'],
-        resultpath=config['blkparse_result_path'])
+        resultpath=config.get_blkparse_result_path())
 
 def stop_blktrace():
     bt.stop_blktrace_on_bg()
@@ -35,8 +35,8 @@ def run_workload():
     shcmd("sync")
 
 def process_data():
-    bt.blkparse_to_files(config['blkparse_result_path'],
-        config['final_table_path'])
+    bt.blkparse_to_files(config.get_blkparse_result_path(),
+        config.get_blkparse_result_table_path())
 
 def main():
     try:
@@ -52,7 +52,7 @@ def main():
 
 def run():
     main()
-    with open(config['ftlsim_formatted_path'], 'r') as f:
+    with open(config.get_ftlsim_events_output_path(), 'r') as f:
         for line in f:
             yield line.strip()
 

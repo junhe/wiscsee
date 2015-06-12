@@ -90,7 +90,7 @@ def table_to_file(table, filepath, adddic=None):
 def blkparse_to_files(blkparse_path, table_path):
     table = parse_blkparse_to_table(open(blkparse_path, 'r'))
     # table_to_file(table, table_path)
-    finaltable_to_ftlsim_input(table, config['ftlsim_formatted_path'])
+    finaltable_to_ftlsim_input(table, config.get_ftlsim_events_output_path())
 
 def finaltable_to_ftlsim_input(table, out_path):
     out = open(out_path, 'w')
@@ -126,6 +126,6 @@ def finaltable_to_ftlsim_input(table, out_path):
 # stop_blktrace_on_bg(p)
 
 
-# blkparse_to_table_file(config['blkparse_result_path'],
-    # config['final_table_path'])
+# blkparse_to_table_file(config.get_blkparse_result_path(),
+    # config.get_blkparse_result_table_path())
 
