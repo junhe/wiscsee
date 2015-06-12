@@ -3,7 +3,6 @@ import json
 from common import *
 
 conf = load_json('config')
-print conf
 
 def ext4_make(devname, blocksize=4096, makeopts=None):
 
@@ -50,6 +49,42 @@ def ext4_mount_simple():
     if ret != 0:
         print 'error in ext4_mount_simple()'
         exit(1)
+
+
+class Filesystem(object):
+    def __init__(self, mountpoint, dev):
+        self.mountpoint = mountpoint
+        self.dev = dev
+
+    def make(self, opt=None):
+        raise NotImplementedError
+
+    def mount(self, opt=None):
+        raise NotImplementedError
+
+    def is_mounted(self):
+        return isMounted(self.dev)
+
+    def umount(self):
+        return umountFS(self.mountpoint)
+
+class F2fs(Filesystem):
+    def make(self, opt=None):
+        if opt == None:
+            opt = ''
+        return shcmd('mkfs.f2fs {opt} {dev}'.format(
+            opt=opt, dev = self.dev))
+
+    def mount(self, opt=None):
+        if opt == None:
+            opt = ''
+        return shcmd('mount -t f2fs {dev} {mp}'.format(
+            dev = self.dev, mp = self.mountpoint))
+
+# f2fs = F2fs('/mnt/fsonloop', '/dev/loop0')
+# print f2fs.umount()
+# print f2fs.make()
+# print f2fs.mount()
 
 def prepare_loop():
     make_loop_device(conf["loop_path"], conf["tmpfs_mount_point"], 4096, img_file=None)

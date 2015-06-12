@@ -67,12 +67,10 @@ def isLoopDevUsed(path):
     cmd = ['losetup','-f']
     proc = subprocess.Popen(cmd,
             stdout=subprocess.PIPE)
-
     proc.wait()
 
     outstr = proc.communicate()[0]
     outstr = outstr.strip()
-    print "isLoopUsed:", outstr+"END"
     if outstr > path:
         return True
     else:
@@ -82,7 +80,6 @@ def umountFS(mountpoint):
     cmd = ["umount", mountpoint]
     p = subprocess.Popen(cmd)
     p.wait()
-    print "umountFS:", p.returncode
     return p.returncode
 
 def make_loop_device(devname, tmpfs_mountpoint, sizeMB, img_file=None):
