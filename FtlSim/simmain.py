@@ -69,6 +69,8 @@ def sim_run(event_line_iter, confdic):
     you need provide an iterator of events and a dictionary containing
     configuration.
     """
+
+    # This should be the only place that we load config
     config.load_from_dict(confdic)
 
     # you have to load configuration first before initialize recorder
@@ -104,12 +106,13 @@ def main():
         parser.print_help()
         exit(1)
 
-    if args.verbose != None:
-        config.verbose_level = int(args.verbose)
 
     # You need to load config before everything else happen
     # (but you have already imported the modules)
     dic = common.load_json(args.configfile)
+
+    if args.verbose != None:
+        dic['verbose_level'] = int(args.verbose)
     sim_run(open(args.events, 'r'), dic)
 
 if __name__ == '__main__':
