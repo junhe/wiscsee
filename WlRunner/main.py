@@ -35,7 +35,7 @@ def run_workload():
     shcmd("sync")
 
 def process_data():
-    bt.blkparse_to_table_file(config['blkparse_result_path'],
+    bt.blkparse_to_files(config['blkparse_result_path'],
         config['final_table_path'])
 
 def main():
@@ -49,6 +49,12 @@ def main():
             stop_blktrace()
     finally:
         process_data()
+
+def run():
+    main()
+    with open(config['ftlsim_formatted_path'], 'r') as f:
+        for line in f:
+            yield line.strip()
 
 if __name__ == '__main__':
     main()

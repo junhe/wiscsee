@@ -87,9 +87,9 @@ def table_to_file(table, filepath, adddic=None):
             rowstr = ';'.join(rowstr) + '\n'
             f.write(rowstr)
 
-def blkparse_to_table_file(blkparse_path, table_path):
+def blkparse_to_files(blkparse_path, table_path):
     table = parse_blkparse_to_table(open(blkparse_path, 'r'))
-    table_to_file(table, table_path)
+    # table_to_file(table, table_path)
     finaltable_to_ftlsim_input(table, config['ftlsim_formatted_path'])
 
 def finaltable_to_ftlsim_input(table, out_path):

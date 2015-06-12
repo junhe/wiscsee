@@ -9,6 +9,6 @@
 
     "sector_size"           : 512,
 
-    "filesystem"            : "f2fs"
+    "filesystem"            : "ext4"
 }
 
