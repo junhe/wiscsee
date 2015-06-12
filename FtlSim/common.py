@@ -35,3 +35,8 @@ def off_size_to_page_list(off, size):
 
     return range(start_page, start_page+npages)
 
+def load_json(fpath):
+    decoded = json.load(open(fpath, 'r'))
+    return decoded
+
+

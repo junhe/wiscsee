@@ -9,6 +9,7 @@ from common import shcmd, prepare_dir_for_path
 import conf
 
 def start_blktrace_on_bg(dev, resultpath):
+    prepare_dir_for_path(resultpath)
     cmd = "sudo blktrace -a write -d {dev} -o - | blkparse -i - > "\
         "{resultpath}".format(dev = dev, resultpath = resultpath)
     print cmd

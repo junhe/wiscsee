@@ -73,11 +73,17 @@ def sim_run(event_line_iter):
             recorder.warning('currnt count', cnt)
             sys.stdout.flush()
 
+def load_config_from_dict(dic):
+    config.load_from_dict(dic)
+
 def main():
     parser = argparse.ArgumentParser(
             description="It takes event input file."
             )
-    parser.add_argument('-e', '--events', action='store', help='event file')
+    parser.add_argument('-c', '--configfile', action='store',
+        help='config file path (REQUIRED)')
+    parser.add_argument('-e', '--events', action='store',
+        help='event file (REQUIRED)')
     parser.add_argument('-v', '--verbose', action='store',
         help='verbose level: 0-minimum, 1-more')
     args = parser.parse_args()
@@ -86,10 +92,15 @@ def main():
         parser.print_help()
         exit(1)
 
+    if args.configfile == None:
+        parser.print_help()
+        exit(1)
+
     if args.verbose != None:
         config.verbose_level = int(args.verbose)
 
-    sim_run(open(args.events, 'r'))
+    config.load_from_json(args.configfile)
+    # sim_run(open(args.events, 'r'))
 
 if __name__ == '__main__':
     main()
