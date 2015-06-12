@@ -4,6 +4,7 @@ import argparse
 from common import byte_to_pagenum, off_size_to_page_list
 import sys
 
+import common
 import config
 import ftl
 import recorder
@@ -68,7 +69,10 @@ def sim_run(event_line_iter, confdic):
     you need provide an iterator of events and a dictionary containing
     configuration.
     """
-    config.load_from_dict(dic)
+    config.load_from_dict(confdic)
+
+    # you have to load configuration first before initialize recorder
+    recorder.initialize()
 
     cnt = 0
     for event_line in event_line_iter:
@@ -105,9 +109,8 @@ def main():
 
     # You need to load config before everything else happen
     # (but you have already imported the modules)
-    config.load_from_json_file(args.configfile)
-    recorder.initialize()
-    sim_run(open(args.events, 'r'))
+    dic = common.load_json(args.configfile)
+    sim_run(open(args.events, 'r'), dic)
 
 if __name__ == '__main__':
     main()
