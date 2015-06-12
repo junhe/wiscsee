@@ -62,7 +62,14 @@ def process_event(event):
         for page in pages:
             ftl.lba_discard(page)
 
-def sim_run(event_line_iter):
+def sim_run(event_line_iter, confdic):
+    """
+    This is an interface for calling FTLSIM as a module. In order to call,
+    you need provide an iterator of events and a dictionary containing
+    configuration.
+    """
+    config.load_from_dict(dic)
+
     cnt = 0
     for event_line in event_line_iter:
         event = event_line_to_dic(event_line)
@@ -72,9 +79,6 @@ def sim_run(event_line_iter):
         if cnt % 10 == 0:
             recorder.warning('currnt count', cnt)
             sys.stdout.flush()
-
-def load_config_from_dict(dic):
-    config.load_from_dict(dic)
 
 def main():
     parser = argparse.ArgumentParser(
@@ -99,8 +103,11 @@ def main():
     if args.verbose != None:
         config.verbose_level = int(args.verbose)
 
+    # You need to load config before everything else happen
+    # (but you have already imported the modules)
     config.load_from_json_file(args.configfile)
-    # sim_run(open(args.events, 'r'))
+    recorder.initialize()
+    sim_run(open(args.events, 'r'))
 
 if __name__ == '__main__':
     main()

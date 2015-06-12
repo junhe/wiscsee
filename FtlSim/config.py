@@ -1,14 +1,15 @@
 import json
 import os
 
-from common import *
+import common
+
 
 # Wait for the main or others to load the confdic
 confdic = None
 
 def load_from_json_file(json_path):
     global confdic
-    confdic = load_json(json_path)
+    confdic = common.load_json(json_path)
     dic_to_variables(confdic)
 
 def load_from_dict(dic):
