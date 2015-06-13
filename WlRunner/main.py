@@ -55,8 +55,6 @@ def run():
         for line in f:
             line = line.strip()
             yield line
-            # print line.strip()
-            # pass
 
 if __name__ == '__main__':
     main()

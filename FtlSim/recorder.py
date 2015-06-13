@@ -1,5 +1,7 @@
-import config
 import sys
+
+import common
+import config
 
 FILE_TARGET = 'file'
 STDOUT_TARGET = 'stdout'
@@ -56,6 +58,7 @@ class Recorder(object):
 
 class Outfile(object):
     def __init__(self, path):
+        common.prepare_dir_for_path(path)
         self.fhandle = open(path, 'w')
 
     def __del__(self):

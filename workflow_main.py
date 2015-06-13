@@ -7,12 +7,11 @@ def main(args):
     # result dir
     dirpath = args.dir
 
-    # WlRunner.conf.config['result_dir'] = dirpath
-    # event_line_iter = WlRunner.main.run()
+    WlRunner.conf.config['result_dir'] = dirpath
+    event_line_iter = WlRunner.main.run()
 
     confdic = FtlSim.common.load_json('./FtlSim/config.json')
     confdic['output_dir'] = dirpath
-    event_line_iter = open(WlRunner.conf.get_ftlsim_events_output_path(), 'r')
     FtlSim.simmain.sim_run(event_line_iter, confdic)
 
 if __name__ == '__main__':
