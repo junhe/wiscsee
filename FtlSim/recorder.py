@@ -92,13 +92,13 @@ def debug2(*args):
 
 def put(*args):
     if config.verbose_level >= 1:
-        output( 'DEBUG', *args )
+        output( 'RECORD', *args )
 
 def warning(*args):
     if config.verbose_level >= 2:
-        output( 'DEBUG', *args )
+        output( 'WARNING', *args )
 
 def error(*args):
     if config.verbose_level >= 0:
-        output( 'DEBUG', *args )
+        output( 'ERROR', *args )
 
