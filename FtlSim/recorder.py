@@ -12,7 +12,10 @@ class Recorder(object):
     Recorder should be explicitly initialized, and once initialized,
     it cannot be changed. I have to do this because I don't want it
     to output to file sometimes and stdout sometimes. This is not
-    consistent
+    consistent.
+
+    Recorder class is necessary because it may be extended to support
+    statistics.
     """
     def __init__(self, output_target, path=None, verbose_level=1):
         self.output_target = output_target
@@ -24,6 +27,8 @@ class Recorder(object):
 
     def __del__(self):
         if self.output_target == FILE_TARGET:
+            self.fhandle.flush()
+            os.fsync(self.fhandle)
             self.fhandle.close()
 
     def output(self, *args):
@@ -45,60 +50,49 @@ class Recorder(object):
 
     def put(self, *args):
         if self.verbose_level >= 1:
-            self.output( 'DEBUG', *args )
+            self.output( 'RECORD', *args )
 
     def warning(self, *args):
         if self.verbose_level >= 2:
-            self.output( 'DEBUG', *args )
+            self.output( 'WARNING', *args )
 
     def error(self, *args):
         if self.verbose_level >= 0:
-            self.output( 'DEBUG', *args )
+            self.output( 'ERROR', *args )
 
-
-class Outfile(object):
-    def __init__(self, path):
-        common.prepare_dir_for_path(path)
-        self.fhandle = open(path, 'w')
-
-    def __del__(self):
-        self.fhandle.close()
-
-    def write(self, line):
-        self.fhandle.write(line)
-
-outfile = None
+# this global Recorder instance should be initialized before using
+rec = None
 
 def initialize():
-    global outfile
-    if config.output_target == 'file':
-        outfile = Outfile(config.get_output_file_path())
+    rec = Recorder(output_target = config.confdic['output_target'],
+                   path = config.get_output_file_path(),
+                   verbose_level = config.confdic['verbose_level'])
 
-def output(*args):
-    line = ' '.join( str(x) for x in args)
-    line += '\n'
-    if config.output_target == 'file':
-        outfile.write(line)
-    else:
-        sys.stdout.write(line)
+# def output(*args):
+    # line = ' '.join( str(x) for x in args)
+    # line += '\n'
+    # if config.output_target == 'file':
+        # outfile.write(line)
+    # else:
+        # sys.stdout.write(line)
 
-def debug(*args):
-    if config.verbose_level >= 3:
-        output( 'DEBUG', *args )
+# def debug(*args):
+    # if config.verbose_level >= 3:
+        # output( 'DEBUG', *args )
 
-def debug2(*args):
-    if config.verbose_level >= 3:
-        output( 'DEBUG', *args )
+# def debug2(*args):
+    # if config.verbose_level >= 3:
+        # output( 'DEBUG', *args )
 
-def put(*args):
-    if config.verbose_level >= 1:
-        output( 'RECORD', *args )
+# def put(*args):
+    # if config.verbose_level >= 1:
+        # output( 'RECORD', *args )
 
-def warning(*args):
-    if config.verbose_level >= 2:
-        output( 'WARNING', *args )
+# def warning(*args):
+    # if config.verbose_level >= 2:
+        # output( 'WARNING', *args )
 
-def error(*args):
-    if config.verbose_level >= 0:
-        output( 'ERROR', *args )
+# def error(*args):
+    # if config.verbose_level >= 0:
+        # output( 'ERROR', *args )
 
