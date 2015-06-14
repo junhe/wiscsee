@@ -16,6 +16,15 @@ class Recorder(object):
 
     Recorder class is necessary because it may be extended to support
     statistics.
+
+    The delimma of recorder is that, in some place, it has to be initialized
+    when importing (so __init__ of some class can use it), while in some places
+    it cannot be initialized when importing (so we can change the
+    output_method). If we don't fix output_method at the beginning, some outputs
+    may go to stdout and some go to file. This is not acceptable.
+
+    How about this, we use recorder.put() to call rec.put(), thus we don't need
+    to use rec in other modules (thus no need to initialize).
     """
     def __init__(self, output_target, path=None, verbose_level=1):
         self.output_target = output_target
@@ -68,6 +77,8 @@ def initialize():
                    path = config.get_output_file_path(),
                    verbose_level = config.confdic['verbose_level'])
 
+
+
 # def output(*args):
     # line = ' '.join( str(x) for x in args)
     # line += '\n'
@@ -95,4 +106,19 @@ def initialize():
 # def error(*args):
     # if config.verbose_level >= 0:
         # output( 'ERROR', *args )
+
+def debug(*args):
+    rec.debug(*args)
+
+def debug2(*args):
+    rec.debug2(*args)
+
+def put(*args):
+    rec.put(*args)
+
+def warning(*args):
+    rec.warning(*args)
+
+def error(*args):
+    rec.error(*args)
 
