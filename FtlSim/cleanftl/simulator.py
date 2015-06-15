@@ -3,6 +3,7 @@
 import argparse
 import sys
 
+import bmftl
 import config
 import dmftl
 import flash
@@ -20,6 +21,9 @@ def event_line_to_dic(line):
 class Simulator(object):
     def __init__(self, conf):
         "conf is class Config"
+        if not isinstance(conf, config.Config):
+            raise TypeError("conf is not config.Config")
+
         self.conf = conf
 
         # initialize recorder
@@ -28,12 +32,17 @@ class Simulator(object):
             verbose_level = self.conf['verbose_level'])
 
         if self.conf['ftl_type'] == 'directmap':
-            self.ftl = dmftl.DirectMapFtl(self.conf, self.rec,
-                flash.Flash(recorder = self.rec))
+            ftl_class = dmftl.DirectMapFtl
+        elif self.conf['ftl_type'] == 'blockmap':
+            ftl_class = bmftl.BlockMapFtl
+        elif self.conf['ftl_type'] == 'pagemap':
+            ftl_class = pmftl.PageMapFtl
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))
 
+        self.ftl = ftl_class(self.conf, self.rec,
+            flash.Flash(recorder = self.rec))
 
     def process_event(self, event):
         pages = self.conf.off_size_to_page_list(event['offset'], event['size'])
