@@ -226,7 +226,8 @@ class BlockMapFtl(ftlbuilder.FtlBuilder):
 
     def block_invalid_ratio(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
-        return self.validbitmap[start:end].count(False) / float(config.flash_npage_per_block)
+        return self.validbitmap[start:end].count(False) / \
+            float(self.conf['flash_npage_per_block'])
 
     def next_victim_block(self):
         "for block map, we can only garbage collect block with no valid pages at all"
