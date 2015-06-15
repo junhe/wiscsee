@@ -1,4 +1,5 @@
 import json
+import os
 
 class Config(dict):
     def show(self):
@@ -46,6 +47,9 @@ class Config(dict):
         start_page = self.byte_to_pagenum(off)
 
         return range(start_page, start_page+npages)
+
+    def get_output_file_path(self):
+        return os.path.join(self['output_dir'], 'ftlsim.out')
 
 # need explicit initialization for it to be usable
 conf = Config()

@@ -3,8 +3,10 @@
 import argparse
 import sys
 
-import dmftl
 import config
+import dmftl
+import flash
+import recorder
 
 
 def event_line_to_dic(line):
@@ -47,10 +49,16 @@ def run(event_line_iter, confdic):
     # This should be the only place that we load config
     config.conf.load_from_dict(confdic)
 
+    # initialize recorder
+    recorder.rec = recorder.Recorder(output_target = config.conf['output_target'],
+        path = config.conf.get_output_file_path(),
+        verbose_level = config.conf['verbose_level'])
+
     # you have to load configuration first before initialize recorder
     # recorder.initialize()
 
-    ftl = dmftl.DmFtl(config.conf, None)
+    ftl = dmftl.DmFtl(config.conf, recorder.rec,
+        flash.Flash(recorder=recorder.rec))
 
     for event_line in event_line_iter:
         event = event_line_to_dic(event_line)

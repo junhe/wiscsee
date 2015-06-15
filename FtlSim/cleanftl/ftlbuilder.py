@@ -1,8 +1,9 @@
 
 class FtlBuilder(object):
-    def __init__(self, confobj, recorder):
+    def __init__(self, confobj, recorder, flash):
         self.conf = confobj
         self.recorder = recorder
+        self.flash = flash
 
     def lba_read(self, page_num):
         raise NotImplementedError

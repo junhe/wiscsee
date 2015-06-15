@@ -6,11 +6,11 @@ import ftlbuilder
 
 class DmFtl(ftlbuilder.FtlBuilder):
 
-    def __init__(self, confobj, recorder):
+    def __init__(self, confobj, recorder, flash):
         # From parent:
         # self.conf = confobj
         # self.recorder = recorder
-        super(DmFtl, self).__init__(confobj, recorder)
+        super(DmFtl, self).__init__(confobj, recorder, flash)
 
         # initialize bitmap 1: valid, 0: invalid
         self.validbitmap = bitarray.bitarray(self.conf.total_num_pages())
@@ -20,7 +20,7 @@ class DmFtl(ftlbuilder.FtlBuilder):
 
     # implement abstract functions
     def lba_read(self, pagenum):
-        flash.page_read(pagenum, 'user')
+        self.flash.page_read(pagenum, 'user')
 
     def lba_write(self, pagenum):
         self.write_page(pagenum)
@@ -48,15 +48,15 @@ class DmFtl(ftlbuilder.FtlBuilder):
     def read_block(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
         for pagenum in range(start, end):
-            flash.page_read(pagenum, 'unimplemented')
+            self.flash.page_read(pagenum, 'unimplemented')
 
     def program_block(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
         for pagenum in range(start, end):
-            flash.page_write(pagenum, 'unimplemented')
+            self.flash.page_write(pagenum, 'unimplemented')
 
     def erase_block(self, blocknum):
-        flash.block_erase(blocknum, 'amplified')
+        self.flash.block_erase(blocknum, 'amplified')
 
     def modify_page_in_ram(self, pagenum):
         "this is a dummy function"

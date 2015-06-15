@@ -1,12 +1,18 @@
-def page_read(pagenum, cat):
-    print 'page_read', pagenum, cat
-    # recorder.put('page_read', pagenum, cat)
+import recorder
 
-def page_write(pagenum, cat):
-    print 'page_write', pagenum, cat
-    # recorder.put('page_write', pagenum, cat)
+class Flash(object):
+    def __init__(self, recorder):
+        self.recorder = recorder
 
-def block_erase(blocknum, cat):
-    print 'block_erase', blocknum, cat
-    # recorder.put('block_erase', blocknum, cat)
+    def page_read(self, pagenum, cat):
+        print 'page_read', pagenum, cat
+        # recorder.put('page_read', pagenum, cat)
+
+    def page_write(self, pagenum, cat):
+        print 'page_write', pagenum, cat
+        # recorder.put('page_write', pagenum, cat)
+
+    def block_erase(self, blocknum, cat):
+        print 'block_erase', blocknum, cat
+        # recorder.put('block_erase', blocknum, cat)
 

@@ -3,6 +3,7 @@ import argparse
 
 import common
 import config
+import recorder
 import simulator
 
 def main():
