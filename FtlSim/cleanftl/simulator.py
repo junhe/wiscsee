@@ -7,6 +7,7 @@ import bmftl
 import config
 import dmftl
 import flash
+import hmftl
 import pmftl
 import recorder
 
@@ -38,6 +39,8 @@ class Simulator(object):
             ftl_class = bmftl.BlockMapFtl
         elif self.conf['ftl_type'] == 'pagemap':
             ftl_class = pmftl.PageMapFtl
+        elif self.conf['ftl_type'] == 'hybridmap':
+            ftl_class = hmftl.HybridMapFtl
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))

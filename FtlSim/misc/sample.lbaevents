@@ -1,0 +1,13 @@
+write 0 4096
+read    4096  4096
+write   4096  4096
+write   0*4096  4096
+write   1*4096  4096
+write   2*4096  4096
+write   3*4096  4096
+write   13*4096  4096
+write   11*4096  4096
+write   10*4096  4096
+discard 0  4096
+discard 0  4096
+discard 4096  4096
