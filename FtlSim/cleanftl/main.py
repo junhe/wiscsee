@@ -1,7 +1,7 @@
 # for executing FtlSim from command line
 import argparse
 
-import common
+import utils
 import config
 import recorder
 import simulator
@@ -28,7 +28,7 @@ def main():
 
     # You need to load config before everything else happen
     # (but you have already imported the modules)
-    dic = common.load_json(args.configfile)
+    dic = utils.load_json(args.configfile)
 
     if args.verbose != None:
         dic['verbose_level'] = int(args.verbose)
