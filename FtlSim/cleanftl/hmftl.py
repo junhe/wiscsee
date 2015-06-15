@@ -3,6 +3,51 @@ from collections import deque
 
 import ftlbuilder
 
+# TODO: remove ftl.block_invalid_ratio()
+
+class HybridBlockPool(object):
+    def __init__(self, num_blocks):
+        self.freeblocks = deque(range(num_blocks))
+
+        # initialize usedblocks
+        self.log_usedblocks = []
+        self.data_usedblocks = []
+
+    def pop_a_free_block(self):
+        if self.freeblocks:
+            blocknum = self.freeblocks.popleft()
+        else:
+            # nobody has free block
+            raise RuntimeError('No free blocks in device!!!!')
+
+        return blocknum
+
+    def pop_a_free_block_to_log(self):
+        "take one block from freelist and add it to log block list"
+        blocknum = self.pop_a_free_block()
+        self.log_usedblocks.append(blocknum)
+        return blocknum
+
+    def pop_a_free_block_to_data(self):
+        "take one block from freelist and add it to data block list"
+        blocknum = self.pop_a_free_block()
+        self.data_usedblocks.append(blocknum)
+        return blocknum
+
+    def move_used_data_block_to_free(self, blocknum):
+        self.data_usedblocks.remove(blocknum)
+        self.freeblocks.append(blocknum)
+
+    def move_used_log_block_to_free(self, blocknum):
+        self.log_usedblocks.remove(blocknum)
+        self.freeblocks.append(blocknum)
+
+    def __repr__(self):
+        ret = ' '.join('freeblocks', repr(self.freeblocks)) + '\n' + \
+            ' '.join('log_usedblocks', repr(self.log_usedblocks)) + '\n' \
+            ' '.join('data_usedblocks', repr(self.data_usedblocks)) + '\n'
+
+
 class HybridMapFtl(ftlbuilder.FtlBuilder):
     """
     There are two types of blocks: log block and data block. I think we need
@@ -32,18 +77,12 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.log_end_pagenum = -1 # the page number of the last write
 
         # initialize free list
-        self.freeblocks = deque(range(self.conf['flash_num_blocks']))
-        # initialize usedblocks
-        self.log_usedblocks = []
-        self.data_usedblocks = []
+        self.block_pool = HybridBlockPool(self.conf['flash_num_blocks'])
 
         self.log_high_num_blocks = int(self.conf['high_log_block_ratio']
             * self.conf['flash_num_blocks'])
         self.data_high_num_blocks = int(self.conf['high_data_block_ratio']
             * self.conf['flash_num_blocks'])
-
-        self.recorder.debug('log_high_num_blocks', self.log_high_num_blocks)
-        self.recorder.debug('data_high_num_blocks', self.data_high_num_blocks)
 
     def lba_read(self, pagenum):
         self.recorder.put('lba_read', pagenum, 'user')
@@ -103,7 +142,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
     def is_log_map_overflow(self):
         "it checks if there are too many log page mapping"
-        if len(self.log_usedblocks) > \
+        if len(self.block_pool.log_usedblocks) > \
             self.conf['log_block_upperbound_ratio'] * self.conf['flash_num_blocks']:
             return True
         else:
@@ -129,28 +168,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
     def modify_page_in_ram(self, pagenum):
         "this is a dummy function"
         pass
-
-    def pop_a_free_block(self):
-        if self.freeblocks:
-            blocknum = self.freeblocks.popleft()
-        else:
-            # nobody has free block
-            self.recorder.error('No free blocks in device!!!!')
-            # TODO: maybe try garbage collecting here
-            exit(1)
-
-        return blocknum
-
-    def pop_a_free_block_to_log(self):
-        blocknum = self.pop_a_free_block()
-        self.log_usedblocks.append(blocknum)
-        assert self.is_log_map_overflow() == False
-        return blocknum
-
-    def pop_a_free_block_to_data(self):
-        blocknum = self.pop_a_free_block()
-        self.data_usedblocks.append(blocknum)
-        return blocknum
 
     def invalidate_lba_page(self, lbapagenum):
         "invalidate bitmap and remove the mapping"
@@ -190,7 +207,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         if curblock == nextblock:
             return nextpage
         else:
-            block = self.pop_a_free_block_to_log()
+            block = self.block_pool.pop_a_free_block_to_log()
             start, end = self.conf.block_to_page_range(block)
             return start
 
@@ -266,14 +283,14 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
     ############################# Garbage Collection ##########################
     def need_garbage_collection(self):
-        if len(self.log_usedblocks) >= self.log_high_num_blocks or \
-            len(self.data_usedblocks) >= self.data_high_num_blocks:
+        if len(self.block_pool.log_usedblocks) >= self.log_high_num_blocks or \
+            len(self.block_pool.data_usedblocks) >= self.data_high_num_blocks:
             return True
         else:
             return False
 
     def need_garbage_collect_log(self):
-        if len(self.log_usedblocks) >= self.log_high_num_blocks:
+        if len(self.block_pool.log_usedblocks) >= self.log_high_num_blocks:
             return True
         else:
             return False
@@ -299,7 +316,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         maxblock = None
         # we don't want usedblocks[-1] because it is the one in use, newly popped block
         # is appended to the used block list
-        for blocknum in self.log_usedblocks[0:-1]:
+        for blocknum in self.block_pool.log_usedblocks[0:-1]:
             invratio = self.block_invalid_ratio(blocknum)
             if invratio > maxratio:
                 maxblock = blocknum
@@ -316,7 +333,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         maxblock = None
         # we don't want usedblocks[-1] because it is the one in use, newly popped block
         # is appended to the used block list
-        for blocknum in self.log_usedblocks[0:-1]:
+        for blocknum in self.block_pool.log_usedblocks[0:-1]:
             invratio = self.block_invalid_ratio(blocknum)
             if invratio > maxratio:
                 maxblock = blocknum
@@ -336,7 +353,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         maxratio = -1
         maxblock = None
 
-        for blocknum in self.data_usedblocks:
+        for blocknum in self.block_pool.data_usedblocks:
             invratio = self.block_invalid_ratio(blocknum)
             if invratio == 1:
                 return blocknum
@@ -413,8 +430,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         # valid bitmap does not change
 
         # move the block from log blocks to data blocks
-        self.log_usedblocks.remove(flash_blocknum)
-        self.data_usedblocks.append(flash_blocknum)
+        self.block_pool.log_usedblocks.remove(flash_blocknum)
+        self.block_pool.data_usedblocks.append(flash_blocknum)
 
         self.recorder.debug('SWITCH MERGE IS DONE')
 
@@ -494,7 +511,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
         # aggregate all the lba blocks
         for lba_block in lbablocks:
-            new_data_block = self.pop_a_free_block_to_data()
+            new_data_block = self.block_pool.pop_a_free_block_to_data()
             self.aggregate_lba_block(lba_block, new_data_block)
 
         # Now block flash_blocknum should have no valid pages
@@ -503,8 +520,9 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         # have been handled above, so we don't need to worry about
         # page mapping.
         self.erase_block(flash_blocknum, 'amplified')
-        self.log_usedblocks.remove(flash_blocknum)
-        self.freeblocks.append(flash_blocknum)
+        # self.log_usedblocks.remove(flash_blocknum)
+        # self.freeblocks.append(flash_blocknum)
+        self.block_pool.move_used_log_block_to_free(flash_blocknum)
 
     def is_partial_mergable(self, flash_blocknum):
         """
@@ -547,7 +565,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         """
         self.recorder.debug('-----------garbage_collect_log_blocks-------------------------garbage collecting')
 
-        lastused = len(self.log_usedblocks)
+        lastused = len(self.block_pool.log_usedblocks)
         cnt = 0
         while self.need_garbage_collect_log():
             # used too many log blocks, need to garbage collect some to
@@ -568,18 +586,19 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             self.erase_block(victimblock, 'amplified')
 
             # move from used to free
-            self.log_usedblocks.remove(victimblock)
-            self.freeblocks.append(victimblock)
+            # self.log_usedblocks.remove(victimblock)
+            # self.freeblocks.append(victimblock)
+            self.block_pool.move_used_log_block_to_free(victimblock)
 
             cnt += 1
             if cnt % 10 == 0:
                 # time to check
-                if len(self.log_usedblocks) >= lastused:
+                if len(self.block_pool.log_usedblocks) >= lastused:
                     # Not making progress
                     self.recorder.debug( self.bitmap.bitmap )
                     self.recorder.debug('GC is not making progress! End GC')
                     break
-                lastused = len(self.log_usedblocks)
+                lastused = len(self.block_pool.log_usedblocks)
 
         self.recorder.debug('============garbage_collect_log_blocks======================garbage collecting ends')
 
@@ -617,8 +636,9 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 self.remove_data_blk_mapping_by_flash(block_to_clean)
 
             # move it to free list
-            self.data_usedblocks.remove(block_to_clean)
-            self.freeblocks.append(block_to_clean)
+            # self.data_usedblocks.remove(block_to_clean)
+            # self.freeblocks.append(block_to_clean)
+            self.block_pool.move_used_data_block_to_free(block_to_clean)
 
             block_to_clean = self.next_victim_data_block()
 
@@ -632,21 +652,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.recorder.debug('data_blk_p2l', self.data_blk_p2l)
 
         self.recorder.debug('* VALIDBITMAP', self.bitmap.bitmap)
-        self.recorder.debug('* freeblocks ', self.freeblocks)
-        self.recorder.debug('* log_usedblocks ', self.log_usedblocks)
-        self.recorder.debug('* data_usedblocks', self.data_usedblocks)
-
-    def debug2(self):
-        self.recorder.debug2('log_page_l2p', self.log_page_l2p)
-        self.recorder.debug2('log_page_p2l', self.log_page_p2l)
-
-        self.recorder.debug2('data_blk_l2p', self.data_blk_l2p)
-        self.recorder.debug2('data_blk_p2l', self.data_blk_p2l)
-
-        self.recorder.debug2('* VALIDBITMAP', self.bitmap.bitmap)
-        self.recorder.debug2('* freeblocks ', self.freeblocks)
-        self.recorder.debug2('* log_usedblocks ', self.log_usedblocks)
-        self.recorder.debug2('* data_usedblocks', self.data_usedblocks)
+        self.recorder.debug('* blocks', self.block_pool)
 
     def show_map(self):
         self.recorder.debug('log_page_l2p', self.log_page_l2p)
@@ -706,8 +712,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         return True
 
     def is_block_total_ok(self):
-        if len(self.freeblocks) + len(self.log_usedblocks) + \
-            len(self.data_usedblocks) == self.conf['flash_num_blocks']:
+        if len(self.block_pool.freeblocks) + len(self.block_pool.log_usedblocks) + \
+            len(self.block_pool.data_usedblocks) == self.conf['flash_num_blocks']:
             return True
         return False
 
