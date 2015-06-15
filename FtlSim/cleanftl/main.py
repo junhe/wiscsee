@@ -32,7 +32,13 @@ def main():
 
     if args.verbose != None:
         dic['verbose_level'] = int(args.verbose)
-    simulator.run(open(args.events, 'r'), dic)
+
+    # Go with the wind~~~~
+    conf = config.Config()
+    conf.load_from_json_file(args.configfile)
+
+    sim = simulator.Simulator(conf)
+    sim.run(open(args.events, 'r'))
 
 if __name__ == '__main__':
     main()

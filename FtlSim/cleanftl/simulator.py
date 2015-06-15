@@ -17,50 +17,46 @@ def event_line_to_dic(line):
     event = dict(zip(keys, items))
     return event
 
-def process_event(ftl, conf, event):
-    """
-    ftl should be a subclass of FtlBuilder
-    TODO: check?
-    """
-    pages = conf.off_size_to_page_list(event['offset'], event['size'])
+class Simulator(object):
+    def __init__(self, conf):
+        "conf is class Config"
+        self.conf = conf
 
-    if event['operation'] == 'read':
-        for page in pages:
-            ftl.lba_read(page)
-    elif event['operation'] == 'write':
-        for page in pages:
-            ftl.lba_write(page)
-    elif event['operation'] == 'discard':
-        for page in pages:
-            ftl.lba_discard(page)
+        # initialize recorder
+        self.rec = recorder.Recorder(output_target = self.conf['output_target'],
+            path = self.conf.get_output_file_path(),
+            verbose_level = self.conf['verbose_level'])
 
-def run(event_line_iter, confdic):
-    """
-    This is an interface for calling FTLSIM as a module. In order to call,
-    you need provide an iterator of events and a dictionary containing
-    configuration.
+        if self.conf['ftl_type'] == 'directmap':
+            self.ftl = dmftl.DmFtl(self.conf, self.rec,
+                flash.Flash(recorder = self.rec))
+        else:
+            raise ValueError("ftl_type {} is not defined"\
+                .format(self.conf['ftl_type']))
 
-    It takes config as dict, not file path, because we later need to use
-    FtlSim as module, and change config
 
-    Note that confdic is a dictionary, not config.Config
-    """
+    def process_event(self, event):
+        pages = self.conf.off_size_to_page_list(event['offset'], event['size'])
 
-    # This should be the only place that we load config
-    config.conf.load_from_dict(confdic)
+        if event['operation'] == 'read':
+            for page in pages:
+                self.ftl.lba_read(page)
+        elif event['operation'] == 'write':
+            for page in pages:
+                self.ftl.lba_write(page)
+        elif event['operation'] == 'discard':
+            for page in pages:
+                self.ftl.lba_discard(page)
 
-    # initialize recorder
-    recorder.rec = recorder.Recorder(output_target = config.conf['output_target'],
-        path = config.conf.get_output_file_path(),
-        verbose_level = config.conf['verbose_level'])
+    def run(self, event_line_iter):
+        # This should be the only place that we load config
+        # do this before running the simulator, Not when initializing the
+        # simulator class
+        # config.conf.load_from_dict(confdic)
 
-    # you have to load configuration first before initialize recorder
-    # recorder.initialize()
-
-    ftl = dmftl.DmFtl(config.conf, recorder.rec,
-        flash.Flash(recorder=recorder.rec))
-
-    for event_line in event_line_iter:
-        event = event_line_to_dic(event_line)
-        process_event(ftl, config.conf, event)
+        # you have to load configuration first before initialize recorder
+        # recorder.initialize()
+        for event_line in event_line_iter:
+            event = event_line_to_dic(event_line)
+            self.process_event(event)
 

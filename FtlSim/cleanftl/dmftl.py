@@ -1,6 +1,5 @@
 import bitarray
 
-import config
 import flash
 import ftlbuilder
 

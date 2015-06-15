@@ -3,7 +3,7 @@
     "flash_npage_per_block" : 16,
     "flash_num_blocks"      : 512,
 
-    "ftl_type" : "hybridmap",
+    "ftl_type" : "directmap",
 
     "high_log_block_ratio"       : 0.4,
     "high_data_block_ratio"      : 0.4,

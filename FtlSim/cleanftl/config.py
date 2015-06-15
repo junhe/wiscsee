@@ -52,7 +52,8 @@ class Config(dict):
         return os.path.join(self['output_dir'], 'ftlsim.out')
 
 # need explicit initialization for it to be usable
-conf = Config()
+# this is the global configuration
+# conf = Config()
 
 # a = Config()
 # a['2'] = 3
