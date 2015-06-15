@@ -11,9 +11,11 @@ def main(args):
     WlRunner.conf.config['result_dir'] = dirpath
     event_line_iter = WlRunner.main.run()
 
-    confdic = FtlSim.common.load_json('./FtlSim/config.json')
+    confdic = FtlSim.utils.load_json('./FtlSim/config.json')
     confdic['output_dir'] = dirpath
-    FtlSim.simmain.sim_run(event_line_iter, confdic)
+    conf = FtlSim.config.Config(confdic)
+    sim = FtlSim.simulator.Simulator(conf)
+    sim.run(event_line_iter)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
