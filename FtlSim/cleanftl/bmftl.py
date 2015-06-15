@@ -16,15 +16,18 @@ class BlockMapFtl(ftlbuilder.FtlBuilder):
     1. find a block with NO valid page, erase the block
     """
 
-    def __init__(self, confobj, recorder, flash):
+    def __init__(self, confobj, recorderobj, flashobj):
         # From parent:
         # self.conf = confobj
         # self.recorder = recorder
+
+        # self.bitmap = FlashBitmap(self.conf.total_num_pages())
         super(BlockMapFtl, self).__init__(confobj, recorder, flash)
+        print 'length...', self.bitmap.length()
 
         # initialize bitmap 1: valid, 0: invalid
-        self.validbitmap = bitarray.bitarray(self.conf.total_num_pages())
-        self.validbitmap.setall(False)
+        self.bitmap.setall(ftlbuilder.FlashBitmap.INVALID)
+        print 'length...', self.bitmap.length()
 
         self.blk_l2p = {} # logical (LBA) block (multiple pages)
                           # to physical (flash) block
@@ -52,24 +55,6 @@ class BlockMapFtl(ftlbuilder.FtlBuilder):
     def lba_discard(self, pagenum):
         self.recorder.put('lba_discard ', pagenum, 'user')
         self.invalidate_lba_page(pagenum)
-
-    # bitmap operations
-    def validate_flash_page(self, pagenum):
-        "use this function to wrap the operation, "\
-        "in case I change bitmap module later"
-        self.validbitmap[pagenum] = True
-
-    def invalidate_flash_page(self, pagenum):
-        "mark the bitmap and remove flashpage -> lba mapping"
-        self.validbitmap[pagenum] = False
-
-    def validate_flash_block(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        self.validbitmap[start : end] = True
-
-    def invalidate_flash_block(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        self.validbitmap[start : end] = False
 
     # basic operations
     def read_page(self, pagenum, cat):
@@ -154,14 +139,14 @@ class BlockMapFtl(ftlbuilder.FtlBuilder):
 
         if flash_page != None:
             # the lba has a corresponding flash page on device
-            self.invalidate_flash_page(flash_page)
+            self.bitmap.invalidate_page(flash_page)
         else:
             self.recorder.warning('trying to invalidate a page not in block map')
 
     def read_valid_pages(self, blocknum, cat):
         start, end = self.conf.block_to_page_range(blocknum)
         for page in range(start, end):
-            if self.validbitmap[page] == True:
+            if self.bitmap.is_page_valid(page):
                 self.read_page(page, cat)
 
     def write_page(self, lba_pagenum, garbage_collect_enable=True, cat='user'):
@@ -192,7 +177,7 @@ class BlockMapFtl(ftlbuilder.FtlBuilder):
         start, end = self.conf.block_to_page_range(flash_block)
         maxtowrite = 0
         for page in range(start, end):
-            if self.validbitmap[page] == True:
+            if self.bitmap.is_page_valid(page):
                 if page > maxtowrite:
                     maxtowrite = page
                 cat = 'amplified'
@@ -210,10 +195,10 @@ class BlockMapFtl(ftlbuilder.FtlBuilder):
             self.erase_block(flash_block, 'amplified')
 
         # set the flash_page as valid if it is not
-        self.validate_flash_page(flash_page)
+        self.bitmap.validate_page(flash_page)
 
         for pagenum in range(start, maxtowrite+1):
-            if self.validbitmap[pagenum] == True:
+            if self.bitmap.is_page_valid(pagenum):
                 # only write valid pages
                 if pagenum == flash_page:
                     cat = 'user'
@@ -224,18 +209,13 @@ class BlockMapFtl(ftlbuilder.FtlBuilder):
         if len(self.freeblocks) < self.low_num_blocks:
             self.garbage_collect()
 
-    def block_invalid_ratio(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        return self.validbitmap[start:end].count(False) / \
-            float(self.conf['flash_npage_per_block'])
-
     def next_victim_block(self):
         "for block map, we can only garbage collect block with no valid pages at all"
         maxratio = -1
         maxblock = None
 
         for blocknum in self.usedblocks:
-            invratio = self.block_invalid_ratio(blocknum)
+            invratio = self.bitmap.block_invalid_ratio(blocknum)
             if invratio == 1:
                 return blocknum
 
@@ -273,7 +253,7 @@ class BlockMapFtl(ftlbuilder.FtlBuilder):
 
     def debug(self):
         self.show_map()
-        self.recorder.debug( 'VALIDBITMAP', self.validbitmap)
+        self.recorder.debug( 'VALIDBITMAP', self.bitmap)
         self.recorder.debug( 'FREEBLOCKS ', self.freeblocks)
         self.recorder.debug( 'USEDBLOCKS ', self.usedblocks)
 

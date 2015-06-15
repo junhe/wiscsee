@@ -26,16 +26,13 @@ def main():
         parser.print_help()
         exit(1)
 
-    # You need to load config before everything else happen
-    # (but you have already imported the modules)
-    dic = utils.load_json(args.configfile)
-
-    if args.verbose != None:
-        dic['verbose_level'] = int(args.verbose)
 
     # Go with the wind~~~~
     conf = config.Config()
     conf.load_from_json_file(args.configfile)
+
+    if args.verbose != None:
+        conf['verbose_level'] = int(args.verbose)
 
     sim = simulator.Simulator(conf)
     sim.run(open(args.events, 'r'))

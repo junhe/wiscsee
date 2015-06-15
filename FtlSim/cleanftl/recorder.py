@@ -46,8 +46,4 @@ class Recorder(object):
         if self.verbose_level >= 0:
             self.output('ERROR', *args)
 
-# this global Recorder instance should be initialized before using
-# all modules share this rec
-rec = None
-
 
