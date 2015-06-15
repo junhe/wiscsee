@@ -3,7 +3,6 @@ from collections import deque
 
 import ftlbuilder
 
-
 class HybridMapFtl(ftlbuilder.FtlBuilder):
     """
     There are two types of blocks: log block and data block. I think we need
@@ -20,14 +19,9 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
     collection. We need to merge.
     """
     def __init__(self, confobj, recorder, flash):
-        # From parent:
-        # self.conf = confobj
-        # self.recorder = recorder
-        # self.flash = flash
         super(HybridMapFtl, self).__init__(confobj, recorder, flash)
 
-        # initialize bitmap 1: valid, 0: invalid
-        self.validbitmap = bitarray.bitarray(self.conf.total_num_pages())
+        self.bitmap.initialize()
 
         self.log_page_l2p = {}
         self.log_page_p2l = {}
@@ -66,23 +60,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
     def lba_discard(self, pagenum):
         self.recorder.put('lba_discard ', pagenum, 'user')
         self.invalidate_lba_page(pagenum)
-
-    # bitmap operations
-    def validate_flash_page(self, pagenum):
-        "use this function to wrap the operation, "\
-        "in case I change bitmap module later"
-        self.validbitmap[pagenum] = True
-
-    def invalidate_flash_page(self, pagenum):
-        self.validbitmap[pagenum] = False
-
-    def validate_flash_block(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        self.validbitmap[start : end] = True
-
-    def invalidate_flash_block(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        self.validbitmap[start : end] = False
 
     # mapping operations
     def add_data_blk_mapping(self, lba_block, flash_block):
@@ -186,16 +163,15 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         if self.log_page_l2p.has_key(lbapagenum):
             # in log block
             flashpagenum = self.log_page_l2p[lbapagenum]
-            assert self.validbitmap[flashpagenum], 'WTF, in map but not valid?'
-            self.invalidate_flash_page(flashpagenum)
+            assert self.bitmap.is_page_valid(flashpagenum), 'WTF, in map but not valid?'
+            self.bitmap.invalidate_page(flashpagenum)
             self.remove_log_page_mapping_by_lba(lbapagenum)
         elif self.data_blk_l2p.has_key(lba_block):
             # in data block
             # In this case, it is OK to be in map but not valid, because this
             # is block map
             flashpagenum = self.lba_page_to_flash_page(lbapagenum)
-            # assert self.validbitmap[flashpagenum], 'WTF, in map but not valid?'
-            self.invalidate_flash_page(flashpagenum)
+            self.bitmap.invalidate_page(flashpagenum)
         else:
             self.recorder.warning('trying to invalidate a page not in page map')
 
@@ -271,20 +247,20 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
         toflashpage = self.next_page_to_program()
         self.recorder.debug('Writing LBA {} to {}'.format(lba_pagenum, toflashpage))
-        assert self.validbitmap[toflashpage] == False
+        assert self.bitmap.is_page_valid(toflashpage) == False
         self.flash.page_write(toflashpage, cat)
         self.log_end_pagenum = toflashpage
 
         if self.log_page_l2p.has_key(lba_pagenum):
             oldflashpage = self.log_page_l2p[lba_pagenum]
-            self.invalidate_flash_page(oldflashpage)
+            self.bitmap.invalidate_page(oldflashpage)
             self.remove_log_page_mapping_by_lba(lba_pagenum)
         elif self.data_blk_l2p.has_key(lba_block):
             oldflashpage = self.lba_page_to_flash_page(lba_pagenum)
-            self.invalidate_flash_page(oldflashpage)
+            self.bitmap.invalidate_page(oldflashpage)
 
         self.add_log_page_mapping(lba_page=lba_pagenum, flash_page=toflashpage)
-        self.validate_flash_page(toflashpage)
+        self.bitmap.validate_page(toflashpage)
 
         # do garbage collection if necessary
         if garbage_collect_enable and self.need_garbage_collection():
@@ -318,7 +294,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
     def block_invalid_ratio(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
-        return self.validbitmap[start:end].count(False) / float(config.flash_npage_per_block)
+        return self.bitmap.bitmap[start:end].count(False) / float(config.flash_npage_per_block)
 
     def next_victim_log_block_to_merge(self):
         # use stupid for the prototype
@@ -381,7 +357,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
         # The loop below will invalidate all pages in this block
         for page in range(start, end):
-            if self.validbitmap[page] == True:
+            if self.bitmap.is_page_valid(page):
                 # lba = self.p2l[page]
                 self.flash.page_read(page, 'amplified')
                 lba = self.flash_page_to_lba_page(page)
@@ -396,7 +372,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         flash_pg_start, flash_pg_end = self.conf.block_to_page_range(flash_blocknum)
 
         for flash_pg in range(flash_pg_start, flash_pg_end):
-            if self.validbitmap[flash_pg] == False:
+            if not self.bitmap.is_page_valid(flash_pg):
                 return False
             lba_pg = self.log_page_p2l[flash_pg]
             if lba_pg % self.npages_per_block != \
@@ -434,7 +410,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
         # removing log page mapping
         for pg in range(flash_pg_start, flash_pg_end):
-            if self.validbitmap[pg] == True:
+            if self.bitmap.is_page_valid(pg):
                 self.remove_log_page_mapping_by_flash(pg)
 
         # valid bitmap does not change
@@ -467,11 +443,11 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
 
                 self.flash.page_read(flash_page, 'amplified')
-                self.invalidate_flash_page(flash_page)
+                self.bitmap.invalidate_page(flash_page)
 
                 target_page = self.conf.block_off_to_page(target_flash_block, page_off)
                 self.flash.page_write(target_page, 'amplified')
-                self.validate_flash_page(target_page)
+                self.bitmap.validate_page(target_page)
 
                 if self.log_page_l2p.has_key(lba_page):
                     # handle the page mapping case
@@ -514,7 +490,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         # find all the lba blocks of the pages in flash_blocknum
         lbablocks = set()
         for flash_pg in range(flash_start, flash_end):
-            if self.validbitmap[flash_pg] == True:
+            if self.bitmap.is_page_valid(flash_pg):
                 lba_pg = self.flash_page_to_lba_page(flash_pg)
                 lba_blk, off = self.conf.page_to_block_off(lba_pg)
                 lbablocks.add(lba_blk)
@@ -583,12 +559,12 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             if victimblock == None:
                 # if next_victim_block() return None, it means
                 # no block can be a victim
-                self.recorder.debug( self.validbitmap )
+                self.recorder.debug( self.bitmap.bitmap )
                 self.recorder.debug('Cannot find a victim block')
                 break
             self.recorder.debug( 'next victimblock:', victimblock,
                     'invaratio', self.block_invalid_ratio(victimblock))
-            self.recorder.debug( self.validbitmap )
+            self.recorder.debug( self.bitmap.bitmap )
 
             self.move_valid_pages(victimblock)
             #block erasure is always counted as amplified
@@ -603,7 +579,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 # time to check
                 if len(self.log_usedblocks) >= lastused:
                     # Not making progress
-                    self.recorder.debug( self.validbitmap )
+                    self.recorder.debug( self.bitmap.bitmap )
                     self.recorder.debug('GC is not making progress! End GC')
                     break
                 lastused = len(self.log_usedblocks)
@@ -616,12 +592,12 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         while self.need_garbage_collect_log():
             victimblock = self.next_victim_log_block_to_merge()
             if victimblock == None:
-                self.recorder.debug( self.validbitmap )
+                self.recorder.debug( self.bitmap.bitmap )
                 self.recorder.debug('Cannot find a victim block')
                 break
             self.recorder.debug( 'next victimblock:', victimblock,
                     'invaratio', self.block_invalid_ratio(victimblock))
-            self.recorder.debug( self.validbitmap )
+            self.recorder.debug( self.bitmap.bitmap )
 
             # The following function may trigger any type of merge
             self.merge_log_block(victimblock)
@@ -658,7 +634,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.recorder.debug('data_blk_l2p', self.data_blk_l2p)
         self.recorder.debug('data_blk_p2l', self.data_blk_p2l)
 
-        self.recorder.debug('* VALIDBITMAP', self.validbitmap)
+        self.recorder.debug('* VALIDBITMAP', self.bitmap.bitmap)
         self.recorder.debug('* freeblocks ', self.freeblocks)
         self.recorder.debug('* log_usedblocks ', self.log_usedblocks)
         self.recorder.debug('* data_usedblocks', self.data_usedblocks)
@@ -670,7 +646,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.recorder.debug2('data_blk_l2p', self.data_blk_l2p)
         self.recorder.debug2('data_blk_p2l', self.data_blk_p2l)
 
-        self.recorder.debug2('* VALIDBITMAP', self.validbitmap)
+        self.recorder.debug2('* VALIDBITMAP', self.bitmap.bitmap)
         self.recorder.debug2('* freeblocks ', self.freeblocks)
         self.recorder.debug2('* log_usedblocks ', self.log_usedblocks)
         self.recorder.debug2('* data_usedblocks', self.data_usedblocks)
@@ -734,7 +710,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
     def is_block_total_ok(self):
         if len(self.freeblocks) + len(self.log_usedblocks) + \
-            len(self.data_usedblocks) == self.flash_num_blocks:
+            len(self.data_usedblocks) == self.conf['flash_num_blocks']:
             return True
         return False
 
@@ -742,9 +718,9 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
     def is_sanity_check_ok(self):
         # if a page in valid, it must have mapping,
         # either block or page mapping
-        for pg in range(self.npages):
+        for pg in range(self.conf.total_num_pages()):
             flash_block, off = self.conf.page_to_block_off(pg)
-            if self.validbitmap[pg] == True and \
+            if self.bitmap.is_page_valid(pg) and \
                 not self.is_page_mapping_ok(pg) and \
                 not self.is_block_mapping_ok(flash_block):
                 "page is valid but could not find mapping"
