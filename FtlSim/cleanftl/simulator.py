@@ -28,7 +28,7 @@ class Simulator(object):
             verbose_level = self.conf['verbose_level'])
 
         if self.conf['ftl_type'] == 'directmap':
-            self.ftl = dmftl.DmFtl(self.conf, self.rec,
+            self.ftl = dmftl.DirectMapFtl(self.conf, self.rec,
                 flash.Flash(recorder = self.rec))
         else:
             raise ValueError("ftl_type {} is not defined"\

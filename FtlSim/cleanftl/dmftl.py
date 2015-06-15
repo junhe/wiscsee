@@ -3,19 +3,17 @@ import bitarray
 import flash
 import ftlbuilder
 
-class DmFtl(ftlbuilder.FtlBuilder):
+class DirectMapFtl(ftlbuilder.FtlBuilder):
 
     def __init__(self, confobj, recorder, flash):
         # From parent:
         # self.conf = confobj
         # self.recorder = recorder
-        super(DmFtl, self).__init__(confobj, recorder, flash)
+        super(DirectMapFtl, self).__init__(confobj, recorder, flash)
 
         # initialize bitmap 1: valid, 0: invalid
         self.validbitmap = bitarray.bitarray(self.conf.total_num_pages())
-        # all pages are valid at the beginning
-        # assuming the vendor has done the first erasure
-        self.validbitmap.setall(True)
+        self.validbitmap.setall(False)
 
     # implement abstract functions
     def lba_read(self, pagenum):
