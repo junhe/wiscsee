@@ -4,7 +4,7 @@
     "flash_num_blocks"      : 512,
     
     "dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
-    "ftl_type" : "blockmap",
+    "ftl_type" : "directmap",
 
     "high_log_block_ratio"       : 0.4,
     "high_data_block_ratio"      : 0.4,

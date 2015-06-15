@@ -5,15 +5,13 @@ import ftlbuilder
 
 class DirectMapFtl(ftlbuilder.FtlBuilder):
 
-    def __init__(self, confobj, recorder, flash):
+    def __init__(self, confobj, recorderobj, flashobj):
         # From parent:
         # self.conf = confobj
         # self.recorder = recorder
-        super(DirectMapFtl, self).__init__(confobj, recorder, flash)
+        super(DirectMapFtl, self).__init__(confobj, recorderobj, flashobj)
 
-        # initialize bitmap 1: valid, 0: invalid
-        self.validbitmap = bitarray.bitarray(self.conf.total_num_pages())
-        self.validbitmap.setall(False)
+        self.bitmap.initialize()
 
     # implement abstract functions
     def lba_read(self, pagenum):
@@ -23,24 +21,7 @@ class DirectMapFtl(ftlbuilder.FtlBuilder):
         self.write_page(pagenum)
 
     def lba_discard(pagenum):
-        self.invalidate_page(pagenum)
-
-    # bitmap operations
-    def validate_page(self, pagenum):
-        "use this function to wrap the operation, "\
-        "in case I change bitmap module later"
-        self.validbitmap[pagenum] = True
-
-    def invalidate_page(self, pagenum):
-        self.validbitmap[pagenum] = False
-
-    def validate_block(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        self.validbitmap[start : end] = True
-
-    def invalidate_block(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        self.validbitmap[start : end] = False
+        self.bitmap.invalidate_page(pagenum)
 
     def read_block(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
