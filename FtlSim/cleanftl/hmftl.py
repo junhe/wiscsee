@@ -37,10 +37,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.log_usedblocks = []
         self.data_usedblocks = []
 
-        # self.log_low_num_blocks = int(config.low_log_block_ratio
-            # * self.flash_num_blocks)
-        # self.data_low_num_blocks = int(config.low_data_block_ratio
-            # * self.flash_num_blocks)
         self.log_high_num_blocks = int(self.conf['high_log_block_ratio']
             * self.conf['flash_num_blocks'])
         self.data_high_num_blocks = int(self.conf['high_data_block_ratio']
@@ -294,7 +290,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
     def block_invalid_ratio(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
-        return self.bitmap.bitmap[start:end].count(False) / float(config.flash_npage_per_block)
+        return self.bitmap.bitmap[start:end].count(False) / \
+            float(self.conf['flash_npage_per_block'])
 
     def next_victim_log_block_to_merge(self):
         # use stupid for the prototype
@@ -375,8 +372,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             if not self.bitmap.is_page_valid(flash_pg):
                 return False
             lba_pg = self.log_page_p2l[flash_pg]
-            if lba_pg % self.npages_per_block != \
-                flash_pg % self.npages_per_block:
+            if lba_pg % self.conf['flash_npage_per_block'] != \
+                flash_pg % self.conf['flash_npage_per_block']:
                 return False
 
         return True
@@ -432,7 +429,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         lba_start, lba_end = self.conf.block_to_page_range(lba_block)
         moved = False
         for lba_page in range(lba_start, lba_end):
-            page_off = lba_page % self.npages_per_block
+            page_off = lba_page % self.conf['flash_npage_per_block']
             flash_page = self.lba_page_to_flash_page(lba_page)
             self.recorder.debug2('trying to move lba_page', lba_page,
                     '(flash_page:', flash_page, ')')
