@@ -306,9 +306,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.recorder.debug('**********************************************************')
 
     def block_invalid_ratio(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        return self.bitmap.bitmap[start:end].count(False) / \
-            float(self.conf['flash_npage_per_block'])
+        return self.bitmap.block_invalid_ratio(blocknum)
 
     def next_victim_log_block_to_merge(self):
         # use stupid for the prototype
