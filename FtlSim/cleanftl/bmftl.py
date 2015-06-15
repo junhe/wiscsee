@@ -22,12 +22,10 @@ class BlockMapFtl(ftlbuilder.FtlBuilder):
         # self.recorder = recorder
 
         # self.bitmap = FlashBitmap(self.conf.total_num_pages())
-        super(BlockMapFtl, self).__init__(confobj, recorder, flash)
-        print 'length...', self.bitmap.length()
+        super(BlockMapFtl, self).__init__(confobj, recorderobj, flashobj)
 
         # initialize bitmap 1: valid, 0: invalid
-        self.bitmap.setall(ftlbuilder.FlashBitmap.INVALID)
-        print 'length...', self.bitmap.length()
+        self.bitmap.initialize()
 
         self.blk_l2p = {} # logical (LBA) block (multiple pages)
                           # to physical (flash) block

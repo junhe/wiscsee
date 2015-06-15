@@ -4,46 +4,41 @@ import config
 import flash
 import recorder
 
-class FlashBitmap(bitarray.bitarray):
+class FlashBitmap(object):
     VALID, INVALID = (True, False)
 
     def __init__(self, conf):
         if not isinstance(conf, config.Config):
             raise TypeError("conf is not conf.Config")
 
-        # self.conf  = conf
+        self.conf  = conf
 
-        print self
-        print 'length before', self.length()
-        print 'length of conf', len(conf)
-        print super(FlashBitmap, self).__dict__
-        super(FlashBitmap, self).__init__([22])
-        # self(100)
-        print 'length after', self.length()
-
-        raise RuntimeError('xxx')
+        self.__bitmap = bitarray.bitarray(conf.total_num_pages())
 
     def validate_page(self, pagenum):
-        self[pagenum] = FlashBitmap.VALID
+        self.__bitmap[pagenum] = FlashBitmap.VALID
 
     def invalidate_page(self, pagenum):
-        self[pagenum] = FlashBitmap.INVALID
+        self.__bitmap[pagenum] = FlashBitmap.INVALID
 
     def validate_block(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
-        self[start : end] = FlashBitmap.VALID
+        self.__bitmap[start : end] = FlashBitmap.VALID
 
     def invalidate_block(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
-        self[start : end] = FlashBitmap.INVALID
+        self.__bitmap[start : end] = FlashBitmap.INVALID
 
     def block_invalid_ratio(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
-        return self[start:end].count(FlashBitmap.INVALID) / \
+        return self.__bitmap[start:end].count(FlashBitmap.INVALID) / \
             float(self.conf['flash_npage_per_block'])
 
     def is_page_valid(self, pagenum):
-        return self[pagenum]
+        return self.__bitmap[pagenum]
+
+    def initialize(self):
+        self.__bitmap.setall(FlashBitmap.INVALID)
 
 class FtlBuilder(object):
     def __init__(self, confobj, recorderobj, flashobj):
