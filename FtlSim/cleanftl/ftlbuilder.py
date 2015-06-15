@@ -13,32 +13,32 @@ class FlashBitmap(object):
 
         self.conf  = conf
 
-        self.__bitmap = bitarray.bitarray(conf.total_num_pages())
+        self.bitmap = bitarray.bitarray(conf.total_num_pages())
 
     def validate_page(self, pagenum):
-        self.__bitmap[pagenum] = FlashBitmap.VALID
+        self.bitmap[pagenum] = FlashBitmap.VALID
 
     def invalidate_page(self, pagenum):
-        self.__bitmap[pagenum] = FlashBitmap.INVALID
+        self.bitmap[pagenum] = FlashBitmap.INVALID
 
     def validate_block(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
-        self.__bitmap[start : end] = FlashBitmap.VALID
+        self.bitmap[start : end] = FlashBitmap.VALID
 
     def invalidate_block(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
-        self.__bitmap[start : end] = FlashBitmap.INVALID
+        self.bitmap[start : end] = FlashBitmap.INVALID
 
     def block_invalid_ratio(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
-        return self.__bitmap[start:end].count(FlashBitmap.INVALID) / \
+        return self.bitmap[start:end].count(FlashBitmap.INVALID) / \
             float(self.conf['flash_npage_per_block'])
 
     def is_page_valid(self, pagenum):
-        return self.__bitmap[pagenum]
+        return self.bitmap[pagenum]
 
     def initialize(self):
-        self.__bitmap.setall(FlashBitmap.INVALID)
+        self.bitmap.setall(FlashBitmap.INVALID)
 
 class FtlBuilder(object):
     def __init__(self, confobj, recorderobj, flashobj):
