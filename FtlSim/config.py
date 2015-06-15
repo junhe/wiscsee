@@ -1,82 +1,65 @@
 import json
 import os
 
-import common
+class Config(dict):
+    def show(self):
+        print self
 
+    def load_from_dict(self, dic):
+        super(Config, self).clear()
+        super(Config, self).__init__(dic)
 
-# Wait for the main or others to load the confdic
-confdic = None
+    def load_from_json_file(self, file_path):
+        decoded = json.load(open(file_path, 'r'))
+        self.load_from_dict(decoded)
 
-def load_from_json_file(json_path):
-    global confdic
-    confdic = common.load_json(json_path)
-    dic_to_variables(confdic)
+    def byte_to_pagenum(self, offset):
+        "offset to page number"
+        assert offset % self['flash_page_size'] == 0, \
+                'offset: {off}, page_size: {ps}'.format(off=offset, ps = flash_page_size)
+        return offset / self['flash_page_size']
 
-def load_from_dict(dic):
-    global confdic
-    confdic = dic
-    dic_to_variables(confdic)
+    def page_to_block(self, pagenum):
+        d = {}
+        d['blocknum'] = pagenum / self['flash_npage_per_block']
+        d['pageoffset'] = pagenum % self['flash_npage_per_block']
+        return d
 
-flash_page_size       = 4096
-flash_npage_per_block = 16
-flash_num_blocks      = 512
+    def page_to_block_off(self, pagenum):
+        "return block, page_offset"
+        return pagenum / self['flash_npage_per_block'], \
+                pagenum % self['flash_npage_per_block']
 
+    def block_off_to_page(self, blocknum, pageoff):
+        "convert block number and page offset to page number"
+        return blocknum * self['flash_npage_per_block'] + pageoff
 
-# directmap pagemap blockmap hybridmap
-# ftl_type = 'pagemap'
-# ftl_type = 'blockmap'
-ftl_type = 'hybridmap'
+    def block_to_page_range(self, blocknum):
+        return blocknum * self['flash_npage_per_block'], \
+                (blocknum + 1) * self['flash_npage_per_block']
 
-# for hybrid mapping
-# Note that log_block_ratio + data_block_ratio does not necessary
-# equal to 1.0. But it must be less than 1.0
-high_log_block_ratio = 0.4   # ratio of log block over all flash blocks
-high_data_block_ratio = 0.4  # ratio of data blocks over all flash blocks
-log_block_upperbound_ratio = 0.5 # to limit RAM usage for the page mapping
-assert high_log_block_ratio < log_block_upperbound_ratio
+    def total_num_pages(self):
+        return self['flash_npage_per_block'] * self['flash_num_blocks']
 
-# for general
-verbose_level = 1
-output_target = 'file' # stdout or file
-# output_target = 'stdout' # stdout or file
-output_dir = './'
+    def off_size_to_page_list(self, off, size):
+        assert size % self['flash_page_size'] == 0
+        npages = size / self['flash_page_size']
+        start_page = self.byte_to_pagenum(off)
 
-def get_output_file_path():
-    return os.path.join(output_dir, 'ftlsim.out')
+        return range(start_page, start_page+npages)
 
-def dic_to_variables(dic):
-    """
-    Copy values from dic to global variables, so the previous
-    users of the variables will still work.
-    """
-    global flash_page_size
-    global flash_npage_per_block
-    global flash_num_blocks
+    def get_output_file_path(self):
+        return os.path.join(self['output_dir'], 'ftlsim.out')
 
-    global ftl_type
+# need explicit initialization for it to be usable
+# this is the global configuration
+# conf = Config()
 
-    global high_log_block_ratio
-    global high_data_block_ratio
-    global log_block_upperbound_ratio
-
-    global verbose_level
-    global output_target
-    global output_dir
-
-    # assignment
-    flash_page_size       = dic['flash_page_size']
-    flash_npage_per_block = dic['flash_npage_per_block']
-    flash_num_blocks      = dic['flash_num_blocks']
-
-
-    ftl_type = dic['ftl_type']
-
-    high_log_block_ratio = dic['high_log_block_ratio']
-    high_data_block_ratio = dic['high_data_block_ratio']
-    log_block_upperbound_ratio = dic['log_block_upperbound_ratio']
-
-    verbose_level = dic['verbose_level']
-    output_target = dic['output_target']
-    output_dir = dic['output_dir']
-
+# a = Config()
+# a['2'] = 3
+# a.show()
+# a.load_from_dict({4:88})
+# a.show()
+# a.load_from_json_file('./config.json')
+# a.show()
 
