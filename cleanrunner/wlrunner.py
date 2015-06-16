@@ -51,11 +51,15 @@ class WorkloadRunner(object):
             self.blktracer.blkparse_file_to_ftlsim_input_file()
             print 'file wrote to {}'.format(
                 self.conf.get_ftlsim_events_output_path())
+            return self.get_iterator()
         finally:
             # always try to clean up the blktrace processes
             self.blktracer.stop_tracing_and_collecting()
 
     def get_iterator(self):
-        pass
-
+        "Note that it can only be uesd once"
+        with open(self.conf.get_ftlsim_events_output_path(), 'r') as f:
+            for line in f:
+                line = line.strip()
+                yield line
 

@@ -6,8 +6,8 @@ def main():
     confobj = config.Config()
     confobj.load_from_json_file('./config.json')
     runner = wlrunner.WorkloadRunner(confobj)
-    runner.run()
-
+    it = runner.run()
+    print list(it)
 
 if __name__ == '__main__':
     main()
