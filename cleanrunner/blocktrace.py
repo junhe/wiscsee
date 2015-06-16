@@ -1,11 +1,18 @@
+import os
+import re
+import subprocess
+import time
+
 import config
 import utils
 
 class BlockTraceManager(object):
     "This class provides interfaces to interact with blktrace"
-    def __init__(self, dev, resultpath, to_ftlsim_path):
+    def __init__(self, dev, resultpath, to_ftlsim_path, sector_size):
         self.dev = dev
         self.resultpath = resultpath
+        self.to_ftlsim_path = to_ftlsim_path
+        self.sector_size = sector_size
 
     def start_tracing_and_collecting(self):
         self.proc = start_blktrace_on_bg(self.dev, self.resultpath)
@@ -15,12 +22,13 @@ class BlockTraceManager(object):
         stop_blktrace_on_bg()
 
     def blkparse_file_to_ftlsim_input_file(self):
-        table = parse_blkparse_to_table(open(blkparse_path, 'r'))
-        utils.prepare_dir_for_path(to_ftlsim_path)
-        finaltable_to_ftlsim_input(table, to_ftlsim_path)
+        table = parse_blkparse_to_table(open(self.resultpath, 'r'))
+        utils.prepare_dir_for_path(self.to_ftlsim_path)
+        finaltable_to_ftlsim_input(table, self.to_ftlsim_path,
+            self.sector_size)
 
 def start_blktrace_on_bg(dev, resultpath):
-    prepare_dir_for_path(resultpath)
+    utils.prepare_dir_for_path(resultpath)
     cmd = "sudo blktrace -a write -d {dev} -o - | blkparse -i - > "\
         "{resultpath}".format(dev = dev, resultpath = resultpath)
     print cmd
@@ -33,9 +41,9 @@ def start_blktrace_on_bg(dev, resultpath):
     return p
 
 def stop_blktrace_on_bg():
-    shcmd('pkill blkparse', ignore_error=True)
-    shcmd('pkill blktrace', ignore_error=True)
-    shcmd('sync')
+    utils.shcmd('pkill blkparse', ignore_error=True)
+    utils.shcmd('pkill blktrace', ignore_error=True)
+    utils.shcmd('sync')
 
     # try:
         # proc.terminate()
@@ -83,7 +91,7 @@ def parse_blkparse_to_table(line_iter):
 #         ]
 def table_to_file(table, filepath, adddic=None):
     'save table to a file with additional columns'
-    prepare_dir_for_path(filepath)
+    utils.prepare_dir_for_path(filepath)
     with open(filepath, 'w') as f:
         colnames = table[0].keys()
         if adddic != None:
@@ -104,19 +112,18 @@ def blkparse_to_parsed_files(blkparse_path):
     table = parse_blkparse_to_table(open(blkparse_path, 'r'))
     # table_to_file(table, table_path)
     table_path = conf.get_ftlsim_events_output_path()
-    prepare_dir_for_path(table_path)
+    utils.prepare_dir_for_path(table_path)
     finaltable_to_ftlsim_input(table, table_path)
 
-def finaltable_to_ftlsim_input(table, out_path):
-    prepare_dir_for_path(out_path)
+def finaltable_to_ftlsim_input(table, out_path, sector_size):
+    utils.prepare_dir_for_path(out_path)
     out = open(out_path, 'w')
     for row in table:
         blk_start = int(row['blockstart'])
         size = int(row['size'])
-        secsize = conf.config['sector_size']
 
-        byte_offset = blk_start * secsize
-        byte_size = size * secsize
+        byte_offset = blk_start * sector_size
+        byte_size = size * sector_size
 
         if row['RWBS'] == 'D':
             operation = 'discard'
@@ -125,8 +132,7 @@ def finaltable_to_ftlsim_input(table, out_path):
         elif 'R' in row['RWBS']:
             operation = 'read'
         else:
-            print 'unknow operation'
-            exit(1)
+            raise RuntimeError('unknow operation')
 
         items = [str(x) for x in [operation, byte_offset, byte_size]]
         line = ' '.join(items)+'\n'
