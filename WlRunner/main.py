@@ -26,7 +26,6 @@ def prepare_fs():
         f2fs.make()
         f2fs.mount()
 
-
 def run_workload():
     # run workload here
     shcmd("sync")
