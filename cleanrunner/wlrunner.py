@@ -3,6 +3,16 @@ import config
 import filesystem
 import workload
 
+class FileLineIterator(object):
+    def __init__(self, file_path):
+        self.file_path = file_path
+
+    def __iter__(self):
+        with open(self.file_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                yield line
+
 class WorkloadRunner(object):
     def __init__(self, confobj):
         if not isinstance(confobj, config.Config):
@@ -51,15 +61,11 @@ class WorkloadRunner(object):
             self.blktracer.blkparse_file_to_ftlsim_input_file()
             print 'file wrote to {}'.format(
                 self.conf.get_ftlsim_events_output_path())
-            return self.get_iterator()
+            return self.get_event_iterator()
         finally:
             # always try to clean up the blktrace processes
             self.blktracer.stop_tracing_and_collecting()
 
-    def get_iterator(self):
-        "Note that it can only be uesd once"
-        with open(self.conf.get_ftlsim_events_output_path(), 'r') as f:
-            for line in f:
-                line = line.strip()
-                yield line
+    def get_event_iterator(self):
+        return FileLineIterator(self.conf.get_ftlsim_events_output_path())
 
