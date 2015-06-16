@@ -67,16 +67,16 @@ class F2fs(FileSystemBase):
         return utils.shcmd('mount -t f2fs {dev} {mp}'.format(
             dev = self.dev, mp = self.mount_point))
 
-loopdev = LoopDevice(dev_path = '/dev/loop0', tmpfs_mount_point = '/mnt/tmpfs',
-        size_mb = 4096)
-loopdev.create()
+# loopdev = LoopDevice(dev_path = '/dev/loop0', tmpfs_mount_point = '/mnt/tmpfs',
+        # size_mb = 4096)
+# loopdev.create()
 
 # ext4 = Ext4(device='/dev/loop0', mount_point='/mnt/fsonloop')
 # ext4.make()
 # ext4.mount()
 
-f2fs = F2fs(device='/dev/loop0', mount_point='/mnt/fsonloop')
-f2fs.make()
-f2fs.mount()
+# f2fs = F2fs(device='/dev/loop0', mount_point='/mnt/fsonloop')
+# f2fs.make()
+# f2fs.mount()
 
 

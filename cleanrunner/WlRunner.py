@@ -1,1 +1,6 @@
 
+class RunnerConfig(object):
+
+
+
+

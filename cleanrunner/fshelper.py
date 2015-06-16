@@ -157,8 +157,6 @@ def make_loop_device(devname, tmpfs_mountpoint, sizeMB, img_file=None):
 
 def mkImageFile(filepath, size):
     "size is in MB"
-    #cmd = ['dd', 'if=/dev/zero', 'of='+filepath,
-           #'bs=1M', 'count='+str(size)]
     cmd = ['truncate', '-s', str(size*1024*1024), filepath]
     print " ".join(cmd), "......"
     proc = subprocess.Popen(cmd)
@@ -178,42 +176,6 @@ def mountTmpfs(mountpoint, size):
     return proc.returncode
 
 
-
-class Filesystem(object):
-    def __init__(self, mountpoint, dev):
-        self.mountpoint = mountpoint
-        self.dev = dev
-
-    def make(self, opt=None):
-        raise NotImplementedError
-
-    def mount(self, opt=None):
-        raise NotImplementedError
-
-    def is_mounted(self):
-        return isMounted(self.dev)
-
-    def umount(self):
-        return umountFS(self.mountpoint)
-
-class F2fs(Filesystem):
-    def make(self, opt=None):
-        if opt == None:
-            opt = ''
-        return shcmd('mkfs.f2fs {opt} {dev}'.format(
-            opt=opt, dev = self.dev))
-
-    def mount(self, opt=None):
-        if opt == None:
-            opt = ''
-        return shcmd('mount -t f2fs {dev} {mp}'.format(
-            dev = self.dev, mp = self.mountpoint))
-
-# f2fs = F2fs('/mnt/fsonloop', '/dev/loop0')
-# print f2fs.umount()
-# print f2fs.make()
-# print f2fs.mount()
-
-def prepare_loop():
-    make_loop_device(config["loop_path"], config["tmpfs_mount_point"], 4096, img_file=None)
+# def prepare_loop():
+    # make_loop_device(config["loop_path"], config["tmpfs_mount_point"], 4096, img_file=None)
 
