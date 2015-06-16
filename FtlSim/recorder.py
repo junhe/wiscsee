@@ -1,3 +1,4 @@
+import os
 import sys
 
 FILE_TARGET, STDOUT_TARGET = ('file', 'stdout')
