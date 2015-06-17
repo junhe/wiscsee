@@ -10,27 +10,30 @@ def main(args):
     # result dir
     dirpath = args.dir
 
-    # run the workload
+    # load configs
     runner_conf = WlRunner.config.Config()
-    runner_conf.load_from_json_file('config.json')
+    runner_conf.load_from_json_file('config.wlrunner.json')
     runner_conf['result_dir'] = dirpath
 
+    ftlsim_conf = FtlSim.config.Config()
+    ftlsim_conf.load_from_json_file('./config.ftlsim.json')
+    ftlsim_conf['output_dir'] = dirpath
+
+    # run the workload
     workload_src = LBAGENERATOR
     if workload_src == WLRUNNER:
         runner = WlRunner.wlrunner.WorkloadRunner(runner_conf)
         event_iter = runner.run()
     elif workload_src == LBAGENERATOR:
-        lbagen = WlRunner.lbaworkloadgenerator.Sequential(
-            runner_conf['flash_page_size'],
-            runner_conf['flash_npage_per_block'],
-            runner_conf['flash_num_blocks'])
+        lbagen = eval("""WlRunner.lbaworkloadgenerator.{classname}(
+            ftlsim_conf['flash_page_size'],
+            ftlsim_conf['flash_npage_per_block'],
+            ftlsim_conf['flash_num_blocks'])""".format(
+            classname=runner_conf['lba_workload_class']))
         event_iter = lbagen
 
     # run the Ftl Simulator
-    confdic = FtlSim.utils.load_json('config.json')
-    confdic['output_dir'] = dirpath
-    conf = FtlSim.config.Config(confdic)
-    sim = FtlSim.simulator.Simulator(conf)
+    sim = FtlSim.simulator.Simulator(ftlsim_conf)
     sim.run(event_iter)
 
 if __name__ == '__main__':

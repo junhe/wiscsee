@@ -1,0 +1,16 @@
+{
+    "####################################### For WlRunner": "",
+    "loop_path"             : "/dev/loop0",
+    "loop_dev_size_mb"      : 4096,
+    "tmpfs_mount_point"     : "/mnt/tmpfs",
+    "fs_mount_point"        : "/mnt/fsonloop",
+
+    "result_dir"            : "/tmp/exp001",
+
+    "sector_size"           : 512,
+
+    "filesystem"            : "ext4",
+
+    "workload_class"        : "Simple",
+    "lba_workload_class"    : "Random"
+}
