@@ -3,7 +3,6 @@ import re
 import subprocess
 import time
 
-import config
 import utils
 
 class BlockTraceManager(object):

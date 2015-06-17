@@ -1,5 +1,4 @@
 import blocktrace
-import config
 import filesystem
 import workload
 

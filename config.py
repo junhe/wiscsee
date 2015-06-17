@@ -13,6 +13,16 @@ class Config(dict):
         decoded = json.load(open(file_path, 'r'))
         self.load_from_dict(decoded)
 
+    def get_blkparse_result_path(self):
+        return os.path.join(self['result_dir'], 'blkparse-output.txt')
+
+    def get_blkparse_result_table_path(self):
+        return os.path.join(self['result_dir'], 'blkparse-output-table.txt')
+
+    def get_ftlsim_events_output_path(self):
+        "This is the path to output parsed blkparse results"
+        return os.path.join(self['result_dir'], 'blkparse-events-for-ftlsim.txt')
+
     def byte_to_pagenum(self, offset):
         "offset to page number"
         assert offset % self['flash_page_size'] == 0, \
@@ -51,15 +61,4 @@ class Config(dict):
     def get_output_file_path(self):
         return os.path.join(self['output_dir'], 'ftlsim.out')
 
-# need explicit initialization for it to be usable
-# this is the global configuration
-# conf = Config()
-
-# a = Config()
-# a['2'] = 3
-# a.show()
-# a.load_from_dict({4:88})
-# a.show()
-# a.load_from_json_file('./config.json')
-# a.show()
 
