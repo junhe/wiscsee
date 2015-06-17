@@ -1,6 +1,8 @@
 import os
 import sys
 
+import utils
+
 FILE_TARGET, STDOUT_TARGET = ('file', 'stdout')
 
 class Recorder(object):
@@ -10,6 +12,7 @@ class Recorder(object):
         self.verbose_level = verbose_level
 
         if self.output_target == FILE_TARGET:
+            utils.prepare_dir_for_path(path)
             self.fhandle = open(path, 'w')
 
     def __del__(self):
