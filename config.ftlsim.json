@@ -2,7 +2,7 @@
     "####################################### For FtlSim": "",
     "flash_page_size"       : 4096,
     "flash_npage_per_block" : 16,
-    "flash_num_blocks"      : 512,
+    "flash_num_blocks"      : 256,
     
     "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
     "ftl_type" : "hybridmap",
