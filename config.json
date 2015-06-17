@@ -29,5 +29,9 @@
     "filesystem"            : "ext4",
 
     "workload_class"        : "Simple",
-    "lba_workload_class"    : "Random"
+    "lba_workload_class"    : "Random",
+    "LBA" : {
+        "lba_to_flash_size_ratio": 0.6
+    }
+
 }

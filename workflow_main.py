@@ -23,11 +23,8 @@ def main(args):
         runner = WlRunner.wlrunner.WorkloadRunner(conf)
         event_iter = runner.run()
     elif workload_src == LBAGENERATOR:
-        lbagen = eval("""WlRunner.lbaworkloadgenerator.{classname}(
-            conf['flash_page_size'],
-            conf['flash_npage_per_block'],
-            conf['flash_num_blocks'])""".format(
-            classname=conf['lba_workload_class']))
+        lbagen = eval("""WlRunner.lbaworkloadgenerator.{classname}(conf)""".\
+            format(classname=conf['lba_workload_class']))
         event_iter = lbagen
 
     # run the Ftl Simulator
