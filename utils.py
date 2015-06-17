@@ -16,7 +16,8 @@ def shcmd(cmd, ignore_error=False):
     ret = subprocess.call(cmd, shell=True)
     print 'Returned', ret, cmd
     if ignore_error == False and ret != 0:
-        exit(ret)
+        raise RuntimeError("Failed to execute {}. Return code:{}".format(
+            cmd, ret))
     return ret
 
 class cd:
@@ -40,4 +41,5 @@ def prepare_dir_for_path(path):
     dirpath = os.path.dirname(path)
     if not os.path.exists(dirpath):
         os.makedirs(dirpath)
+
 
