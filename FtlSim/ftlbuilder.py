@@ -9,7 +9,8 @@ class FlashBitmap(object):
 
     def __init__(self, conf):
         if not isinstance(conf, config.Config):
-            raise TypeError("conf is not conf.Config")
+            raise TypeError("conf is not conf.Config. it is {}".
+               format(type(conf).__name__))
 
         self.conf  = conf
 
