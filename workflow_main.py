@@ -8,12 +8,14 @@ def main(args):
     # result dir
     dirpath = args.dir
 
+    # run the workload
     runner_conf = WlRunner.config.Config()
     runner_conf.load_from_json_file('./WlRunner/config.json')
     runner_conf['result_dir'] = dirpath
     runner = WlRunner.wlrunner.WorkloadRunner(runner_conf)
     event_iter = runner.run()
 
+    # run the Ftl Simulator
     confdic = FtlSim.utils.load_json('./FtlSim/config.json')
     confdic['output_dir'] = dirpath
     conf = FtlSim.config.Config(confdic)

@@ -25,4 +25,3 @@ class Simple(Workload):
         pass
 
 
-
