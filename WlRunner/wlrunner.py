@@ -16,7 +16,8 @@ class FileLineIterator(object):
 class WorkloadRunner(object):
     def __init__(self, confobj):
         if not isinstance(confobj, config.Config):
-            raise TypeError("confobj is not of type class config.Config")
+            raise TypeError("confobj is not of type class config.Config".
+                format(type(confobj).__name__()))
         self.conf = confobj
 
         # create loop dev object, it is not physically created

@@ -24,7 +24,8 @@ class Simulator(object):
     def __init__(self, conf):
         "conf is class Config"
         if not isinstance(conf, config.Config):
-            raise TypeError("conf is not config.Config")
+            raise TypeError("conf is not config.Config, it is {}".
+                format(type(conf).__name__()))
 
         self.conf = conf
 

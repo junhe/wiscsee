@@ -44,11 +44,14 @@ class FlashBitmap(object):
 class FtlBuilder(object):
     def __init__(self, confobj, recorderobj, flashobj):
         if not isinstance(confobj, config.Config):
-            raise TypeError('confobj is not of type config.Config')
+            raise TypeError('confobj is not of type config.Config, it is {}'.
+               format(type(confobj).__name__))
         if not isinstance(recorderobj, recorder.Recorder):
-            raise TypeError('recorder is not of type recorder.Recorder')
+            raise TypeError('recorder is not of type recorder.Recorder, "\
+                "it is{}'.format(type(recorderobj).__name__))
         if not isinstance(flashobj, flash.Flash):
-            raise TypeError('flash is not of type flash.Flash')
+            raise TypeError('flash is not of type flash.Flash'.
+               format(type(flashobj).__name__))
 
         self.conf = confobj
         self.recorder = recorderobj
