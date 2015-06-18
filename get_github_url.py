@@ -32,7 +32,7 @@ def get_lastest_hash(fpath):
     proc = subprocess.Popen(cmd,
                             stdout=subprocess.PIPE)
     proc.wait()
-    hash = proc.communicate()[0]
+    hash = proc.communicate()[0].strip('"')
     print hash
     return hash
 
@@ -73,12 +73,12 @@ def compose_url(hash, fpath):
 
     return url
 
-def compose_r_code_block(hash, fpath):
+def compose_r_code_block(commit, fpath):
     code = """library(devtools)
 source_url("https://gist.github.com/junhe/1f7e41f4c2829486e46f/raw/source_private_github_file.r")
 source_private_github_file("{repo_name}", "{file_path}", "{commit}")"""\
         .format(repo_name = get_root_dir_name(), file_path = fpath,
-        commit = hash)
+        commit = commit)
     return code
 
 def git_push():
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     commit_file(fpath)
     git_push()
-    hash = get_lastest_hash(fpath)
+    commithash = get_lastest_hash(fpath)
     # url = compose_url(hash, fpath)
-    code = compose_r_code_block(hash, fpath)
+    code = compose_r_code_block(commithash, fpath)
     to_clipboard(code)
