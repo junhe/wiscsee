@@ -750,7 +750,8 @@ explore.sim.results <- function()
     load <- function()
     {
         # d = read.table('./data/sim.result.sample', header=F,
-        d = read.table('./../FtlSim/f2fs.ftlpattern', header=F,
+        # d = read.table('./../FtlSim/f2fs.ftlpattern', header=F,
+        d = read.table('./data/randomwl/pagemap/ftlsim.out', header=F,
                        col.names = c('type', 'operation', 'pagenum', 'cat')
                        )
         return(d)
