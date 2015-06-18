@@ -474,7 +474,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         # we now need to handle the mappings
         if moved:
             if self.data_blk_l2p.has_key(lba_block):
-                self.debug2()
+                self.recorder.debug2()
                 # the lba block was in the mapping
                 flash_block = self.data_blk_l2p[lba_block]
                 self.recorder.debug2('lba_block', lba_block,

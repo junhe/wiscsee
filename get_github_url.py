@@ -73,6 +73,14 @@ def compose_url(hash, fpath):
 
     return url
 
+def compose_r_code_block(hash, fpath):
+    code = """library(devtools)
+source_url("https://gist.github.com/junhe/1f7e41f4c2829486e46f/raw/source_private_github_file.r")
+source_private_github_file("{repo_name}", "{file_path}", "{commit}")"""\
+        .format(repo_name = get_root_dir_name(), file_path = fpath,
+        commit = hash)
+    return code
+
 def git_push():
     cmd = ['git', 'push']
     print cmd

@@ -87,21 +87,19 @@ def pure_sequential():
         "workload_class"        : "Simple",
         "lba_workload_class"    : "Random",
         "LBA" : {
-            "lba_to_flash_size_ratio": 0.1
+            "lba_to_flash_size_ratio": 0.6,
+            "write_to_lba_ratio"     : 2    #how many writes you want to have
         }
     }
 
-    conf = config.Config()
-    conf.load_from_json_file('config.json')
+    conf = config.Config(confdic)
 
     # ftls = ("directmap", "blockmap", "pagemap", "hybridmap")
-    ftls = ("pagemap",)
+    ftls = ("hybridmap",)
     for ftl in ftls:
         conf['result_dir'] = os.path.join('/tmp/', ftl)
         conf['ftl_type'] = ftl
         workflow(conf)
-
-
 
 def main():
     #function you want to call

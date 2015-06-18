@@ -22,7 +22,7 @@ class Sequential(LBAWorkloadGenerator):
         n_lba_pages = int(n_flash_pages * \
             self.conf["LBA"]["lba_to_flash_size_ratio"])
 
-        n_accesses = n_lba_pages
+        n_accesses = n_lba_pages * self.conf['LBA']['write_to_lba_ratio']
         for i in range(n_accesses):
             page = i % n_lba_pages # restrict to lba space
             offset = page * self.conf['flash_page_size']
@@ -42,7 +42,7 @@ class Random(LBAWorkloadGenerator):
         n_lba_pages = int(n_flash_pages * \
             self.conf["LBA"]["lba_to_flash_size_ratio"])
 
-        n_accesses = n_lba_pages
+        n_accesses = n_lba_pages * self.conf['LBA']['write_to_lba_ratio']
         random.seed(1)
         for i in range(n_accesses):
             page = int(random.random() * n_lba_pages) # restrict to lba space
