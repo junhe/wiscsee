@@ -103,7 +103,8 @@ def main():
     #function you want to call
     # shcmd('scp jhe@users.emulab.net:/users/jhe/workdir/doraemon/myresult ./myresult2')
     # shcmd('scp -r jhe@users.emulab.net:/users/jhe/workdir/doraemon/madmax ./')
-    shcmd("scp jun@192.168.56.102:/tmp/finaltable.txt ./data/")
+    # shcmd("scp jun@192.168.56.102:/tmp/finaltable.txt ./data/")
+    shcmd("scp -r jun@192.168.56.102:/tmp/randomwl/ ./data/")
 
 
 def _main():
