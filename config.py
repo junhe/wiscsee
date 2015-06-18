@@ -59,6 +59,6 @@ class Config(dict):
         return range(start_page, start_page+npages)
 
     def get_output_file_path(self):
-        return os.path.join(self['output_dir'], 'ftlsim.out')
+        return os.path.join(self['result_dir'], 'ftlsim.out')
 
 

@@ -1,4 +1,7 @@
 {
+    "####################################### Global": "",
+    "result_dir"            : "/tmp/exp001",
+
     "####################################### For FtlSim": "",
     "flash_page_size"       : 4096,
     "flash_npage_per_block" : 16,
@@ -14,7 +17,6 @@
     "verbose_level" : 1,
     "comment1"      : "output_target: file, stdout",
     "output_target" : "file",
-    "output_dir"    : "./",
 
     "####################################### For WlRunner": "",
     "loop_path"             : "/dev/loop0",
@@ -22,7 +24,6 @@
     "tmpfs_mount_point"     : "/mnt/tmpfs",
     "fs_mount_point"        : "/mnt/fsonloop",
 
-    "result_dir"            : "/tmp/exp001",
 
     "sector_size"           : 512,
 
@@ -33,5 +34,4 @@
     "LBA" : {
         "lba_to_flash_size_ratio": 0.6
     }
-
 }

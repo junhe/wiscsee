@@ -11,50 +11,12 @@ import time
 import glob
 from time import localtime, strftime
 
-def shcmd(cmd, ignore_error=False):
-    print 'Doing:', cmd
-    ret = subprocess.call(cmd, shell=True)
-    print 'Returned', ret, cmd
-    if ignore_error == False and ret != 0:
-        exit(ret)
-    return ret
+import config
+import FtlSim
+import WlRunner
+from utils import *
 
-def run_and_get_output(cmd):
-    output = []
-    cmd = shlex.split(cmd)
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    p.wait()
-
-    return p.stdout.readlines()
-
-class cd:
-    """Context manager for changing the current working directory"""
-    def __init__(self, newPath):
-        self.newPath = newPath
-
-    def __enter__(self):
-        self.savedPath = os.getcwd()
-        os.chdir(self.newPath)
-
-    def __exit__(self, etype, value, traceback):
-        os.chdir(self.savedPath)
-
-def ParameterCombinations(parameter_dict):
-    """
-    Get all the cominbation of the values from each key
-    http://tinyurl.com/nnglcs9
-    Input: parameter_dict={
-                    p0:[x, y, z, ..],
-                    p1:[a, b, c, ..],
-                    ...}
-    Output: [
-             {p0:x, p1:a, ..},
-             {..},
-             ...
-            ]
-    """
-    d = parameter_dict
-    return [dict(zip(d, v)) for v in itertools.product(*d.values())]
+WLRUNNER, LBAGENERATOR = ('WLRUNNER', 'LBAGENERATOR')
 
 #########################################################
 # Git helper
@@ -74,60 +36,77 @@ def git_commit(msg='auto commit'):
     shcmd('git commit -am "{msg}"'.format(msg=msg),
             ignore_error=True)
 
-########################################################
-# table = [
-#           {'col1':data, 'col2':data, ..},
-#           {'col1':data, 'col2':data, ..},
-#           ...
-#         ]
-def table_to_file(table, filepath, adddic=None):
-    'save table to a file with additional columns'
-    with open(filepath, 'w') as f:
-        colnames = table[0].keys()
-        if adddic != None:
-            colnames += adddic.keys()
-        colnamestr = ';'.join(colnames) + '\n'
-        f.write(colnamestr)
-        for row in table:
-            if adddic != None:
-                rowcopy = dict(row.items() + adddic.items())
-            else:
-                rowcopy = row
-            rowstr = [rowcopy[k] for k in colnames]
-            rowstr = [str(x) for x in rowstr]
-            rowstr = ';'.join(rowstr) + '\n'
-            f.write(rowstr)
+def workflow(conf):
+    # run the workload
+    workload_src = LBAGENERATOR
+    if workload_src == WLRUNNER:
+        runner = WlRunner.wlrunner.WorkloadRunner(conf)
+        event_iter = runner.run()
+    elif workload_src == LBAGENERATOR:
+        lbagen = eval("""WlRunner.lbaworkloadgenerator.{classname}(conf)""".\
+            format(classname=conf['lba_workload_class']))
+        event_iter = lbagen
+
+    # run the Ftl Simulator
+    sim = FtlSim.simulator.Simulator(conf)
+    sim.run(event_iter)
 
 
-def parse_blkparse(fpath, resultpath):
-    f = open(fpath, 'r')
-    lines = f.readlines()
-    f.close()
+def pure_sequential():
+    confdic = {
+        "####################################### Global": "",
+        # "result_dir"            : "/tmp/exp001",
 
-    def line2dic(line):
-        "['8,0', '0', '1', '0.000000000', '440', 'A', 'W', '12912077', '+', '8', '<-', '(8,2)', '606224']"
-        names = ['devid', 'cpuid', 'seqid', 'time', 'pid', 'action', 'RWBS', 'blockstart', 'ignore1', 'size']
-        items = line.split()
-        dic = dict(zip(names, items[0:7]))
+        "####################################### For FtlSim": "",
+        "flash_page_size"       : 4096,
+        "flash_npage_per_block" : 16,
+        "flash_num_blocks"      : 256,
 
-        if dic['action'] == "D":
-            return dict(zip(names, items[0:len(names)]))
-        else:
-            return None
+        "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
+        "ftl_type" : "hybridmap",
 
-    table = []
-    for line in lines:
-       ret = line2dic(line)
-       if ret != None:
-           table.append(ret)
+        "high_log_block_ratio"       : 0.4,
+        "high_data_block_ratio"      : 0.4,
+        "log_block_upperbound_ratio" : 0.5,
 
-    table_to_file(table, resultpath)
+        "verbose_level" : 1,
+        "comment1"      : "output_target: file, stdout",
+        "output_target" : "file",
+
+        "####################################### For WlRunner": "",
+        "loop_path"             : "/dev/loop0",
+        "loop_dev_size_mb"      : 4096,
+        "tmpfs_mount_point"     : "/mnt/tmpfs",
+        "fs_mount_point"        : "/mnt/fsonloop",
+
+
+        "sector_size"           : 512,
+
+        "filesystem"            : "ext4",
+
+        "workload_class"        : "Simple",
+        "lba_workload_class"    : "Random",
+        "LBA" : {
+            "lba_to_flash_size_ratio": 0.1
+        }
+    }
+
+    conf = config.Config()
+    conf.load_from_json_file('config.json')
+
+    ftls = ("directmap", "blockmap", "pagemap", "hybridmap")
+    for ftl in ftls:
+        conf['result_dir'] = os.path.join('/tmp/', ftl)
+        conf['ftl_type'] = ftl
+        workflow(conf)
+
 
 
 def main():
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
-    shcmd("scp jun@192.168.56.102:/tmp/ftlsim.in ./FtlSim/misc/")
+    # shcmd("scp jun@192.168.56.102:/tmp/ftlsim.in ./FtlSim/misc/")
+    pure_sequential()
 
 def _main():
     parser = argparse.ArgumentParser(

@@ -20,6 +20,14 @@ def shcmd(cmd, ignore_error=False):
             cmd, ret))
     return ret
 
+def run_and_get_output(cmd):
+    output = []
+    cmd = shlex.split(cmd)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p.wait()
+
+    return p.stdout.readlines()
+
 class cd:
     """Context manager for changing the current working directory"""
     def __init__(self, newPath):
@@ -41,5 +49,46 @@ def prepare_dir_for_path(path):
     dirpath = os.path.dirname(path)
     if not os.path.exists(dirpath):
         os.makedirs(dirpath)
+
+def ParameterCombinations(parameter_dict):
+    """
+    Get all the cominbation of the values from each key
+    http://tinyurl.com/nnglcs9
+    Input: parameter_dict={
+                    p0:[x, y, z, ..],
+                    p1:[a, b, c, ..],
+                    ...}
+    Output: [
+             {p0:x, p1:a, ..},
+             {..},
+             ...
+            ]
+    """
+    d = parameter_dict
+    return [dict(zip(d, v)) for v in itertools.product(*d.values())]
+
+########################################################
+# table = [
+#           {'col1':data, 'col2':data, ..},
+#           {'col1':data, 'col2':data, ..},
+#           ...
+#         ]
+def table_to_file(table, filepath, adddic=None):
+    'save table to a file with additional columns'
+    with open(filepath, 'w') as f:
+        colnames = table[0].keys()
+        if adddic != None:
+            colnames += adddic.keys()
+        colnamestr = ';'.join(colnames) + '\n'
+        f.write(colnamestr)
+        for row in table:
+            if adddic != None:
+                rowcopy = dict(row.items() + adddic.items())
+            else:
+                rowcopy = row
+            rowstr = [rowcopy[k] for k in colnames]
+            rowstr = [str(x) for x in rowstr]
+            rowstr = ';'.join(rowstr) + '\n'
+            f.write(rowstr)
 
 
