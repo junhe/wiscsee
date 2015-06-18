@@ -97,5 +97,6 @@ if __name__ == '__main__':
     commit_file(fpath)
     git_push()
     hash = get_lastest_hash(fpath)
-    url = compose_url(hash, fpath)
-    to_clipboard(url)
+    # url = compose_url(hash, fpath)
+    code = compose_r_code_block(hash, fpath)
+    to_clipboard(code)
