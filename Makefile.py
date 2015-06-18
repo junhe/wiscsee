@@ -94,7 +94,8 @@ def pure_sequential():
     conf = config.Config()
     conf.load_from_json_file('config.json')
 
-    ftls = ("directmap", "blockmap", "pagemap", "hybridmap")
+    # ftls = ("directmap", "blockmap", "pagemap", "hybridmap")
+    ftls = ("pagemap",)
     for ftl in ftls:
         conf['result_dir'] = os.path.join('/tmp/', ftl)
         conf['ftl_type'] = ftl

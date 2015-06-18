@@ -10,6 +10,7 @@ class Recorder(object):
         self.output_target = output_target
         self.path = path
         self.verbose_level = verbose_level
+        self.counter = {}
 
         if self.output_target == FILE_TARGET:
             utils.prepare_dir_for_path(path)
@@ -20,6 +21,9 @@ class Recorder(object):
             self.fhandle.flush()
             os.fsync(self.fhandle)
             self.fhandle.close()
+
+        stats_path = '.'.join((self.path, 'stats'))
+        utils.table_to_file([self.counter], stats_path)
 
     def output(self, *args):
         line = ' '.join( str(x) for x in args)
@@ -39,6 +43,10 @@ class Recorder(object):
             self.output('DEBUG', *args)
 
     def put(self, operation, page_num, category):
+        # do statistics
+        item = '.'.join((operation, category))
+        self.counter[item] = self.counter.setdefault(item, 0) + 1
+
         if self.verbose_level >= 1:
             self.output('RECORD', operation, page_num, category)
 

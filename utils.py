@@ -40,6 +40,31 @@ class cd:
     def __exit__(self, etype, value, traceback):
         os.chdir(self.savedPath)
 
+########################################################
+# table = [
+#           {'col1':data, 'col2':data, ..},
+#           {'col1':data, 'col2':data, ..},
+#           ...
+#         ]
+def table_to_file(table, filepath, adddic=None):
+    'save table to a file with additional columns'
+    with open(filepath, 'w') as f:
+        colnames = table[0].keys()
+        if adddic != None:
+            colnames += adddic.keys()
+        colnamestr = ';'.join(colnames) + '\n'
+        f.write(colnamestr)
+        for row in table:
+            if adddic != None:
+                rowcopy = dict(row.items() + adddic.items())
+            else:
+                rowcopy = row
+            rowstr = [rowcopy[k] for k in colnames]
+            rowstr = [str(x) for x in rowstr]
+            rowstr = ';'.join(rowstr) + '\n'
+            f.write(rowstr)
+
+
 def load_json(fpath):
     decoded = json.load(open(fpath, 'r'))
     return decoded
@@ -66,29 +91,4 @@ def ParameterCombinations(parameter_dict):
     """
     d = parameter_dict
     return [dict(zip(d, v)) for v in itertools.product(*d.values())]
-
-########################################################
-# table = [
-#           {'col1':data, 'col2':data, ..},
-#           {'col1':data, 'col2':data, ..},
-#           ...
-#         ]
-def table_to_file(table, filepath, adddic=None):
-    'save table to a file with additional columns'
-    with open(filepath, 'w') as f:
-        colnames = table[0].keys()
-        if adddic != None:
-            colnames += adddic.keys()
-        colnamestr = ';'.join(colnames) + '\n'
-        f.write(colnamestr)
-        for row in table:
-            if adddic != None:
-                rowcopy = dict(row.items() + adddic.items())
-            else:
-                rowcopy = row
-            rowstr = [rowcopy[k] for k in colnames]
-            rowstr = [str(x) for x in rowstr]
-            rowstr = ';'.join(rowstr) + '\n'
-            f.write(rowstr)
-
 
