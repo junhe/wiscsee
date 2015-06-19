@@ -772,13 +772,13 @@ explore.sim.results <- function()
         print(levels(d$operation))
         d$operation = factor(d$operation, levels=c('lba_write', 'page_read', 'page_write', 'block_erase'))
 
-        # quartz()
+        quartz()
         p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
             geom_point() +
             facet_grid(operation~.)
         print(p)
         z = grid.locator()
-        ggsave("plot.pdf", plot=p, h=12, w=4)
+        # ggsave("plot.pdf", plot=p, h=12, w=4)
     }
 
     do_main <- function()
