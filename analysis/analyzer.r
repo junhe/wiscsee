@@ -5,8 +5,7 @@ library(reshape2)
 library(gridExtra)
 
 # copy the following so you can do sme()
-# WORKDIRECTORY= "/Users/junhe/BoxSync/0-MyResearch/Doraemon/workdir/doraemon/analysis"
-WORKDIRECTORY= "./"
+WORKDIRECTORY= "/Users/junhe/BoxSync/0-MyResearch/Doraemon/workdir/doraemon/analysis"
 THISFILE     ='analyzer.r'
 setwd(WORKDIRECTORY)
 sme <- function()
@@ -124,6 +123,7 @@ load_file_from_cache <- function(fpath, reader.funcname)
     #     return(1000)   
     # }
     # 
+    # Note that the function is passed in as string
     # load_file_from_cache('file03', 'myreader')
     
     if ( exists('filecache') == FALSE ) {
@@ -748,14 +748,15 @@ explore.sim.results <- function()
     transfer <- function()
     {
     }
-    load <- function()
+
+    load <- function(fpath)
     {
+        print(fpath)
         # d = read.table('./data/sim.result.sample', header=F,
         # d = read.table('./../FtlSim/f2fs.ftlpattern', header=F,
         # d = read.table('./data/randomwl/pagemap/ftlsim.out', header=F,
-        d = read.table('/tmp/simple-ext4/ftlsim.out', header=F,
-                       col.names = c('type', 'operation', 'pagenum', 'cat')
-                       )
+        # d = read.table('~/datahouse/simple-ext4/ftlsim.out', header=F,
+        d = read.table(fpath, header=F, col.names = c('type', 'operation', 'pagenum', 'cat'))
         return(d)
     }
 
@@ -770,7 +771,7 @@ explore.sim.results <- function()
         d$seqid = seq_along(d$operation)
 
         print(levels(d$operation))
-        d$operation = factor(d$operation, levels=c('lba_write', 'page_read', 'page_write', 'block_erase'))
+        d$operation = factor(d$operation, levels=c('lba_write', 'page_read', 'page_write', 'lba_discard', 'block_erase'))
 
         quartz()
         p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
@@ -783,7 +784,8 @@ explore.sim.results <- function()
 
     do_main <- function()
     {
-        d = load()
+        d = load_file_from_cache(
+            '~/datahouse/simple/ext4/ftlsim.out', 'load')
         d = clean(d)
         func(d)
     }
