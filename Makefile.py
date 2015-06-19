@@ -64,7 +64,7 @@ def from_filesystem():
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
         "flash_npage_per_block" : 16,
-        "flash_num_blocks"      : 256,
+        "flash_num_blocks"      : 128,
 
         "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
         "ftl_type" : "hybridmap",
@@ -79,7 +79,7 @@ def from_filesystem():
 
         "####################################### For WlRunner": "",
         "loop_path"             : "/dev/loop0",
-        "loop_dev_size_mb"      : 4096,
+        "loop_dev_size_mb"      : 8,
         "tmpfs_mount_point"     : "/mnt/tmpfs",
         "fs_mount_point"        : "/mnt/fsonloop",
 
@@ -97,9 +97,9 @@ def from_filesystem():
     }
 
     conf = config.Config(confdic)
-    workflow(conf)
-
-
+    for fs in ('ext4', 'f2fs'):
+        conf['result_dir'] = "/tmp/simple/"+fs
+        workflow(conf)
 
 def pure_sequential():
     confdic = {

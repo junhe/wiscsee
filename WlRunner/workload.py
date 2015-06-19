@@ -19,7 +19,7 @@ class Workload(object):
 class Simple(Workload):
     def run(self):
         utils.shcmd("sync")
-        utils.shcmd("cp -r /boot {}".format(self.conf["fs_mount_point"]))
+        utils.shcmd("cp -r ./ {}".format(self.conf["fs_mount_point"]))
         utils.shcmd("rm -r {}/*".format(self.conf["fs_mount_point"]))
         utils.shcmd("sync")
 
