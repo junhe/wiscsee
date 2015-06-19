@@ -5,7 +5,8 @@ library(reshape2)
 library(gridExtra)
 
 # copy the following so you can do sme()
-WORKDIRECTORY= "/Users/junhe/BoxSync/0-MyResearch/Doraemon/workdir/doraemon/analysis"
+# WORKDIRECTORY= "/Users/junhe/BoxSync/0-MyResearch/Doraemon/workdir/doraemon/analysis"
+WORKDIRECTORY= "./"
 THISFILE     ='analyzer.r'
 setwd(WORKDIRECTORY)
 sme <- function()
@@ -751,7 +752,8 @@ explore.sim.results <- function()
     {
         # d = read.table('./data/sim.result.sample', header=F,
         # d = read.table('./../FtlSim/f2fs.ftlpattern', header=F,
-        d = read.table('./data/randomwl/pagemap/ftlsim.out', header=F,
+        # d = read.table('./data/randomwl/pagemap/ftlsim.out', header=F,
+        d = read.table('/tmp/simple-ext4/ftlsim.out', header=F,
                        col.names = c('type', 'operation', 'pagenum', 'cat')
                        )
         return(d)
@@ -770,14 +772,13 @@ explore.sim.results <- function()
         print(levels(d$operation))
         d$operation = factor(d$operation, levels=c('lba_write', 'page_read', 'page_write', 'block_erase'))
 
-        d[d$operation == 'block_erase', 'pagenum'] = d[d$operation == 'block_erase', 'pagenum'] * 4
-
-        quartz()
+        # quartz()
         p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
             geom_point() +
             facet_grid(operation~.)
         print(p)
         z = grid.locator()
+        ggsave("plot.pdf", plot=p, h=12, w=4)
     }
 
     do_main <- function()

@@ -38,7 +38,8 @@ def git_commit(msg='auto commit'):
 
 def workflow(conf):
     # run the workload
-    workload_src = LBAGENERATOR
+    # workload_src = LBAGENERATOR
+    workload_src = conf['workload_src']
     if workload_src == WLRUNNER:
         runner = WlRunner.wlrunner.WorkloadRunner(conf)
         event_iter = runner.run()
@@ -46,16 +47,19 @@ def workflow(conf):
         lbagen = eval("""WlRunner.lbaworkloadgenerator.{classname}(conf)""".\
             format(classname=conf['lba_workload_class']))
         event_iter = lbagen
+    else:
+        raise RuntimeError("{} is not a valid workload source"\
+            .format(workload_src))
 
     # run the Ftl Simulator
     sim = FtlSim.simulator.Simulator(conf)
     sim.run(event_iter)
 
-
-def pure_sequential():
+def from_filesystem():
     confdic = {
         "####################################### Global": "",
-        # "result_dir"            : "/tmp/exp001",
+        "result_dir"            : "/tmp/simple",
+        "workload_src" : WLRUNNER,
 
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
@@ -93,6 +97,53 @@ def pure_sequential():
     }
 
     conf = config.Config(confdic)
+    workflow(conf)
+
+
+
+def pure_sequential():
+    confdic = {
+        "####################################### Global": "",
+        # "result_dir"            : "/tmp/exp001",
+        "workload_src" : WLRUNNER,
+
+        "####################################### For FtlSim": "",
+        "flash_page_size"       : 4096,
+        "flash_npage_per_block" : 16,
+        "flash_num_blocks"      : 256,
+
+        "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
+        "ftl_type" : "hybridmap",
+
+        "high_log_block_ratio"       : 0.4,
+        "high_data_block_ratio"      : 0.4,
+        "log_block_upperbound_ratio" : 0.5,
+
+        "verbose_level" : 1,
+        "comment1"      : "output_target: file, stdout",
+        "output_target" : "file",
+
+        "####################################### For WlRunner": "",
+        "loop_path"             : "/dev/loop0",
+        "loop_dev_size_mb"      : 4096,
+        "tmpfs_mount_point"     : "/mnt/tmpfs",
+        "fs_mount_point"        : "/mnt/fsonloop",
+
+
+        "sector_size"           : 512,
+
+        # "filesystem"            : "ext4",
+        "filesystem"            : "f2fs",
+
+        "workload_class"        : "Simple",
+        "lba_workload_class"    : "Random",
+        "LBA" : {
+            "lba_to_flash_size_ratio": 0.6,
+            "write_to_lba_ratio"     : 2    #how many writes you want to have
+        }
+    }
+
+    conf = config.Config(confdic)
 
     # ftls = ("directmap", "blockmap", "pagemap", "hybridmap")
     ftls = ("hybridmap",)
@@ -105,7 +156,8 @@ def main():
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
     # shcmd("scp jun@192.168.56.102:/tmp/ftlsim.in ./FtlSim/misc/")
-    pure_sequential()
+    # pure_sequential()
+    from_filesystem()
 
 def _main():
     parser = argparse.ArgumentParser(
