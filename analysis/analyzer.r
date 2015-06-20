@@ -5,8 +5,7 @@ library(reshape2)
 library(gridExtra)
 
 # copy the following so you can do sme()
-# WORKDIRECTORY= "/Users/junhe/BoxSync/0-MyResearch/Doraemon/workdir/doraemon/analysis"
-WORKDIRECTORY= "./"
+WORKDIRECTORY= "/Users/junhe/BoxSync/0-MyResearch/Doraemon/workdir/doraemon/analysis"
 THISFILE     ='analyzer.r'
 setwd(WORKDIRECTORY)
 sme <- function()
@@ -124,6 +123,7 @@ load_file_from_cache <- function(fpath, reader.funcname)
     #     return(1000)   
     # }
     # 
+    # Note that the function is passed in as string
     # load_file_from_cache('file03', 'myreader')
     
     if ( exists('filecache') == FALSE ) {
@@ -748,14 +748,15 @@ explore.sim.results <- function()
     transfer <- function()
     {
     }
-    load <- function()
+
+    load <- function(fpath)
     {
+        print(fpath)
         # d = read.table('./data/sim.result.sample', header=F,
         # d = read.table('./../FtlSim/f2fs.ftlpattern', header=F,
         # d = read.table('./data/randomwl/pagemap/ftlsim.out', header=F,
-        d = read.table('/tmp/simple-ext4/ftlsim.out', header=F,
-                       col.names = c('type', 'operation', 'pagenum', 'cat')
-                       )
+        # d = read.table('~/datahouse/simple-ext4/ftlsim.out', header=F,
+        d = read.table(fpath, header=F, col.names = c('type', 'operation', 'pagenum', 'cat'))
         return(d)
     }
 
@@ -770,22 +771,51 @@ explore.sim.results <- function()
         d$seqid = seq_along(d$operation)
 
         print(levels(d$operation))
-        d$operation = factor(d$operation, levels=c('lba_write', 'page_read', 'page_write', 'block_erase'))
+        d$operation = factor(d$operation, levels=c('lba_write', 'page_read', 'page_write', 'lba_discard', 'block_erase'))
+        # d = subset(d, operation != 'block_erase')
 
-        quartz()
+
+        # quartz()
         p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
             geom_point() +
-            facet_grid(operation~.)
-        print(p)
-        z = grid.locator()
+            facet_grid(operation~.) +
+            scale_colour_manual(
+              values = c("amplified" = "red",
+                         "user" = "blue"))
+        # print(p)
+        return(p)
+        # z = grid.locator()
         # ggsave("plot.pdf", plot=p, h=12, w=4)
     }
 
     do_main <- function()
     {
-        d = load()
-        d = clean(d)
-        func(d)
+        plotlist = list()
+        for (f in c( 
+            # '~/datahouse/randomlba/directmap/ftlsim.out',
+            # '~/datahouse/randomlba/blockmap/ftlsim.out',
+            # '~/datahouse/randomlba/pagemap/ftlsim.out',
+            # '~/datahouse/randomlba/hybridmap/ftlsim.out'
+
+            # '~/datahouse/seqlba/directmap/ftlsim.out',
+            # '~/datahouse/seqlba/blockmap/ftlsim.out',
+            # '~/datahouse/seqlba/pagemap/ftlsim.out',
+            # '~/datahouse/seqlba/hybridmap/ftlsim.out'
+
+            '~/datahouse/seqlba8/hybridmap/ftlsim.out'
+            )) {
+            d = load_file_from_cache(f, 'load')
+            d = clean(d)
+            p = func(d)
+            plotlist = append(plotlist, list(p))
+
+            # a = readline()
+            a = 0
+            if (a == 'a') {
+                break
+            }
+        }
+        do.call('grid.arrange', c(plotlist, ncol=1)) 
     }
     do_main()
 }
