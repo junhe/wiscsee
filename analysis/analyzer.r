@@ -792,10 +792,16 @@ explore.sim.results <- function()
     {
         plotlist = list()
         for (f in c( 
-            '~/datahouse/randomlba/directmap/ftlsim.out',
-            '~/datahouse/randomlba/blockmap/ftlsim.out',
-            '~/datahouse/randomlba/pagemap/ftlsim.out',
-            '~/datahouse/randomlba/hybridmap/ftlsim.out')) {
+            # '~/datahouse/randomlba/directmap/ftlsim.out',
+            # '~/datahouse/randomlba/blockmap/ftlsim.out',
+            # '~/datahouse/randomlba/pagemap/ftlsim.out',
+            # '~/datahouse/randomlba/hybridmap/ftlsim.out'
+
+            '~/datahouse/seqlba/directmap/ftlsim.out',
+            '~/datahouse/seqlba/blockmap/ftlsim.out',
+            '~/datahouse/seqlba/pagemap/ftlsim.out',
+            '~/datahouse/seqlba/hybridmap/ftlsim.out'
+            )) {
             d = load_file_from_cache(f, 'load')
             d = clean(d)
             p = func(d)
