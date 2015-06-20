@@ -279,7 +279,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         if garbage_collect_enable and self.need_garbage_collection():
             self.garbage_collect()
 
-        assert self.is_sanity_check_ok()
+        # assert self.is_sanity_check_ok()
 
     ############################# Garbage Collection ##########################
     def need_garbage_collection(self):

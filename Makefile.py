@@ -64,7 +64,7 @@ def from_filesystem():
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
         "flash_npage_per_block" : 16,
-        "flash_num_blocks"      : 128,
+        "flash_num_blocks"      : 64*2**20/(4096*16),
 
         "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
         "ftl_type" : "hybridmap",
@@ -105,12 +105,12 @@ def pure_sequential():
     confdic = {
         "####################################### Global": "",
         # "result_dir"            : "/tmp/exp001",
-        "workload_src" : WLRUNNER,
+        "workload_src" : LBAGENERATOR,
 
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
         "flash_npage_per_block" : 16,
-        "flash_num_blocks"      : 256,
+        "flash_num_blocks"      : 64*2**20/(4096*16),
 
         "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
         "ftl_type" : "hybridmap",
@@ -136,10 +136,11 @@ def pure_sequential():
         "filesystem"            : "f2fs",
 
         "workload_class"        : "Simple",
-        "lba_workload_class"    : "Random",
+        # "lba_workload_class"    : "Random",
+        "lba_workload_class"    : "Sequential",
         "LBA" : {
             "lba_to_flash_size_ratio": 0.6,
-            "write_to_lba_ratio"     : 2    #how many writes you want to have
+            "write_to_lba_ratio"     : 8    #how many writes you want to have
         }
     }
 
@@ -148,7 +149,7 @@ def pure_sequential():
     # ftls = ("directmap", "blockmap", "pagemap", "hybridmap")
     ftls = ("hybridmap",)
     for ftl in ftls:
-        conf['result_dir'] = os.path.join('/tmp/', ftl)
+        conf['result_dir'] = os.path.join('/tmp/seqlba8', ftl)
         conf['ftl_type'] = ftl
         workflow(conf)
 
@@ -156,8 +157,8 @@ def main():
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
     # shcmd("scp jun@192.168.56.102:/tmp/ftlsim.in ./FtlSim/misc/")
-    # pure_sequential()
-    from_filesystem()
+    pure_sequential()
+    # from_filesystem()
 
 def _main():
     parser = argparse.ArgumentParser(
