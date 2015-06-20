@@ -797,10 +797,12 @@ explore.sim.results <- function()
             # '~/datahouse/randomlba/pagemap/ftlsim.out',
             # '~/datahouse/randomlba/hybridmap/ftlsim.out'
 
-            '~/datahouse/seqlba/directmap/ftlsim.out',
-            '~/datahouse/seqlba/blockmap/ftlsim.out',
-            '~/datahouse/seqlba/pagemap/ftlsim.out',
-            '~/datahouse/seqlba/hybridmap/ftlsim.out'
+            # '~/datahouse/seqlba/directmap/ftlsim.out',
+            # '~/datahouse/seqlba/blockmap/ftlsim.out',
+            # '~/datahouse/seqlba/pagemap/ftlsim.out',
+            # '~/datahouse/seqlba/hybridmap/ftlsim.out'
+
+            '~/datahouse/seqlba8/hybridmap/ftlsim.out'
             )) {
             d = load_file_from_cache(f, 'load')
             d = clean(d)
