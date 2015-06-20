@@ -772,22 +772,42 @@ explore.sim.results <- function()
 
         print(levels(d$operation))
         d$operation = factor(d$operation, levels=c('lba_write', 'page_read', 'page_write', 'lba_discard', 'block_erase'))
+        # d = subset(d, operation != 'block_erase')
 
-        quartz()
+
+        # quartz()
         p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
             geom_point() +
-            facet_grid(operation~.)
-        print(p)
-        z = grid.locator()
+            facet_grid(operation~.) +
+            scale_colour_manual(
+              values = c("amplified" = "red",
+                         "user" = "blue"))
+        # print(p)
+        return(p)
+        # z = grid.locator()
         # ggsave("plot.pdf", plot=p, h=12, w=4)
     }
 
     do_main <- function()
     {
-        d = load_file_from_cache(
-            '~/datahouse/simple/ext4/ftlsim.out', 'load')
-        d = clean(d)
-        func(d)
+        plotlist = list()
+        for (f in c( 
+            '~/datahouse/randomlba/directmap/ftlsim.out',
+            '~/datahouse/randomlba/blockmap/ftlsim.out',
+            '~/datahouse/randomlba/pagemap/ftlsim.out',
+            '~/datahouse/randomlba/hybridmap/ftlsim.out')) {
+            d = load_file_from_cache(f, 'load')
+            d = clean(d)
+            p = func(d)
+            plotlist = append(plotlist, list(p))
+
+            # a = readline()
+            a = 0
+            if (a == 'a') {
+                break
+            }
+        }
+        do.call('grid.arrange', c(plotlist, ncol=1)) 
     }
     do_main()
 }
