@@ -1,9 +1,127 @@
 import bitarray
 from collections import deque
 
+import bidict
+
+import config
 import ftlbuilder
 
 # TODO: remove ftl.block_invalid_ratio()
+
+
+class HybridMapping():
+    """
+    This mapping class uses bidict to manage the mapping between logical
+    address and physical address. The advantage is that it is naturally
+    symmetric, which means logical to physical and physical to logical is
+    always one to one. Hmm.. example: if logical 100 maps to physical 200,
+    then physical 200 has to map back to 100. It cannot map to other value.
+    """
+    def __init__(self, confobj):
+        if not isinstance(confobj, config.Config):
+            raise TypeError("confobj is not conf.Config. it is {}".
+               format(type(confobj).__name__))
+
+        self.conf = confobj
+
+        # for data block
+        self.data_blk_l2p = bidict.bidict()
+        # for log page
+        self.log_page_l2p = bidict.bidict()
+
+    def has_lba_block(self, lba_block):
+        return lba_block in self.data_blk_l2p
+    def has_flash_block(self, flash_block):
+        return flash_block in self.data_blk_l2p.inv
+
+    def has_lba_page(self, lba_page):
+        return lba_page in self.log_page_l2p
+
+    def has_flash_page(self, flash_page):
+        return flash_page in  self.log_page_l2p.inv
+
+    def lba_block_to_flash_block(self, lba_block):
+        return self.data_blk_l2p[lba_block]
+
+    def flash_block_to_lba_block(self, flash_block):
+        return self.data_blk_l2p[:flash_block]
+
+    def lba_page_to_flash_page(self, lba_page):
+        return self.log_page_l2p[lba_page]
+
+    def lba_page_to_flash_page_by_all_means(self, lba_pagenum):
+        lba_block, lba_off = self.conf.page_to_block_off(lba_pagenum)
+
+        if self.has_lba_page(lba_pagenum):
+            return self.lba_page_to_flash_page(lba_pagenum)
+        elif self.has_lba_block(lba_block):
+            flash_block = self.lba_block_to_flash_block(lba_block)
+            return self.conf.block_off_to_page(flash_block, lba_off)
+        else:
+            return None
+
+    def flash_page_to_lba_page_by_all_means(self, flash_page):
+        flash_block, flash_off = self.conf.page_to_block_off(flash_page)
+
+        if self.has_flash_page(flash_page):
+            return self.flash_page_to_lba_page(flash_page)
+        elif self.has_flash_block[flash_block]:
+            lba_block = self.flash_block_to_lba_block(flash_block)
+            return self.conf.block_off_to_page(lba_block, flash_off)
+        else:
+            raise RuntimeError("Cannot find flash page {} in "\
+                "any mapping table".format(flash_page))
+
+    def flash_page_to_lba_page(self, flash_page):
+        return self.log_page_l2p[:flash_page]
+
+    def add_data_blk_mapping(self, lba_block, flash_block):
+        if lba_block in self.data_blk_l2p:
+            raise RuntimeError("Trying to add data block mapping "\
+                "{lba_block}->{flash_block}. But logical block {lba_block} "\
+                "already exists".format(logical = lba_block,
+                flash_block = flash_block))
+        if flash_block in self.data_blk_l2p.inv:
+            raise RuntimeError("Trying to add data block mapping "\
+                "{lba_block}->{flash_block}. But flash block {flash_block} "\
+                "already exists".format(lba_block = lba_block,
+                flash_block = flash_block))
+        self.data_blk_l2p[lba_block] = flash_block
+
+    def remove_data_blk_mapping(self, lba_block=None, flash_block=None):
+        "The mapping must exist. bidict should raise an exception."
+        if bool(lba_block) and bool(flash_block):
+            # XOR
+            raise ValueError("You should have specified one and only one "\
+                "of lba_block and flash_block.")
+        if lba_block:
+            del self.data_blk_l2p[lba_block]
+        if flash_block:
+            del self.data_blk_l2p[:flash_block]
+
+    def add_log_page_mapping(self, lba_page, flash_page):
+        if lba_page in  self.log_page_l2p:
+            raise RuntimeError("Trying to add data page mapping "\
+                "{lba_page}->{flash_page}. But logical page {lba_page} "\
+                "already exists".format(lba_page = lba_page,
+                flash_page = flash_page))
+        if flash_page in self.log_page_l2p.inv:
+            raise RuntimeError("Trying to add data page mapping "\
+                "{lba_page}->{flash_page}. But flash page {flash_page} "\
+                "already exists".format(lba_page = lba_page,
+                flash_page = flash_page))
+        self.log_page_l2p[lba_page] = flash_page
+
+    def remove_log_page_mapping(self, lba_page=None, flash_page=None):
+        "The mapping must exist. bidict should raise an exception."
+        if bool(lba_page) and bool(flash_page):
+            # XOR
+            raise ValueError("You should have specified one and only one "\
+                "of lba_page and flash_page.")
+        if lba_page:
+            del self.log_page_l2p[lba_page]
+        if flash_page:
+            del self.log_page_l2p[:flash_page]
 
 class HybridBlockPool(object):
     def __init__(self, num_blocks):
@@ -68,11 +186,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
         self.bitmap.initialize()
 
-        self.log_page_l2p = {}
-        self.log_page_p2l = {}
-
-        self.data_blk_l2p = {}
-        self.data_blk_p2l = {}
+        self.mappings = HybridMapping(confobj)
 
         self.log_end_pagenum = -1 # the page number of the last write
 
@@ -95,50 +209,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
     def lba_discard(self, pagenum):
         self.recorder.put('lba_discard ', pagenum, 'user')
         self.invalidate_lba_page(pagenum)
-
-    # mapping operations
-    def add_data_blk_mapping(self, lba_block, flash_block):
-        """
-        we don't want l2p and p2l to be asymmetric, so we assert
-        The assertion will make sure that we increase both mappings
-        by one after the function.
-        """
-        assert not self.data_blk_l2p.has_key(lba_block)
-        assert not self.data_blk_p2l.has_key(flash_block)
-
-        self.data_blk_l2p[lba_block] = flash_block
-        self.data_blk_p2l[flash_block] = lba_block
-
-    def remove_data_blk_mapping_by_lba(self, lba_block):
-        "The mapping must exist"
-        flash_block = self.data_blk_l2p[lba_block]
-        del self.data_blk_l2p[lba_block]
-        del self.data_blk_p2l[flash_block]
-
-    def remove_data_blk_mapping_by_flash(self, flash_block):
-        "The mapping must exist"
-        lba_block = self.data_blk_p2l[flash_block]
-        del self.data_blk_l2p[lba_block]
-        del self.data_blk_p2l[flash_block]
-
-    def add_log_page_mapping(self, lba_page, flash_page):
-        assert not self.log_page_l2p.has_key(lba_page)
-        assert not self.log_page_p2l.has_key(flash_page)
-
-        self.log_page_l2p[lba_page] = flash_page
-        self.log_page_p2l[flash_page] = lba_page
-
-    def remove_log_page_mapping_by_lba(self, lba_page):
-        "The mapping must exist"
-        flash_page = self.log_page_l2p[lba_page]
-        del self.log_page_l2p[lba_page]
-        del self.log_page_p2l[flash_page]
-
-    def remove_log_page_mapping_by_flash(self, flash_page):
-        "The mapping must exist"
-        lba_page = self.log_page_p2l[flash_page]
-        del self.log_page_l2p[lba_page]
-        del self.log_page_p2l[flash_page]
 
     def is_log_map_overflow(self):
         "it checks if there are too many log page mapping"
@@ -173,20 +243,21 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         "invalidate bitmap and remove the mapping"
         lba_block, lba_off = self.conf.page_to_block_off(lbapagenum)
 
-        if self.log_page_l2p.has_key(lbapagenum):
+        if self.mappings.has_lba_page(lbapagenum):
             # in log block
-            flashpagenum = self.log_page_l2p[lbapagenum]
+            flashpagenum = self.mappings.lba_page_to_flash_page(lbapagenum)
             assert self.bitmap.is_page_valid(flashpagenum), 'WTF, in map but not valid?'
             self.bitmap.invalidate_page(flashpagenum)
-            self.remove_log_page_mapping_by_lba(lbapagenum)
-        elif self.data_blk_l2p.has_key(lba_block):
+            self.mappings.remove_log_page_mapping(lba_page=lbapagenum)
+        elif self.mappings.has_lba_block(lba_block):
             # in data block
             # In this case, it is OK to be in map but not valid, because this
             # is block map
-            flashpagenum = self.lba_page_to_flash_page(lbapagenum)
+            flashpagenum = self.mappings.lba_page_to_flash_page_by_all_means(lbapagenum)
             self.bitmap.invalidate_page(flashpagenum)
         else:
-            self.recorder.warning('trying to invalidate a page not in page map')
+            self.recorder.warning('trying to invalidate lba page {}, '\
+                    'which is not in any map'.format(lbapagenum))
 
     def next_page_to_program(self):
         """
@@ -210,17 +281,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             block = self.block_pool.pop_a_free_block_to_log()
             start, end = self.conf.block_to_page_range(block)
             return start
-
-    def lba_page_to_flash_page(self, lba_pagenum):
-        lba_block, lba_off = self.conf.page_to_block_off(lba_pagenum)
-
-        if self.log_page_l2p.has_key(lba_pagenum):
-            return self.log_page_l2p[lba_pagenum]
-        elif self.data_blk_l2p.has_key(lba_block):
-            flash_block = self.data_blk_l2p[lba_block]
-            return self.conf.block_off_to_page(flash_block, lba_off)
-        else:
-            return None
 
     def write_page(self, lba_pagenum, garbage_collect_enable, cat):
         """
@@ -264,15 +324,9 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.flash.page_write(toflashpage, cat)
         self.log_end_pagenum = toflashpage
 
-        if self.log_page_l2p.has_key(lba_pagenum):
-            oldflashpage = self.log_page_l2p[lba_pagenum]
-            self.bitmap.invalidate_page(oldflashpage)
-            self.remove_log_page_mapping_by_lba(lba_pagenum)
-        elif self.data_blk_l2p.has_key(lba_block):
-            oldflashpage = self.lba_page_to_flash_page(lba_pagenum)
-            self.bitmap.invalidate_page(oldflashpage)
+        self.invalidate_lba_page(lba_pagenum)
 
-        self.add_log_page_mapping(lba_page=lba_pagenum, flash_page=toflashpage)
+        self.mappings.add_log_page_mapping(lba_page=lba_pagenum, flash_page=toflashpage)
         self.bitmap.validate_page(toflashpage)
 
         # do garbage collection if necessary
@@ -372,7 +426,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             if self.bitmap.is_page_valid(page):
                 # lba = self.p2l[page]
                 self.flash.page_read(page, 'amplified')
-                lba = self.flash_page_to_lba_page(page)
+                lba = self.mappings.flash_page_to_lba_page_by_all_means(page)
                 self.write_page(lba, garbage_collect_enable=False, cat='amplified')
 
     def is_switch_mergable(self, flash_blocknum):
@@ -386,24 +440,12 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         for flash_pg in range(flash_pg_start, flash_pg_end):
             if not self.bitmap.is_page_valid(flash_pg):
                 return False
-            lba_pg = self.log_page_p2l[flash_pg]
+            lba_pg = self.mappings.flash_page_to_lba_page(flash_pg)
             if lba_pg % self.conf['flash_npage_per_block'] != \
                 flash_pg % self.conf['flash_npage_per_block']:
                 return False
 
         return True
-
-    def flash_page_to_lba_page(self, flash_page):
-        flash_block, flash_off = self.conf.page_to_block_off(flash_page)
-
-        if self.log_page_p2l.has_key(flash_page):
-            return self.log_page_p2l[flash_page]
-        elif self.data_blk_p2l.has_key[flash_block]:
-            lba_block = self.data_blk_p2l[flash_block]
-            return self.conf.block_off_to_page(lba_block, flash_off)
-        else:
-            self.recorder.error("Cannot find flash page in any mapping table")
-            exit(1)
 
     def switch_merge(self, flash_blocknum):
         """
@@ -413,17 +455,18 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         """
         self.recorder.debug("I am in switch_merge()-~~~~~~~~~~-")
         flash_pg_start, flash_pg_end = self.conf.block_to_page_range(flash_blocknum)
-        lba_pg_start = self.flash_page_to_lba_page(flash_pg_start)
+        lba_pg_start = self.mappings.flash_page_to_lba_page_by_all_means(
+            flash_pg_start)
         lba_block, lba_off = self.conf.page_to_block_off(lba_pg_start)
 
         # add data block mapping
-        self.add_data_blk_mapping(lba_block=lba_block,
+        self.mappings.add_data_blk_mapping(lba_block=lba_block,
             flash_block=flash_blocknum)
 
         # removing log page mapping
         for pg in range(flash_pg_start, flash_pg_end):
             if self.bitmap.is_page_valid(pg):
-                self.remove_log_page_mapping_by_flash(pg)
+                self.mappings.remove_log_page_mapping(flash_page=pg)
 
         # valid bitmap does not change
 
@@ -445,7 +488,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         moved = False
         for lba_page in range(lba_start, lba_end):
             page_off = lba_page % self.conf['flash_npage_per_block']
-            flash_page = self.lba_page_to_flash_page(lba_page)
+            flash_page = self.mappings.lba_page_to_flash_page_by_all_means(lba_page)
             self.recorder.debug2('trying to move lba_page', lba_page,
                     '(flash_page:', flash_page, ')')
 
@@ -461,11 +504,11 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 self.flash.page_write(target_page, 'amplified')
                 self.bitmap.validate_page(target_page)
 
-                if self.log_page_l2p.has_key(lba_page):
+                if self.mappings.has_lba_page(lba_page):
                     # handle the page mapping case
                     # you only need to delete the page mapping because
                     # later we will establish block mapping
-                    self.remove_log_page_mapping_by_lba(lba_page)
+                    self.mappings.remove_log_page_mapping(lba_page=lba_page)
 
                 self.recorder.debug2('move lba', lba_page, '(flash:', flash_page,
                         ') to flash', target_page)
@@ -473,17 +516,17 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         # Now all pages of lba_block is in target_flash_block
         # we now need to handle the mappings
         if moved:
-            if self.data_blk_l2p.has_key(lba_block):
+            if self.mappings.has_lba_block(lba_block=lba_block):
                 self.recorder.debug2()
                 # the lba block was in the mapping
-                flash_block = self.data_blk_l2p[lba_block]
+                flash_block = self.mappings.lba_block_to_flash_block(lba_block)
                 self.recorder.debug2('lba_block', lba_block,
                                 'flash_block', flash_block)
-                self.remove_data_blk_mapping_by_lba(lba_block)
-                self.add_data_blk_mapping(lba_block=lba_block,
+                self.mappings.remove_data_blk_mapping(lba_block=lba_block)
+                self.mappings.add_data_blk_mapping(lba_block=lba_block,
                     flash_block=target_flash_block)
             else:
-                self.add_data_blk_mapping(lba_block=lba_block,
+                self.mappings.add_data_blk_mapping(lba_block=lba_block,
                     flash_block=target_flash_block)
 
         self.debug()
@@ -503,7 +546,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         lbablocks = set()
         for flash_pg in range(flash_start, flash_end):
             if self.bitmap.is_page_valid(flash_pg):
-                lba_pg = self.flash_page_to_lba_page(flash_pg)
+                lba_pg = self.mappings.flash_page_to_lba_page_by_all_means(
+                    flash_pg)
                 lba_blk, off = self.conf.page_to_block_off(lba_pg)
                 lbablocks.add(lba_blk)
 
@@ -630,8 +674,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
             # now remove the mappings
             # some blocks may be used by has no mapping
-            if self.data_blk_p2l.has_key(block_to_clean):
-                self.remove_data_blk_mapping_by_flash(block_to_clean)
+            if self.mappings.has_flash_block(block_to_clean):
+                self.mappings.remove_data_blk_mapping(flash_block=block_to_clean)
 
             # move it to free list
             # self.data_usedblocks.remove(block_to_clean)
@@ -643,31 +687,29 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.recorder.debug('=============garbage_collect_data_blocks======================garbage collecting ends')
 
     def debug(self):
-        self.recorder.debug('log_page_l2p', self.log_page_l2p)
-        self.recorder.debug('log_page_p2l', self.log_page_p2l)
+        self.recorder.debug('log_page_l2p', self.mappings.log_page_l2p)
 
-        self.recorder.debug('data_blk_l2p', self.data_blk_l2p)
-        self.recorder.debug('data_blk_p2l', self.data_blk_p2l)
+        self.recorder.debug('data_blk_l2p', self.mappings.data_blk_l2p)
 
         self.recorder.debug('* VALIDBITMAP', self.bitmap.bitmap)
         self.recorder.debug('* blocks', self.block_pool)
 
     def show_map(self):
-        self.recorder.debug('log_page_l2p', self.log_page_l2p)
-        self.recorder.debug('log_page_p2l', self.log_page_p2l)
+        self.recorder.debug('log_page_l2p', self.mappings.log_page_l2p)
+        self.recorder.debug('log_page_p2l', self.mappings.log_page_p2l)
 
-        self.recorder.debug('data_blk_l2p', self.data_blk_l2p)
-        self.recorder.debug('data_blk_p2l', self.data_blk_p2l)
+        self.recorder.debug('data_blk_l2p', self.mappings.data_blk_l2p)
+        self.recorder.debug('data_blk_p2l', self.mappings.data_blk_p2l)
 
     # Sanity checks
     def is_page_mapping_ok(self, flash_pg):
-        if self.log_page_p2l.has_key(flash_pg):
-            lba_pg = self.log_page_p2l[flash_pg]
+        if self.mappings.has_flash_page(flash_pg):
+            lba_pg = self.mappings.flash_page_to_lba_page(flash_pg)
         else:
             return False
 
-        if self.log_page_l2p.has_key(lba_pg):
-            flash_page2 = self.log_page_l2p[lba_pg]
+        if self.mappings.has_lba_page(lba_pg):
+            flash_page2 = self.mappings.lba_page_to_flash_page(lba_pg)
             if flash_page2 != flash_pg:
                 return False
         else:
@@ -677,36 +719,17 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         return True
 
     def is_block_mapping_ok(self, flash_block):
-        if self.data_blk_p2l.has_key(flash_block):
-            lba_block = self.data_blk_p2l[flash_block]
+        if self.mappings.has_flash_block(flash_block):
+            lba_block = self.flash_block_to_lba_block(flash_block)
         else:
             return False
 
-        if self.data_blk_l2p.has_key(lba_block):
-            flash_block2 = self.data_blk_l2p[lba_block]
+        if self.mappings.has_lba_block(lba_block=lba_block):
+            flash_block2 = self.mappings.lba_block_to_flash_block(lba_block)
             if flash_block2 != flash_block:
                 return False
         else:
             return False
-        return True
-
-    def is_mapping_size_ok(self):
-        if len(self.log_page_l2p) != len(self.log_page_p2l):
-            self.recorder.error('log page sizes are not equal')
-            return False
-        if len(self.data_blk_l2p) != len(self.data_blk_p2l):
-            self.recorder.error('data block sizes are not equal')
-            return False
-
-    def is_mapping_reverse_ok(self):
-        for k, v in self.log_page_l2p.items():
-            if self.log_page_p2l[v] != k:
-                return False
-
-        for k, v in self.data_blk_l2p.items():
-            if self.data_blk_p2l[v] != k:
-                return False
-
         return True
 
     def is_block_total_ok(self):
@@ -727,16 +750,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 "page is valid but could not find mapping"
                 return False
 
-        # l2p and p2l have the same size
-        if self.is_mapping_size_ok() == False:
-            self.recorder.debug("self.is_mapping_size_ok() is False")
-            return False
-
-        # p2l is the reverse of l2p
-        if self.is_mapping_reverse_ok() == False:
-            self.recorder.debug("self.is_mapping_reverse_ok()  is False")
-            return False
-
         # the sum of freeblock, data_usedblocks, log_usedblocks
         # should be flash_num_blocks
         if self.is_block_total_ok() == False:
@@ -744,9 +757,9 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             return False
 
         # log block is not overflow
-        if self.is_log_map_overflow() == True:
-            self.recorder.debug("self.is_log_map_overflow() is True")
-            return False
+        # if self.is_log_map_overflow() == True:
+            # self.recorder.debug("self.is_log_map_overflow() is True")
+            # return False
 
         return True
 

@@ -99,7 +99,7 @@ def seq_with_rand_start():
     conf = config.Config(confdic)
 
     # ftls = ("blockmap", "pagemap", "hybridmap")
-    ftls = ("hybridmap")
+    ftls = ("hybridmap",)
     for ftl in ftls:
         conf['result_dir'] = os.path.join('/tmp/seq_randstart', ftl)
         conf['ftl_type'] = ftl
