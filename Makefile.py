@@ -55,6 +55,56 @@ def workflow(conf):
     sim = FtlSim.simulator.Simulator(conf)
     sim.run(event_iter)
 
+def seq_with_rand_start():
+    confdic = {
+        "####################################### Global": "",
+        "result_dir"            : "/tmp/simple",
+        "workload_src" : LBAGENERATOR,
+
+        "####################################### For FtlSim": "",
+        "flash_page_size"       : 4096,
+        "flash_npage_per_block" : 16,
+        "flash_num_blocks"      : 64*2**20/(4096*16),
+
+        "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
+        "ftl_type" : "hybridmap",
+
+        "high_log_block_ratio"       : 0.4,
+        "high_data_block_ratio"      : 0.4,
+        "log_block_upperbound_ratio" : 0.5,
+
+        "verbose_level" : 1,
+        "comment1"      : "output_target: file, stdout",
+        "output_target" : "file",
+
+        "####################################### For WlRunner": "",
+        "loop_path"             : "/dev/loop0",
+        "loop_dev_size_mb"      : 8,
+        "tmpfs_mount_point"     : "/mnt/tmpfs",
+        "fs_mount_point"        : "/mnt/fsonloop",
+
+
+        "sector_size"           : 512,
+
+        "filesystem"            : "ext4",
+
+        "workload_class"        : "Simple",
+        "lba_workload_class"    : "SeqWithRandomStart", # in WlRunner/lbaworkloadgenerator.py
+        "LBA" : {
+            "lba_to_flash_size_ratio": 0.6,
+            "write_to_lba_ratio"     : 0.5    #how many writes you want to have
+        }
+    }
+
+    conf = config.Config(confdic)
+
+    # ftls = ("blockmap", "pagemap", "hybridmap")
+    ftls = ("hybridmap")
+    for ftl in ftls:
+        conf['result_dir'] = os.path.join('/tmp/seq_randstart', ftl)
+        conf['ftl_type'] = ftl
+        workflow(conf)
+
 def from_filesystem():
     confdic = {
         "####################################### Global": "",
@@ -157,8 +207,9 @@ def main():
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
     # shcmd("scp jun@192.168.56.102:/tmp/ftlsim.in ./FtlSim/misc/")
-    pure_sequential()
+    # pure_sequential()
     # from_filesystem()
+    seq_with_rand_start()
 
 def _main():
     parser = argparse.ArgumentParser(
