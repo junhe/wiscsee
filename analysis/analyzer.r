@@ -802,7 +802,10 @@ explore.sim.results <- function()
             # '~/datahouse/seqlba/pagemap/ftlsim.out',
             # '~/datahouse/seqlba/hybridmap/ftlsim.out'
 
-            '~/datahouse/seqlba8/hybridmap/ftlsim.out'
+            '~/datahouse/seq_randstart/directmap/ftlsim.out',
+            '~/datahouse/seq_randstart/blockmap/ftlsim.out',
+            '~/datahouse/seq_randstart/pagemap/ftlsim.out',
+            '~/datahouse/seq_randstart/hybridmap/ftlsim.out'
             )) {
             d = load_file_from_cache(f, 'load')
             d = clean(d)
