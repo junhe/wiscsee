@@ -5,9 +5,9 @@ import bidict
 
 import config
 import ftlbuilder
+import recorder
 
-# TODO: remove ftl.block_invalid_ratio()
-
+tmprec = recorder.Recorder(recorder.STDOUT_TARGET, verbose_level = 3)
 
 class HybridMapping():
     """
@@ -31,6 +31,7 @@ class HybridMapping():
 
     def has_lba_block(self, lba_block):
         return lba_block in self.data_blk_l2p
+
     def has_flash_block(self, flash_block):
         return flash_block in self.data_blk_l2p.inv
 
@@ -69,8 +70,7 @@ class HybridMapping():
             lba_block = self.flash_block_to_lba_block(flash_block)
             return self.conf.block_off_to_page(lba_block, flash_off)
         else:
-            raise RuntimeError("Cannot find flash page {} in "\
-                "any mapping table".format(flash_page))
+            return None
 
     def flash_page_to_lba_page(self, flash_page):
         return self.log_page_l2p[:flash_page]
@@ -79,7 +79,7 @@ class HybridMapping():
         if lba_block in self.data_blk_l2p:
             raise RuntimeError("Trying to add data block mapping "\
                 "{lba_block}->{flash_block}. But logical block {lba_block} "\
-                "already exists".format(logical = lba_block,
+                "already exists".format(lba_block = lba_block,
                 flash_block = flash_block))
         if flash_block in self.data_blk_l2p.inv:
             raise RuntimeError("Trying to add data block mapping "\
@@ -90,13 +90,15 @@ class HybridMapping():
 
     def remove_data_blk_mapping(self, lba_block=None, flash_block=None):
         "The mapping must exist. bidict should raise an exception."
-        if bool(lba_block) and bool(flash_block):
+        arg_bool = [lba_block == None , flash_block == None]
+        if not any(arg_bool) or all(arg_bool) :
             # XOR
             raise ValueError("You should have specified one and only one "\
                 "of lba_block and flash_block.")
-        if lba_block:
+
+        if lba_block != None:
             del self.data_blk_l2p[lba_block]
-        if flash_block:
+        if flash_block != None:
             del self.data_blk_l2p[:flash_block]
 
     def add_log_page_mapping(self, lba_page, flash_page):
@@ -159,6 +161,10 @@ class HybridBlockPool(object):
     def move_used_log_block_to_free(self, blocknum):
         self.log_usedblocks.remove(blocknum)
         self.freeblocks.append(blocknum)
+
+    def move_used_log_block_to_data_block(self, blocknum):
+        self.log_usedblocks.remove(blocknum)
+        self.data_usedblocks.append(blocknum)
 
     def __repr__(self):
         ret = ' '.join('freeblocks', repr(self.freeblocks)) + '\n' + \
@@ -259,6 +265,14 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             self.recorder.warning('trying to invalidate lba page {}, '\
                     'which is not in any map'.format(lbapagenum))
 
+    def new_block_sanity_check(self, block):
+        if self.mappings.has_flash_block(block):
+            lba_block = self.mappings.flash_block_to_lba_block(block)
+            raise RuntimeError("Flash block {flashblock} is new "\
+                "from free block list. But it has mapping "\
+                "{lbablock}->{flashblock}".format(
+                flashblock = block,lbablock = lba_block))
+
     def next_page_to_program(self):
         """
         it finds out the next available page to write,
@@ -278,8 +292,10 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         if curblock == nextblock:
             return nextpage
         else:
+            # get a new block
             block = self.block_pool.pop_a_free_block_to_log()
-            start, end = self.conf.block_to_page_range(block)
+            self.new_block_sanity_check(block)
+            start, _ = self.conf.block_to_page_range(block)
             return start
 
     def write_page(self, lba_pagenum, garbage_collect_enable, cat):
@@ -324,6 +340,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.flash.page_write(toflashpage, cat)
         self.log_end_pagenum = toflashpage
 
+        # this also removes mapping from lba_pagenum
+        # writing this lba_pagenum could be an overwrite
         self.invalidate_lba_page(lba_pagenum)
 
         self.mappings.add_log_page_mapping(lba_page=lba_pagenum, flash_page=toflashpage)
@@ -359,8 +377,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.recorder.debug('******************** end *********************************')
         self.recorder.debug('**********************************************************')
 
-    def block_invalid_ratio(self, blocknum):
-        return self.bitmap.block_invalid_ratio(blocknum)
 
     def next_victim_log_block_to_merge(self):
         # use stupid for the prototype
@@ -369,7 +385,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         # we don't want usedblocks[-1] because it is the one in use, newly popped block
         # is appended to the used block list
         for blocknum in self.block_pool.log_usedblocks[0:-1]:
-            invratio = self.block_invalid_ratio(blocknum)
+            invratio = self.bitmap.block_invalid_ratio(blocknum)
             if invratio > maxratio:
                 maxblock = blocknum
                 maxratio = invratio
@@ -386,7 +402,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         # we don't want usedblocks[-1] because it is the one in use, newly popped block
         # is appended to the used block list
         for blocknum in self.block_pool.log_usedblocks[0:-1]:
-            invratio = self.block_invalid_ratio(blocknum)
+            invratio = self.bitmap.block_invalid_ratio(blocknum)
             if invratio > maxratio:
                 maxblock = blocknum
                 maxratio = invratio
@@ -406,7 +422,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         maxblock = None
 
         for blocknum in self.block_pool.data_usedblocks:
-            invratio = self.block_invalid_ratio(blocknum)
+            invratio = self.bitmap.block_invalid_ratio(blocknum)
             if invratio == 1:
                 return blocknum
 
@@ -457,22 +473,24 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         flash_pg_start, flash_pg_end = self.conf.block_to_page_range(flash_blocknum)
         lba_pg_start = self.mappings.flash_page_to_lba_page_by_all_means(
             flash_pg_start)
-        lba_block, lba_off = self.conf.page_to_block_off(lba_pg_start)
+        lba_block, _ = self.conf.page_to_block_off(lba_pg_start)
+
+        # removing log page mapping
+        for pg in range(flash_pg_start, flash_pg_end):
+            if not self.bitmap.is_page_valid(pg):
+                raise RuntimeError("All page in switch merge should be valid."\
+                    " But {flash_page} (in flash block {flash_block}) is not."\
+                    .format(flash_page = pg, flash_block = flash_blocknum))
+            self.mappings.remove_log_page_mapping(flash_page=pg)
 
         # add data block mapping
         self.mappings.add_data_blk_mapping(lba_block=lba_block,
             flash_block=flash_blocknum)
 
-        # removing log page mapping
-        for pg in range(flash_pg_start, flash_pg_end):
-            if self.bitmap.is_page_valid(pg):
-                self.mappings.remove_log_page_mapping(flash_page=pg)
-
         # valid bitmap does not change
 
         # move the block from log blocks to data blocks
-        self.block_pool.log_usedblocks.remove(flash_blocknum)
-        self.block_pool.data_usedblocks.append(flash_blocknum)
+        self.block_pool.move_used_log_block_to_data_block(flash_blocknum)
 
         self.recorder.debug('SWITCH MERGE IS DONE')
 
@@ -488,27 +506,34 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         moved = False
         for lba_page in range(lba_start, lba_end):
             page_off = lba_page % self.conf['flash_npage_per_block']
-            flash_page = self.mappings.lba_page_to_flash_page_by_all_means(lba_page)
+            flash_page = self.mappings.lba_page_to_flash_page_by_all_means(
+                lba_page)
             self.recorder.debug2('trying to move lba_page', lba_page,
-                    '(flash_page:', flash_page, ')')
+                '(flash_page:', flash_page, ')')
 
             if flash_page != None:
                 # mapping exists (this lba page is on device)
                 moved = True
 
-
                 self.flash.page_read(flash_page, 'amplified')
+
+                # handle mapping
+                # if the lba_page in in log page mapping, we need to
+                # invalidate the its flash page and remove the mapping
+                # from log_page_l2p
+                # if it is in data block, we don't just need to invalidate
+                # the flash page. We don't need to change the block mapping
+                # since there may be other valid pages in the block.
                 self.bitmap.invalidate_page(flash_page)
-
-                target_page = self.conf.block_off_to_page(target_flash_block, page_off)
-                self.flash.page_write(target_page, 'amplified')
-                self.bitmap.validate_page(target_page)
-
                 if self.mappings.has_lba_page(lba_page):
                     # handle the page mapping case
                     # you only need to delete the page mapping because
                     # later we will establish block mapping
                     self.mappings.remove_log_page_mapping(lba_page=lba_page)
+
+                target_page = self.conf.block_off_to_page(target_flash_block, page_off)
+                self.flash.page_write(target_page, 'amplified')
+                self.bitmap.validate_page(target_page)
 
                 self.recorder.debug2('move lba', lba_page, '(flash:', flash_page,
                         ') to flash', target_page)
@@ -517,19 +542,19 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         # we now need to handle the mappings
         if moved:
             if self.mappings.has_lba_block(lba_block=lba_block):
-                self.recorder.debug2()
                 # the lba block was in the mapping
-                flash_block = self.mappings.lba_block_to_flash_block(lba_block)
-                self.recorder.debug2('lba_block', lba_block,
-                                'flash_block', flash_block)
                 self.mappings.remove_data_blk_mapping(lba_block=lba_block)
                 self.mappings.add_data_blk_mapping(lba_block=lba_block,
                     flash_block=target_flash_block)
             else:
+                # BUG: target_flash_block is in free list but also in block mapping
+                # It must be that when moving from used list to free list, we
+                # forgot to removing the block mapping. I should be able to find out
+                # where this happens by looking at used block to free block moving
+                # Or the block has been used without moving out of free list
                 self.mappings.add_data_blk_mapping(lba_block=lba_block,
                     flash_block=target_flash_block)
 
-        self.debug()
         self.recorder.debug('End aggregate_lba_block:')
 
     def full_merge(self, flash_blocknum):
@@ -554,6 +579,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         # aggregate all the lba blocks
         for lba_block in lbablocks:
             new_data_block = self.block_pool.pop_a_free_block_to_data()
+            self.new_block_sanity_check(new_data_block)
             self.aggregate_lba_block(lba_block, new_data_block)
 
         # Now block flash_blocknum should have no valid pages
@@ -620,7 +646,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 self.recorder.debug('Cannot find a victim block')
                 break
             self.recorder.debug( 'next victimblock:', victimblock,
-                    'invaratio', self.block_invalid_ratio(victimblock))
+                    'invaratio', self.bitmap.block_invalid_ratio(victimblock))
             self.recorder.debug( self.bitmap.bitmap )
 
             self.move_valid_pages(victimblock)
@@ -654,7 +680,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 self.recorder.debug('Cannot find a victim block')
                 break
             self.recorder.debug( 'next victimblock:', victimblock,
-                    'invaratio', self.block_invalid_ratio(victimblock))
+                    'invaratio', self.bitmap.block_invalid_ratio(victimblock))
             self.recorder.debug( self.bitmap.bitmap )
 
             # The following function may trigger any type of merge

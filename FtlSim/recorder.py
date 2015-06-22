@@ -22,8 +22,10 @@ class Recorder(object):
             os.fsync(self.fhandle)
             self.fhandle.close()
 
-        stats_path = '.'.join((self.path, 'stats'))
-        utils.table_to_file([self.counter], stats_path)
+        if self.path:
+            # only write stats when we output to file
+            stats_path = '.'.join((self.path, 'stats'))
+            utils.table_to_file([self.counter], stats_path)
 
     def output(self, *args):
         line = ' '.join( str(x) for x in args)
@@ -35,7 +37,6 @@ class Recorder(object):
 
     def debug(self, *args):
         if self.verbose_level >= 3:
-            args = ' '.join( str(x) for x in args)
             self.output('DEBUG', *args)
 
     def debug2(self, *args):
