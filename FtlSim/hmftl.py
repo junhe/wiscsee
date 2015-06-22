@@ -9,6 +9,37 @@ import recorder
 
 tmprec = recorder.Recorder(recorder.STDOUT_TARGET, verbose_level = 3)
 
+# Design notes
+# What happen when a lba_block -> flash_block mapping exists and we
+# write to a page in lba_block? For example, lba_block 518->flash 882
+# already exists, and we now write to the first lba page, k, in lba block 518.
+# In the current design, we will
+# 1. find a free flash page k' for writing page k
+# 2. write to page k'
+# 3. set the end of log to k'
+# 4. invalidate lba page k
+#    if k is in page mapping:
+#        find k's old flash page k'' and invalidate the flash page k''
+#        remove k from log page mapping
+#    if k's block is in block mappping
+#        find k's old flash page k'' and invalidate the flash page k''
+#        block map stays the same
+# 5. add new log page mapping k -> k'
+# 6. validate k'
+#
+# this could lead to the case that a lba_block -> flash_block exists
+# but none of the pages in flash_block is valid (all of them have been
+# overwritten and are in log blocks). When we do switch merge (or other
+# merges?), we will want to switch the block in log blocks to data blocks
+# but we will found the lba_block->flash_block already exists.
+# The solution is to
+# 1. consider adding mapping k->k' when k->k'' exist legal
+# 2. remove block mapping when all pages in a block are invalid
+# 1?
+#
+
+# TODO: improving cooperation between bitmap and mappings
+
 class HybridMapping():
     """
     This mapping class uses bidict to manage the mapping between logical
@@ -76,15 +107,19 @@ class HybridMapping():
         return self.log_page_l2p[:flash_page]
 
     def add_data_blk_mapping(self, lba_block, flash_block):
-        if lba_block in self.data_blk_l2p:
-            raise RuntimeError("Trying to add data block mapping "\
-                "{lba_block}->{flash_block}. But logical block {lba_block} "\
-                "already exists".format(lba_block = lba_block,
-                flash_block = flash_block))
+        # if lba_block in self.data_blk_l2p:
+            # raise RuntimeError("Trying to add data block mapping "\
+                # "{lba_block}->{flash_block}. But logical block {lba_block}"\
+                # "->{old_flash_block} already exists".format(
+                # lba_block = lba_block, flash_block = flash_block,
+                # old_flash_block = self.lba_block_to_flash_block(lba_block)))
         if flash_block in self.data_blk_l2p.inv:
             raise RuntimeError("Trying to add data block mapping "\
-                "{lba_block}->{flash_block}. But flash block {flash_block} "\
-                "already exists".format(lba_block = lba_block,
+                "{lba_block}->{flash_block}. But "\
+                "{old_lba_block}->{flash_block} "\
+                "already exists".format(
+                old_lba_block = self.flash_block_to_lba_block(flash_block),
+                lba_block = lba_block,
                 flash_block = flash_block))
         self.data_blk_l2p[lba_block] = flash_block
 
@@ -116,13 +151,14 @@ class HybridMapping():
 
     def remove_log_page_mapping(self, lba_page=None, flash_page=None):
         "The mapping must exist. bidict should raise an exception."
-        if bool(lba_page) and bool(flash_page):
+        arg_bool = [lba_page == None , flash_page == None]
+        if not any(arg_bool) or all(arg_bool) :
             # XOR
             raise ValueError("You should have specified one and only one "\
                 "of lba_page and flash_page.")
-        if lba_page:
+        if lba_page != None:
             del self.log_page_l2p[lba_page]
-        if flash_page:
+        if flash_page != None:
             del self.log_page_l2p[:flash_page]
 
 class HybridBlockPool(object):
@@ -547,11 +583,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 self.mappings.add_data_blk_mapping(lba_block=lba_block,
                     flash_block=target_flash_block)
             else:
-                # BUG: target_flash_block is in free list but also in block mapping
-                # It must be that when moving from used list to free list, we
-                # forgot to removing the block mapping. I should be able to find out
-                # where this happens by looking at used block to free block moving
-                # Or the block has been used without moving out of free list
                 self.mappings.add_data_blk_mapping(lba_block=lba_block,
                     flash_block=target_flash_block)
 
