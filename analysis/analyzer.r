@@ -900,7 +900,8 @@ explore.stats <- function()
         func(d)
     }
     # do_main("~/datahouse/seq_randstart/")
-    do_main("~/datahouse/randomlba/")
+    # do_main("~/datahouse/randomlba/")
+    do_main("~/datahouse/seqlba")
 }
 
 
