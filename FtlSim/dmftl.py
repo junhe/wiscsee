@@ -15,12 +15,15 @@ class DirectMapFtl(ftlbuilder.FtlBuilder):
 
     # implement abstract functions
     def lba_read(self, pagenum):
+        self.recorder.put('lba_read', pagenum, 'user')
         self.flash.page_read(pagenum, 'user')
 
     def lba_write(self, pagenum):
+        self.recorder.put('lba_write', pagenum, 'user')
         self.write_page(pagenum)
 
     def lba_discard(pagenum):
+        self.recorder.put('lba_discard ', pagenum, 'user')
         self.bitmap.invalidate_page(pagenum)
 
     def erase_block(self, blocknum):
