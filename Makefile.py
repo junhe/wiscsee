@@ -197,10 +197,11 @@ def pure_sequential_or_random():
     conf = config.Config(confdic)
 
     # ftls = ("directmap", "blockmap", "pagemap", "hybridmap")
-    ftls = ("pagemap",)
+    # ftls = ("pagemap",)
+    ftls = ("directmap",)
     # ftls = ("hybridmap",)
     for ftl in ftls:
-        conf['result_dir'] = os.path.join('/tmp/seqlba4', ftl)
+        conf['result_dir'] = os.path.join('/tmp/seqlba_03', ftl)
         conf['ftl_type'] = ftl
         workflow(conf)
 
@@ -208,6 +209,7 @@ def main():
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
     # shcmd("scp jun@192.168.56.102:/tmp/ftlsim.in ./FtlSim/misc/")
+    shcmd("git pull && git commit -am 'update'")
     pure_sequential_or_random()
     # from_filesystem()
     # seq_with_rand_start()

@@ -4,6 +4,8 @@ import subprocess
 import shlex
 import sys
 
+import utils
+
 def run_and_get_output(cmd):
     output = []
     cmd = shlex.split(cmd)
@@ -95,6 +97,8 @@ if __name__ == '__main__':
         print "This script can be executed anywhere within the repository"
         exit(1)
     fpath = sys.argv[1]
+
+    utils.shcmd("git pull")
 
     commit_file(fpath)
     git_push()

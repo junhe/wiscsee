@@ -3,6 +3,74 @@ from collections import deque
 
 import ftlbuilder
 
+class GarbageCollectionDecider(object):
+    """
+    it is a queue maintaining GC activity in the past a few
+    writes.
+    old ......... new
+    [True, False, True]
+    If it is true, means GC is triggered for a write.
+
+    it also tells you whether you should do GC.
+    """
+    def __init__(self, threshold, pause_cnt, freeblocks, low_num_blocks):
+        """
+        threshold: pause GC when threshold writes in the past
+            has triggerred GC.
+        pause_cnt: pause GC for this many writes
+
+        This class should be used like this:
+
+        write_page():
+            do_gc = should_do_gc()
+            if do_gc == True:
+                gc()
+            add_gc_activity(do_gc)
+
+
+        """
+        self.threshold = int(threshold)
+        self.pause_cnt = pause_cnt
+        self.queue_size = threshold
+        self.freeblocks = freeblocks # Python passes in as reference
+        self.low_num_blocks = low_num_blocks
+        self.pause_remaining = 0
+
+        self.gc_activity = []
+
+    def should_do_gc(self):
+        """
+        We should NOT do gc when:
+        1. gc has been triggerred for the past threshold user writes.
+        2. number of freeblocks is more then low_num_blocks
+        3. pause_remaining > 0
+        """
+        if len(self.freeblocks) > self.low_num_blocks or \
+            self.pause_remaining > 0:
+            return False
+
+        return True
+
+    def add_gc_activity(self, gc_bool):
+        """
+        This function should be called for every write.
+        This also dequeues if the queue is long
+        """
+        self.pause_cnt -= 1
+
+        self.gc_activity.append(gc_bool)
+        while len(self.gc_activity) > self.queue_size:
+            # no need to check size here, the while check already did
+            del self.gc_activity[0]
+
+        if self.pause_remaining <= 0 and \
+            all(self.gc_activity[-self.threshold:]):
+            # not in pausing status and found we have been doing
+            # too many garbage collecting
+            self.pause_remaining = self.pause_cnt
+            # print 'reset pause_remaining'
+
+
 class PageMapFtl(ftlbuilder.FtlBuilder):
     """
     Write a page (not program a page). In this case, every block is log block.
@@ -47,6 +115,9 @@ class PageMapFtl(ftlbuilder.FtlBuilder):
         # trigger garbage collection if the number of free blocks is below
         # the number below
         self.low_num_blocks = 0.5 * self.conf['flash_num_blocks']
+        self.gc_decider = GarbageCollectionDecider(threshold = 3,
+            pause_cnt = 10000, freeblocks = self.freeblocks,
+            low_num_blocks = self.low_num_blocks)
 
     def lba_read(self, pagenum):
         self.recorder.put('lba_read', pagenum, 'user')
@@ -158,9 +229,10 @@ class PageMapFtl(ftlbuilder.FtlBuilder):
         self.bitmap.validate_page(toflashpage)
 
         # do garbage collection if necessary
-        if garbage_collect_enable == True and \
-                len(self.freeblocks) < self.low_num_blocks:
+        do_gc = self.gc_decider.should_do_gc()
+        if garbage_collect_enable == True and do_gc == True:
             self.garbage_collect()
+        self.gc_decider.add_gc_activity(do_gc)
 
     def block_invalid_ratio(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)

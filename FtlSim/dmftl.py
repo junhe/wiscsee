@@ -23,16 +23,6 @@ class DirectMapFtl(ftlbuilder.FtlBuilder):
     def lba_discard(pagenum):
         self.bitmap.invalidate_page(pagenum)
 
-    def read_block(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        for pagenum in range(start, end):
-            self.flash.page_read(pagenum, 'unimplemented')
-
-    def program_block(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        for pagenum in range(start, end):
-            self.flash.page_write(pagenum, 'unimplemented')
-
     def erase_block(self, blocknum):
         self.flash.block_erase(blocknum, 'amplified')
 
@@ -40,7 +30,7 @@ class DirectMapFtl(ftlbuilder.FtlBuilder):
         "this is a dummy function"
         pass
 
-    def write_page(self, pagenum):
+    def write_page(self, pagenum, cat='user'):
         """
         in directmap we need to:
         1. read the whole block
@@ -49,8 +39,23 @@ class DirectMapFtl(ftlbuilder.FtlBuilder):
         4. write the block
         """
         blocknum = self.conf.page_to_block(pagenum)['blocknum']
-        self.read_block(blocknum)
+
+        start, end = self.conf.block_to_page_range(blocknum)
+        for pg in range(start, end):
+            if pg == pagenum:
+                loop_cat = 'user'
+            else:
+                loop_cat = 'amplified'
+            self.flash.page_read(pg, loop_cat)
+
         self.modify_page_in_ram(pagenum)
+
         self.erase_block(blocknum)
-        self.program_block(blocknum)
+
+        for pg in range(start, end):
+            if pg == pagenum:
+                loop_cat = 'user'
+            else:
+                loop_cat = 'amplified'
+            self.flash.page_write(pg, loop_cat)
 
