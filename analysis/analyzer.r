@@ -773,8 +773,9 @@ explore.sim.results <- function()
 
 
         # quartz()
+        # d = subset(d, cat == 'user')
         p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
-            geom_point(alpha=0.1) +
+            geom_point() +
             facet_grid(operation~.) +
             scale_colour_manual(
               values = c("amplified" = "red",
@@ -805,9 +806,15 @@ explore.sim.results <- function()
             # '~/datahouse/seq_randstart/hybridmap/ftlsim.out'
 
             # '~/datahouse/randomlba/pagemap/ftlsim.out'
-            '~/datahouse/seqlba4/pagemap/ftlsim.out'
+            # '~/datahouse/seqlba_03/pagemap/ftlsim.out'
+
+            '~/datahouse/seqlba_improved_dm_pm/directmap/ftlsim.out',
+            '~/datahouse/seqlba_improved_dm_pm/blockmap/ftlsim.out',
+            '~/datahouse/seqlba_improved_dm_pm/pagemap/ftlsim.out',
+            '~/datahouse/seqlba_improved_dm_pm/hybridmap/ftlsim.out'
             )) {
             d = load_file_from_cache(f, 'load')
+            # d = load(f)
             d = clean(d)
             p = func(d)
             plotlist = append(plotlist, list(p))
