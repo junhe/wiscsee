@@ -752,10 +752,6 @@ explore.sim.results <- function()
     load <- function(fpath)
     {
         print(fpath)
-        # d = read.table('./data/sim.result.sample', header=F,
-        # d = read.table('./../FtlSim/f2fs.ftlpattern', header=F,
-        # d = read.table('./data/randomwl/pagemap/ftlsim.out', header=F,
-        # d = read.table('~/datahouse/simple-ext4/ftlsim.out', header=F,
         d = read.table(fpath, header=F, col.names = c('type', 'operation', 'pagenum', 'cat'))
         return(d)
     }
@@ -768,6 +764,7 @@ explore.sim.results <- function()
     func <- function(d)
     {
         # print((d))
+        # d = head(d, n=100000)
         d$seqid = seq_along(d$operation)
 
         print(levels(d$operation))
@@ -777,7 +774,7 @@ explore.sim.results <- function()
 
         # quartz()
         p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
-            geom_point() +
+            geom_point(alpha=0.1) +
             facet_grid(operation~.) +
             scale_colour_manual(
               values = c("amplified" = "red",
@@ -802,10 +799,13 @@ explore.sim.results <- function()
             # '~/datahouse/seqlba/pagemap/ftlsim.out',
             # '~/datahouse/seqlba/hybridmap/ftlsim.out'
 
-            '~/datahouse/seq_randstart/directmap/ftlsim.out',
-            '~/datahouse/seq_randstart/blockmap/ftlsim.out',
-            '~/datahouse/seq_randstart/pagemap/ftlsim.out',
-            '~/datahouse/seq_randstart/hybridmap/ftlsim.out'
+            # '~/datahouse/seq_randstart/directmap/ftlsim.out',
+            # '~/datahouse/seq_randstart/blockmap/ftlsim.out',
+            # '~/datahouse/seq_randstart/pagemap/ftlsim.out',
+            # '~/datahouse/seq_randstart/hybridmap/ftlsim.out'
+
+            # '~/datahouse/randomlba/pagemap/ftlsim.out'
+            '~/datahouse/seqlba4/pagemap/ftlsim.out'
             )) {
             d = load_file_from_cache(f, 'load')
             d = clean(d)
@@ -904,8 +904,6 @@ explore.stats <- function()
     do_main("~/datahouse/seqlba")
 }
 
-
-
 main <- function()
 {
     # explore.FSJ386323()
@@ -914,8 +912,8 @@ main <- function()
     # explore.madmax.iterate()
     # explore.mail01()
     # explore.websearch()
-    # explore.sim.results()
+    explore.sim.results()
     # explore.mywl()
-    explore.stats()
+    # explore.stats()
 }
 main()
