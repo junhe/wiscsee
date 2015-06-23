@@ -857,6 +857,53 @@ explore.mywl <- function()
     do_main()
 }
 
+# This function plot all .stats files in a directory
+explore.stats <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function(dir)
+    {
+        files = list.files(dir, recursive = T, 
+           pattern = "stats", full.names = T)
+        ret = data.frame()
+        for (f in files) {
+            print(f)
+            d = read.csv(f, header=T, sep=';')
+            d = melt(d)
+            d$file = paste(tail(unlist(strsplit(f, "/")), 2), collapse="/")
+            ret = rbind(ret, d)
+        }
+        print(ret)
+        return(ret)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        # p = ggplot(d, aes(x=variable, y=value, fill=file)) +
+        p = ggplot(d, aes(x=file, y=value, fill=variable)) +
+            geom_bar(stat='identity', position='dodge') + 
+            theme(axis.text.x = element_text(angle=90))
+        print(p)
+    }
+
+    do_main <- function(dir)
+    {
+        d = load(dir)
+        d = clean(d)
+        func(d)
+    }
+    do_main("~/datahouse/seq_randstart/")
+}
+
+
+
 main <- function()
 {
     # explore.FSJ386323()
@@ -865,7 +912,8 @@ main <- function()
     # explore.madmax.iterate()
     # explore.mail01()
     # explore.websearch()
-    explore.sim.results()
+    # explore.sim.results()
     # explore.mywl()
+    explore.stats()
 }
 main()
