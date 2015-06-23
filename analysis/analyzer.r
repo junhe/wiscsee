@@ -908,7 +908,8 @@ explore.stats <- function()
     }
     # do_main("~/datahouse/seq_randstart/")
     # do_main("~/datahouse/randomlba/")
-    do_main("~/datahouse/seqlba")
+    # do_main("~/datahouse/seqlba")
+    do_main("~/datahouse/seqlba_improved_dm_pm")
 }
 
 main <- function()
@@ -919,8 +920,8 @@ main <- function()
     # explore.madmax.iterate()
     # explore.mail01()
     # explore.websearch()
-    explore.sim.results()
+    # explore.sim.results()
     # explore.mywl()
-    # explore.stats()
+    explore.stats()
 }
 main()
