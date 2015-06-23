@@ -186,8 +186,8 @@ def pure_sequential_or_random():
         "filesystem"            : "f2fs",
 
         "workload_class"        : "Simple",
-        "lba_workload_class"    : "Random",
-        # "lba_workload_class"    : "Sequential",
+        # "lba_workload_class"    : "Random",
+        "lba_workload_class"    : "Sequential",
         "LBA" : {
             "lba_to_flash_size_ratio": 0.6,
             "write_to_lba_ratio"     : 4    #how many writes you want to have
@@ -201,7 +201,7 @@ def pure_sequential_or_random():
     # ftls = ("directmap",)
     # ftls = ("hybridmap",)
     for ftl in ftls:
-        conf['result_dir'] = os.path.join('/tmp/seqlba_improved_dm_pm', ftl)
+        conf['result_dir'] = os.path.join('/tmp/seqlba_improved_dm_pm_SEQ', ftl)
         conf['ftl_type'] = ftl
         workflow(conf)
 
@@ -209,7 +209,7 @@ def main():
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
     # shcmd("scp jun@192.168.56.102:/tmp/ftlsim.in ./FtlSim/misc/")
-    shcmd("git pull && git commit -am 'update'")
+    shcmd("git pull && git commit -am 'commit by Makefile'")
     pure_sequential_or_random()
     # from_filesystem()
     # seq_with_rand_start()
