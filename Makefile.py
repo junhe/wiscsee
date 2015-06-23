@@ -151,7 +151,7 @@ def from_filesystem():
         conf['result_dir'] = "/tmp/simple/"+fs
         workflow(conf)
 
-def pure_sequential():
+def pure_sequential_or_random():
     confdic = {
         "####################################### Global": "",
         # "result_dir"            : "/tmp/exp001",
@@ -186,20 +186,21 @@ def pure_sequential():
         "filesystem"            : "f2fs",
 
         "workload_class"        : "Simple",
-        # "lba_workload_class"    : "Random",
-        "lba_workload_class"    : "Sequential",
+        "lba_workload_class"    : "Random",
+        # "lba_workload_class"    : "Sequential",
         "LBA" : {
             "lba_to_flash_size_ratio": 0.6,
-            "write_to_lba_ratio"     : 8    #how many writes you want to have
+            "write_to_lba_ratio"     : 4    #how many writes you want to have
         }
     }
 
     conf = config.Config(confdic)
 
     # ftls = ("directmap", "blockmap", "pagemap", "hybridmap")
-    ftls = ("hybridmap",)
+    ftls = ("pagemap",)
+    # ftls = ("hybridmap",)
     for ftl in ftls:
-        conf['result_dir'] = os.path.join('/tmp/seqlba8', ftl)
+        conf['result_dir'] = os.path.join('/tmp/seqlba4', ftl)
         conf['ftl_type'] = ftl
         workflow(conf)
 
@@ -207,9 +208,9 @@ def main():
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
     # shcmd("scp jun@192.168.56.102:/tmp/ftlsim.in ./FtlSim/misc/")
-    # pure_sequential()
+    pure_sequential_or_random()
     # from_filesystem()
-    seq_with_rand_start()
+    # seq_with_rand_start()
 
 def _main():
     parser = argparse.ArgumentParser(

@@ -253,7 +253,7 @@ class PageMapFtl(ftlbuilder.FtlBuilder):
             # self.debug()
 
             self.move_valid_pages(victimblock)
-            #block erasure is always counted as amplified
+            # block erasure is always counted as amplified
             self.erase_block(victimblock, 'amplified')
             self.used_to_free(victimblock)
 
@@ -263,8 +263,8 @@ class PageMapFtl(ftlbuilder.FtlBuilder):
             cnt += 1
             if cnt % 10 == 0:
                 # time to check
-                if len(self.freeblocks) >= lastfree:
-                    # Not making progress
+                if len(self.freeblocks) <= lastfree:
+                    # Not making progress (number of free blocks are not increased)
                     self.recorder.debug( self.bitmap.bitmap )
                     self.recorder.debug('GC is not making progress! End GC')
                     break
