@@ -808,10 +808,15 @@ explore.sim.results <- function()
             # '~/datahouse/randomlba/pagemap/ftlsim.out'
             # '~/datahouse/seqlba_03/pagemap/ftlsim.out'
 
-            '~/datahouse/seqlba_improved_dm_pm/directmap/ftlsim.out',
-            '~/datahouse/seqlba_improved_dm_pm/blockmap/ftlsim.out',
-            '~/datahouse/seqlba_improved_dm_pm/pagemap/ftlsim.out',
-            '~/datahouse/seqlba_improved_dm_pm/hybridmap/ftlsim.out'
+            # '~/datahouse/seqlba_improved_dm_pm/directmap/ftlsim.out',
+            # '~/datahouse/seqlba_improved_dm_pm/blockmap/ftlsim.out',
+            # '~/datahouse/seqlba_improved_dm_pm/pagemap/ftlsim.out',
+            # '~/datahouse/seqlba_improved_dm_pm/hybridmap/ftlsim.out'
+
+            '~/datahouse/seqlba_improved_dm_pm_SEQ/directmap/ftlsim.out',
+            '~/datahouse/seqlba_improved_dm_pm_SEQ/blockmap/ftlsim.out',
+            '~/datahouse/seqlba_improved_dm_pm_SEQ/pagemap/ftlsim.out',
+            '~/datahouse/seqlba_improved_dm_pm_SEQ/hybridmap/ftlsim.out'
             )) {
             d = load_file_from_cache(f, 'load')
             # d = load(f)
@@ -909,7 +914,8 @@ explore.stats <- function()
     # do_main("~/datahouse/seq_randstart/")
     # do_main("~/datahouse/randomlba/")
     # do_main("~/datahouse/seqlba")
-    do_main("~/datahouse/seqlba_improved_dm_pm")
+    # do_main("~/datahouse/seqlba_improved_dm_pm")
+    do_main("~/datahouse/seqlba_improved_dm_pm_SEQ")
 }
 
 main <- function()
@@ -920,8 +926,8 @@ main <- function()
     # explore.madmax.iterate()
     # explore.mail01()
     # explore.websearch()
-    # explore.sim.results()
+    explore.sim.results()
     # explore.mywl()
-    explore.stats()
+    # explore.stats()
 }
 main()
