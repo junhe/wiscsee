@@ -116,7 +116,7 @@ class PageMapFtl(ftlbuilder.FtlBuilder):
         # the number below
         self.low_num_blocks = 0.5 * self.conf['flash_num_blocks']
         self.gc_decider = GarbageCollectionDecider(threshold = 3,
-            pause_cnt = 10000, freeblocks = self.freeblocks,
+            pause_cnt = 1000, freeblocks = self.freeblocks,
             low_num_blocks = self.low_num_blocks)
 
     def lba_read(self, pagenum):

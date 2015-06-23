@@ -163,7 +163,7 @@ def pure_sequential_or_random():
         "flash_num_blocks"      : 64*2**20/(4096*16),
 
         "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
-        "ftl_type" : "hybridmap",
+        "ftl_type" : None,
 
         "high_log_block_ratio"       : 0.4,
         "high_data_block_ratio"      : 0.4,
@@ -196,12 +196,12 @@ def pure_sequential_or_random():
 
     conf = config.Config(confdic)
 
-    # ftls = ("directmap", "blockmap", "pagemap", "hybridmap")
+    ftls = ("directmap", "blockmap", "pagemap", "hybridmap")
     # ftls = ("pagemap",)
-    ftls = ("directmap",)
+    # ftls = ("directmap",)
     # ftls = ("hybridmap",)
     for ftl in ftls:
-        conf['result_dir'] = os.path.join('/tmp/seqlba_03', ftl)
+        conf['result_dir'] = os.path.join('/tmp/seqlba_improved_dm_pm', ftl)
         conf['ftl_type'] = ftl
         workflow(conf)
 
