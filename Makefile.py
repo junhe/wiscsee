@@ -151,6 +151,58 @@ def from_filesystem():
         conf['result_dir'] = "/tmp/simple/"+fs
         workflow(conf)
 
+def mdtest_on_filesystems():
+    confdic = {
+        "####################################### Global": "",
+        "result_dir"            : None,
+        "workload_src" : WLRUNNER,
+
+        "####################################### For FtlSim": "",
+        "flash_page_size"       : 4096,
+        "flash_npage_per_block" : 16,
+        "flash_num_blocks"      : 64*2**20/(4096*16),
+
+        "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
+        "ftl_type" : "hybridmap",
+
+        "high_log_block_ratio"       : 0.4,
+        "high_data_block_ratio"      : 0.4,
+        "log_block_upperbound_ratio" : 0.5,
+
+        "verbose_level" : 1,
+        "# comment1"      : "output_target: file, stdout",
+        "output_target" : "file",
+
+        "####################################### For WlRunner": "",
+        "loop_path"             : "/dev/loop0",
+        "loop_dev_size_mb"      : 8,
+        "tmpfs_mount_point"     : "/mnt/tmpfs",
+        "fs_mount_point"        : "/mnt/fsonloop",
+
+
+        "sector_size"           : 512,
+
+        "filesystem"            : "ext4",
+
+        "workload_class"        : "Mdtest",
+        "mdtest_settings"       : {
+            "np" : 1, "branches" : 2, "items_per_node" : 3, "depth" : 4
+        },
+
+        # if you choose LBAGENERATOR for workload_src, the following will
+        # be used
+        "lba_workload_class"    : "Random",
+        "LBA" : {
+            "lba_to_flash_size_ratio": 0.6,
+            "write_to_lba_ratio"     : 2    #how many writes you want to have
+        }
+    }
+
+    conf = config.Config(confdic)
+    for fs in ('ext4', 'f2fs'):
+        conf['result_dir'] = "/tmp/mdtest/"+fs
+        workflow(conf)
+
 def pure_sequential_or_random():
     confdic = {
         "####################################### Global": "",
@@ -209,10 +261,13 @@ def main():
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
     # shcmd("scp jun@192.168.56.102:/tmp/ftlsim.in ./FtlSim/misc/")
-    shcmd("git pull && git commit -am 'commit by Makefile'")
-    pure_sequential_or_random()
+
+    # shcmd("git pull && git commit -am 'commit by Makefile'")
+    # pure_sequential_or_random()
     # from_filesystem()
     # seq_with_rand_start()
+    # pass
+    mdtest_on_filesystems()
 
 def _main():
     parser = argparse.ArgumentParser(
