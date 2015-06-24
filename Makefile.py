@@ -175,7 +175,7 @@ def mdtest_on_filesystems():
 
         "####################################### For WlRunner": "",
         "loop_path"             : "/dev/loop0",
-        "loop_dev_size_mb"      : 8,
+        "loop_dev_size_mb"      : 64,
         "tmpfs_mount_point"     : "/mnt/tmpfs",
         "fs_mount_point"        : "/mnt/fsonloop",
 
@@ -186,7 +186,11 @@ def mdtest_on_filesystems():
 
         "workload_class"        : "Mdtest",
         "mdtest_settings"       : {
-            "np" : 1, "branches" : 2, "items_per_node" : 3, "depth" : 4
+            "np" : 1,
+            "branches" : 40,
+            "items_per_node" : 40,
+            "depth" : 1,
+            "write_bytes": 4096
         },
 
         # if you choose LBAGENERATOR for workload_src, the following will
@@ -199,7 +203,9 @@ def mdtest_on_filesystems():
     }
 
     conf = config.Config(confdic)
-    for fs in ('ext4', 'f2fs'):
+    # filesystems = ('ext4', 'f2fs')
+    filesystems = ('ext4',)
+    for fs in filesystems:
         conf['result_dir'] = "/tmp/mdtest/"+fs
         workflow(conf)
 
@@ -258,6 +264,7 @@ def pure_sequential_or_random():
         workflow(conf)
 
 def main():
+    shcmd("git pull && git commit -am 'commit by Makefile'")
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
     # shcmd("scp jun@192.168.56.102:/tmp/ftlsim.in ./FtlSim/misc/")

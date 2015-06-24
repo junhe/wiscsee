@@ -1,3 +1,5 @@
+import os
+
 import config
 import utils
 
@@ -27,20 +29,11 @@ class Simple(Workload):
         pass
 
 class Mdtest(Workload):
-    def runmdtest(self, **kwargs):
-        "kwargs will be expanded in format()"
-        kwargs['running_dir'] = self.conf['fs_mount_point']
-        cmd = 'mpirun -np {np} ./externals/mdtest/mdtest '\
-            '-b {branches} -I {items_per_node} -z {depth} -d {running_dir}'\
-            .format(**kwargs)
-            # .format(np=1, branches=3, items_per_node=1, depth=1,
-            # running_dir='/tmp/mytmp')
-        utils.shcmd(cmd)
-
     def run(self):
-        self.conf['mdtest_settings']['running_dir'] = self.conf['fs_mount_point']
+        self.conf['mdtest_settings']['running_dir'] = os.path.join(self.conf['fs_mount_point'], 'formdtest')
         cmd = 'mpirun -np {np} ./externals/mdtest/mdtest '\
-            '-b {branches} -I {items_per_node} -z {depth} -d {running_dir}'\
+            '-b {branches} -I {items_per_node} -z {depth} -d {running_dir} -C '\
+            '-w {write_bytes}'\
             .format(**self.conf['mdtest_settings'])
 
         utils.shcmd(cmd)
