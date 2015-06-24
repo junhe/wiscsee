@@ -203,8 +203,8 @@ def mdtest_on_filesystems():
         }
     }
 
-    # filesystems = ('ext4',)
-    filesystems = ('f2fs',)
+    filesystems = ('ext4',)
+    # filesystems = ('f2fs',)
     # filesystems = ('ext4', 'f2fs')
     for fs in filesystems:
         confdic['filesystem'] = fs
