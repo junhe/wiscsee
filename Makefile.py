@@ -203,12 +203,13 @@ def mdtest_on_filesystems():
         }
     }
 
-    filesystems = ('ext4',)
+    # filesystems = ('ext4',)
     # filesystems = ('f2fs',)
-    # filesystems = ('ext4', 'f2fs')
+    filesystems = ('ext4', 'f2fs')
     for fs in filesystems:
         confdic['filesystem'] = fs
-        confdic['result_dir'] = "/tmp/mdtest/"+fs
+        confdic['ftl_type'] = 'pagemap'
+        confdic['result_dir'] = "/tmp/mdtest/"+fs+'-'+confdic['ftl_type']
 
         conf = config.Config(confdic)
         workflow(conf)
@@ -268,8 +269,8 @@ def pure_sequential_or_random():
         workflow(conf)
 
 def main():
-    shcmd("sudo -u jun git pull")
     shcmd("sudo -u jun git commit -am 'commit by Makefile'", ignore_error=True)
+    shcmd("sudo -u jun git pull")
     shcmd("sudo -u jun git push")
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
