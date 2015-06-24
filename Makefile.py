@@ -175,7 +175,7 @@ def mdtest_on_filesystems():
 
         "####################################### For WlRunner": "",
         "loop_path"             : "/dev/loop0",
-        "loop_dev_size_mb"      : 64,
+        "loop_dev_size_mb"      : 128,
         "tmpfs_mount_point"     : "/mnt/tmpfs",
         "fs_mount_point"        : "/mnt/fsonloop",
 
@@ -202,8 +202,8 @@ def mdtest_on_filesystems():
         }
     }
 
-    filesystems = ('ext4',)
-    # filesystems = ('f2fs',)
+    # filesystems = ('ext4',)
+    filesystems = ('f2fs',)
     # filesystems = ('ext4', 'f2fs')
     for fs in filesystems:
         confdic['filesystem'] = fs
