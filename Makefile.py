@@ -52,6 +52,7 @@ def workflow(conf):
             .format(workload_src))
 
     # run the Ftl Simulator
+    print "Start simulation.........."
     sim = FtlSim.simulator.Simulator(conf)
     sim.run(event_iter)
 
