@@ -17,7 +17,7 @@ def run_and_get_output(cmd):
 def commit_file(fpath):
     rootdir = get_root_dir_path()
     cmd = ['git', 'commit',
-           '-am', 'update '+fpath]
+           '-am', 'update '+fpath+' by get_github_url.py']
            # os.path.join(rootdir, fpath)]
     print cmd
     ret = subprocess.call(cmd)
@@ -101,6 +101,7 @@ if __name__ == '__main__':
     utils.shcmd("git pull")
 
     commit_file(fpath)
+    utils.shcmd("git pull")
     git_push()
     commithash = get_lastest_hash(fpath)
     # url = compose_url(hash, fpath)
