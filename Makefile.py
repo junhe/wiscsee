@@ -160,7 +160,7 @@ def mdtest_on_filesystems():
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
         "flash_npage_per_block" : 16,
-        "flash_num_blocks"      : 64*2**20/(4096*16),
+        "flash_num_blocks"      : 128*2**20/(4096*16),
 
         "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
         "ftl_type" : "hybridmap",
@@ -203,7 +203,8 @@ def mdtest_on_filesystems():
     }
 
     # filesystems = ('ext4',)
-    filesystems = ('ext4', 'f2fs')
+    filesystems = ('f2fs',)
+    # filesystems = ('ext4', 'f2fs')
     for fs in filesystems:
         confdic['filesystem'] = fs
         confdic['result_dir'] = "/tmp/mdtest/"+fs
