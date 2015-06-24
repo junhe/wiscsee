@@ -268,8 +268,8 @@ def pure_sequential_or_random():
         workflow(conf)
 
 def main():
-    shcmd("sudo -u jun git pull")
     shcmd("sudo -u jun git commit -am 'commit by Makefile'", ignore_error=True)
+    shcmd("sudo -u jun git pull")
     shcmd("sudo -u jun git push")
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
