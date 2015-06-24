@@ -203,8 +203,8 @@ def mdtest_on_filesystems():
     }
 
     conf = config.Config(confdic)
-    # filesystems = ('ext4', 'f2fs')
-    filesystems = ('ext4',)
+    filesystems = ('ext4', 'f2fs')
+    # filesystems = ('ext4',)
     for fs in filesystems:
         conf['result_dir'] = "/tmp/mdtest/"+fs
         workflow(conf)
