@@ -789,7 +789,7 @@ explore.sim.results <- function()
     do_main <- function()
     {
         plotlist = list()
-        for (f in c( 
+        files = c( 
             # '~/datahouse/randomlba/directmap/ftlsim.out',
             # '~/datahouse/randomlba/blockmap/ftlsim.out',
             # '~/datahouse/randomlba/pagemap/ftlsim.out',
@@ -817,11 +817,22 @@ explore.sim.results <- function()
             '~/datahouse/seqlba_improved_dm_pm_SEQ/blockmap/ftlsim.out',
             '~/datahouse/seqlba_improved_dm_pm_SEQ/pagemap/ftlsim.out',
             '~/datahouse/seqlba_improved_dm_pm_SEQ/hybridmap/ftlsim.out'
-            )) {
+            )
+
+        dir = "~/datahouse/mdtest"
+        files = list.files(dir, recursive = T, 
+            pattern = "ftlsim.out$", full.names = T)
+        print(files)
+
+        for (f in files ) {
             d = load_file_from_cache(f, 'load')
             # d = load(f)
             d = clean(d)
             p = func(d)
+
+            filename = paste(tail(unlist(strsplit(f, "/")), 3), collapse="/")
+            p = p + ggtitle(filename)
+
             plotlist = append(plotlist, list(p))
 
             # a = readline()
