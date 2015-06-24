@@ -276,7 +276,7 @@ def main():
     # from_filesystem()
     # seq_with_rand_start()
     # pass
-    # mdtest_on_filesystems()
+    mdtest_on_filesystems()
 
 def _main():
     parser = argparse.ArgumentParser(
