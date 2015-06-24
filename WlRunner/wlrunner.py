@@ -55,9 +55,9 @@ class WorkloadRunner(object):
     def run(self):
         try:
             self.loopdev.create()
-            self.blktracer.start_tracing_and_collecting()
             self.fs.make()
             self.fs.mount()
+            self.blktracer.start_tracing_and_collecting()
             self.workload.run()
             utils.shcmd('sync')
         except Exception:
