@@ -264,7 +264,9 @@ def pure_sequential_or_random():
         workflow(conf)
 
 def main():
-    shcmd("git pull && git commit -am 'commit by Makefile' && git push")
+    shcmd("sudo -u jun git pull && "\
+        "sudo -u jun git commit -am 'commit by Makefile' && "\
+        "sudo -u jun git push")
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
     # shcmd("scp jun@192.168.56.102:/tmp/ftlsim.in ./FtlSim/misc/")
@@ -274,7 +276,7 @@ def main():
     # from_filesystem()
     # seq_with_rand_start()
     # pass
-    mdtest_on_filesystems()
+    # mdtest_on_filesystems()
 
 def _main():
     parser = argparse.ArgumentParser(
