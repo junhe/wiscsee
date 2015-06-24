@@ -770,13 +770,14 @@ explore.sim.results <- function()
         print(levels(d$operation))
         d$operation = factor(d$operation, levels=c('lba_write', 'page_read', 'page_write', 'lba_discard', 'block_erase'))
         # d = subset(d, operation != 'block_erase')
+        # d = subset(d, cat == 'amplified')
 
 
         # quartz()
         # d = subset(d, cat == 'user')
         p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
             geom_point() +
-            facet_grid(operation~.) +
+            facet_grid(operation~cat) +
             scale_colour_manual(
               values = c("amplified" = "red",
                          "user" = "blue"))
@@ -926,7 +927,8 @@ explore.stats <- function()
     # do_main("~/datahouse/randomlba/")
     # do_main("~/datahouse/seqlba")
     # do_main("~/datahouse/seqlba_improved_dm_pm")
-    do_main("~/datahouse/seqlba_improved_dm_pm_SEQ")
+    # do_main("~/datahouse/seqlba_improved_dm_pm_SEQ")
+    do_main("~/datahouse/mdtest/")
 }
 
 main <- function()
@@ -937,8 +939,8 @@ main <- function()
     # explore.madmax.iterate()
     # explore.mail01()
     # explore.websearch()
-    explore.sim.results()
+    # explore.sim.results()
     # explore.mywl()
-    # explore.stats()
+    explore.stats()
 }
 main()
