@@ -98,6 +98,8 @@ if __name__ == '__main__':
         exit(1)
     fpath = sys.argv[1]
 
+    utils.shcmd("git pull")
+
     commit_file(fpath)
     utils.shcmd("git pull")
     git_push()

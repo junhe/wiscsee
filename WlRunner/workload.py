@@ -1,3 +1,5 @@
+import os
+
 import config
 import utils
 
@@ -26,4 +28,16 @@ class Simple(Workload):
     def stop(self):
         pass
 
+class Mdtest(Workload):
+    def run(self):
+        self.conf['mdtest_settings']['running_dir'] = os.path.join(self.conf['fs_mount_point'], 'formdtest')
+        cmd = 'mpirun -np {np} ./externals/mdtest/mdtest '\
+            '-b {branches} -I {items_per_node} -z {depth} -d {running_dir} -C '\
+            '-w {write_bytes}'\
+            .format(**self.conf['mdtest_settings'])
+
+        utils.shcmd(cmd)
+
+    def stop(self):
+        pass
 

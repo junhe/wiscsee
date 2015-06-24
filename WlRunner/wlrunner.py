@@ -1,6 +1,7 @@
 import blocktrace
 import config
 import filesystem
+import utils
 import workload
 
 class FileLineIterator(object):
@@ -56,6 +57,7 @@ class WorkloadRunner(object):
             self.fs.make()
             self.fs.mount()
             self.workload.run()
+            utils.shcmd('sync')
         except Exception:
             raise
         else:
