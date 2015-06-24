@@ -205,11 +205,12 @@ def mdtest_on_filesystems():
 
     # filesystems = ('ext4',)
     # filesystems = ('f2fs',)
-    filesystems = ('ext4', 'f2fs')
+    filesystems = ('btrfs',)
+    # filesystems = ('ext4', 'f2fs')
     for fs in filesystems:
         confdic['filesystem'] = fs
         confdic['ftl_type'] = 'pagemap'
-        confdic['result_dir'] = "/tmp/mdtest/"+fs+'-'+confdic['ftl_type']
+        confdic['result_dir'] = "/tmp/mdtest-btrfs/"+fs+'-'+confdic['ftl_type']
 
         conf = config.Config(confdic)
         workflow(conf)

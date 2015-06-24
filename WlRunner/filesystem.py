@@ -57,7 +57,7 @@ class F2fs(FileSystemBase):
         if opt == None:
             opt = ''
         ret = utils.shcmd('mkfs.f2fs {opt} {dev}'.format(
-            opt=opt, dev = self.dev), ignore_error = False)
+            opt=opt, dev = self.dev), ignore_error = True)
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
 
@@ -65,7 +65,26 @@ class F2fs(FileSystemBase):
         if opt == None:
             opt = ''
         return utils.shcmd('mount -t f2fs {dev} {mp}'.format(
-            dev = self.dev, mp = self.mount_point))
+            dev = self.dev, mp = self.mount_point), ignore_error = True)
+
+class Btrfs(FileSystemBase):
+    def make(self, opt=None):
+        if opt == None:
+            opt = ''
+        ret = utils.shcmd('mkfs.btrfs {opt} {dev}'.format(
+            opt=opt, dev = self.dev), ignore_error = True)
+        if ret != 0:
+            raise RuntimeError("Failed to make dev:{}".format(self.dev))
+
+    def mount(self, opt=None):
+        if opt == None:
+            opt = ''
+        ret = utils.shcmd('mount -t btrfs {dev} {mp}'.format(
+            dev = self.dev, mp = self.mount_point), ignore_error = True)
+        if ret != 0:
+            raise RuntimeError("Failed to mount dev:{} as btrfs"\
+                .format(self.dev))
+
 
 # loopdev = LoopDevice(dev_path = '/dev/loop0', tmpfs_mount_point = '/mnt/tmpfs',
         # size_mb = 4096)
