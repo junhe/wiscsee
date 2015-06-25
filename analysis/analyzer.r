@@ -820,7 +820,9 @@ explore.sim.results <- function()
             '~/datahouse/seqlba_improved_dm_pm_SEQ/hybridmap/ftlsim.out'
             )
 
-        dir = "~/datahouse/mdtest"
+        # dir = "~/datahouse/mdtest"
+        # dir = "~/datahouse/mdtest-btrfs/"
+        dir = "~/datahouse/mdtest-3fs/"
         files = list.files(dir, recursive = T, 
             pattern = "ftlsim.out$", full.names = T)
         print(files)
@@ -831,7 +833,7 @@ explore.sim.results <- function()
             d = clean(d)
             p = func(d)
 
-            filename = paste(tail(unlist(strsplit(f, "/")), 3), collapse="/")
+            filename = paste(tail(unlist(strsplit(f, "/")), 4), collapse="/")
             p = p + ggtitle(filename)
 
             plotlist = append(plotlist, list(p))
