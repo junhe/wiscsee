@@ -188,8 +188,8 @@ def mdtest_on_filesystems():
         "workload_class"        : "Mdtest",
         "mdtest_settings"       : {
             "np" : 1,
-            "branches" : 5,
-            "items_per_node" : 100,
+            "branches" : 1,
+            "items_per_node" : 300,
             "depth" : 1,
             "write_bytes": 0
         },
