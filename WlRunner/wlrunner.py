@@ -57,6 +57,7 @@ class WorkloadRunner(object):
             self.loopdev.create()
             self.fs.make()
             self.fs.mount()
+            utils.shcmd('sync')
             self.blktracer.start_tracing_and_collecting()
             self.workload.run()
             utils.shcmd('sync')
