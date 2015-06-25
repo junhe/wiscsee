@@ -823,7 +823,7 @@ explore.sim.results <- function()
         # dir = "~/datahouse/mdtest"
         # dir = "~/datahouse/mdtest-btrfs/"
         # dir = "~/datahouse/mdtest-3fs/"
-        dir = "~/datahouse/mdtest-0byte/"
+        dir = "~/datahouse/mdtest-less/"
         files = list.files(dir, recursive = T, 
             pattern = "ftlsim.out$", full.names = T)
         print(files)
