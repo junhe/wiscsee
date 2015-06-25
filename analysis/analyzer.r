@@ -828,8 +828,8 @@ explore.sim.results <- function()
         print(files)
 
         for (f in files ) {
-            d = load_file_from_cache(f, 'load')
-            # d = load(f)
+            # d = load_file_from_cache(f, 'load')
+            d = load(f)
             d = clean(d)
             p = func(d)
 
