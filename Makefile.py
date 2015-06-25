@@ -188,8 +188,8 @@ def mdtest_on_filesystems():
         "workload_class"        : "Mdtest",
         "mdtest_settings"       : {
             "np" : 1,
-            "branches" : 10,
-            "items_per_node" : 50,
+            "branches" : 5,
+            "items_per_node" : 10,
             "depth" : 1,
             "write_bytes": 0
         },
@@ -210,7 +210,7 @@ def mdtest_on_filesystems():
     for fs in filesystems:
         confdic['filesystem'] = fs
         confdic['ftl_type'] = 'pagemap'
-        confdic['result_dir'] = "/tmp/mdtest-0byte/"+fs+'-'+confdic['ftl_type']
+        confdic['result_dir'] = "/tmp/mdtest-less/"+fs+'-'+confdic['ftl_type']
 
         conf = config.Config(confdic)
         workflow(conf)
