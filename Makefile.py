@@ -191,7 +191,7 @@ def mdtest_on_filesystems():
             "branches" : 10,
             "items_per_node" : 50,
             "depth" : 1,
-            "write_bytes": 4096
+            "write_bytes": 0
         },
 
         # if you choose LBAGENERATOR for workload_src, the following will
@@ -210,7 +210,7 @@ def mdtest_on_filesystems():
     for fs in filesystems:
         confdic['filesystem'] = fs
         confdic['ftl_type'] = 'pagemap'
-        confdic['result_dir'] = "/tmp/mdtest-3fs/"+fs+'-'+confdic['ftl_type']
+        confdic['result_dir'] = "/tmp/mdtest-0byte/"+fs+'-'+confdic['ftl_type']
 
         conf = config.Config(confdic)
         workflow(conf)
