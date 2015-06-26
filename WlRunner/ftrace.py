@@ -28,7 +28,6 @@ def stats_worker(stop_event):
 
     utils.table_to_file([cnt], "/tmp/stats_worker_output")
 
-
 class Ftrace(object):
     def __init__(self):
         self.rootdir = "/sys/kernel/debug/tracing"
@@ -68,6 +67,7 @@ class Ftrace(object):
 
     def stop_stats(self):
         self.stop_event.set()
+        self.stats_proc.join()
 
 if __name__ == '__main__':
     # An example
