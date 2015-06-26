@@ -29,7 +29,7 @@ def stats_worker(stop_event):
                 # needs to be stoped
                 break
 
-            print 'wait pipe'
+            # print 'wait pipe'
 
     print cnt
     utils.table_to_file([cnt], "/tmp/stats_worker_output")
