@@ -13,7 +13,7 @@ def stats_worker(stop_event):
         for line in f_in:
             # f_out.write(line)
             if 'JUN' in line:
-                print line
+                print line, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
             if line.startswith("#"):
                 next
             try:
