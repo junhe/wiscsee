@@ -72,6 +72,7 @@ class WorkloadRunner(object):
             self.ftrace.start_tracing()
             self.ftrace.clean_trace()
             self.ftrace.write_marker('JUN: beginning of workload..............')
+            self.ftrace.run_stats()
 
             self.workload.run()
 
@@ -82,7 +83,7 @@ class WorkloadRunner(object):
             # finish Ftrace
             self.ftrace.write_marker('JUN: end of workload..............')
             self.ftrace.stop_tracing()
-            self.ftrace.copy_trace('/tmp/ftrace_output')
+            self.ftrace.stop_stats()
 
             self.blktracer.blkparse_file_to_ftlsim_input_file()
             print 'file wrote to {}'.format(
