@@ -14,12 +14,12 @@ def stats_worker(stop_event):
     print "i am hre~~~~~~~~~~~~~~~~~~~~~~fffffffffffffffffffffff"
     while stop_event.is_set() == False:
         line = nb_reader.readline()
+
         if line == None:
             continue
-        print line,
-
         if line.startswith("#"):
-            next
+            continue
+
         try:
             func_name = line.split()[4]
         except IndexError:
