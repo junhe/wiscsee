@@ -12,6 +12,7 @@ def stats_worker(stop_event):
     with open("/sys/kernel/debug/tracing/trace_pipe", "r") as f_in:
         for line in f_in:
             # f_out.write(line)
+            print 'got new line'
             if 'JUN' in line:
                 print line, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
             if line.startswith("#"):
@@ -27,6 +28,8 @@ def stats_worker(stop_event):
                 # the main process will set the event to True if it
                 # needs to be stoped
                 break
+
+            print 'wait pipe'
 
     print cnt
     utils.table_to_file([cnt], "/tmp/stats_worker_output")
