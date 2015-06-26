@@ -16,6 +16,7 @@ def stats_worker(stop_event):
         line = nb_reader.readline()
         if line == None:
             next
+        print line,
 
         if 'JUN' in line:
             print line, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'

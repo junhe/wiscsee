@@ -88,10 +88,6 @@ class WorkloadRunner(object):
             self.ftrace.write_marker('send to pipe.')
             self.ftrace.stop_stats()
             self.ftrace.write_marker('send to pipe.')
-            self.ftrace.write_marker('send to pipe.')
-            self.ftrace.write_marker('send to pipe.')
-            self.ftrace.write_marker('send to pipe.')
-            self.ftrace.write_marker('send to pipe.')
             # self.ftrace.stop_stats()
             # self.ftrace.stop_tracing()
 
