@@ -1,3 +1,5 @@
+import time
+
 import blocktrace
 import config
 import filesystem
@@ -84,7 +86,9 @@ class WorkloadRunner(object):
             self.ftrace.write_marker('JUN: end of workload..............')
             print "trying to stop stats"
             self.ftrace.write_marker('send to pipe.')
+            time.sleep(1)
             self.ftrace.stop_stats()
+            time.sleep(1)
             # self.ftrace.stop_stats()
             # self.ftrace.stop_tracing()
 
