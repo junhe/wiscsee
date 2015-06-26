@@ -11,7 +11,7 @@ def stats_worker(stop_event):
     cnt = collections.Counter()
     nb_reader = nonblockingreader.NonBlockingReader(
         "/sys/kernel/debug/tracing/trace_pipe")
-
+    print "i am hre~~~~~~~~~~~~~~~~~~~~~~fffffffffffffffffffffff"
     while stop_event.is_set() == False:
         line = nb_reader.readline()
         if line == None:
