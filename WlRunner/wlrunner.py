@@ -1,6 +1,7 @@
 import blocktrace
 import config
 import filesystem
+import ftrace
 import utils
 import workload
 
@@ -52,18 +53,36 @@ class WorkloadRunner(object):
         self.workload = eval("workload.{}(self.conf)".format(
             self.conf["workload_class"]))
 
+        # create Ftrace manager
+        self.ftrace = ftrace.Ftrace()
+
     def run(self):
         try:
+            # Prepare file systems
             self.loopdev.create()
             self.fs.make()
             self.fs.mount()
             utils.shcmd('sync')
+
+            # strat blktrace
             self.blktracer.start_tracing_and_collecting()
+
+            # start Ftrace
+            self.ftrace.set_filter('*f2fs*')
+            self.ftrace.start_tracing()
+            self.ftrace.clean_trace()
+            self.ftrace.write_marker('JUN: beginning of workload..............')
+
             self.workload.run()
+
             utils.shcmd('sync')
         except Exception:
             raise
         else:
+            self.ftrace.write_marker('JUN: end of workload..............')
+            self.ftrace.stop_tracing()
+            self.ftrace.copy_trace('/tmp/ftrace_output')
+
             self.blktracer.blkparse_file_to_ftlsim_input_file()
             print 'file wrote to {}'.format(
                 self.conf.get_ftlsim_events_output_path())
