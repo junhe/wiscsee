@@ -964,7 +964,26 @@ explore.function.hist <- function()
 
     func <- function(d)
     {
-        p = ggplot(d, aes(x=variable, y=value, fill=run)) +
+        dd = ddply(d, .(variable), subset, value == max(value))
+        vars = as.character(dd$variable)
+        vars = vars[order(dd$value)]
+        sorted_levels = unique(vars)
+
+
+        d.temp = expand.grid(variable=unique(sorted_levels), run=unique(d$run))
+        d.temp$value_default = 0
+        print(nrow(d))
+        print(nrow(d.temp))
+
+        print(head(d))
+        print(d.temp)
+        d = merge(d, d.temp, all=T)
+        d$final_value = apply(d[, c('value', 'value_default')], 1, max)
+
+        d$variable = factor(d$variable, levels=sorted_levels)
+        print(d)
+        print(subset(d, variable == 'X__f2fs_writepage'))
+        p = ggplot(d, aes(x=variable, y=final_value, fill=run), dropping=F) +
             geom_bar(stat='identity', position='dodge') +
             coord_flip()
         print(p)
