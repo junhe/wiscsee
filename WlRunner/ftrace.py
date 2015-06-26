@@ -3,35 +3,31 @@ import multiprocessing
 import os
 import time
 
+import nonblockingreader
 import utils
 
 def stats_worker(stop_event):
     """this worker process counts the number of function called in Ftrace"""
     cnt = collections.Counter()
-    # with open("/tmp/ftrace_output_from_pipe", "w") as f_out:
-    with open("/sys/kernel/debug/tracing/trace_pipe", "r") as f_in:
-        for line in f_in:
-            # f_out.write(line)
-            # print 'got new line'
-            if 'JUN' in line:
-                print line, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-            if line.startswith("#"):
-                next
-            try:
-                func_name = line.split()[4]
-            except IndexError:
-                pass
-            else:
-                cnt[func_name] += 1
+    nb_reader = nonblockingreader.NonBlockingReader(
+        "/sys/kernel/debug/tracing/trace_pipe")
 
-            if stop_event.is_set() == True:
-                # the main process will set the event to True if it
-                # needs to be stoped
-                break
-            else:
-                print stop_event.is_set()
+    while stop_event.is_set() == False:
+        line = nb_reader.readline()
+        if line == None:
+            next
 
-            # print 'wait pipe'
+        if 'JUN' in line:
+            print line, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+
+        if line.startswith("#"):
+            next
+        try:
+            func_name = line.split()[4]
+        except IndexError:
+            pass
+        else:
+            cnt[func_name] += 1
 
     print cnt
     utils.table_to_file([cnt], "/tmp/stats_worker_output")
