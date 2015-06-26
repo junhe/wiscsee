@@ -18,9 +18,6 @@ def stats_worker(stop_event):
             next
         print line,
 
-        if 'JUN' in line:
-            print line, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-
         if line.startswith("#"):
             next
         try:
