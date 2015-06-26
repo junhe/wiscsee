@@ -53,8 +53,8 @@ def workflow(conf):
 
     # run the Ftl Simulator
     print "Start simulation.........."
-    sim = FtlSim.simulator.Simulator(conf)
-    sim.run(event_iter)
+    # sim = FtlSim.simulator.Simulator(conf)
+    # sim.run(event_iter)
 
 def seq_with_rand_start():
     confdic = {
@@ -189,7 +189,7 @@ def mdtest_on_filesystems():
         "mdtest_settings"       : {
             "np" : 1,
             "branches" : 1,
-            "items_per_node" : 300,
+            "items_per_node" : 1,
             "depth" : 1,
             "write_bytes": 0
         },
