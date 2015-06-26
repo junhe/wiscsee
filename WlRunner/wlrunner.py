@@ -83,6 +83,7 @@ class WorkloadRunner(object):
             # finish Ftrace
             self.ftrace.write_marker('JUN: end of workload..............')
             self.ftrace.stop_tracing()
+            print "trying to stop stats"
             self.ftrace.stop_stats()
 
             self.blktracer.blkparse_file_to_ftlsim_input_file()
