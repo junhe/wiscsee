@@ -28,6 +28,8 @@ def stats_worker(stop_event):
                 # the main process will set the event to True if it
                 # needs to be stoped
                 break
+            else:
+                print stop_event.is_set()
 
             # print 'wait pipe'
 
