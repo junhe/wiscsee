@@ -28,7 +28,7 @@ def stats_worker(stop_event):
 
     print cnt
     utils.table_to_file([cnt], "/tmp/stats_worker_output")
-    print 'stats_worker ended'
+    print 'stats_worker ended-------------------------------'
 
 class Ftrace(object):
     def __init__(self):
