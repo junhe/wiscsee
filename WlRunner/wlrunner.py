@@ -79,6 +79,7 @@ class WorkloadRunner(object):
         except Exception:
             raise
         else:
+            # finish Ftrace
             self.ftrace.write_marker('JUN: end of workload..............')
             self.ftrace.stop_tracing()
             self.ftrace.copy_trace('/tmp/ftrace_output')
