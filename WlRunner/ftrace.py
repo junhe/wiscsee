@@ -26,7 +26,9 @@ def stats_worker(stop_event):
                 # needs to be stoped
                 break
 
+    print cnt
     utils.table_to_file([cnt], "/tmp/stats_worker_output")
+    print 'stats_worker ended'
 
 class Ftrace(object):
     def __init__(self):
@@ -67,13 +69,13 @@ class Ftrace(object):
 
     def stop_stats(self):
         self.stop_event.set()
-        self.stats_proc.join()
+        # self.stats_proc.join()
 
 if __name__ == '__main__':
     # An example
     ftr = Ftrace()
     ftr.clean_trace()
-    ftr.set_filter('')
+    ftr.set_filter('*f2fs*')
     ftr.run_stats()
     ftr.start_tracing()
     time.sleep(2)
