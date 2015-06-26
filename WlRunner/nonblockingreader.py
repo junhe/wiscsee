@@ -24,9 +24,6 @@ class NonBlockingReader(object):
         else:
             return line
 
-    def __del__(self):
-        self.f.close()
-
 
 if __name__ == '__main__':
     nb_reader = NonBlockingReader("/sys/kernel/debug/tracing/trace_pipe")
