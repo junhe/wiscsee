@@ -15,7 +15,7 @@ def stats_worker(stop_event):
     while stop_event.is_set() == False:
         line = nb_reader.readline()
         if line == None:
-            next
+            continue
         print line,
 
         if line.startswith("#"):
