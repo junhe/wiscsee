@@ -85,8 +85,8 @@ class WorkloadRunner(object):
             print "trying to stop stats"
             self.ftrace.write_marker('send to pipe.')
             self.ftrace.stop_stats()
-            self.ftrace.stop_stats()
-            self.ftrace.stop_tracing()
+            # self.ftrace.stop_stats()
+            # self.ftrace.stop_tracing()
 
             self.blktracer.blkparse_file_to_ftlsim_input_file()
             print 'file wrote to {}'.format(
