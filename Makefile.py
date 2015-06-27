@@ -53,8 +53,8 @@ def workflow(conf):
 
     # run the Ftl Simulator
     print "Start simulation.........."
-    # sim = FtlSim.simulator.Simulator(conf)
-    # sim.run(event_iter)
+    sim = FtlSim.simulator.Simulator(conf)
+    sim.run(event_iter)
 
 def seq_with_rand_start():
     confdic = {
@@ -161,7 +161,7 @@ def mdtest_on_filesystems():
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
         "flash_npage_per_block" : 16,
-        "flash_num_blocks"      : 128*2**20/(4096*16),
+        "flash_num_blocks"      : 256*2**20/(4096*16),
 
         "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
         "ftl_type" : "hybridmap",
@@ -176,7 +176,7 @@ def mdtest_on_filesystems():
 
         "####################################### For WlRunner": "",
         "loop_path"             : "/dev/loop0",
-        "loop_dev_size_mb"      : 128,
+        "loop_dev_size_mb"      : 256,
         "tmpfs_mount_point"     : "/mnt/tmpfs",
         "fs_mount_point"        : "/mnt/fsonloop",
 
