@@ -934,6 +934,70 @@ explore.stats <- function()
     do_main("~/datahouse/mdtest/")
 }
 
+explore.function.hist <- function()
+{
+    transfer <- function()
+    {
+    }
+    load <- function()
+    {
+        branch5item10.text = "f2fs_writepages:;f2fs_balance_fs;f2fs_statfs;f2fs_write_data_page;f2fs_getattr;f2fs_write_node_page;f2fs_wait_on_page_writeback;f2fs_getxattr;f2fs_lookup;f2fs_find_entry;f2fs_set_meta_page_dirty;f2fs_submit_page_mbio:;f2fs_alloc_inode;f2fs_get_acl;f2fs_init_acl;f2fs_mkdir;f2fs_issue_discard:;f2fs_new_inode;f2fs_set_node_page_dirty;f2fs_dentry_hash;f2fs_dirty_inode;__f2fs_writepage;f2fs_write_checkpoint:;f2fs_submit_write_bio:;f2fs_new_inode:;f2fs_submit_merged_bio;f2fs_submit_page_mbio;f2fs_set_page_dirty:;f2fs_write_end_io;f2fs_reserve_block;f2fs_write_data_pages;tracing_mark_write:;f2fs_issue_discard.isra.12;f2fs_init_security;f2fs_reserve_new_block:;f2fs_writepage:;__f2fs_add_link;f2fs_set_data_page_dirty;f2fs_gc;f2fs_write_meta_page
+46;24;1;46;1;46;466;5;24;24;71;163;24;5;23;24;23;24;254;48;116;46;69;93;24;162;163;370;93;47;46;1;23;23;23;163;24;46;23;71"
+        branch5item10.d = read.csv(text=branch5item10.text, header=T, sep=';')
+        branch5item10.d = melt(branch5item10.d)
+        branch5item10.d$run = 'branch5item10'
+
+        branch10item50.text = "f2fs_iget;f2fs_writepages:;f2fs_balance_fs;f2fs_statfs;f2fs_write_data_page;f2fs_getattr;f2fs_write_node_page;f2fs_wait_on_page_writeback;f2fs_getxattr;f2fs_lookup;f2fs_find_entry;f2fs_set_meta_page_dirty;f2fs_submit_page_mbio:;f2fs_alloc_inode;f2fs_get_acl;f2fs_init_acl;f2fs_mkdir;f2fs_issue_discard:;f2fs_new_inode;f2fs_set_node_page_dirty;f2fs_dentry_hash;f2fs_create;f2fs_dirty_inode;__f2fs_writepage;f2fs_write_checkpoint:;f2fs_submit_write_bio:;f2fs_get_victim:;f2fs_iget:;f2fs_new_inode:;f2fs_submit_merged_bio;f2fs_submit_page_mbio;f2fs_set_page_dirty:;f2fs_write_inode;f2fs_write_end_io;f2fs_reserve_block;f2fs_write_data_pages;tracing_mark_write:;f2fs_issue_discard.isra.12;f2fs_init_security;f2fs_reserve_new_block:;f2fs_writepage:;__f2fs_add_link;f2fs_set_data_page_dirty;f2fs_gc;f2fs_write_meta_page
+3984;114;69;1;113;1;15665;50129;4;68;68;245;25377;67;4;67;48;55;67;24539;135;20;297;113;178;1082;22;3992;67;437;25377;24914;1;1081;120;114;1;55;67;50;16002;67;114;67;230"
+        branch10item50.d = read.csv(text=branch10item50.text, header=T, sep=';')
+        branch10item50.d = melt(branch10item50.d)
+        branch10item50.d$run = 'branch10item50'
+
+        d = rbind(branch5item10.d, branch10item50.d)
+        return(d)
+    }
+
+    clean <- function(d)
+    {
+        return(d)
+    }
+
+    func <- function(d)
+    {
+        dd = ddply(d, .(variable), subset, value == max(value))
+        vars = as.character(dd$variable)
+        vars = vars[order(dd$value)]
+        sorted_levels = unique(vars)
+
+
+        d.temp = expand.grid(variable=unique(sorted_levels), run=unique(d$run))
+        d.temp$value_default = 0
+        print(nrow(d))
+        print(nrow(d.temp))
+
+        print(head(d))
+        print(d.temp)
+        d = merge(d, d.temp, all=T)
+        d$final_value = apply(d[, c('value', 'value_default')], 1, max)
+
+        d$variable = factor(d$variable, levels=sorted_levels)
+        print(d)
+        print(subset(d, variable == 'X__f2fs_writepage'))
+        p = ggplot(d, aes(x=variable, y=final_value, fill=run), dropping=F) +
+            geom_bar(stat='identity', position='dodge') +
+            coord_flip()
+        print(p)
+    }
+
+    do_main <- function()
+    {
+        d = load()
+        d = clean(d)
+        func(d)
+    }
+    do_main()
+}
+
 main <- function()
 {
     # explore.FSJ386323()
@@ -942,8 +1006,9 @@ main <- function()
     # explore.madmax.iterate()
     # explore.mail01()
     # explore.websearch()
-    explore.sim.results()
+    # explore.sim.results()
     # explore.mywl()
     # explore.stats()
+    explore.function.hist()
 }
 main()
