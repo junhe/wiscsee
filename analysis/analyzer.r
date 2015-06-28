@@ -743,112 +743,150 @@ explore.websearch <- function()
     do_main_vis_lives()
 }
 
+# This function is for the case that when plotting with ggplot,
+# some bar is missing so other bars at the same location become
+# bigger.
+# See evernote title: "fill in missing values" for more details
+# id_cols, val_col are characters
+set_missing_to_default <- function(d, id_cols, val_col, default_val)
+{
+    level_list = apply(d[, id_cols], 2, unique)
+    d.temp = expand.grid(level_list)
+    d.new = merge(d, d.temp, all=T)
+    d.new[, val_col] = ifelse(is.na(d.new[, val_col]), default_val, 
+                              d.new[, val_col])
+    return(d.new)
+}
+
+
 explore.sim.results <- function()
 {
-    transfer <- function()
+    # This function plot all .stats files in a directory
+    explore.stats <- function(expdir)
     {
-    }
-
-    load <- function(fpath)
-    {
-        print(fpath)
-        d = read.table(fpath, header=F, col.names = c('type', 'operation', 'pagenum', 'cat'))
-        return(d)
-    }
-
-    clean <- function(d)
-    {
-        return(d)
-    }
-
-    func <- function(d)
-    {
-        # print((d))
-        # d = head(d, n=100000)
-        d$seqid = seq_along(d$operation)
-
-        print(levels(d$operation))
-        d$operation = factor(d$operation, levels=c('lba_write', 'page_read', 'page_write', 'lba_discard', 'block_erase'))
-        # d = subset(d, operation != 'block_erase')
-        # d = subset(d, cat == 'amplified')
-
-
-        # quartz()
-        # d = subset(d, cat == 'user')
-        p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
-            geom_point() +
-            facet_grid(operation~cat) +
-            scale_colour_manual(
-              values = c("amplified" = "red",
-                         "user" = "blue"))
-        # print(p)
-        return(p)
-        # z = grid.locator()
-        # ggsave("plot.pdf", plot=p, h=12, w=4)
-    }
-
-    do_main <- function()
-    {
-        plotlist = list()
-        files = c( 
-            # '~/datahouse/randomlba/directmap/ftlsim.out',
-            # '~/datahouse/randomlba/blockmap/ftlsim.out',
-            # '~/datahouse/randomlba/pagemap/ftlsim.out',
-            # '~/datahouse/randomlba/hybridmap/ftlsim.out'
-
-            # '~/datahouse/seqlba/directmap/ftlsim.out',
-            # '~/datahouse/seqlba/blockmap/ftlsim.out',
-            # '~/datahouse/seqlba/pagemap/ftlsim.out',
-            # '~/datahouse/seqlba/hybridmap/ftlsim.out'
-
-            # '~/datahouse/seq_randstart/directmap/ftlsim.out',
-            # '~/datahouse/seq_randstart/blockmap/ftlsim.out',
-            # '~/datahouse/seq_randstart/pagemap/ftlsim.out',
-            # '~/datahouse/seq_randstart/hybridmap/ftlsim.out'
-
-            # '~/datahouse/randomlba/pagemap/ftlsim.out'
-            # '~/datahouse/seqlba_03/pagemap/ftlsim.out'
-
-            # '~/datahouse/seqlba_improved_dm_pm/directmap/ftlsim.out',
-            # '~/datahouse/seqlba_improved_dm_pm/blockmap/ftlsim.out',
-            # '~/datahouse/seqlba_improved_dm_pm/pagemap/ftlsim.out',
-            # '~/datahouse/seqlba_improved_dm_pm/hybridmap/ftlsim.out'
-
-            '~/datahouse/seqlba_improved_dm_pm_SEQ/directmap/ftlsim.out',
-            '~/datahouse/seqlba_improved_dm_pm_SEQ/blockmap/ftlsim.out',
-            '~/datahouse/seqlba_improved_dm_pm_SEQ/pagemap/ftlsim.out',
-            '~/datahouse/seqlba_improved_dm_pm_SEQ/hybridmap/ftlsim.out'
-            )
-
-        # dir = "~/datahouse/mdtest"
-        # dir = "~/datahouse/mdtest-btrfs/"
-        # dir = "~/datahouse/mdtest-3fs/"
-        # dir = "~/datahouse/mdtest-less/"
-        dir = "~/datahouse/mdtest-whatswrong/"
-        files = list.files(dir, recursive = T, 
-            pattern = "ftlsim.out$", full.names = T)
-        print(files)
-
-        for (f in files ) {
-            # d = load_file_from_cache(f, 'load')
-            d = load(f)
-            d = clean(d)
-            p = func(d)
-
-            filename = paste(tail(unlist(strsplit(f, "/")), 4), collapse="/")
-            p = p + ggtitle(filename)
-
-            plotlist = append(plotlist, list(p))
-
-            # a = readline()
-            a = 0
-            if (a == 'a') {
-                break
+        load <- function(dir)
+        {
+            files = list.files(dir, recursive = T, 
+               pattern = "stats", full.names = T)
+            ret = data.frame()
+            for (f in files) {
+                print(f)
+                d = read.csv(f, header=T, sep=';')
+                d = melt(d)
+                d$file = paste(tail(unlist(strsplit(f, "/")), 2), collapse="/")
+                ret = rbind(ret, d)
             }
+            print(ret)
+            return(ret)
         }
+
+        clean <- function(d)
+        {
+            return(d)
+        }
+
+        func <- function(d)
+        {
+            # p = ggplot(d, aes(x=variable, y=value, fill=file)) +
+            d = set_missing_to_default(d, 
+                id_cols=c("file", "variable"), val_col="value",
+                default_val = NA)
+            p = ggplot(d, aes(x=file, y=value, fill=variable)) +
+                geom_bar(stat='identity', position='dodge') + 
+                theme(axis.text.x = element_text(angle=90))
+            return(p)
+        }
+
+        do_main <- function(dir)
+        {
+            d = load(dir)
+            d = clean(d)
+            func(d)
+        }
+        # do_main("~/datahouse/seq_randstart/")
+        # do_main("~/datahouse/randomlba/")
+        # do_main("~/datahouse/seqlba")
+        # do_main("~/datahouse/seqlba_improved_dm_pm")
+        # do_main("~/datahouse/seqlba_improved_dm_pm_SEQ")
+        do_main(expdir)
+    }
+
+    explore.trace <- function(expdir)
+    {
+        transfer <- function()
+        {
+        }
+
+        load <- function(fpath)
+        {
+            print(fpath)
+            d = read.table(fpath, header=F, col.names = c('type', 'operation', 'pagenum', 'cat'))
+            return(d)
+        }
+
+        clean <- function(d)
+        {
+            return(d)
+        }
+
+        func <- function(d)
+        {
+            # print((d))
+            # d = head(d, n=100000)
+            d$seqid = seq_along(d$operation)
+
+            print(levels(d$operation))
+            d$operation = factor(d$operation, levels=c('lba_write', 'page_read', 'page_write', 'lba_discard', 'block_erase'))
+            # d = subset(d, operation != 'block_erase')
+            # d = subset(d, cat == 'amplified')
+
+
+            # quartz()
+            # d = subset(d, cat == 'user')
+            p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
+                geom_point() +
+                facet_grid(operation~cat) +
+                scale_colour_manual(
+                  values = c("amplified" = "red",
+                             "user" = "blue"))
+            # print(p)
+            return(p)
+            # z = grid.locator()
+            # ggsave("plot.pdf", plot=p, h=12, w=4)
+        }
+
+        do_main <- function(expdir)
+        {
+            plotlist = list()
+            files = list.files(expdir, recursive = T, 
+                pattern = "ftlsim.out$", full.names = T)
+            print(files)
+
+            for (f in files ) {
+                # d = load_file_from_cache(f, 'load')
+                d = load(f)
+                d = clean(d)
+                p = func(d)
+
+                filename = paste(tail(unlist(strsplit(f, "/")), 4), collapse="/")
+                p = p + ggtitle(filename)
+
+                plotlist = append(plotlist, list(p))
+            }
+            return(plotlist)
+        }
+        do_main(expdir)
+    }
+
+    local_main <- function(expdir) 
+    {
+        plotlist = explore.trace(expdir)
+        p = explore.stats(expdir)
+        plotlist = append(plotlist, list(p))
         do.call('grid.arrange', c(plotlist, ncol=1)) 
     }
-    do_main()
+
+    local_main("~/datahouse/long-mdtest/")
 }
 
 explore.mywl <- function()
@@ -883,56 +921,6 @@ explore.mywl <- function()
         func(d)
     }
     do_main()
-}
-
-# This function plot all .stats files in a directory
-explore.stats <- function()
-{
-    transfer <- function()
-    {
-    }
-    load <- function(dir)
-    {
-        files = list.files(dir, recursive = T, 
-           pattern = "stats", full.names = T)
-        ret = data.frame()
-        for (f in files) {
-            print(f)
-            d = read.csv(f, header=T, sep=';')
-            d = melt(d)
-            d$file = paste(tail(unlist(strsplit(f, "/")), 2), collapse="/")
-            ret = rbind(ret, d)
-        }
-        print(ret)
-        return(ret)
-    }
-
-    clean <- function(d)
-    {
-        return(d)
-    }
-
-    func <- function(d)
-    {
-        # p = ggplot(d, aes(x=variable, y=value, fill=file)) +
-        p = ggplot(d, aes(x=file, y=value, fill=variable)) +
-            geom_bar(stat='identity', position='dodge') + 
-            theme(axis.text.x = element_text(angle=90))
-        print(p)
-    }
-
-    do_main <- function(dir)
-    {
-        d = load(dir)
-        d = clean(d)
-        func(d)
-    }
-    # do_main("~/datahouse/seq_randstart/")
-    # do_main("~/datahouse/randomlba/")
-    # do_main("~/datahouse/seqlba")
-    # do_main("~/datahouse/seqlba_improved_dm_pm")
-    # do_main("~/datahouse/seqlba_improved_dm_pm_SEQ")
-    do_main("~/datahouse/mdtest/")
 }
 
 explore.function.hist <- function()
