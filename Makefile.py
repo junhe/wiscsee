@@ -204,21 +204,21 @@ def mdtest_on_filesystems():
     }
 
     # filesystems = ('ext4',)
-    filesystems = ('f2fs',)
+    # filesystems = ('f2fs',)
     # filesystems = ('btrfs',)
-    # filesystems = ('ext4', 'f2fs')
-    # for fs in filesystems:
-    for devsize_mb in (128, 256):
-        fs = 'f2fs'
+    filesystems = ('ext4', 'btrfs', 'f2fs')
+    expname = 'long-mdtest'
+    for fs in filesystems:
+        devsize_mb = 256
         conf = config.Config(confdic)
         conf['filesystem'] = fs
-        conf['ftl_type'] = 'pagemap'
-        conf['result_dir'] = "/tmp/mdtest-whatswrong/" + \
-                '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
+        conf['ftl_type'] = 'hybridmap'
+        conf['result_dir'] = "/tmp/{}/".format(expname) + \
+            '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
         conf['loop_dev_size_mb'] = devsize_mb
 
-        workflow(conf)
+        # workflow(conf)
 
 def pure_sequential_or_random():
     confdic = {
