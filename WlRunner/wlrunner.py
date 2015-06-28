@@ -56,7 +56,7 @@ class WorkloadRunner(object):
             self.conf["workload_class"]))
 
         # create Ftrace manager
-        self.ftrace = ftrace.Ftrace()
+        # self.ftrace = ftrace.Ftrace()
 
     def run(self):
         try:
@@ -70,11 +70,11 @@ class WorkloadRunner(object):
             self.blktracer.start_tracing_and_collecting()
 
             # start Ftrace
-            self.ftrace.set_filter('*f2fs*')
-            self.ftrace.start_tracing()
-            self.ftrace.clean_trace()
-            self.ftrace.write_marker('JUN: beginning of workload..............')
-            self.ftrace.run_stats()
+            # self.ftrace.set_filter('*f2fs*')
+            # self.ftrace.start_tracing()
+            # self.ftrace.clean_trace()
+            # self.ftrace.write_marker('JUN: beginning of workload..............')
+            # self.ftrace.run_stats()
 
             self.workload.run()
 
@@ -83,13 +83,11 @@ class WorkloadRunner(object):
             raise
         else:
             # finish Ftrace
-            self.ftrace.write_marker('JUN: end of workload..............')
-            print "trying to stop stats"
-            self.ftrace.write_marker('send to pipe.')
-            self.ftrace.stop_stats()
-            self.ftrace.write_marker('send to pipe.')
+            # self.ftrace.write_marker('JUN: end of workload..............')
+            # print "trying to stop stats"
+            # self.ftrace.write_marker('send to pipe.')
             # self.ftrace.stop_stats()
-            # self.ftrace.stop_tracing()
+            # self.ftrace.write_marker('send to pipe.')
 
             self.blktracer.blkparse_file_to_ftlsim_input_file()
             print 'file wrote to {}'.format(
