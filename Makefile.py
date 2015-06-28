@@ -218,7 +218,7 @@ def mdtest_on_filesystems():
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
         conf['loop_dev_size_mb'] = devsize_mb
 
-        # workflow(conf)
+        workflow(conf)
 
 def pure_sequential_or_random():
     confdic = {
