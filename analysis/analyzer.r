@@ -823,7 +823,8 @@ explore.sim.results <- function()
         # dir = "~/datahouse/mdtest"
         # dir = "~/datahouse/mdtest-btrfs/"
         # dir = "~/datahouse/mdtest-3fs/"
-        dir = "~/datahouse/mdtest-less/"
+        # dir = "~/datahouse/mdtest-less/"
+        dir = "~/datahouse/mdtest-whatswrong/"
         files = list.files(dir, recursive = T, 
             pattern = "ftlsim.out$", full.names = T)
         print(files)
@@ -953,7 +954,13 @@ explore.function.hist <- function()
         branch10item50.d = melt(branch10item50.d)
         branch10item50.d$run = 'branch10item50'
 
-        d = rbind(branch5item10.d, branch10item50.d)
+        branch10item50.256mb.text = "f2fs_balance_fs;f2fs_statfs;f2fs_getattr;f2fs_wait_on_page_writeback;f2fs_getxattr;f2fs_lookup;f2fs_find_entry;f2fs_alloc_inode;f2fs_get_acl;f2fs_init_acl;f2fs_mkdir;f2fs_new_inode;f2fs_set_node_page_dirty;f2fs_dentry_hash;f2fs_dirty_inode;f2fs_new_inode:;f2fs_set_page_dirty:;f2fs_reserve_block;tracing_mark_write:;f2fs_init_security;f2fs_reserve_new_block:;__f2fs_add_link;f2fs_set_data_page_dirty
+82;1;1;658;5;83;82;81;5;82;82;82;576;163;411;81;741;164;1;82;82;81;165"
+        branch10item50.256mb.d = read.csv(text=branch10item50.256mb.text, header=T, sep=';')
+        branch10item50.256mb.d = melt(branch10item50.256mb.d)
+        branch10item50.256mb.d$run = 'branch10item50.256mb'
+
+        d = rbind(branch5item10.d, branch10item50.d, branch10item50.256mb.d)
         return(d)
     }
 
@@ -1006,9 +1013,9 @@ main <- function()
     # explore.madmax.iterate()
     # explore.mail01()
     # explore.websearch()
-    # explore.sim.results()
+    explore.sim.results()
     # explore.mywl()
     # explore.stats()
-    explore.function.hist()
+    # explore.function.hist()
 }
 main()
