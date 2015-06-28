@@ -161,7 +161,7 @@ def mdtest_on_filesystems():
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
         "flash_npage_per_block" : 16,
-        "flash_num_blocks"      : 128*2**20/(4096*16),
+        "flash_num_blocks"      : None,
 
         "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
         "ftl_type" : "hybridmap",
@@ -176,7 +176,7 @@ def mdtest_on_filesystems():
 
         "####################################### For WlRunner": "",
         "loop_path"             : "/dev/loop0",
-        "loop_dev_size_mb"      : 128,
+        "loop_dev_size_mb"      : None,
         "tmpfs_mount_point"     : "/mnt/tmpfs",
         "fs_mount_point"        : "/mnt/fsonloop",
 
@@ -207,13 +207,17 @@ def mdtest_on_filesystems():
     filesystems = ('f2fs',)
     # filesystems = ('btrfs',)
     # filesystems = ('ext4', 'f2fs')
-    for fs in filesystems:
-        confdic['filesystem'] = fs
-        confdic['ftl_type'] = 'pagemap'
-        confdic['result_dir'] = "/tmp/mdtest-less2/"+fs+'-'+confdic['ftl_type']
-
+    # for fs in filesystems:
+    for devsize_mb in (128, 256):
         conf = config.Config(confdic)
-        workflow(conf)
+        conf['filesystem'] = 'f2fs'
+        conf['ftl_type'] = 'pagemap'
+        conf['result_dir'] = "/tmp/mdtest-whatswrong/" + \
+                '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
+        conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
+        conf['loop_dev_size_mb'] = devsize_mb
+
+        # workflow(conf)
 
 def pure_sequential_or_random():
     confdic = {

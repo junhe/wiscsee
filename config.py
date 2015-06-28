@@ -61,4 +61,8 @@ class Config(dict):
     def get_output_file_path(self):
         return os.path.join(self['result_dir'], 'ftlsim.out')
 
+    def set_flash_num_blocks_by_bytes(self, size_byte):
+        self['flash_num_blocks'] = size_byte/ \
+            (self['flash_page_size'] * self['flash_npage_per_block'])
+
 
