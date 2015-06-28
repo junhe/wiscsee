@@ -65,6 +65,7 @@ class WorkloadRunner(object):
             self.fs.make()
             self.fs.mount()
             utils.shcmd('sync')
+            exit(0)
 
             # strat blktrace
             self.blktracer.start_tracing_and_collecting()

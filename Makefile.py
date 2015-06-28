@@ -204,9 +204,9 @@ def mdtest_on_filesystems():
     }
 
     # filesystems = ('ext4',)
-    # filesystems = ('f2fs',)
+    filesystems = ('f2fs',)
     # filesystems = ('btrfs',)
-    filesystems = ('ext4', 'btrfs', 'f2fs')
+    # filesystems = ('ext4', 'btrfs', 'f2fs')
     expname = 'long-mdtest'
     for fs in filesystems:
         devsize_mb = 256
