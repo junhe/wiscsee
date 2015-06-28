@@ -191,7 +191,10 @@ def mdtest_on_filesystems():
             "branches" : 2,
             "items_per_node" : 50,
             "depth" : 7,
-            "write_bytes": 4096
+            "write_bytes": 4096,
+            "repeats": 2,
+            "sync_write": "-y",
+            "iterations": 2
         },
 
         # if you choose LBAGENERATOR for workload_src, the following will
@@ -204,10 +207,10 @@ def mdtest_on_filesystems():
     }
 
     # filesystems = ('ext4',)
-    filesystems = ('f2fs',)
+    # filesystems = ('f2fs',)
     # filesystems = ('btrfs',)
-    # filesystems = ('ext4', 'btrfs', 'f2fs')
-    expname = 'long-mdtest'
+    filesystems = ('ext4', 'btrfs', 'f2fs')
+    expname = 'long-mdtest-2'
     for fs in filesystems:
         devsize_mb = 256
         conf = config.Config(confdic)

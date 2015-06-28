@@ -33,7 +33,7 @@ class Mdtest(Workload):
         self.conf['mdtest_settings']['running_dir'] = os.path.join(self.conf['fs_mount_point'], 'formdtest')
         cmd = 'mpirun -np {np} ./externals/mdtest/mdtest '\
             '-b {branches} -I {items_per_node} -z {depth} -d {running_dir} -C '\
-            '-w {write_bytes}'\
+            '-w {write_bytes} {sync_write} -i {iterations}'\
             .format(**self.conf['mdtest_settings'])
 
         utils.shcmd(cmd)
