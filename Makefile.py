@@ -188,10 +188,10 @@ def mdtest_on_filesystems():
         "workload_class"        : "Mdtest",
         "mdtest_settings"       : {
             "np" : 1,
-            "branches" : 10,
+            "branches" : 2,
             "items_per_node" : 50,
-            "depth" : 1,
-            "write_bytes": 0
+            "depth" : 7,
+            "write_bytes": 4096
         },
 
         # if you choose LBAGENERATOR for workload_src, the following will
@@ -218,7 +218,7 @@ def mdtest_on_filesystems():
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
         conf['loop_dev_size_mb'] = devsize_mb
 
-        # workflow(conf)
+        workflow(conf)
 
 def pure_sequential_or_random():
     confdic = {
