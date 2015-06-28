@@ -209,8 +209,9 @@ def mdtest_on_filesystems():
     # filesystems = ('ext4', 'f2fs')
     # for fs in filesystems:
     for devsize_mb in (128, 256):
+        fs = 'f2fs'
         conf = config.Config(confdic)
-        conf['filesystem'] = 'f2fs'
+        conf['filesystem'] = fs
         conf['ftl_type'] = 'pagemap'
         conf['result_dir'] = "/tmp/mdtest-whatswrong/" + \
                 '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
