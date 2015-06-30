@@ -337,29 +337,31 @@ def sqlbench_on_filesystems():
     sqlbenchlist = strlist.split()
     sqlbenchlist.remove('test-insert')
     # sqlbenchlist = ["test-ATIS"]
-    sqlbenchlist = ["test-create"]
+    # sqlbenchlist = ["test-create"]
 
-    filesystems = ('ext4',)
+    # filesystems = ('ext4',)
     # filesystems = ('f2fs',)
     # filesystems = ('btrfs',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
-    expname = 'sqlbench'
-    for fs in filesystems:
-        devsize_mb = 512
-        conf = config.Config(confdic)
-        conf['filesystem'] = fs
-        conf['ftl_type'] = 'hybridmap'
-        conf['result_dir'] = "/tmp/{}/".format(expname) + \
-            '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
-        conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
-        conf['loop_dev_size_mb'] = devsize_mb
-        conf['sqlbench']['benches_to_run'] = sqlbenchlist
+    filesystems = ('btrfs', 'f2fs')
+    expname = 'sqlbench-1by1'
+    for bench in sqlbenchlist:
+        for fs in filesystems:
+            devsize_mb = 512
+            conf = config.Config(confdic)
+            conf['filesystem'] = fs
+            conf['ftl_type'] = 'hybridmap'
+            conf['result_dir'] = "/tmp/{}/".format(expname) + \
+                '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
+            conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
+            conf['loop_dev_size_mb'] = devsize_mb
+            conf['sqlbench']['benches_to_run'] = [bench]
 
-        try:
-            shcmd("sudo service mysql stop")
-        except Exception:
-            pass
-        workflow(conf)
+            try:
+                shcmd("sudo service mysql stop")
+            except Exception:
+                pass
+            workflow(conf)
 
 
 
