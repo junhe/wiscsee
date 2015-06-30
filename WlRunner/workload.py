@@ -118,7 +118,7 @@ class Tpcc(Workload):
         utils.shcmd("sudo service mysql stop")
 
 
-class Sqlbench():
+class Sqlbench(Workload):
     def start_mysql():
         shcmd("sudo service mysql start")
 
