@@ -273,7 +273,7 @@ def tpcc_on_filesystems():
     filesystems = ('ext4',)
     expname = 'tpcc'
     for fs in filesystems:
-        devsize_mb = 256
+        devsize_mb = 4096
         conf = config.Config(confdic)
         conf['filesystem'] = fs
         conf['ftl_type'] = 'hybridmap'

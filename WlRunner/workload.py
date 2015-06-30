@@ -44,7 +44,45 @@ class Mdtest(Workload):
 
 
 class Tpcc(Workload):
+    def start_mysql():
+        shcmd("sudo service mysql start")
+
+    def stop_mysql():
+        """You will get 'no instance found' if no mysql runningn"""
+        shcmd("sudo service mysql stop")
+
+
+    def change_data_dir(self):
+        """TODO: It has some hard-coded stuff"""
+        lines = []
+        with open("/etc/mysql/my.cnf", "r") as f:
+            for line in f:
+                if line.startswith("datadir"):
+                    line = "datadir     = /mnt/fsonloop/mysql\n"
+                lines.append(line)
+
+        with open("/etc/mysql/my.cnf", "w") as f:
+            for line in lines:
+                f.write(line)
+
+        lines = []
+        with open("/etc/apparmor.d/usr.sbin.mysqld", "r") as f:
+            for line in f:
+                line = line.replace('/var/lib/mysql', '/mnt/fsonloop/mysql')
+                lines.append(line)
+
+        with open("/etc/apparmor.d/usr.sbin.mysqld", "w") as f:
+            for line in lines:
+                f.write(line)
+
     def run(self):
+        try:
+            self.stop_mysql()
+        except Exception:
+            pass
+
+        self.change_data_dir()
+
         with utils.cd("/home/jun/workdir/mysql-io-pattern/tpcc-mysql/tpcc-mysql"):
             # utils.shcmd("sudo mysqld &")
             # utils.shcmd("sudo /etc/init.d/mysql restart")
