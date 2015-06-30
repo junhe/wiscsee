@@ -331,6 +331,15 @@ def sqlbench_on_filesystems():
         }
     }
 
+
+    strlist = "test-ATIS test-big-tables test-create test-select test-wisconsin "\
+              "test-alter-table test-connect test-insert test-transactions"
+    sqlbenchlist = strlist.split()
+    sqlbenchlist.remove('test-insert')
+    print sqlbenchlist
+    exit(1)
+
+
     filesystems = ('ext4',)
     # filesystems = ('f2fs',)
     # filesystems = ('btrfs',)
@@ -345,6 +354,7 @@ def sqlbench_on_filesystems():
             '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
         conf['loop_dev_size_mb'] = devsize_mb
+        conf['sqlbench']['benches_to_run'] = sqlbenchlist
 
         workflow(conf)
 
