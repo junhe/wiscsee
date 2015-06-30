@@ -39,7 +39,7 @@ def git_commit(msg='auto commit'):
 def workflow(conf):
     # save config file for reference
     confpath = os.path.join(conf['result_dir'], 'config.json')
-    utils.prepare_dir_for_path(confpath)
+    prepare_dir_for_path(confpath)
     conf.dump_to_file(confpath)
 
     # run the workload
