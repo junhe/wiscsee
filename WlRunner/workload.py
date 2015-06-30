@@ -50,8 +50,8 @@ class Tpcc(Workload):
             # utils.shcmd("sudo /etc/init.d/mysql restart")
             # time.sleep(1)
 
-            shcmd("cp -r /var/lib/mysql /mnt/fsonloop/")
-            shcmd("chown -R mysql:mysql /mnt/fsonloop/mysql")
+            utils.shcmd("cp -r /var/lib/mysql /mnt/fsonloop/")
+            utils.shcmd("chown -R mysql:mysql /mnt/fsonloop/mysql")
 
             utils.shcmd("sudo service mysql restart")
             utils.shcmd('mysql -u root -p8888 -e "CREATE DATABASE tpcc1000;"')
