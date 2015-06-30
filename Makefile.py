@@ -37,8 +37,8 @@ def git_commit(msg='auto commit'):
             ignore_error=True)
 
 def workflow(conf):
+    conf.dump_to_file(os.path.join(conf['result_dir'], 'config.json'))
     # run the workload
-    # workload_src = LBAGENERATOR
     workload_src = conf['workload_src']
     if workload_src == WLRUNNER:
         runner = WlRunner.wlrunner.WorkloadRunner(conf)

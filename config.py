@@ -13,6 +13,10 @@ class Config(dict):
         decoded = json.load(open(file_path, 'r'))
         self.load_from_dict(decoded)
 
+    def dump_to_file(self, file_path):
+        with open(file_path, "w") as f:
+            json.dump(self, f)
+
     def get_blkparse_result_path(self):
         return os.path.join(self['result_dir'], 'blkparse-output.txt')
 
