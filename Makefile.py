@@ -223,6 +223,68 @@ def mdtest_on_filesystems():
 
         workflow(conf)
 
+def tpcc_on_filesystems():
+    confdic = {
+        "####################################### Global": "",
+        "result_dir"            : None,
+        "workload_src" : WLRUNNER,
+
+        "####################################### For FtlSim": "",
+        "flash_page_size"       : 4096,
+        "flash_npage_per_block" : 16,
+        "flash_num_blocks"      : None,
+
+        "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
+        "ftl_type" : "hybridmap",
+
+        "high_log_block_ratio"       : 0.4,
+        "high_data_block_ratio"      : 0.4,
+        "log_block_upperbound_ratio" : 0.5,
+
+        "verbose_level" : 1,
+        "# comment1"      : "output_target: file, stdout",
+        "output_target" : "file",
+
+        "####################################### For WlRunner": "",
+        "loop_path"             : "/dev/loop0",
+        "loop_dev_size_mb"      : None,
+        "tmpfs_mount_point"     : "/mnt/tmpfs",
+        "fs_mount_point"        : "/mnt/fsonloop",
+
+
+        "sector_size"           : 512,
+
+        "filesystem"            : "ext4",
+
+        "workload_class"        : "Simple",
+
+        # if you choose LBAGENERATOR for workload_src, the following will
+        # be used
+        "lba_workload_class"    : "Random",
+        "LBA" : {
+            "lba_to_flash_size_ratio": 0.6,
+            "write_to_lba_ratio"     : 2    #how many writes you want to have
+        }
+    }
+
+    # filesystems = ('ext4',)
+    # filesystems = ('f2fs',)
+    # filesystems = ('btrfs',)
+    filesystems = ('ext4')
+    expname = 'tpcc'
+    for fs in filesystems:
+        devsize_mb = 256
+        conf = config.Config(confdic)
+        conf['filesystem'] = fs
+        conf['ftl_type'] = 'hybridmap'
+        conf['result_dir'] = "/tmp/{}/".format(expname) + \
+            '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
+        conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
+        conf['loop_dev_size_mb'] = devsize_mb
+
+        workflow(conf)
+
+
 def pure_sequential_or_random():
     confdic = {
         "####################################### Global": "",
@@ -291,7 +353,8 @@ def main():
     # from_filesystem()
     # seq_with_rand_start()
     # pass
-    mdtest_on_filesystems()
+    # mdtest_on_filesystems()
+    tpcc_on_filesystems()
 
 def _main():
     parser = argparse.ArgumentParser(

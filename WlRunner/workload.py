@@ -1,4 +1,5 @@
 import os
+import time
 
 import config
 import utils
@@ -40,4 +41,35 @@ class Mdtest(Workload):
 
     def stop(self):
         pass
+
+
+class Tpcc(Workload):
+    def __init__(self):
+        pass
+    def run(self):
+        with utils.cd("/home/jun/workdir/mysql-io-pattern/tpcc-mysql/tpcc-mysql"):
+            # utils.shcmd("sudo mysqld &")
+            # utils.shcmd("sudo /etc/init.d/mysql restart")
+            # time.sleep(1)
+            utils.shcmd('./tpcc_load 127.0.0.1 tpcc1000 root "8888" 20')
+            cmd = [
+                    './tpcc_start',
+                    '-h127.0.0.1',
+                    '-dtpcc1000',
+                    '-uroot',
+                    '-p8888',
+                    '-w20',
+                    '-c16',
+                    '-r10',
+                    '-l1200'
+                  ]
+            utils.shcmd(" ".join(cmd))
+
+    def stop(self):
+        utils.shcmd("sudo pkill mysqld")
+
+if __name__ == '__main__':
+    tpcc = Tpcc()
+    tpcc.run()
+    tpcc.stop()
 
