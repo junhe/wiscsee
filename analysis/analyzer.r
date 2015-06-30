@@ -761,6 +761,12 @@ set_missing_to_default <- function(d, id_cols, val_col, default_val)
 
 explore.sim.results <- function()
 {
+    get_config <- function(jsonpath)
+    {
+        doc <- fromJSON(txt=jsonpath)
+        return(doc)
+    }
+
     # This function plot all .stats files in a directory
     explore.stats <- function(expdir)
     {
