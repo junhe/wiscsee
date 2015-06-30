@@ -44,8 +44,6 @@ class Mdtest(Workload):
 
 
 class Tpcc(Workload):
-    def __init__(self):
-        pass
     def run(self):
         with utils.cd("/home/jun/workdir/mysql-io-pattern/tpcc-mysql/tpcc-mysql"):
             # utils.shcmd("sudo mysqld &")
