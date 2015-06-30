@@ -319,7 +319,7 @@ def pure_sequential_or_random():
         # "filesystem"            : "ext4",
         "filesystem"            : "f2fs",
 
-        "workload_class"        : "Simple",
+        "workload_class"        : "Tpcc",
         # "lba_workload_class"    : "Random",
         "lba_workload_class"    : "Sequential",
         "LBA" : {
