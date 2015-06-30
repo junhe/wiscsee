@@ -166,6 +166,8 @@ class Sqlbench(Workload):
             utils.shcmd(' '.join(cmd))
 
     def run(self):
+        return
+
         try:
             self.stop_mysql()
         except Exception:
@@ -177,9 +179,6 @@ class Sqlbench(Workload):
             utils.shcmd("sudo service mysql restart")
             utils.shcmd("mysqladmin -u root -p8888 create test")
 
-            # strlist = "test-ATIS test-big-tables test-create test-select test-wisconsin "\
-                      # "test-alter-table test-connect test-insert test-transactions"
-            # sqlbenchlist = strlist.split()
 
             for test in self.conf['sqlbench']['benches_to_run']:
                 self.run_sqlbench(test)
