@@ -52,6 +52,10 @@ class Tpcc(Workload):
             # utils.shcmd("sudo /etc/init.d/mysql restart")
             # time.sleep(1)
             utils.shcmd("sudo /etc/init.d/mysql start")
+            utils.shcmd('mysql -u root -p8888 -e "CREATE DATABASE tpcc1000;"')
+            utils.shcmd('mysql -u root -p8888 tpcc1000 < create_table.sql')
+            utils.shcmd('mysql -u root -p8888 tpcc1000 < add_fkey_idx.sql')
+
             utils.shcmd('./tpcc_load 127.0.0.1 tpcc1000 root "8888" 20')
             cmd = [
                     './tpcc_start',
