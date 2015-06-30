@@ -794,8 +794,8 @@ explore.sim.results <- function()
             p = ggplot(d, aes(x=file, y=value, fill=variable)) +
                 geom_bar(stat='identity', position='dodge') + 
                 theme(axis.text.x = element_text(angle=90))
-            ggsave("tpcc-time-space.png", plot=p, w=50, h=10)
-            return()
+            # ggsave("tpcc-time-space.png", plot=p, w=50, h=10)
+            # return()
             return(p)
         }
 
