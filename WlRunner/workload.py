@@ -171,17 +171,23 @@ class Sqlbench(Workload):
         except Exception:
             pass
 
-        self.change_data_dir()
+        try:
+            self.change_data_dir()
 
-        utils.shcmd("sudo service mysql restart")
-        utils.shcmd("mysqladmin -u root -p8888 create test")
+            utils.shcmd("sudo service mysql restart")
+            utils.shcmd("mysqladmin -u root -p8888 create test")
 
-        # strlist = "test-ATIS test-big-tables test-create test-select test-wisconsin "\
-                  # "test-alter-table test-connect test-insert test-transactions"
-        # sqlbenchlist = strlist.split()
+            # strlist = "test-ATIS test-big-tables test-create test-select test-wisconsin "\
+                      # "test-alter-table test-connect test-insert test-transactions"
+            # sqlbenchlist = strlist.split()
 
-        for test in conf['sqlbench']['benches_to_run']:
-            self.run_sqlbench(test)
+            for test in self.conf['sqlbench']['benches_to_run']:
+                self.run_sqlbench(test)
+        finally:
+            try:
+                self.stop_mysql()
+            except Exception:
+                pass
 
     def stop(self):
         utils.shcmd("sudo service mysql stop")
