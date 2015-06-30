@@ -353,6 +353,7 @@ def sqlbench_on_filesystems():
         conf['loop_dev_size_mb'] = devsize_mb
         conf['sqlbench']['benches_to_run'] = sqlbenchlist
 
+        shcmd("sudo service mysql stop")
         workflow(conf)
 
 
