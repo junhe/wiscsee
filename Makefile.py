@@ -37,7 +37,11 @@ def git_commit(msg='auto commit'):
             ignore_error=True)
 
 def workflow(conf):
-    conf.dump_to_file(os.path.join(conf['result_dir'], 'config.json'))
+    # save config file for reference
+    confpath = os.path.join(conf['result_dir'], 'config.json')
+    utils.prepare_dir_for_path(confpath)
+    conf.dump_to_file(confpath)
+
     # run the workload
     workload_src = conf['workload_src']
     if workload_src == WLRUNNER:
