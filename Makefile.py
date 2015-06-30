@@ -336,6 +336,7 @@ def sqlbench_on_filesystems():
               "test-alter-table test-connect test-insert test-transactions"
     sqlbenchlist = strlist.split()
     sqlbenchlist.remove('test-insert')
+    sqlbenchlist = ["test-ATIS"]
 
     filesystems = ('ext4',)
     # filesystems = ('f2fs',)
@@ -353,7 +354,10 @@ def sqlbench_on_filesystems():
         conf['loop_dev_size_mb'] = devsize_mb
         conf['sqlbench']['benches_to_run'] = sqlbenchlist
 
-        shcmd("sudo service mysql stop")
+        try:
+            shcmd("sudo service mysql stop")
+        except Exception:
+            pass
         workflow(conf)
 
 
