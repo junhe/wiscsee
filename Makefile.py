@@ -340,6 +340,7 @@ def sqlbench_on_filesystems():
               "test-alter-table test-connect test-insert test-transactions"
     sqlbenchlist = strlist.split()
     sqlbenchlist.remove('test-insert')
+    sqlbenchlist.remove('test-create')
     # sqlbenchlist = ["test-ATIS"]
     # sqlbenchlist = ["test-create"]
 
@@ -347,11 +348,11 @@ def sqlbench_on_filesystems():
     # filesystems = ('f2fs',)
     # filesystems = ('btrfs',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
-    filesystems = ('btrfs', 'f2fs')
+    filesystems = ('ext4', 'btrfs', 'f2fs')
     expname = 'sqlbench-1by1'
     for bench in sqlbenchlist:
         for fs in filesystems:
-            devsize_mb = 1024
+            devsize_mb = 256
             conf = config.Config(confdic)
             conf['filesystem'] = fs
             conf['ftl_type'] = 'hybridmap'

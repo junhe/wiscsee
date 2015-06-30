@@ -15,7 +15,7 @@ class Config(dict):
 
     def dump_to_file(self, file_path):
         with open(file_path, "w") as f:
-            json.dump(self, f)
+            json.dump(self, f, indent=4)
 
     def get_blkparse_result_path(self):
         return os.path.join(self['result_dir'], 'blkparse-output.txt')
