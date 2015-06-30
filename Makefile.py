@@ -339,7 +339,7 @@ def pure_sequential_or_random():
         conf['ftl_type'] = ftl
         workflow(conf)
 
-def mysql():
+def mysql_change_data_dir():
     def start_mysql():
         shcmd("sudo service mysql start")
 
@@ -370,11 +370,12 @@ def mysql():
                 f.write(line)
 
     def local_main():
-        stop_mysql()
+        # stop_mysql()
 
-        # shcmd("mv /var/lib/mysql /mnt/fsonloop/")
-        # change_data_dir()
-        # start_mysql()
+        shcmd("cp -r /var/lib/mysql /mnt/fsonloop/")
+        shcmd("chown -R mysql:mysql /mnt/fsonloop/mysql")
+        change_data_dir()
+        start_mysql()
 
     local_main()
 
