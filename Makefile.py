@@ -270,7 +270,7 @@ def tpcc_on_filesystems():
     # filesystems = ('ext4',)
     # filesystems = ('f2fs',)
     # filesystems = ('btrfs',)
-    filesystems = ('ext4')
+    filesystems = ('ext4',)
     expname = 'tpcc'
     for fs in filesystems:
         devsize_mb = 256
