@@ -46,6 +46,7 @@ class Mdtest(Workload):
 class Tpcc(Workload):
     def run(self):
         print ['sssssss'] * 100
+        return
         with utils.cd("/home/jun/workdir/mysql-io-pattern/tpcc-mysql/tpcc-mysql"):
             # utils.shcmd("sudo mysqld &")
             # utils.shcmd("sudo /etc/init.d/mysql restart")
