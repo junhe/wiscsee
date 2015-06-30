@@ -166,8 +166,6 @@ class Sqlbench(Workload):
             utils.shcmd(' '.join(cmd))
 
     def run(self):
-        return
-
         try:
             self.stop_mysql()
         except Exception:

@@ -345,7 +345,7 @@ def sqlbench_on_filesystems():
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     expname = 'sqlbench'
     for fs in filesystems:
-        devsize_mb = 256
+        devsize_mb = 512
         conf = config.Config(confdic)
         conf['filesystem'] = fs
         conf['ftl_type'] = 'hybridmap'
