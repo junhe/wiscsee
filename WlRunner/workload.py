@@ -54,6 +54,9 @@ class Tpcc(Workload):
 
     def change_data_dir(self):
         """TODO: It has some hard-coded stuff"""
+        utils.shcmd("cp -r /var/lib/mysql /mnt/fsonloop/")
+        utils.shcmd("chown -R mysql:mysql /mnt/fsonloop/mysql")
+
         lines = []
         with open("/etc/mysql/my.cnf", "r") as f:
             for line in f:
@@ -75,6 +78,9 @@ class Tpcc(Workload):
             for line in lines:
                 f.write(line)
 
+        utils.shcmd("cp -r /var/lib/mysql /mnt/fsonloop/")
+        utils.shcmd("chown -R mysql:mysql /mnt/fsonloop/mysql")
+
     def run(self):
         try:
             self.stop_mysql()
@@ -88,8 +94,6 @@ class Tpcc(Workload):
             # utils.shcmd("sudo /etc/init.d/mysql restart")
             # time.sleep(1)
 
-            utils.shcmd("cp -r /var/lib/mysql /mnt/fsonloop/")
-            utils.shcmd("chown -R mysql:mysql /mnt/fsonloop/mysql")
 
             utils.shcmd("sudo service mysql restart")
             utils.shcmd('mysql -u root -p8888 -e "CREATE DATABASE tpcc1000;"')
@@ -113,8 +117,80 @@ class Tpcc(Workload):
     def stop(self):
         utils.shcmd("sudo service mysql stop")
 
+
+class Sqlbench():
+    def start_mysql():
+        shcmd("sudo service mysql start")
+
+    def stop_mysql():
+        """You will get 'no instance found' if no mysql runningn"""
+        shcmd("sudo service mysql stop")
+
+
+    def change_data_dir(self):
+        """TODO: It has some hard-coded stuff"""
+        utils.shcmd("cp -r /var/lib/mysql /mnt/fsonloop/")
+        utils.shcmd("chown -R mysql:mysql /mnt/fsonloop/mysql")
+
+        lines = []
+        with open("/etc/mysql/my.cnf", "r") as f:
+            for line in f:
+                if line.startswith("datadir"):
+                    line = "datadir     = /mnt/fsonloop/mysql\n"
+                lines.append(line)
+
+        with open("/etc/mysql/my.cnf", "w") as f:
+            for line in lines:
+                f.write(line)
+
+        lines = []
+        with open("/etc/apparmor.d/usr.sbin.mysqld", "r") as f:
+            for line in f:
+                line = line.replace('/var/lib/mysql', '/mnt/fsonloop/mysql')
+                lines.append(line)
+
+        with open("/etc/apparmor.d/usr.sbin.mysqld", "w") as f:
+            for line in lines:
+                f.write(line)
+
+
+    def run_sqlbench(self, testname):
+        print 'in run_sqlbench***********'
+        with utils.cd('../mysql-io-pattern/bench/sql-bench/'):
+            cmd = ['perl',
+                    testname,
+                    '--user', 'root',
+                    '--password', '8888'
+                    ]
+            # subprocess.call(cmd)
+            utils.shcmd(' '.join(cmd))
+
+    def run(self):
+        try:
+            self.stop_mysql()
+        except Exception:
+            pass
+
+        self.change_data_dir()
+
+        utils.shcmd("sudo service mysql restart")
+        utils.shcmd("mysqladmin -u root -p8888 create test")
+
+        # strlist = "test-ATIS test-big-tables test-create test-select test-wisconsin "\
+                  # "test-alter-table test-connect test-insert test-transactions"
+        # sqlbenchlist = strlist.split()
+
+        for test in conf['sqlbench']['benches_to_run']:
+            self.run_sqlbench(test)
+
+    def stop(self):
+        utils.shcmd("sudo service mysql stop")
+
 if __name__ == '__main__':
-    tpcc = Tpcc()
-    tpcc.run()
-    tpcc.stop()
+    # tpcc = Tpcc()
+    # tpcc.run()
+    # tpcc.stop()
+
+    sqlbench = Sqlbench()
+    sqlbench.run()
 
