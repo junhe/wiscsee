@@ -52,18 +52,18 @@ class Tpcc(Workload):
             # utils.shcmd("sudo /etc/init.d/mysql restart")
             # time.sleep(1)
             utils.shcmd('./tpcc_load 127.0.0.1 tpcc1000 root "8888" 20')
-            cmd = [
-                    './tpcc_start',
-                    '-h127.0.0.1',
-                    '-dtpcc1000',
-                    '-uroot',
-                    '-p8888',
-                    '-w20',
-                    '-c16',
-                    '-r10',
-                    '-l1200'
-                  ]
-            utils.shcmd(" ".join(cmd))
+            # cmd = [
+                    # './tpcc_start',
+                    # '-h127.0.0.1',
+                    # '-dtpcc1000',
+                    # '-uroot',
+                    # '-p8888',
+                    # '-w20',
+                    # '-c16',
+                    # '-r10',
+                    # '-l1200'
+                  # ]
+            # utils.shcmd(" ".join(cmd))
 
     def stop(self):
         utils.shcmd("sudo pkill mysqld")
