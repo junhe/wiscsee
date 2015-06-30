@@ -886,7 +886,8 @@ explore.sim.results <- function()
         do.call('grid.arrange', c(plotlist, ncol=1)) 
     }
 
-    local_main("~/datahouse/long-mdtest/")
+    # local_main("~/datahouse/long-mdtest/")
+    local_main("~/datahouse/ext4-hybridmap-4096/")
 }
 
 explore.mywl <- function()
