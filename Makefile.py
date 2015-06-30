@@ -256,7 +256,7 @@ def tpcc_on_filesystems():
 
         "filesystem"            : "ext4",
 
-        "workload_class"        : "Simple",
+        "workload_class"        : "Tpcc",
 
         # if you choose LBAGENERATOR for workload_src, the following will
         # be used
@@ -319,7 +319,7 @@ def pure_sequential_or_random():
         # "filesystem"            : "ext4",
         "filesystem"            : "f2fs",
 
-        "workload_class"        : "Tpcc",
+        "workload_class"        : "Simple",
         # "lba_workload_class"    : "Random",
         "lba_workload_class"    : "Sequential",
         "LBA" : {
