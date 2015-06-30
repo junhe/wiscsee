@@ -23,7 +23,7 @@ class DirectMapFtl(ftlbuilder.FtlBuilder):
         self.write_page(pagenum)
 
     def lba_discard(pagenum):
-        self.recorder.put('lba_discard ', pagenum, 'user')
+        self.recorder.put('lba_discard', pagenum, 'user')
         self.bitmap.invalidate_page(pagenum)
 
     def erase_block(self, blocknum):

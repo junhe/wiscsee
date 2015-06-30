@@ -128,7 +128,7 @@ class PageMapFtl(ftlbuilder.FtlBuilder):
         self.write_page(pagenum)
 
     def lba_discard(self, pagenum):
-        self.recorder.put('lba_discard ', pagenum, 'user')
+        self.recorder.put('lba_discard', pagenum, 'user')
         self.invalidate_lba_page(pagenum)
 
     # basic operations

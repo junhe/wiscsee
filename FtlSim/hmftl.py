@@ -249,7 +249,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.write_page(pagenum, garbage_collect_enable=True, cat='user')
 
     def lba_discard(self, pagenum):
-        self.recorder.put('lba_discard ', pagenum, 'user')
+        self.recorder.put('lba_discard', pagenum, 'user')
         self.invalidate_lba_page(pagenum)
 
     def is_log_map_overflow(self):
