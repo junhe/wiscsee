@@ -336,7 +336,8 @@ def sqlbench_on_filesystems():
               "test-alter-table test-connect test-insert test-transactions"
     sqlbenchlist = strlist.split()
     sqlbenchlist.remove('test-insert')
-    sqlbenchlist = ["test-ATIS"]
+    # sqlbenchlist = ["test-ATIS"]
+    sqlbenchlist = ["test-create"]
 
     filesystems = ('ext4',)
     # filesystems = ('f2fs',)
