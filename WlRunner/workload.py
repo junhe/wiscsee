@@ -45,13 +45,11 @@ class Mdtest(Workload):
 
 class Tpcc(Workload):
     def run(self):
-        print ['sssssss'] * 100
-        utils.shcmd("mkdir /mnt/fsonloop/mysql")
         with utils.cd("/home/jun/workdir/mysql-io-pattern/tpcc-mysql/tpcc-mysql"):
             # utils.shcmd("sudo mysqld &")
             # utils.shcmd("sudo /etc/init.d/mysql restart")
             # time.sleep(1)
-            utils.shcmd("sudo /etc/init.d/mysql start")
+            utils.shcmd("sudo service mysql restart")
             utils.shcmd('mysql -u root -p8888 -e "CREATE DATABASE tpcc1000;"')
             utils.shcmd('mysql -u root -p8888 tpcc1000 < create_table.sql')
             utils.shcmd('mysql -u root -p8888 tpcc1000 < add_fkey_idx.sql')
@@ -71,7 +69,7 @@ class Tpcc(Workload):
             utils.shcmd(" ".join(cmd))
 
     def stop(self):
-        utils.shcmd("sudo pkill mysqld")
+        utils.shcmd("sudo service mysql stop")
 
 if __name__ == '__main__':
     tpcc = Tpcc()

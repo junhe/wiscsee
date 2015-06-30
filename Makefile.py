@@ -339,6 +339,46 @@ def pure_sequential_or_random():
         conf['ftl_type'] = ftl
         workflow(conf)
 
+def mysql():
+    def start_mysql():
+        shcmd("sudo service mysql start")
+
+    def stop_mysql():
+        """You will get 'no instance found' if no mysql runningn"""
+        shcmd("sudo service mysql stop")
+
+    def change_data_dir():
+        lines = []
+        with open("/etc/mysql/my.cnf", "r") as f:
+            for line in f:
+                if line.startswith("datadir"):
+                    line = "datadir     = /mnt/fsonloop/mysql\n"
+                lines.append(line)
+
+        with open("/etc/mysql/my.cnf", "w") as f:
+            for line in lines:
+                f.write(line)
+
+        lines = []
+        with open("/etc/apparmor.d/usr.sbin.mysqld", "r") as f:
+            for line in f:
+                line = line.replace('/var/lib/mysql', '/mnt/fsonloop/mysql')
+                lines.append(line)
+
+        with open("/etc/apparmor.d/usr.sbin.mysqld", "w") as f:
+            for line in lines:
+                f.write(line)
+
+    def local_main():
+        stop_mysql()
+
+        # shcmd("mv /var/lib/mysql /mnt/fsonloop/")
+        # change_data_dir()
+        # start_mysql()
+
+    local_main()
+
+
 def main():
     shcmd("sudo -u jun git commit -am 'commit by Makefile'", ignore_error=True)
     shcmd("sudo -u jun git pull")
