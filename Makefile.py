@@ -357,7 +357,7 @@ def sqlbench_on_filesystems():
             conf['filesystem'] = fs
             conf['ftl_type'] = 'hybridmap'
             conf['result_dir'] = "/tmp/{}/".format(expname) + \
-                '-'.join([fs, conf['ftl_type'], str(devsize_mb), bench])
+                '-'.join([fs, 'ondefault', conf['ftl_type'], str(devsize_mb), bench])
             conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
             conf['loop_dev_size_mb'] = devsize_mb
             conf['sqlbench']['benches_to_run'] = [bench]
