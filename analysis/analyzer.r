@@ -961,6 +961,13 @@ explore.sim.results <- function()
         return(paste(elems, collapse='/'))
     }
 
+    split_column <- function(mycol, splitchar)
+    {
+        mycol = as.character(mycol)
+        splitlist = strsplit(mycol, splitchar, fixed=T)
+        df = ldply(splitlist, as.vector)
+        return(df)
+    }
 
     # This function plot all .stats files in a directory
     explore.stats <- function(expdir)
