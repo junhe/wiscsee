@@ -3,6 +3,7 @@ library(ggplot2)
 library(plyr)
 library(reshape2)
 library(gridExtra)
+library(jsonlite)
 
 # copy the following so you can do sme()
 WORKDIRECTORY= "/Users/junhe/BoxSync/0-MyResearch/Doraemon/workdir/doraemon/analysis"
@@ -837,30 +838,37 @@ explore.sim.results <- function()
             return(d)
         }
 
-        func <- function(d)
+        datafile_to_conffile <- function(path)
         {
-            # print((d))
-            # d = head(d, n=100000)
+            elems = unlist(strsplit(path, '/'))
+            lastindex = length(elems)
+            if ( lastindex == 0 ) {
+                stop('lastindex cannot be 0')
+            }
+            elems[lastindex] = 'config.json'
+            return(paste(elems, collapse='/'))
+        }
+
+        func <- function(d, datafile=NULL)
+        {
             d$seqid = seq_along(d$operation)
 
-            print(levels(d$operation))
-            d$operation = factor(d$operation, levels=c('lba_write', 'page_read', 'page_write', 'lba_discard', 'block_erase'))
-            # d = subset(d, operation != 'block_erase')
-            # d = subset(d, cat == 'amplified')
+            d$operation = factor(d$operation, levels=c('lba_write', 
+                'page_read', 'page_write', 'lba_discard', 'block_erase'))
 
+            confpath = datafile_to_conffile(datafile)
+            conf = get_config(confpath)
+            flash_npage_per_block = conf[['flash_npage_per_block']]
+            d$pagenum[d$operation == 'block_erase'] = d$pagenum[d$operation == 'block_erase'] *
+                flash_npage_per_block
 
-            # quartz()
-            # d = subset(d, cat == 'user')
             p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
                 geom_point() +
                 facet_grid(operation~cat) +
                 scale_colour_manual(
                   values = c("amplified" = "red",
                              "user" = "blue"))
-            # print(p)
             return(p)
-            # z = grid.locator()
-            # ggsave("plot.pdf", plot=p, h=12, w=4)
         }
 
         do_main <- function(expdir)
@@ -871,10 +879,10 @@ explore.sim.results <- function()
             print(files)
 
             for (f in files ) {
-                # d = load_file_from_cache(f, 'load')
-                d = load(f)
+                d = load_file_from_cache(f, 'load')
+                # d = load(f)
                 d = clean(d)
-                p = func(d)
+                p = func(d, datafile=f)
 
                 filename = paste(tail(unlist(strsplit(f, "/")), 4), collapse="/")
                 p = p + ggtitle(filename)
