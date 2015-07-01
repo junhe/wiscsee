@@ -344,12 +344,12 @@ def sqlbench_on_filesystems():
     # sqlbenchlist = ["test-ATIS"]
     # sqlbenchlist = ["test-create"]
 
-    # filesystems = ('ext4',)
+    filesystems = ('ext4',)
     # filesystems = ('f2fs',)
     # filesystems = ('btrfs',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
-    filesystems = ('ext4', 'btrfs', 'f2fs')
-    expname = 'sqlbench-1by1'
+    # filesystems = ('ext4', 'btrfs', 'f2fs')
+    expname = 'sqlbench-1by1-ext4default'
     for bench in sqlbenchlist:
         for fs in filesystems:
             devsize_mb = 256
@@ -467,7 +467,7 @@ def mysql_change_data_dir():
 def main(cmd_args):
     shcmd("sudo -u jun git commit -am 'commit by Makefile: {commitmsg}'"\
         .format(commitmsg=cmd_args.commitmsg \
-        if cmd_args.commitmsg != None else '' , ignore_error=True)
+        if cmd_args.commitmsg != None else '' , ignore_error=True))
     shcmd("sudo -u jun git pull")
     shcmd("sudo -u jun git push")
 
