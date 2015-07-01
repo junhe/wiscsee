@@ -369,7 +369,6 @@ def sqlbench_on_filesystems():
             workflow(conf)
 
 
-
 def pure_sequential_or_random():
     confdic = {
         "####################################### Global": "",
@@ -465,8 +464,10 @@ def mysql_change_data_dir():
     local_main()
 
 
-def main():
-    shcmd("sudo -u jun git commit -am 'commit by Makefile'", ignore_error=True)
+def main(cmd_args):
+    shcmd("sudo -u jun git commit -am 'commit by Makefile: {commitmsg}'"\
+        .format(commitmsg=cmd_args.commitmsg \
+        if cmd_args.commitmsg != None else '' , ignore_error=True)
     shcmd("sudo -u jun git pull")
     shcmd("sudo -u jun git push")
 
@@ -485,14 +486,15 @@ def main():
 
 def _main():
     parser = argparse.ArgumentParser(
-            description="This file hold command stream." \
-            'Example: python Makefile.py doexp1 '
-            )
+        description="This file hold command stream." \
+        'Example: python Makefile.py doexp1 '
+        )
     parser.add_argument('-t', '--target', action='store')
+    parser.add_argument('-c', '--commitmsg', action='store')
     args = parser.parse_args()
 
     if args.target == None:
-        main()
+        main(args)
     else:
         # WARNING! Using argument will make it less reproducible
         # because you have to remember what argument you used!

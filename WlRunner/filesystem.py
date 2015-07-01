@@ -43,11 +43,17 @@ class FileSystemBase(object):
         common.shcmd("sync")
 
 class Ext4(FileSystemBase):
-    def make(self):
-        fshelper.ext4_make(self.dev)
+    def make(self, opt=None):
+        if opt == None:
+            opt = ''
+        ret = utils.shcmd('mkfs.ext4 {opt} {dev}'.format(
+            opt=opt, dev = self.dev), ignore_error = True)
+        if ret != 0:
+            raise RuntimeError("Failed to make dev:{}".format(self.dev))
 
-    def mount(self):
-        ret = fshelper.ext4_mount(self.dev, self.mount_point)
+    def mount(self, opt=None):
+        ret = utils.shcmd('mount -t ext4 {dev} {mp}'.format(
+            dev = self.dev, mp = self.mount_point), ignore_error = True)
         if ret != 0:
             raise RuntimeError("Failed to mount dev:{} to dir:{}".format(
                 self.dev, self.mount_point))
