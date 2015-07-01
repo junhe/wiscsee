@@ -46,6 +46,8 @@ class Ext4(FileSystemBase):
     def make(self, opt=None):
         if opt == None:
             opt = ''
+        # TODO: so elegant
+        opt = '-b 4096'
         ret = utils.shcmd('mkfs.ext4 {opt} {dev}'.format(
             opt=opt, dev = self.dev), ignore_error = True)
         if ret != 0:
