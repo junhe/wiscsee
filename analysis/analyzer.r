@@ -1101,7 +1101,13 @@ explore.sim.results <- function()
             files = list.files(expdir, recursive = T, 
                 pattern = "ftlsim.out$", full.names = T)
             print(files)
-            # stop()
+
+            # order so the same bench goes together
+            l = strsplit(files, '-')
+            l = lapply(l, tail, 1)
+            l = unlist(l)
+            files = files[order(l)]
+            print(files)
 
             for (f in files ) {
                 d = load_file_from_cache(f, 'load')
