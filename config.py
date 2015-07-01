@@ -56,7 +56,8 @@ class Config(dict):
         return self['flash_npage_per_block'] * self['flash_num_blocks']
 
     def off_size_to_page_list(self, off, size):
-        assert size % self['flash_page_size'] == 0
+        assert size % self['flash_page_size'] == 0, \
+            'size:{}, flash_page_size:{}'.format(size, self['flash_page_size'])
         npages = size / self['flash_page_size']
         start_page = self.byte_to_pagenum(off)
 
