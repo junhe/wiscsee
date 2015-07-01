@@ -963,6 +963,12 @@ explore.sim.results <- function()
                 d = read.csv(f, header=T, sep=';')
                 d = melt(d)
                 d$file = paste(tail(unlist(strsplit(f, "/")), 2), collapse="/")
+
+                confpath = datafile_to_conffile(f)
+                conf = get_config(confpath)
+                d$bench.to.run = conf[['sqlbench']][['benches_to_run']]
+                d$filesystem = conf[['filesystem']]
+
                 ret = rbind(ret, d)
             }
             print(ret)
@@ -976,14 +982,33 @@ explore.sim.results <- function()
 
         func <- function(d)
         {
-            # p = ggplot(d, aes(x=variable, y=value, fill=file)) +
-            d = set_missing_to_default(d, 
+            d2 = set_missing_to_default(d, 
                 id_cols=c("file", "variable"), val_col="value",
                 default_val = NA)
+            d2$bench.to.run = NULL
+
+            d1 = ddply(d, .(file), head, 1)
+            d1 = d1[, c('file', 'bench.to.run')]
+            d = merge(d1, d2, by = c('file'))
+
+            l = strsplit(d$file, '/')
+            l = lapply(l, '[[', 1)
+            l = lapply(l, strsplit, '-')
+            l = lapply(l, '[[', 1)
+            l = lapply(l, '[', c(1,2))
+            l = lapply(l, paste, collapse='-')
+            l = unlist(l)
+            d$fs = l
+            d = subset(d, fs != 'ext4-hybridmap')
+            d$file = split_column(d$fs, '-')[,1]
+            d$file = factor(d$file, levels=c('btrfs', 'f2fs', 'ext4'))
+
             p = ggplot(d, aes(x=file, y=value, fill=variable)) +
                 geom_bar(stat='identity', position='dodge') + 
+                facet_grid(~bench.to.run, scale="free_x") +
                 theme(axis.text.x = element_text(angle=90)) +
-                coord_flip()
+                xlab("file system") +
+                ylab("count")
             return(p)
         }
 
@@ -1001,8 +1026,26 @@ explore.sim.results <- function()
         do_main(expdir)
     }
 
+
+
     explore.trace <- function(expdir)
     {
+        explore_page_access_freq <- function(d)
+        {
+            cnt = as.data.frame(table(d$pagenum))
+            print(head(cnt))
+            freqdist = as.data.frame(table(cnt$Freq))
+            print(summary(freqdist))
+            freqdist$Var1 = as.numeric(freqdist$Var1)
+
+            p = ggplot(freqdist, aes(x=Var1, y=log10(Freq))) +
+                geom_point() +
+                geom_line() +
+                xlab('x is access count, y is number of blocks having this count') +
+                ylab('block count (log10)')
+            return(p)
+        }
+
         transfer <- function()
         {
         }
@@ -1058,17 +1101,23 @@ explore.sim.results <- function()
             files = list.files(expdir, recursive = T, 
                 pattern = "ftlsim.out$", full.names = T)
             print(files)
+            # stop()
 
             for (f in files ) {
                 d = load_file_from_cache(f, 'load')
                 # d = load(f)
                 d = clean(d)
-                p = func(d, datafile=f)
 
                 filename = paste(tail(unlist(strsplit(f, "/")), 4), collapse="/")
+
+                p = func(d, datafile=f)
                 p = p + ggtitle(filename)
 
-                plotlist = append(plotlist, list(p))
+                print(head(d))
+                p.freq = explore_page_access_freq(subset(d, operation == 'lba_write'))
+                p.freq = p.freq + ggtitle(filename)
+
+                plotlist = append(plotlist, list(p, p.freq))
             }
             return(plotlist)
         }
@@ -1077,6 +1126,7 @@ explore.sim.results <- function()
 
     local_main <- function(expdir) 
     {
+        plotlist = list()
         plotlist = explore.trace(expdir)
         p = explore.stats(expdir)
         plotlist = append(plotlist, list(p))
@@ -1201,8 +1251,8 @@ main <- function()
     # explore.madmax.iterate()
     # explore.mail01()
     # explore.websearch()
-    # explore.sim.results()
-    explore.sim.results.for.meeting.0702()
+    explore.sim.results()
+    # explore.sim.results.for.meeting.0702()
     # explore.mywl()
     # explore.stats()
     # explore.function.hist()
