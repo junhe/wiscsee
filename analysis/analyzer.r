@@ -950,6 +950,18 @@ explore.sim.results <- function()
         return(doc)
     }
 
+    datafile_to_conffile <- function(path)
+    {
+        elems = unlist(strsplit(path, '/'))
+        lastindex = length(elems)
+        if ( lastindex == 0 ) {
+            stop('lastindex cannot be 0')
+        }
+        elems[lastindex] = 'config.json'
+        return(paste(elems, collapse='/'))
+    }
+
+
     # This function plot all .stats files in a directory
     explore.stats <- function(expdir)
     {
@@ -1060,17 +1072,6 @@ explore.sim.results <- function()
         clean <- function(d)
         {
             return(d)
-        }
-
-        datafile_to_conffile <- function(path)
-        {
-            elems = unlist(strsplit(path, '/'))
-            lastindex = length(elems)
-            if ( lastindex == 0 ) {
-                stop('lastindex cannot be 0')
-            }
-            elems[lastindex] = 'config.json'
-            return(paste(elems, collapse='/'))
         }
 
         func <- function(d, datafile=NULL)
