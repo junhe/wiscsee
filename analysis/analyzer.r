@@ -907,7 +907,6 @@ explore.sim.results.for.meeting.0702 <- function()
             plotlist = list()
             files = list.files(expdir, recursive = T, 
                 pattern = "ftlsim.out$", full.names = T)
-            print(files)
 
             for (f in files ) {
                 d = load_file_from_cache(f, 'load')
@@ -919,7 +918,11 @@ explore.sim.results.for.meeting.0702 <- function()
                 p = p + ggtitle(filename)
 
                 plotlist = append(plotlist, list(p))
+
+
+                break
             }
+            print(df.lba)
             return(plotlist)
         }
         do_main(expdir)
@@ -978,7 +981,6 @@ explore.sim.results <- function()
                pattern = "stats", full.names = T)
             ret = data.frame()
             for (f in files) {
-                print(f)
                 d = read.csv(f, header=T, sep=';')
                 d = melt(d)
                 d$file = paste(tail(unlist(strsplit(f, "/")), 2), collapse="/")
@@ -990,7 +992,6 @@ explore.sim.results <- function()
 
                 ret = rbind(ret, d)
             }
-            print(ret)
             return(ret)
         }
 
@@ -1052,9 +1053,7 @@ explore.sim.results <- function()
         explore_page_access_freq <- function(d)
         {
             cnt = as.data.frame(table(d$pagenum))
-            print(head(cnt))
             freqdist = as.data.frame(table(cnt$Freq))
-            print(summary(freqdist))
             freqdist$Var1 = as.numeric(freqdist$Var1)
 
             p = ggplot(freqdist, aes(x=Var1, y=log10(Freq))) +
@@ -1071,7 +1070,6 @@ explore.sim.results <- function()
 
         load <- function(fpath)
         {
-            print(fpath)
             d = read.table(fpath, header=F, col.names = c('type', 'operation', 'pagenum', 'cat'))
             return(d)
         }
@@ -1103,19 +1101,24 @@ explore.sim.results <- function()
             return(p)
         }
 
+        get_unique_lba_row <- function(d, datafile)
+        {
+            unique.lba.count = length(unique(subset(d, operation == 'lba_write')$pagenum)) 
+            return(c('lba.cnt'=unique.lba.count, 'datafile'=datafile))
+        }
+
         do_main <- function(expdir)
         {
             plotlist = list()
             files = list.files(expdir, recursive = T, 
                 pattern = "ftlsim.out$", full.names = T)
-            print(files)
+            df.lba = list()
 
             # order so the same bench goes together
             l = strsplit(files, '-')
             l = lapply(l, tail, 1)
             l = unlist(l)
             files = files[order(l)]
-            print(files)
 
             for (f in files ) {
                 d = load_file_from_cache(f, 'load')
@@ -1124,15 +1127,27 @@ explore.sim.results <- function()
 
                 filename = paste(tail(unlist(strsplit(f, "/")), 4), collapse="/")
 
-                p = func(d, datafile=f)
-                p = p + ggtitle(filename)
+                # p = func(d, datafile=f)
+                # p = p + ggtitle(filename)
 
-                print(head(d))
-                p.freq = explore_page_access_freq(subset(d, operation == 'lba_write'))
-                p.freq = p.freq + ggtitle(filename)
+                # p.freq = explore_page_access_freq(subset(d, operation == 'lba_write'))
+                # p.freq = p.freq + ggtitle(filename)
 
-                plotlist = append(plotlist, list(p, p.freq))
+                # plotlist = append(plotlist, list(p, p.freq))
+
+                df.lba = append(df.lba, list(get_unique_lba_row(d, filename)))
             }
+            df.lba = as.data.frame(matrix(unlist(df.lba), ncol=2, byrow=T))
+            names(df.lba) = c("lba.cnt", "datafile")
+            df.lba$lba.cnt = as.numeric(as.character(df.lba$lba.cnt))
+
+            p = ggplot(df.lba, aes(x=datafile, y=lba.cnt))+
+                geom_bar(stat='identity', position='dodge') +
+                theme(axis.text.x = element_text(angle=90)) +
+                coord_flip()
+
+            plotlist = append(plotlist, list(p))
+
             return(plotlist)
         }
         do_main(expdir)
@@ -1142,8 +1157,8 @@ explore.sim.results <- function()
     {
         plotlist = list()
         plotlist = explore.trace(expdir)
-        p = explore.stats(expdir)
-        plotlist = append(plotlist, list(p))
+        # p = explore.stats(expdir)
+        # plotlist = append(plotlist, list(p))
         do.call('grid.arrange', c(plotlist, ncol=1)) 
     }
 
