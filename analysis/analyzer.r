@@ -919,7 +919,6 @@ explore.sim.results.for.meeting.0702 <- function()
 
                 plotlist = append(plotlist, list(p))
 
-
                 break
             }
             print(df.lba)
@@ -1107,6 +1106,25 @@ explore.sim.results <- function()
             return(c('lba.cnt'=unique.lba.count, 'datafile'=datafile))
         }
 
+        parse_filename_to_cols <- function(datafiles)
+        {
+            l = strsplit(as.character(datafiles), '/')
+            l = lapply(l, '[[', 3)
+            l = lapply(l, strsplit, '-')
+            l = lapply(l, '[[', 1)
+            fs = lapply(l, '[', c(1,2))
+            fs = unlist(lapply(fs, paste, collapse='-'))
+
+
+            l = strsplit(as.character(datafiles), '/')
+            l = lapply(l, '[[', 3)
+            l = lapply(l, strsplit, 'test')
+            l = lapply(l, '[[', 1)
+            test = unlist(lapply(l, '[[', c(2)))
+            test = paste('test', test, sep='')
+            return(data.frame(fs=fs, test=test))
+        }
+
         do_main <- function(expdir)
         {
             plotlist = list()
@@ -1140,11 +1158,18 @@ explore.sim.results <- function()
             df.lba = as.data.frame(matrix(unlist(df.lba), ncol=2, byrow=T))
             names(df.lba) = c("lba.cnt", "datafile")
             df.lba$lba.cnt = as.numeric(as.character(df.lba$lba.cnt))
+            cols = parse_filename_to_cols(df.lba$datafile)
+            df.lba = cbind(df.lba, cols)
+            df.lba = subset(df.lba, fs != 'ext4-hybridmap')
+            df.lba$fs = split_column(df.lba$fs, '-')[,1]
+            df.lba$fs = factor(df.lba$fs, levels=c("btrfs", "f2fs", "ext4"))
 
-            p = ggplot(df.lba, aes(x=datafile, y=lba.cnt))+
+            print(df.lba)
+            p = ggplot(df.lba, aes(x=fs, y=lba.cnt))+
                 geom_bar(stat='identity', position='dodge') +
+                facet_grid(~test) +
                 theme(axis.text.x = element_text(angle=90)) +
-                coord_flip()
+                ylab('unique.lba.count')
 
             plotlist = append(plotlist, list(p))
 
