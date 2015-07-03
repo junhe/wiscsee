@@ -1124,7 +1124,7 @@ explore.sim.results <- function()
     # local_main("~/datahouse/ext4-hybridmap-4096/")
     # local_main("~/datahouse/ext4-hybridmap-512/")
     # local_main("~/datahouse/sqlbench-1by1")
-    local_main("~/datahouse/sequential2")
+    local_main("~/datahouse/sequential3")
 }
 
 explore.sim.results.too.new <- function()
