@@ -203,11 +203,13 @@ class Synthetic(Workload):
         wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
         filepath = 'testfile'
         wllist.add_call(name='open', pid=0, path=filepath)
-        for i in range(setting['chunk_count']):
-            offset = setting['chunk_size'] * i
-            size = setting['chunk_size']
-            wllist.add_call(name='write', pid=0, path=filepath,
-                offset=offset, count=size)
+
+        for rep in range(setting['iterations']):
+            for i in range(setting['chunk_count']):
+                offset = setting['chunk_size'] * i
+                size = setting['chunk_size']
+                wllist.add_call(name='write', pid=0, path=filepath,
+                    offset=offset, count=size)
 
         wllist.add_call(name='fsync', pid=0, path=filepath)
         wllist.add_call(name='close', pid=0, path=filepath)
