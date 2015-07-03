@@ -192,7 +192,7 @@ class Sqlbench(Workload):
 
 
 class Synthetic(Workload):
-    def generate_workload(self):
+    def generate_sequential_workload(self):
         setting = self.conf['Synthetic']
         # - fsync switch
         # - chunk size
@@ -213,13 +213,16 @@ class Synthetic(Workload):
         wllist.add_call(name='close', pid=0, path=filepath)
         return wllist
 
-    def run(self):
+    def run_by(self, generator_func):
+        wllist = generator_func()
         tmppath = '/tmp/tmp_workloadfile'
-        wllist = self.generate_workload()
         wllist.save(tmppath)
 
         utils.shcmd("mpirun -np 1 ../wlgen/player {}".format(tmppath))
         utils.shcmd("sync")
+
+    def run(self):
+        self.run_by(self.generate_sequential_workload)
 
     def stop(self):
         pass
