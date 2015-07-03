@@ -407,7 +407,7 @@ def synthetic_on_filesystems():
         "Synthetic" :{
             "chunk_count": 100*2**20/(8*1024),
             "chunk_size" : 8*1024,
-            "iterations" : 3
+            "iterations" : 6
         },
 
         # if you choose LBAGENERATOR for workload_src, the following will
