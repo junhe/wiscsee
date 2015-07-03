@@ -1164,17 +1164,13 @@ explore.sim.results.too.new <- function()
                pattern = "stats", full.names = T)
             ret = data.frame()
             for (f in files) {
+                print(f)
                 d = read.csv(f, header=T, sep=';')
                 d = melt(d)
                 d$file = paste(tail(unlist(strsplit(f, "/")), 2), collapse="/")
-
-                confpath = datafile_to_conffile(f)
-                conf = get_config(confpath)
-                d$bench.to.run = conf[['sqlbench']][['benches_to_run']]
-                d$filesystem = conf[['filesystem']]
-
                 ret = rbind(ret, d)
             }
+            print(ret)
             return(ret)
         }
 
@@ -1185,33 +1181,14 @@ explore.sim.results.too.new <- function()
 
         func <- function(d)
         {
-            d2 = set_missing_to_default(d, 
+            # p = ggplot(d, aes(x=variable, y=value, fill=file)) +
+            d = set_missing_to_default(d, 
                 id_cols=c("file", "variable"), val_col="value",
                 default_val = NA)
-            d2$bench.to.run = NULL
-
-            d1 = ddply(d, .(file), head, 1)
-            d1 = d1[, c('file', 'bench.to.run')]
-            d = merge(d1, d2, by = c('file'))
-
-            l = strsplit(d$file, '/')
-            l = lapply(l, '[[', 1)
-            l = lapply(l, strsplit, '-')
-            l = lapply(l, '[[', 1)
-            l = lapply(l, '[', c(1,2))
-            l = lapply(l, paste, collapse='-')
-            l = unlist(l)
-            d$fs = l
-            d = subset(d, fs != 'ext4-hybridmap')
-            d$file = split_column(d$fs, '-')[,1]
-            d$file = factor(d$file, levels=c('btrfs', 'f2fs', 'ext4'))
-
             p = ggplot(d, aes(x=file, y=value, fill=variable)) +
                 geom_bar(stat='identity', position='dodge') + 
-                facet_grid(~bench.to.run, scale="free_x") +
                 theme(axis.text.x = element_text(angle=90)) +
-                xlab("file system") +
-                ylab("count")
+                coord_flip()
             return(p)
         }
 
@@ -1228,7 +1205,6 @@ explore.sim.results.too.new <- function()
         # do_main("~/datahouse/seqlba_improved_dm_pm_SEQ")
         do_main(expdir)
     }
-
 
 
     explore.trace <- function(expdir)
@@ -1290,25 +1266,6 @@ explore.sim.results.too.new <- function()
             return(c('lba.cnt'=unique.lba.count, 'datafile'=datafile))
         }
 
-        parse_filename_to_cols <- function(datafiles)
-        {
-            l = strsplit(as.character(datafiles), '/')
-            l = lapply(l, '[[', 3)
-            l = lapply(l, strsplit, '-')
-            l = lapply(l, '[[', 1)
-            fs = lapply(l, '[', c(1,2))
-            fs = unlist(lapply(fs, paste, collapse='-'))
-
-
-            l = strsplit(as.character(datafiles), '/')
-            l = lapply(l, '[[', 3)
-            l = lapply(l, strsplit, 'test')
-            l = lapply(l, '[[', 1)
-            test = unlist(lapply(l, '[[', c(2)))
-            test = paste('test', test, sep='')
-            return(data.frame(fs=fs, test=test))
-        }
-
         do_main <- function(expdir)
         {
             plotlist = list()
@@ -1329,31 +1286,25 @@ explore.sim.results.too.new <- function()
 
                 filename = paste(tail(unlist(strsplit(f, "/")), 4), collapse="/")
 
-                # p = func(d, datafile=f)
-                # p = p + ggtitle(filename)
+                p = func(d, datafile=f)
+                p = p + ggtitle(filename)
 
-                # p.freq = explore_page_access_freq(subset(d, operation == 'lba_write'))
-                # p.freq = p.freq + ggtitle(filename)
+                p.freq = explore_page_access_freq(subset(d, operation == 'lba_write'))
+                p.freq = p.freq + ggtitle(filename)
 
-                # plotlist = append(plotlist, list(p, p.freq))
+                plotlist = append(plotlist, list(p, p.freq))
 
                 df.lba = append(df.lba, list(get_unique_lba_row(d, filename)))
             }
             df.lba = as.data.frame(matrix(unlist(df.lba), ncol=2, byrow=T))
             names(df.lba) = c("lba.cnt", "datafile")
-            df.lba$lba.cnt = as.numeric(as.character(df.lba$lba.cnt))
-            cols = parse_filename_to_cols(df.lba$datafile)
-            df.lba = cbind(df.lba, cols)
-            df.lba = subset(df.lba, fs != 'ext4-hybridmap')
-            df.lba$fs = split_column(df.lba$fs, '-')[,1]
-            df.lba$fs = factor(df.lba$fs, levels=c("btrfs", "f2fs", "ext4"))
+            df.lba$lba.cnt = as.numeric(df.lba$lba.cnt)
 
-            print(df.lba)
-            p = ggplot(df.lba, aes(x=fs, y=lba.cnt))+
+            p = ggplot(df.lba, aes(x=datafile, y=lba.cnt))+
                 geom_bar(stat='identity', position='dodge') +
-                facet_grid(~test) +
                 theme(axis.text.x = element_text(angle=90)) +
-                ylab('unique.lba.count')
+                ylab('unique.lba.count') +
+                coord_flip()
 
             plotlist = append(plotlist, list(p))
 
@@ -1366,15 +1317,15 @@ explore.sim.results.too.new <- function()
     {
         plotlist = list()
         plotlist = explore.trace(expdir)
-        # p = explore.stats(expdir)
-        # plotlist = append(plotlist, list(p))
+        p = explore.stats(expdir)
+        plotlist = append(plotlist, list(p))
         do.call('grid.arrange', c(plotlist, ncol=1)) 
     }
 
     # local_main("~/datahouse/long-mdtest/")
     # local_main("~/datahouse/ext4-hybridmap-4096/")
     # local_main("~/datahouse/ext4-hybridmap-512/")
-    local_main("~/datahouse/sqlbench-1by1")
+    local_main("~/datahouse/sequential6")
 }
 
 explore.mywl <- function()
@@ -1711,7 +1662,8 @@ main <- function()
     # explore.madmax.iterate()
     # explore.mail01()
     # explore.websearch()
-    explore.sim.results()
+    # explore.sim.results()
+    explore.sim.results.too.new()
     # explore.sim.results.alter.table.for.meeting.0702()
     # explore.sim.results.for.meeting.0702()
     # explore.mywl()
