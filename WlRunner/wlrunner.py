@@ -68,6 +68,8 @@ class WorkloadRunner(object):
 
             # strat blktrace
             self.blktracer.start_tracing_and_collecting()
+            # make sure (kind of) workload is run after tracing started
+            time.sleep(0.5)
 
             # start Ftrace
             # self.ftrace.set_filter('*f2fs*')
