@@ -201,12 +201,15 @@ class Synthetic(Workload):
         # - chunk filter
         # - access frequency assignment
         wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
+        filepath = 'testfile'
+        wllist.add_call(name='open', pid=0, path=filepath)
         for i in range(setting['chunk_count']):
             offset = setting['chunk_size'] * i
             size = setting['chunk_size']
-            wllist.add_call(name='write', pid=0, path='testfile',
+            wllist.add_call(name='write', pid=0, path=filepath,
                 offset=offset, count=size)
 
+        wllist.add_call(name='close', pid=0, path=filepath)
         return wllist
 
     def run(self):
