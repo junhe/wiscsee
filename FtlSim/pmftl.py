@@ -284,6 +284,7 @@ class PageMapFtl(ftlbuilder.FtlBuilder):
         # The loop below will invalidate all pages in this block
         for page in range(start, end):
             if self.bitmap.is_page_valid(page) == True:
+                self.flash.page_read(page, 'amplified')
                 lba = self.p2l[page]
                 self.write_page(lba, garbage_collect_enable=False,
                     cat='amplified')
