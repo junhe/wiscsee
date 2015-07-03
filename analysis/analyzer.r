@@ -942,9 +942,192 @@ explore.sim.results.for.meeting.0702 <- function()
     local_main("~/datahouse/sqlbench-1by1")
 }
 
-
-
 explore.sim.results <- function()
+{
+    get_config <- function(jsonpath)
+    {
+        doc <- fromJSON(txt=jsonpath)
+        return(doc)
+    }
+
+    datafile_to_conffile <- function(path)
+    {
+        elems = unlist(strsplit(path, '/'))
+        lastindex = length(elems)
+        if ( lastindex == 0 ) {
+            stop('lastindex cannot be 0')
+        }
+        elems[lastindex] = 'config.json'
+        return(paste(elems, collapse='/'))
+    }
+
+    split_column <- function(mycol, splitchar)
+    {
+        mycol = as.character(mycol)
+        splitlist = strsplit(mycol, splitchar, fixed=T)
+        df = ldply(splitlist, as.vector)
+        return(df)
+    }
+
+    # This function plot all .stats files in a directory
+    explore.stats <- function(expdir)
+    {
+        load <- function(dir)
+        {
+            files = list.files(dir, recursive = T, 
+               pattern = "stats", full.names = T)
+            ret = data.frame()
+            for (f in files) {
+                print(f)
+                d = read.csv(f, header=T, sep=';')
+                d = melt(d)
+                d$file = paste(tail(unlist(strsplit(f, "/")), 2), collapse="/")
+                ret = rbind(ret, d)
+            }
+            print(ret)
+            return(ret)
+        }
+
+        clean <- function(d)
+        {
+            return(d)
+        }
+
+        func <- function(d)
+        {
+            # p = ggplot(d, aes(x=variable, y=value, fill=file)) +
+            d = set_missing_to_default(d, 
+                id_cols=c("file", "variable"), val_col="value",
+                default_val = NA)
+            p = ggplot(d, aes(x=file, y=value, fill=variable)) +
+                geom_bar(stat='identity', position='dodge') + 
+                theme(axis.text.x = element_text(angle=90)) +
+                coord_flip()
+            return(p)
+        }
+
+        do_main <- function(dir)
+        {
+            d = load(dir)
+            d = clean(d)
+            func(d)
+        }
+        # do_main("~/datahouse/seq_randstart/")
+        # do_main("~/datahouse/randomlba/")
+        # do_main("~/datahouse/seqlba")
+        # do_main("~/datahouse/seqlba_improved_dm_pm")
+        # do_main("~/datahouse/seqlba_improved_dm_pm_SEQ")
+        do_main(expdir)
+    }
+
+    explore.trace <- function(expdir)
+    {
+        explore_page_access_freq <- function(d)
+        {
+            cnt = as.data.frame(table(d$pagenum))
+            print(head(cnt))
+            freqdist = as.data.frame(table(cnt$Freq))
+            print(summary(freqdist))
+            freqdist$Var1 = as.numeric(freqdist$Var1)
+
+            p = ggplot(freqdist, aes(x=Var1, y=log10(Freq))) +
+                geom_point() +
+                geom_line() +
+                xlab('x is access count, y is number of blocks having this count') +
+                ylab('block count (log10)')
+            return(p)
+        }
+
+        transfer <- function()
+        {
+        }
+
+        load <- function(fpath)
+        {
+            print(fpath)
+            d = read.table(fpath, header=F, col.names = c('type', 'operation', 'pagenum', 'cat'))
+            return(d)
+        }
+
+        clean <- function(d)
+        {
+            return(d)
+        }
+
+        func <- function(d, datafile=NULL)
+        {
+            d$seqid = seq_along(d$operation)
+
+            d$operation = factor(d$operation, levels=c('lba_write', 
+                'page_read', 'page_write', 'lba_discard', 'block_erase'))
+
+            confpath = datafile_to_conffile(datafile)
+            conf = get_config(confpath)
+            flash_npage_per_block = conf[['flash_npage_per_block']]
+            d$pagenum[d$operation == 'block_erase'] = d$pagenum[d$operation == 'block_erase'] *
+                flash_npage_per_block
+
+            p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
+                geom_point() +
+                facet_grid(operation~cat) +
+                scale_colour_manual(
+                  values = c("amplified" = "red",
+                             "user" = "blue"))
+            return(p)
+        }
+
+        do_main <- function(expdir)
+        {
+            plotlist = list()
+            files = list.files(expdir, recursive = T, 
+                pattern = "ftlsim.out$", full.names = T)
+            print(files)
+
+            # order so the same bench goes together
+            l = strsplit(files, '-')
+            l = lapply(l, tail, 1)
+            l = unlist(l)
+            files = files[order(l)]
+            print(files)
+
+            for (f in files ) {
+                d = load_file_from_cache(f, 'load')
+                # d = load(f)
+                d = clean(d)
+
+                filename = paste(tail(unlist(strsplit(f, "/")), 4), collapse="/")
+
+                p = func(d, datafile=f)
+                p = p + ggtitle(filename)
+
+                print(head(d))
+                p.freq = explore_page_access_freq(subset(d, operation == 'lba_write'))
+                p.freq = p.freq + ggtitle(filename)
+
+                plotlist = append(plotlist, list(p, p.freq))
+            }
+            return(plotlist)
+        }
+        do_main(expdir)
+    }
+
+    local_main <- function(expdir) 
+    {
+        plotlist = list()
+        plotlist = explore.trace(expdir)
+        p = explore.stats(expdir)
+        plotlist = append(plotlist, list(p))
+        do.call('grid.arrange', c(plotlist, ncol=1)) 
+    }
+
+    # local_main("~/datahouse/long-mdtest/")
+    # local_main("~/datahouse/ext4-hybridmap-4096/")
+    # local_main("~/datahouse/ext4-hybridmap-512/")
+    # local_main("~/datahouse/sqlbench-1by1")
+    local_main("~/datahouse/sequential")
+}
+
+explore.sim.results.too.new <- function()
 {
     get_config <- function(jsonpath)
     {
@@ -1297,6 +1480,228 @@ explore.function.hist <- function()
     do_main()
 }
 
+
+explore.sim.results.alter.table.for.meeting.0702 <- function()
+{
+    get_config <- function(jsonpath)
+    {
+        doc <- fromJSON(txt=jsonpath)
+        return(doc)
+    }
+
+    datafile_to_conffile <- function(path)
+    {
+        elems = unlist(strsplit(path, '/'))
+        lastindex = length(elems)
+        if ( lastindex == 0 ) {
+            stop('lastindex cannot be 0')
+        }
+        elems[lastindex] = 'config.json'
+        return(paste(elems, collapse='/'))
+    }
+
+    split_column <- function(mycol, splitchar)
+    {
+        mycol = as.character(mycol)
+        splitlist = strsplit(mycol, splitchar, fixed=T)
+        df = ldply(splitlist, as.vector)
+        return(df)
+    }
+
+    # This function plot all .stats files in a directory
+    explore.stats <- function(expdir)
+    {
+        load <- function(dir)
+        {
+            files = list.files(dir, recursive = T, 
+               pattern = "stats", full.names = T)
+            ret = data.frame()
+            for (f in files) {
+                print(f)
+                d = read.csv(f, header=T, sep=';')
+                d = melt(d)
+                d$file = paste(tail(unlist(strsplit(f, "/")), 2), collapse="/")
+
+                confpath = datafile_to_conffile(f)
+                conf = get_config(confpath)
+                d$bench.to.run = conf[['sqlbench']][['benches_to_run']]
+                d$filesystem = conf[['filesystem']]
+
+                ret = rbind(ret, d)
+            }
+            print(ret)
+            return(ret)
+        }
+
+        clean <- function(d)
+        {
+            return(d)
+        }
+
+        func <- function(d)
+        {
+            d2 = set_missing_to_default(d, 
+                id_cols=c("file", "variable"), val_col="value",
+                default_val = NA)
+            d2$bench.to.run = NULL
+
+            d1 = ddply(d, .(file), head, 1)
+            d1 = d1[, c('file', 'bench.to.run')]
+            d = merge(d1, d2, by = c('file'))
+
+            l = strsplit(d$file, '/')
+            l = lapply(l, '[[', 1)
+            l = lapply(l, strsplit, '-')
+            l = lapply(l, '[[', 1)
+            l = lapply(l, '[', c(1,2))
+            l = lapply(l, paste, collapse='-')
+            l = unlist(l)
+            d$fs = l
+            d = subset(d, fs != 'ext4-hybridmap')
+            d$file = split_column(d$fs, '-')[,1]
+            d$file = factor(d$file, levels=c('btrfs', 'f2fs', 'ext4'))
+
+            p = ggplot(d, aes(x=file, y=value, fill=variable)) +
+                geom_bar(stat='identity', position='dodge') + 
+                facet_grid(~bench.to.run, scale="free_x") +
+                theme(axis.text.x = element_text(angle=90)) +
+                xlab("file system") +
+                ylab("count")
+            return(p)
+        }
+
+        do_main <- function(dir)
+        {
+            d = load(dir)
+            d = clean(d)
+            func(d)
+        }
+        # do_main("~/datahouse/seq_randstart/")
+        # do_main("~/datahouse/randomlba/")
+        # do_main("~/datahouse/seqlba")
+        # do_main("~/datahouse/seqlba_improved_dm_pm")
+        # do_main("~/datahouse/seqlba_improved_dm_pm_SEQ")
+        do_main(expdir)
+    }
+
+
+
+    explore.trace <- function(expdir)
+    {
+        explore_page_access_freq <- function(d)
+        {
+            cnt = as.data.frame(table(d$pagenum))
+            print(head(cnt))
+            freqdist = as.data.frame(table(cnt$Freq))
+            print(summary(freqdist))
+            freqdist$Var1 = as.numeric(freqdist$Var1)
+
+            p = ggplot(freqdist, aes(x=Var1, y=Freq)) +
+                geom_point() +
+                geom_line() +
+                scale_y_log10(limits = c(0.01, 10^7)) +
+                xlab('x is access count, y is number of blocks having this count') +
+                ylab('block count')
+            return(p)
+        }
+
+        transfer <- function()
+        {
+        }
+
+        load <- function(fpath)
+        {
+            print(fpath)
+            d = read.table(fpath, header=F, col.names = c('type', 'operation', 'pagenum', 'cat'))
+            return(d)
+        }
+
+        clean <- function(d)
+        {
+            return(d)
+        }
+
+        func <- function(d, datafile=NULL)
+        {
+            d$seqid = seq_along(d$operation)
+
+            d$operation = factor(d$operation, levels=c('lba_write', 
+                'page_read', 'page_write', 'lba_discard', 'block_erase'))
+
+            confpath = datafile_to_conffile(datafile)
+            conf = get_config(confpath)
+            flash_npage_per_block = conf[['flash_npage_per_block']]
+            d$pagenum[d$operation == 'block_erase'] = d$pagenum[d$operation == 'block_erase'] *
+                flash_npage_per_block
+
+            p = ggplot(d, aes(x=seqid, y=pagenum, color=cat)) +
+                geom_point() +
+                facet_grid(operation~cat) +
+                scale_colour_manual(
+                  values = c("amplified" = "red",
+                             "user" = "blue"))
+            return(p)
+        }
+
+        do_main <- function(expdir)
+        {
+            plotlist = list()
+            files = list.files(expdir, recursive = T, 
+                pattern = "ftlsim.out$", full.names = T)
+            print(files)
+
+            # order so the same bench goes together
+            l = strsplit(files, '-')
+            l = lapply(l, tail, 1)
+            l = unlist(l)
+            files = files[order(l)]
+            print(files)
+
+            for (f in files ) {
+                if ( ! grepl('alter-table', f) ) {
+                    next
+                }
+
+                d = load_file_from_cache(f, 'load')
+                # d = load(f)
+                d = clean(d)
+
+                filename = paste(tail(unlist(strsplit(f, "/")), 4), collapse="/")
+
+                cleanfilename = gsub('/', '-', f)
+                p = func(d, datafile=f)
+                p = p + ggtitle(filename)
+                # ggsave(paste(cleanfilename, 'trace.pdf', sep='-'), plot=p, w=10, h=20)
+                ggsave(paste(cleanfilename, 'trace.png', sep='-'), plot=p, w=10, h=20)
+
+                print(head(d))
+                p.freq = explore_page_access_freq(subset(d, operation == 'lba_write'))
+                p.freq = p.freq + ggtitle(filename)
+                ggsave(paste(cleanfilename, 'count.pdf', sep='-'), plot=p.freq, w=12, h=8)
+
+                plotlist = append(plotlist, list(p, p.freq))
+            }
+            return(plotlist)
+        }
+        do_main(expdir)
+    }
+
+    local_main <- function(expdir) 
+    {
+        plotlist = list()
+        plotlist = explore.trace(expdir)
+        # p = explore.stats(expdir)
+        # plotlist = append(plotlist, list(p))
+        # do.call('grid.arrange', c(plotlist, ncol=1)) 
+    }
+
+    # local_main("~/datahouse/long-mdtest/")
+    # local_main("~/datahouse/ext4-hybridmap-4096/")
+    # local_main("~/datahouse/ext4-hybridmap-512/")
+    local_main("~/datahouse/sqlbench-1by1")
+}
+
+
 main <- function()
 {
     # explore.FSJ386323()
@@ -1306,6 +1711,7 @@ main <- function()
     # explore.mail01()
     # explore.websearch()
     explore.sim.results()
+    # explore.sim.results.alter.table.for.meeting.0702()
     # explore.sim.results.for.meeting.0702()
     # explore.mywl()
     # explore.stats()
