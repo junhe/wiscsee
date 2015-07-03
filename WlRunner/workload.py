@@ -3,6 +3,7 @@ import time
 
 import config
 import utils
+import workloadlist
 
 class Workload(object):
     def __init__(self, confobj):
@@ -188,6 +189,36 @@ class Sqlbench(Workload):
 
     def stop(self):
         utils.shcmd("sudo service mysql stop")
+
+
+class Synthetic(Workload):
+    def generate_workload(self):
+        setting = self.conf['Synthetic']
+        # - fsync switch
+        # - chunk size
+        # - chunk count
+        # - chunk order hash
+        # - chunk filter
+        # - access frequency assignment
+        wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
+        for i in range(setting['chunk_count']):
+            offset = setting['chunk_size'] * i
+            size = setting['chunk_size']
+            wllist.add_call(name='write', pid=0, path='testfile',
+                offset=offset, count=size)
+
+        return wllist
+
+    def run(self):
+        tmppath = '/tmp/tmp_workloadfile'
+        wllist = self.generate_workload()
+        wllist.save(tmppath)
+
+        utils.shcmd("mpirun -np 1 ../wlgen/player {}".format(tmppath))
+
+    def stop(self):
+        pass
+
 
 if __name__ == '__main__':
     # tpcc = Tpcc()
