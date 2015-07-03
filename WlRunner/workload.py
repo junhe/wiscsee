@@ -203,6 +203,7 @@ class Synthetic(Workload):
         wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
         filepath = 'testfile'
         wllist.add_call(name='open', pid=0, path=filepath)
+        print setting
         for i in range(setting['chunk_count']):
             offset = setting['chunk_size'] * i
             size = setting['chunk_size']
