@@ -418,11 +418,11 @@ def synthetic_on_filesystems():
         }
     }
 
-    filesystems = ('ext4',)
+    # filesystems = ('ext4',)
     # filesystems = ('f2fs',)
     # filesystems = ('btrfs',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
-    # filesystems = ('ext4', 'btrfs', 'f2fs')
+    filesystems = ('ext4', 'btrfs', 'f2fs')
     for fs in filesystems:
         devsize_mb = 256
         conf = config.Config(confdic)
