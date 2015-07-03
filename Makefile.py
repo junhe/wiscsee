@@ -402,7 +402,8 @@ def synthetic_on_filesystems():
 
         "filesystem"            : "ext4",
 
-        "workload_class"        : "Synthetic",
+        "workload_class"        : "Simple",
+        # "workload_class"        : "Synthetic",
         "Synthetic" :{
             "chunk_count": 4,
             "chunk_size" : 4096
