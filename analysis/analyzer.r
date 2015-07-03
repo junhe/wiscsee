@@ -1030,9 +1030,10 @@ explore.sim.results <- function()
             print(summary(freqdist))
             freqdist$Var1 = as.numeric(freqdist$Var1)
 
-            p = ggplot(freqdist, aes(x=Var1, y=log10(Freq))) +
+            p = ggplot(freqdist, aes(x=Var1, y=Freq)) +
                 geom_point() +
                 geom_line() +
+                scale_y_log10() +
                 xlab('x is access count, y is number of blocks having this count') +
                 ylab('block count (log10)')
             return(p)
@@ -1124,7 +1125,7 @@ explore.sim.results <- function()
     # local_main("~/datahouse/ext4-hybridmap-4096/")
     # local_main("~/datahouse/ext4-hybridmap-512/")
     # local_main("~/datahouse/sqlbench-1by1")
-    local_main("~/datahouse/sequential5")
+    local_main("~/datahouse/sequential6")
 }
 
 explore.sim.results.too.new <- function()
