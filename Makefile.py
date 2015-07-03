@@ -430,7 +430,7 @@ def synthetic_on_filesystems():
         devsize_mb = 256
         conf = config.Config(confdic)
         conf['filesystem'] = fs
-        conf['ftl_type'] = 'hybridmap'
+        # conf['ftl_type'] = 'hybridmap'
         conf['result_dir'] = "/tmp/{}/".format(conf['expname']) + \
             '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
