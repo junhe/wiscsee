@@ -381,7 +381,8 @@ def synthetic_on_filesystems():
         "flash_num_blocks"      : None,
 
         "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
-        "ftl_type" : "hybridmap",
+        # "ftl_type" : "hybridmap",
+        "ftl_type" : "pagemap",
 
         "high_log_block_ratio"       : 0.4,
         "high_data_block_ratio"      : 0.4,
