@@ -219,6 +219,7 @@ class Synthetic(Workload):
         wllist.save(tmppath)
 
         utils.shcmd("mpirun -np 1 ../wlgen/player {}".format(tmppath))
+        utils.shcmd("sync")
 
     def stop(self):
         pass
