@@ -373,7 +373,7 @@ def synthetic_on_filesystems():
         "####################################### Global": "",
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
-        "expname"               : "sequential",
+        "expname"               : "sequential.btrfs",
 
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
@@ -409,7 +409,7 @@ def synthetic_on_filesystems():
         "Synthetic" :{
             "chunk_count": 100*2**20/(8*1024),
             "chunk_size" : 8*1024,
-            "iterations" : 3
+            "iterations" : 1
         },
 
         # if you choose LBAGENERATOR for workload_src, the following will
@@ -423,9 +423,9 @@ def synthetic_on_filesystems():
 
     # filesystems = ('ext4',)
     # filesystems = ('f2fs',)
-    # filesystems = ('btrfs',)
+    filesystems = ('btrfs',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
-    filesystems = ('ext4', 'btrfs', 'f2fs')
+    # filesystems = ('ext4', 'btrfs', 'f2fs')
     for fs in filesystems:
         devsize_mb = 256
         conf = config.Config(confdic)

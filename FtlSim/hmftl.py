@@ -683,7 +683,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 break
             self.recorder.debug( 'next victimblock:', victimblock,
                     'invaratio', self.bitmap.block_invalid_ratio(victimblock))
-            self.gcrec.debug( 'victimblock', victimblock, 'vnv_ratio',
+            self.gcrec.debug( 'victimblock', victimblock, 'inv_ratio',
                 self.bitmap.block_invalid_ratio(victimblock))
             self.recorder.debug( self.bitmap.bitmap )
 
