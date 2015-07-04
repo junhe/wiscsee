@@ -1653,6 +1653,75 @@ explore.sim.results.alter.table.for.meeting.0702 <- function()
     local_main("~/datahouse/sqlbench-1by1")
 }
 
+explore.stack <- function()
+{
+    # this is a refactoring of the ole explore.sim.result. 
+    # subfunction should take data frame as argument, in that case
+    # you don't need to read file every time you call the function
+    # So the process is like
+    # analyze.df (data.frame) {}
+    # analyze.df2 (data.frame) {}
+    # load (file.path)
+    # analyze.file(filepath){
+    #     d = load(filepath)
+    #     analyze(d)
+    #     analyze2(d)
+    # }
+    # analyze.dir(dir.path) {
+    #     for f in file:
+    #         analyze.file(f)
+    #     plot
+    # }
+
+    load.ftlsim.out <- function(fpath)
+    {
+        d = read.table(fpath, header=F, col.names = c('type', 'operation', 'pagenum', 'cat'))
+        return(d)
+    }
+
+    func.sequentiality <- function(d)
+    {
+        # this function returns the number of lba pages (x) that are
+        # accessed right after page (x-1)
+        d = subset(d, operation == 'lba_write')
+        addr.pre.pagenum = d$pagenum - 1
+        size = length(d$pagenum)
+        is.seq = d$pagenum[-size] == addr.pre.pagenum[-1]
+        
+        diff = d$pagenum[-size] - addr.pre.pagenum[-1]
+        diff = diff[ diff != 0 ]
+
+        p = qplot(seq_along(diff), diff)
+        print(p)
+
+        return (c(length(which(is.seq)), length(is.seq)))
+    }
+
+    analyze.dir.ftilsim.out <- function(dir.path)
+    {
+        files = list.files(dir.path, recursive = T, 
+            pattern = "ftlsim.out$", full.names = T)
+
+        # order so the same bench goes together
+        l = strsplit(files, '-')
+        l = lapply(l, tail, 1)
+        l = unlist(l)
+        files = files[order(l)]
+
+        for (f in files ) {
+            d = load_file_from_cache(f, 'load.ftlsim.out')
+            print(f)
+            print(func.sequentiality(d))
+        }
+    }
+
+    local_main <- function()
+    {
+        analyze.dir.ftilsim.out("~/datahouse/sequential7")
+    }
+
+    local_main()
+}
 
 main <- function()
 {
@@ -1663,11 +1732,13 @@ main <- function()
     # explore.mail01()
     # explore.websearch()
     # explore.sim.results()
-    explore.sim.results.too.new()
+    # explore.sim.results.too.new()
     # explore.sim.results.alter.table.for.meeting.0702()
     # explore.sim.results.for.meeting.0702()
     # explore.mywl()
     # explore.stats()
     # explore.function.hist()
+
+    explore.stack()
 }
 main()
