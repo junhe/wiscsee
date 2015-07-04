@@ -222,8 +222,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
     the number of data blocks is below a water mark, we need to do garbage
     collection. We need to merge.
     """
-    def __init__(self, confobj, recorder, flash):
-        super(HybridMapFtl, self).__init__(confobj, recorder, flash)
+    def __init__(self, confobj, recorderobj, flashobj):
+        super(HybridMapFtl, self).__init__(confobj, recorderobj, flashobj)
 
         self.bitmap.initialize()
 
