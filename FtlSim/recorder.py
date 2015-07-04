@@ -7,6 +7,8 @@ FILE_TARGET, STDOUT_TARGET = ('file', 'stdout')
 
 class Recorder(object):
     def __init__(self, output_target, path=None, verbose_level=1):
+        """This can be improved by passing in file descriptor, then you don't
+        need output_target"""
         self.output_target = output_target
         self.path = path
         self.verbose_level = verbose_level

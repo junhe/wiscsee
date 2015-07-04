@@ -7,7 +7,6 @@ import config
 import ftlbuilder
 import recorder
 
-tmprec = recorder.Recorder(recorder.STDOUT_TARGET, verbose_level = 3)
 
 # Design notes
 # What happen when a lba_block -> flash_block mapping exists and we
@@ -239,6 +238,11 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             * self.conf['flash_num_blocks'])
         self.data_high_num_blocks = int(self.conf['high_data_block_ratio']
             * self.conf['flash_num_blocks'])
+
+        # collect GC info
+        self.gcrec = recorder.Recorder(recorder.FILE_TARGET,
+            path=os.path.join(self.conf['result_dir'], 'gc.log'),
+            verbose_level = 3)
 
     def lba_read(self, pagenum):
         self.recorder.put('lba_read', pagenum, 'user')
@@ -678,6 +682,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 break
             self.recorder.debug( 'next victimblock:', victimblock,
                     'invaratio', self.bitmap.block_invalid_ratio(victimblock))
+            self.gcrec.debug( 'victimblock', victimblock, 'vnv_ratio',
+                self.bitmap.block_invalid_ratio(victimblock))
             self.recorder.debug( self.bitmap.bitmap )
 
             self.move_valid_pages(victimblock)
