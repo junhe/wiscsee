@@ -1325,7 +1325,7 @@ explore.sim.results.too.new <- function()
     # local_main("~/datahouse/long-mdtest/")
     # local_main("~/datahouse/ext4-hybridmap-4096/")
     # local_main("~/datahouse/ext4-hybridmap-512/")
-    local_main("~/datahouse/sequential7")
+    local_main("~/datahouse/sequential87")
 }
 
 explore.mywl <- function()
