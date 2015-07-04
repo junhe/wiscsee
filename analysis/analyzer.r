@@ -128,18 +128,18 @@ load_file_from_cache <- function(fpath, reader.funcname)
     # load_file_from_cache('file03', 'myreader')
     
     if ( exists('filecache') == FALSE ) {
-        print('filecache not exist')
+        # print('filecache not exist')
         filecache <<- list()
     } else {
-        print('filecache exist')
+        # print('filecache exist')
     }
     
     if ( exists(fpath, where=filecache) == TRUE ) {
-        print('in cache')
+        # print('in cache')
         return(filecache[[fpath]])
     } else {
         # not in cache
-        print('not in cache')
+        # print('not in cache')
         f = match.fun(reader.funcname)
         d = f(fpath)
         filecache[[fpath]] <<- d
@@ -1694,7 +1694,8 @@ explore.stack <- function()
         p = qplot(seq_along(diff), diff)
         print(p)
 
-        return (c(length(which(is.seq)), length(is.seq)))
+        return (list('sequential writes:'=length(which(is.seq)), 
+                     'total write'=length(is.seq)))
     }
 
     analyze.dir.ftilsim.out <- function(dir.path)
