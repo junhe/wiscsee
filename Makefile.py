@@ -407,7 +407,7 @@ def synthetic_on_filesystems():
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
         "Synthetic" :{
-            "chunk_count": 150*2**20/(8*1024),
+            "chunk_count": 130*2**20/(8*1024),
             "chunk_size" : 8*1024,
             "iterations" : 1
         },
@@ -425,6 +425,7 @@ def synthetic_on_filesystems():
     # filesystems = ('f2fs',)
     # filesystems = ('btrfs',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
+
     filesystems = ('ext4', 'btrfs', 'f2fs')
     for fs in filesystems:
         devsize_mb = 256
