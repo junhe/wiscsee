@@ -1298,7 +1298,7 @@ explore.sim.results.too.new <- function()
             }
             df.lba = as.data.frame(matrix(unlist(df.lba), ncol=2, byrow=T))
             names(df.lba) = c("lba.cnt", "datafile")
-            df.lba$lba.cnt = as.numeric(df.lba$lba.cnt)
+            df.lba$lba.cnt = as.numeric(as.character(df.lba$lba.cnt))
 
             p = ggplot(df.lba, aes(x=datafile, y=lba.cnt))+
                 geom_bar(stat='identity', position='dodge') +
@@ -1673,9 +1673,44 @@ explore.stack <- function()
     #     plot
     # }
 
+    get_config <- function(jsonpath)
+    {
+        doc <- fromJSON(txt=jsonpath)
+        return(doc)
+    }
+
+    datafile_to_conffile <- function(path)
+    {
+        elems = unlist(strsplit(path, '/'))
+        lastindex = length(elems)
+        if ( lastindex == 0 ) {
+            stop('lastindex cannot be 0')
+        }
+        elems[lastindex] = 'config.json'
+        return(paste(elems, collapse='/'))
+    }
+
+    get_conf_by_datafile_path <- function(datafilepath)
+    {
+        confpath = datafile_to_conffile(datafilepath)
+        return( get_config(confpath) )
+    }
+
     load.ftlsim.out <- function(fpath)
     {
         d = read.table(fpath, header=F, col.names = c('type', 'operation', 'pagenum', 'cat'))
+        return(d)
+    }
+
+    load.gc.log <- function(fpath)
+    {
+        # DEBUG victimblock 619 vnv_ratio 1.0
+        print('load.gc.log')
+        d = read.table(fpath, header=F,
+            colClasses = c("NULL", "NULL", "numeric",      "NULL", "numeric"),
+            col.names  = c('',     "",     'victim.block', "",     'inv.ratio')
+            )
+        print(head(d))
         return(d)
     }
 
@@ -1716,9 +1751,37 @@ explore.stack <- function()
         }
     }
 
+    analyze.dir.gc.log <- function(dir.path)
+    {
+        files = list.files(dir.path, recursive = T, 
+            pattern = "gc.log$", full.names = T)
+
+        # order so the same bench goes together
+        l = strsplit(files, '-')
+        l = lapply(l, tail, 1)
+        l = unlist(l)
+        files = files[order(l)]
+
+        d.all = data.frame()
+        for (f in files ) {
+            d = load_file_from_cache(f, 'load.gc.log')
+            conf = get_conf_by_datafile_path(f)
+            d$fs = conf[['filesystem']]
+            d.all = rbind(d.all, d)
+            d.all$fs = as.factor(d.all$fs)
+        }
+
+        d.all$valid.ratio = 1-d.all$inv.ratio
+        p = ggplot(d.all, aes(x=valid.ratio, fill=fs)) +
+            geom_histogram() +
+            facet_grid(fs~.)
+        print(p)
+    }
+
     local_main <- function()
     {
-        analyze.dir.ftilsim.out("~/datahouse/sequential7")
+        # analyze.dir.ftilsim.out("~/datahouse/sequential11")
+        analyze.dir.gc.log("~/datahouse/sequential13")
     }
 
     local_main()
