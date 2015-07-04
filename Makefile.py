@@ -373,7 +373,7 @@ def synthetic_on_filesystems():
         "####################################### Global": "",
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
-        "expname"               : "sequential.btrfs",
+        "expname"               : "sequential",
 
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
@@ -389,7 +389,7 @@ def synthetic_on_filesystems():
         "log_block_upperbound_ratio" : 0.5,
 
         "verbose_level" : 1,
-        "# comment1"      : "output_target: file, stdout",
+        # output_target: file, stdout",
         "output_target" : "file",
 
         "####################################### For WlRunner": "",
@@ -402,7 +402,7 @@ def synthetic_on_filesystems():
 
         "sector_size"           : 512,
 
-        "filesystem"            : "ext4",
+        "filesystem"            : None,
 
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
@@ -423,14 +423,13 @@ def synthetic_on_filesystems():
 
     # filesystems = ('ext4',)
     # filesystems = ('f2fs',)
-    filesystems = ('btrfs',)
+    # filesystems = ('btrfs',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
-    # filesystems = ('ext4', 'btrfs', 'f2fs')
+    filesystems = ('ext4', 'btrfs', 'f2fs')
     for fs in filesystems:
         devsize_mb = 256
         conf = config.Config(confdic)
         conf['filesystem'] = fs
-        # conf['ftl_type'] = 'hybridmap'
         conf['result_dir'] = "/tmp/{}/".format(conf['expname']) + \
             '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
