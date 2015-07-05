@@ -397,8 +397,7 @@ def synthetic_on_filesystems():
         "loop_dev_size_mb"      : None,
         "tmpfs_mount_point"     : "/mnt/tmpfs",
         "fs_mount_point"        : "/mnt/fsonloop",
-        "common_mnt_opts"       : "-o discard",
-
+        "common_mnt_opts"       : ["discard", "nodatacow"],
 
         "sector_size"           : 512,
 
