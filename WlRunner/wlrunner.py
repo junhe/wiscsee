@@ -63,7 +63,7 @@ class WorkloadRunner(object):
             # Prepare file systems
             self.loopdev.create()
             self.fs.make()
-            self.fs.mount(opt=self.conf['common_mnt_opts'])
+            self.fs.mount(opt_list=self.conf['common_mnt_opts'])
             utils.shcmd('sync')
 
             # strat blktrace

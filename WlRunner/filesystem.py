@@ -29,10 +29,17 @@ class FileSystemBase(object):
         "will never be here"
         raise NotImplementedError
 
-    @abc.abstractmethod
-    def mount(self):
-        "will never be here"
-        raise NotImplementedError
+    def mount(self, opt_list=None):
+        if opt_list == None:
+            opt_str = ''
+        else:
+            opt_str = '-o ' + ','.join(opt_list)
+
+        ret = utils.shcmd('mount {opt} {dev} {mp}'.format(
+            opt = opt_str, dev = self.dev, mp = self.mount_point), ignore_error = True)
+        if ret != 0:
+            raise RuntimeError("Failed to mount dev:{} to dir:{}".format(
+                self.dev, self.mount_point))
 
     def umount(self):
         ret = fshelper.umountFS(self.mount_point)
@@ -43,22 +50,11 @@ class FileSystemBase(object):
         common.shcmd("sync")
 
 class Ext4(FileSystemBase):
-    def make(self, opt=None):
-        if opt == None:
-            opt = ''
-        # TODO: so elegant
-        opt = '-b 4096'
-        ret = utils.shcmd('mkfs.ext4 {opt} {dev}'.format(
-            opt=opt, dev = self.dev), ignore_error = True)
+    def make(self):
+        ret = utils.shcmd('mkfs.ext4 -b 4096 {dev}'.format(
+            dev = self.dev), ignore_error = True)
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
-
-    def mount(self, opt=None):
-        ret = utils.shcmd('mount -t ext4 {dev} {mp}'.format(
-            dev = self.dev, mp = self.mount_point), ignore_error = True)
-        if ret != 0:
-            raise RuntimeError("Failed to mount dev:{} to dir:{}".format(
-                self.dev, self.mount_point))
 
 class F2fs(FileSystemBase):
     def make(self, opt=None):
@@ -69,12 +65,6 @@ class F2fs(FileSystemBase):
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
 
-    def mount(self, opt=None):
-        if opt == None:
-            opt = ''
-        return utils.shcmd('mount -t f2fs {dev} {mp}'.format(
-            dev = self.dev, mp = self.mount_point), ignore_error = True)
-
 class Btrfs(FileSystemBase):
     def make(self, opt=None):
         if opt == None:
@@ -83,16 +73,6 @@ class Btrfs(FileSystemBase):
             opt=opt, dev = self.dev), ignore_error = True)
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
-
-    def mount(self, opt=None):
-        if opt == None:
-            opt = ''
-        ret = utils.shcmd('mount -t btrfs {dev} {mp}'.format(
-            dev = self.dev, mp = self.mount_point), ignore_error = True)
-        if ret != 0:
-            raise RuntimeError("Failed to mount dev:{} as btrfs"\
-                .format(self.dev))
-
 
 # loopdev = LoopDevice(dev_path = '/dev/loop0', tmpfs_mount_point = '/mnt/tmpfs',
         # size_mb = 4096)
