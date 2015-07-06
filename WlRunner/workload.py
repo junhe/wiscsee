@@ -238,7 +238,9 @@ class Synthetic(Workload):
 
     def run(self):
         # self.run_by(self.generate_sequential_workload)
-        self.run_by(self.generate_backward_workload)
+        # self.run_by(self.generate_backward_workload)
+        eval("self.run_by({})".format(
+            self.conf['Synthetic']['generating_func']))
 
     def stop(self):
         pass

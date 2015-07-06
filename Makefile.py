@@ -407,6 +407,7 @@ def synthetic_on_filesystems():
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
         "Synthetic" :{
+            "generating_func": "self.generate_sequential_workload",
             "chunk_count": 100*2**20/(8*1024),
             "chunk_size" : 8*1024,
             "iterations" : 3
