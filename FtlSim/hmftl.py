@@ -243,7 +243,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         # collect GC info
         self.gcrec = recorder.Recorder(recorder.FILE_TARGET,
             path=os.path.join(self.conf['result_dir'], 'gc.log'),
-            verbose_level = 3)
+            verbose_level = -1)
 
     def lba_read(self, pagenum):
         self.recorder.put('lba_read', pagenum, 'user')
