@@ -534,11 +534,12 @@ def mysql_change_data_dir():
 
 
 def main(cmd_args):
-    shcmd("sudo -u jun git commit -am 'commit by Makefile: {commitmsg}'"\
-        .format(commitmsg=cmd_args.commitmsg \
-        if cmd_args.commitmsg != None else ''), ignore_error=True)
-    shcmd("sudo -u jun git pull")
-    shcmd("sudo -u jun git push")
+    if cmd_args.nogit == True:
+        shcmd("sudo -u jun git commit -am 'commit by Makefile: {commitmsg}'"\
+            .format(commitmsg=cmd_args.commitmsg \
+            if cmd_args.commitmsg != None else ''), ignore_error=True)
+        shcmd("sudo -u jun git pull")
+        shcmd("sudo -u jun git push")
 
     #function you want to call
     # parse_blkparse('./bigsample', 'myresult')
@@ -561,6 +562,8 @@ def _main():
         )
     parser.add_argument('-t', '--target', action='store')
     parser.add_argument('-c', '--commitmsg', action='store')
+    parser.add_argument('-g', '--git',  action='store_true',
+        help='snapshot the code by git')
     args = parser.parse_args()
 
     if args.target == None:
