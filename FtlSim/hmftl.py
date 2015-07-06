@@ -245,6 +245,10 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             path=os.path.join(self.conf['result_dir'], 'gc.log'),
             verbose_level = -1)
 
+        self.gc_cnt_rec = recorder.Recorder(recorder.FILE_TARGET,
+            path=os.path.join(self.conf['result_dir'], 'gc_cnt.log'),
+            verbose_level = 3)
+
     def lba_read(self, pagenum):
         self.recorder.put('lba_read', pagenum, 'user')
         self.flash.page_read(pagenum, 'user')
@@ -510,7 +514,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         At beginning, the pages in flash_blocknum have mapping in log map
         you want to remove those and add block mapping in block map
         """
-        self.recorder.debug("I am in switch_merge()-~~~~~~~~~~-")
+        self.gc_cnt_rec.debug("GC_SWITCH_MERGE", "victimblock", flash_blocknum)
         flash_pg_start, flash_pg_end = self.conf.block_to_page_range(flash_blocknum)
         lba_pg_start = self.mappings.flash_page_to_lba_page_by_all_means(
             flash_pg_start)
@@ -599,7 +603,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         block with it and move them to a new flash block.
         We need to add mapping for the new flash block
         """
-        self.recorder.debug('I am in full_merge()!!!!!!!!~~~~~~~~~~-!')
+        self.gc_cnt_rec.debug("GC_FULL_MERGE", "victimblock", flash_blocknum)
 
         flash_start, flash_end = self.conf.block_to_page_range(flash_blocknum)
 
@@ -681,6 +685,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 self.recorder.debug( self.bitmap.bitmap )
                 self.recorder.debug('Cannot find a victim block')
                 break
+            self.gc_cnt_rec.debug("GC_LOG victimblock", victimblock, 'invaratio',
+                self.bitmap.block_invalid_ratio(victimblock))
             self.recorder.debug( 'next victimblock:', victimblock,
                     'invaratio', self.bitmap.block_invalid_ratio(victimblock))
             self.gcrec.debug( 'victimblock', victimblock, 'inv_ratio',
