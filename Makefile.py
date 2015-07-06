@@ -373,7 +373,7 @@ def synthetic_on_filesystems():
         "####################################### Global": "",
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
-        "expname"               : "sequential",
+        "expname"               : "backwards",
 
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
@@ -397,7 +397,8 @@ def synthetic_on_filesystems():
         "loop_dev_size_mb"      : None,
         "tmpfs_mount_point"     : "/mnt/tmpfs",
         "fs_mount_point"        : "/mnt/fsonloop",
-        "common_mnt_opts"       : ["discard", "nodatacow"],
+        "common_mnt_opts"       : ["discard"],
+        # "common_mnt_opts"       : ["discard", "nodatacow"],
 
         "sector_size"           : 512,
 
@@ -406,9 +407,9 @@ def synthetic_on_filesystems():
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
         "Synthetic" :{
-            "chunk_count": 130*2**20/(8*1024),
+            "chunk_count": 100*2**20/(8*1024),
             "chunk_size" : 8*1024,
-            "iterations" : 1
+            "iterations" : 3
         },
 
         # if you choose LBAGENERATOR for workload_src, the following will

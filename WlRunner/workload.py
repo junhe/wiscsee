@@ -194,18 +194,31 @@ class Sqlbench(Workload):
 class Synthetic(Workload):
     def generate_sequential_workload(self):
         setting = self.conf['Synthetic']
-        # - fsync switch
-        # - chunk size
-        # - chunk count
-        # - chunk order hash
-        # - chunk filter
-        # - access frequency assignment
+
         wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
         filepath = 'testfile'
         wllist.add_call(name='open', pid=0, path=filepath)
 
         for rep in range(setting['iterations']):
             for i in range(setting['chunk_count']):
+                offset = setting['chunk_size'] * i
+                size = setting['chunk_size']
+                wllist.add_call(name='write', pid=0, path=filepath,
+                    offset=offset, count=size)
+            wllist.add_call(name='fsync', pid=0, path=filepath)
+
+        wllist.add_call(name='close', pid=0, path=filepath)
+        return wllist
+
+    def generate_backward_workload(self):
+        setting = self.conf['Synthetic']
+
+        wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
+        filepath = 'testfile'
+        wllist.add_call(name='open', pid=0, path=filepath)
+
+        for rep in range(setting['iterations']):
+            for i in reversed(range(setting['chunk_count'])):
                 offset = setting['chunk_size'] * i
                 size = setting['chunk_size']
                 wllist.add_call(name='write', pid=0, path=filepath,
@@ -224,7 +237,8 @@ class Synthetic(Workload):
         utils.shcmd("sync")
 
     def run(self):
-        self.run_by(self.generate_sequential_workload)
+        # self.run_by(self.generate_sequential_workload)
+        self.run_by(self.generate_backward_workload)
 
     def stop(self):
         pass
