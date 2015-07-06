@@ -1,4 +1,5 @@
 import json
+import math
 import os
 
 class Config(dict):
@@ -27,10 +28,11 @@ class Config(dict):
         "This is the path to output parsed blkparse results"
         return os.path.join(self['result_dir'], 'blkparse-events-for-ftlsim.txt')
 
-    def byte_to_pagenum(self, offset):
+    def byte_to_pagenum(self, offset, force_alignment = True):
         "offset to page number"
-        assert offset % self['flash_page_size'] == 0, \
-                'offset: {off}, page_size: {ps}'.format(off=offset, ps = flash_page_size)
+        if force_alignment and offset % self['flash_page_size'] != 0:
+            raise RuntimeError('offset: {off}, page_size: {ps}'.format(
+                off=offset, ps = self['flash_page_size']))
         return offset / self['flash_page_size']
 
     def page_to_block(self, pagenum):
@@ -55,13 +57,19 @@ class Config(dict):
     def total_num_pages(self):
         return self['flash_npage_per_block'] * self['flash_num_blocks']
 
-    def off_size_to_page_list(self, off, size):
-        assert size % self['flash_page_size'] == 0, \
-            'size:{}, flash_page_size:{}'.format(size, self['flash_page_size'])
-        npages = size / self['flash_page_size']
-        start_page = self.byte_to_pagenum(off)
+    def off_size_to_page_list(self, off, size, force_alignment = True):
+        if force_alignment:
+            assert size % self['flash_page_size'] == 0, \
+                'size:{}, flash_page_size:{}'.format(size, self['flash_page_size'])
+            npages = size / self['flash_page_size']
+            start_page = self.byte_to_pagenum(off)
 
-        return range(start_page, start_page+npages)
+            return range(start_page, start_page+npages)
+        else:
+            start_page = self.byte_to_pagenum(off, force_alignment = False)
+            npages = int(math.ceil(float(size) / self['flash_page_size']))
+
+            return range(start_page, start_page+npages)
 
     def get_output_file_path(self):
         return os.path.join(self['result_dir'], 'ftlsim.out')

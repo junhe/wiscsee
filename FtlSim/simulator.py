@@ -50,17 +50,24 @@ class Simulator(object):
             flash.Flash(recorder = self.rec))
 
     def process_event(self, event):
-        pages = self.conf.off_size_to_page_list(event['offset'], event['size'])
-
         if event['operation'] == 'read':
+            pages = self.conf.off_size_to_page_list(event['offset'],
+                event['size'], force_alignment = False)
             for page in pages:
                 self.ftl.lba_read(page)
         elif event['operation'] == 'write':
+            pages = self.conf.off_size_to_page_list(event['offset'],
+                event['size'])
             for page in pages:
                 self.ftl.lba_write(page)
         elif event['operation'] == 'discard':
+            pages = self.conf.off_size_to_page_list(event['offset'],
+                event['size'])
             for page in pages:
                 self.ftl.lba_discard(page)
+        else:
+            raise RuntimeError("operation '{}' is not supported".format(
+                event['operation']))
 
     def run(self, event_line_iter):
         # This should be the only place that we load config
