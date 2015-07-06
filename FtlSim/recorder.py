@@ -13,6 +13,7 @@ class Recorder(object):
         self.path = path
         self.verbose_level = verbose_level
         self.counter = {}
+        self.put_and_count_counter = {}
 
         if self.output_target == FILE_TARGET:
             utils.prepare_dir_for_path(path)
@@ -28,6 +29,9 @@ class Recorder(object):
             # only write stats when we output to file
             stats_path = '.'.join((self.path, 'stats'))
             utils.table_to_file([self.counter], stats_path)
+
+            path2 = '.'.join((self.path, 'put_and_count.stats'))
+            utils.table_to_file([self.put_and_count_counter], path2)
 
     def output(self, *args):
         line = ' '.join( str(x) for x in args)
@@ -52,6 +56,13 @@ class Recorder(object):
 
         if self.verbose_level >= 1:
             self.output('RECORD', operation, page_num, category)
+
+    def put_and_count(self, item, *args ):
+        """ The first parameter will be counted """
+        self.put_and_count_counter[item] = self.put_and_count_counter.setdefault(item, 0) + 1
+
+        if self.verbose_level >= 1:
+            self.output('PUTCOUNT', item, *args)
 
     def warning(self, *args):
         if self.verbose_level >= 2:
