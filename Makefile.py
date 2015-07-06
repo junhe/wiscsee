@@ -534,7 +534,7 @@ def mysql_change_data_dir():
 
 
 def main(cmd_args):
-    if cmd_args.nogit == True:
+    if cmd_args.git == True:
         shcmd("sudo -u jun git commit -am 'commit by Makefile: {commitmsg}'"\
             .format(commitmsg=cmd_args.commitmsg \
             if cmd_args.commitmsg != None else ''), ignore_error=True)
