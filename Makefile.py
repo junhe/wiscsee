@@ -373,7 +373,7 @@ def synthetic_on_filesystems():
         "####################################### Global": "",
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
-        "expname"               : "sequential",
+        "expname"               : "backwards.blktrace.right",
 
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
