@@ -686,7 +686,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 self.recorder.debug( self.bitmap.bitmap )
                 self.recorder.debug('Cannot find a victim block')
                 break
-            self.gc_cnt_rec.put_and_count("GC_LOG victimblock", victimblock,
+            self.gc_cnt_rec.put_and_count("GC_LOG", "victimblock", victimblock,
                     'invaratio', self.bitmap.block_invalid_ratio(victimblock))
             self.recorder.debug( 'next victimblock:', victimblock,
                     'invaratio', self.bitmap.block_invalid_ratio(victimblock))
