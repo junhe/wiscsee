@@ -514,7 +514,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         At beginning, the pages in flash_blocknum have mapping in log map
         you want to remove those and add block mapping in block map
         """
-        self.gc_cnt_rec.debug("GC_SWITCH_MERGE", "victimblock", flash_blocknum)
+        self.gc_cnt_rec.put_and_count("GC_SWITCH_MERGE", "victimblock", flash_blocknum)
         flash_pg_start, flash_pg_end = self.conf.block_to_page_range(flash_blocknum)
         lba_pg_start = self.mappings.flash_page_to_lba_page_by_all_means(
             flash_pg_start)
@@ -603,7 +603,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         block with it and move them to a new flash block.
         We need to add mapping for the new flash block
         """
-        self.gc_cnt_rec.debug("GC_FULL_MERGE", "victimblock", flash_blocknum)
+        self.gc_cnt_rec.put_and_count("GC_FULL_MERGE", "victimblock",
+            flash_blocknum)
 
         flash_start, flash_end = self.conf.block_to_page_range(flash_blocknum)
 
@@ -685,8 +686,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 self.recorder.debug( self.bitmap.bitmap )
                 self.recorder.debug('Cannot find a victim block')
                 break
-            self.gc_cnt_rec.debug("GC_LOG victimblock", victimblock, 'invaratio',
-                self.bitmap.block_invalid_ratio(victimblock))
+            self.gc_cnt_rec.put_and_count("GC_LOG victimblock", victimblock,
+                    'invaratio', self.bitmap.block_invalid_ratio(victimblock))
             self.recorder.debug( 'next victimblock:', victimblock,
                     'invaratio', self.bitmap.block_invalid_ratio(victimblock))
             self.gcrec.debug( 'victimblock', victimblock, 'inv_ratio',
