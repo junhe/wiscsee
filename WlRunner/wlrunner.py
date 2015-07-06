@@ -62,15 +62,21 @@ class WorkloadRunner(object):
         try:
             # Prepare file systems
             self.loopdev.create()
-            self.fs.make()
-            self.fs.mount(opt_list=self.conf['common_mnt_opts'])
-            utils.shcmd('sync')
 
             # strat blktrace
+            # You have to start blktrace before making file system
+            # Otherwise, the making and mounting will NOT be simulated
+            # by FtlSim
             self.blktracer.start_tracing_and_collecting()
             while self.blktracer.proc == None:
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
+
+            self.fs.make()
+            self.fs.mount(opt_list=self.conf['common_mnt_opts'])
+            utils.shcmd('sync')
+
+
 
             # start Ftrace
             # self.ftrace.set_filter('*f2fs*')
