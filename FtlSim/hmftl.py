@@ -514,7 +514,9 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         At beginning, the pages in flash_blocknum have mapping in log map
         you want to remove those and add block mapping in block map
         """
-        self.gc_cnt_rec.put_and_count("GC_SWITCH_MERGE", "victimblock", flash_blocknum)
+        self.gc_cnt_rec.put_and_count("GC_SWITCH_MERGE", "victimblock", flash_blocknum,
+                'invaratio', self.bitmap.block_invalid_ratio(flash_blocknum))
+
         flash_pg_start, flash_pg_end = self.conf.block_to_page_range(flash_blocknum)
         lba_pg_start = self.mappings.flash_page_to_lba_page_by_all_means(
             flash_pg_start)
@@ -603,8 +605,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         block with it and move them to a new flash block.
         We need to add mapping for the new flash block
         """
-        self.gc_cnt_rec.put_and_count("GC_FULL_MERGE", "victimblock",
-            flash_blocknum)
+        self.gc_cnt_rec.put_and_count("GC_FULL_MERGE", "victimblock", flash_blocknum,
+                'invaratio', self.bitmap.block_invalid_ratio(flash_blocknum))
 
         flash_start, flash_end = self.conf.block_to_page_range(flash_blocknum)
 
@@ -649,8 +651,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         try partial merge
         try full merge
         """
-        self.recorder.debug('I am in merge_log_block()')
-
         if self.is_switch_mergable(flash_blocknum):
             self.switch_merge(flash_blocknum)
         elif self.is_partial_mergable(flash_blocknum):
@@ -688,11 +688,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 break
             self.gc_cnt_rec.put_and_count("GC_LOG", "victimblock", victimblock,
                     'invaratio', self.bitmap.block_invalid_ratio(victimblock))
-            self.recorder.debug( 'next victimblock:', victimblock,
-                    'invaratio', self.bitmap.block_invalid_ratio(victimblock))
-            self.gcrec.debug( 'victimblock', victimblock, 'inv_ratio',
-                self.bitmap.block_invalid_ratio(victimblock))
-            self.recorder.debug( self.bitmap.bitmap )
 
             self.move_valid_pages(victimblock)
             #block erasure is always counted as amplified
@@ -716,22 +711,16 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.recorder.debug('============garbage_collect_log_blocks======================garbage collecting ends')
 
     def garbage_collect_merge(self):
-        self.recorder.debug('-----------garbage_collect_merge()-------------------------garbage collecting')
-        self.debug()
         while self.need_garbage_collect_log():
             victimblock = self.next_victim_log_block_to_merge()
             if victimblock == None:
                 self.recorder.debug( self.bitmap.bitmap )
                 self.recorder.debug('Cannot find a victim block')
                 break
-            self.recorder.debug( 'next victimblock:', victimblock,
-                    'invaratio', self.bitmap.block_invalid_ratio(victimblock))
-            self.recorder.debug( self.bitmap.bitmap )
 
             # The following function may trigger any type of merge
             self.merge_log_block(victimblock)
 
-        self.recorder.debug('============garbage_collect_merge()======================garbage collecting ends')
 
     def garbage_collect_data_blocks(self):
         """
