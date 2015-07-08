@@ -461,12 +461,20 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         return GcDecider(self)
 
     def garbage_collect(self):
+        # it is worth doing the most cost effective work first -
+        # simply reclaim all DATA blocks without valid pages
+        self.garbage_collect_data_blocks()
+
         self.garbage_collect_log_blocks()
         self.garbage_collect_merge()
         self.garbage_collect_data_blocks()
 
     def next_victim_log_block_to_merge(self):
-        # use stupid for the prototype
+        """
+        Return the block with the highest invalid ratio
+        Return None if there is no block in log_usedblocks
+        use stupid for the prototype
+        """
         maxratio = -1
         maxblock = None
         # we don't want usedblocks[-1] because it is the one in use, newly popped block
@@ -756,6 +764,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
     def garbage_collect_merge(self):
         decider = self.create_gc_decider()
         while decider.need_log_block_gc():
+            # Note that it is possible that block 1 is full merged
+            # but block 2 is switch merged
             victimblock = self.next_victim_log_block_to_merge()
             if victimblock == None:
                 self.recorder.debug( self.bitmap.bitmap )
@@ -763,6 +773,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                 break
 
             # The following function may trigger any type of merge
+            # for this one block
             self.merge_log_block(victimblock)
 
 
