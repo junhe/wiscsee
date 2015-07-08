@@ -207,6 +207,48 @@ class HybridBlockPool(object):
             ' '.join('log_usedblocks', repr(self.log_usedblocks)) + '\n' \
             ' '.join('data_usedblocks', repr(self.data_usedblocks)) + '\n'
 
+class GcDecider(object):
+    """
+    It decides whether we should do garbage collection. The decision
+    is based on the number of used log blocks.
+
+    This should be used as a local variable so the instance will be
+    destroyed after each use. So we don't need to worry about global
+    states.
+    """
+    def __init__(self, ftlobj):
+        if not isinstance(ftlobj, HybridMapFtl):
+            raise TypeError('ftlobj is not of Type HybridMapFtl')
+
+        self.call_count = 0
+        self.ftlobj = ftlobj
+
+    def need_log_block_gc(self):
+        """
+        when called for the first time, compare used log blocks to
+        high threshold.
+        After the first time, compare used log blocks to low threshold
+        """
+        doit = None
+        if self.call_count == 0:
+            # first time
+            if len(self.ftlobj.block_pool.log_usedblocks)\
+                >= self.ftlobj.log_high_num_blocks:
+                doit = True
+            else:
+                doit =  False
+        else:
+            # do GC until used blocks are less than low water mark
+            if len(self.ftlobj.block_pool.log_usedblocks)\
+                >= self.ftlobj.log_low_num_blocks:
+                doit = True
+            else:
+                doit =  False
+
+        self.call_count += 1
+        return doit
+
+
 
 class HybridMapFtl(ftlbuilder.FtlBuilder):
     """
@@ -237,6 +279,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
         self.log_high_num_blocks = int(self.conf['high_log_block_ratio']
             * self.conf['flash_num_blocks'])
+        self.log_low_num_blocks = self.log_high_num_blocks * 0.8
         self.data_high_num_blocks = int(self.conf['high_data_block_ratio']
             * self.conf['flash_num_blocks'])
 
@@ -396,7 +439,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         if garbage_collect_enable and self.need_garbage_collection():
             self.garbage_collect()
 
-        # assert self.is_sanity_check_ok()
 
     ############################# Garbage Collection ##########################
     def need_garbage_collection(self):
@@ -406,22 +448,14 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         else:
             return False
 
-    def need_garbage_collect_log(self):
-        if len(self.block_pool.log_usedblocks) >= self.log_high_num_blocks:
-            return True
-        else:
-            return False
+
+    def create_gc_decider(self):
+        return GcDecider(self)
 
     def garbage_collect(self):
-        self.recorder.debug('************************************************************')
-        self.recorder.debug('****************** start ***********************************')
         self.garbage_collect_log_blocks()
         self.garbage_collect_merge()
         self.garbage_collect_data_blocks()
-        self.debug()
-        self.recorder.debug('******************** end *********************************')
-        self.recorder.debug('**********************************************************')
-
 
     def next_victim_log_block_to_merge(self):
         # use stupid for the prototype
@@ -672,11 +706,12 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             3. clean data blocks: this removes data blocks without valid pages
                 - garbage_collect_data_blocks()
         """
-        self.recorder.debug('-----------garbage_collect_log_blocks-------------------------garbage collecting')
 
         lastused = len(self.block_pool.log_usedblocks)
         cnt = 0
-        while self.need_garbage_collect_log():
+        decider = self.create_gc_decider()
+        # while self.need_garbage_collect_log():
+        while decider.need_log_block_gc():
             # used too many log blocks, need to garbage collect some to
             # free some, hopefully
             victimblock = self.next_victim_log_block()
@@ -711,7 +746,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.recorder.debug('============garbage_collect_log_blocks======================garbage collecting ends')
 
     def garbage_collect_merge(self):
-        while self.need_garbage_collect_log():
+        decider = self.create_gc_decider()
+        while decider.need_log_block_gc():
             victimblock = self.next_victim_log_block_to_merge()
             if victimblock == None:
                 self.recorder.debug( self.bitmap.bitmap )
