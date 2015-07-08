@@ -373,7 +373,7 @@ def synthetic_on_filesystems():
         "####################################### Global": "",
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
-        "expname"               : "sequential.blktrace.right.btrfs",
+        "expname"               : "improved.gc",
 
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
@@ -397,8 +397,8 @@ def synthetic_on_filesystems():
         "loop_dev_size_mb"      : None,
         "tmpfs_mount_point"     : "/mnt/tmpfs",
         "fs_mount_point"        : "/mnt/fsonloop",
-        # "common_mnt_opts"       : ["discard"],
-        "common_mnt_opts"       : ["discard", "nodatacow"],
+        "common_mnt_opts"       : ["discard"],
+        # "common_mnt_opts"       : ["discard", "nodatacow"],
 
         "sector_size"           : 512,
 
@@ -425,10 +425,8 @@ def synthetic_on_filesystems():
 
     # filesystems = ('ext4',)
     # filesystems = ('f2fs',)
-    filesystems = ('btrfs',)
-    # filesystems = ('ext4', 'btrfs', 'f2fs')
-
-    # filesystems = ('ext4', 'btrfs', 'f2fs')
+    # filesystems = ('btrfs',)
+    filesystems = ('ext4', 'btrfs', 'f2fs')
     for fs in filesystems:
         devsize_mb = 256
         conf = config.Config(confdic)
