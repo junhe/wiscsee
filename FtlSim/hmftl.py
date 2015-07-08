@@ -241,13 +241,13 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             * self.conf['flash_num_blocks'])
 
         # collect GC info
-        self.gcrec = recorder.Recorder(recorder.FILE_TARGET,
-            path=os.path.join(self.conf['result_dir'], 'gc.log'),
-            verbose_level = -1)
+        # self.gcrec = recorder.Recorder(recorder.FILE_TARGET,
+            # path=os.path.join(self.conf['result_dir'], 'gc.log'),
+            # verbose_level = -1)
 
         self.gc_cnt_rec = recorder.Recorder(recorder.FILE_TARGET,
             path=os.path.join(self.conf['result_dir'], 'gc_cnt.log'),
-            verbose_level = -1)
+            verbose_level = 3)
 
     def lba_read(self, pagenum):
         self.recorder.put('lba_read', pagenum, 'user')
