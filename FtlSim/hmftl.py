@@ -248,6 +248,14 @@ class GcDecider(object):
         self.call_count += 1
         return doit
 
+    def debug_info(self):
+        info = "log_usedblocks: {}, log_high_num_blocks: {} "\
+            "log_low_num_blocks: {}".format(
+            len(self.ftlobj.block_pool.log_usedblocks),
+            self.ftlobj.log_high_num_blocks,
+            self.ftlobj.log_low_num_blocks)
+        return info
+
 
 
 class HybridMapFtl(ftlbuilder.FtlBuilder):
