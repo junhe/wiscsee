@@ -456,7 +456,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         else:
             return False
 
-
     def create_gc_decider(self):
         return GcDecider(self)
 
@@ -722,7 +721,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             3. clean data blocks: this removes data blocks without valid pages
                 - garbage_collect_data_blocks()
         """
-
+        self.gc_cnt_rec.debug("entering garbage_collect_log_blocks()")
         lastused = len(self.block_pool.log_usedblocks)
         cnt = 0
         decider = self.create_gc_decider()
@@ -734,8 +733,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             if victimblock == None:
                 # if next_victim_block() return None, it means
                 # no block can be a victim
-                self.recorder.debug( self.bitmap.bitmap )
-                self.recorder.debug('Cannot find a victim block')
+                self.gc_cnt_rec.debug("No victim block can be found "\
+                    "at garbage_collect_log_blocks()")
                 break
             self.gc_cnt_rec.put_and_count("GC_LOG", "victimblock", victimblock,
                     'invaratio', self.bitmap.block_invalid_ratio(victimblock))
@@ -759,30 +758,29 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
                     break
                 lastused = len(self.block_pool.log_usedblocks)
 
-        self.recorder.debug('============garbage_collect_log_blocks======================garbage collecting ends')
-
     def garbage_collect_merge(self):
+        self.gc_cnt_rec.debug("entering garbage_collect_merge()")
         decider = self.create_gc_decider()
         while decider.need_log_block_gc():
             # Note that it is possible that block 1 is full merged
             # but block 2 is switch merged
             victimblock = self.next_victim_log_block_to_merge()
             if victimblock == None:
-                self.recorder.debug( self.bitmap.bitmap )
-                self.recorder.debug('Cannot find a victim block')
+                self.gc_cnt_rec.debug("No USED block can be found "\
+                    "at garbage_collect_merge()")
                 break
 
             # The following function may trigger any type of merge
             # for this one block
             self.merge_log_block(victimblock)
+        self.gc_cnt_rec.debug(decider.debug_info())
+        self.gc_cnt_rec.debug("leaving garbage_collect_merge()")
 
 
     def garbage_collect_data_blocks(self):
         """
         When needed, we recall all blocks with no valid page
         """
-        self.recorder.debug('-----------------garbage_collect_data_blocks-------------------garbage collecting')
-
         block_to_clean = self.next_victim_data_block()
         while block_to_clean != None:
             self.erase_block(block_to_clean, 'amplified')
