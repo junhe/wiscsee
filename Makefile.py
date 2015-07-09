@@ -373,7 +373,7 @@ def synthetic_on_filesystems():
         "####################################### Global": "",
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
-        "expname"               : "higher.mark",
+        "expname"               : "backwards.impr.gc",
         "time"                  : None,
 
         "####################################### For FtlSim": "",
@@ -385,7 +385,7 @@ def synthetic_on_filesystems():
         "ftl_type" : "hybridmap",
         # "ftl_type" : "pagemap",
 
-        "high_log_block_ratio"       : 0.8,
+        "high_log_block_ratio"       : 0.4,
         "high_data_block_ratio"      : 0.4,
         "hybridmapftl": {
             "low_log_block_ratio": 0.32
@@ -410,8 +410,8 @@ def synthetic_on_filesystems():
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
         "Synthetic" :{
-            "generating_func": "self.generate_sequential_workload",
-            # "generating_func": "self.generate_backward_workload",
+            # "generating_func": "self.generate_sequential_workload",
+            "generating_func": "self.generate_backward_workload",
             "chunk_count": 100*2**20/(8*1024),
             "chunk_size" : 8*1024,
             "iterations" : 3
