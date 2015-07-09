@@ -238,7 +238,7 @@ class Synthetic(Workload):
 
         random.seed(1)
         random_seq = range(setting['chunk_count'])
-        random_seq = random.shuffle(random_seq)
+        random.shuffle(random_seq)
 
         for rep in range(setting['iterations']):
             for i in random_seq:
