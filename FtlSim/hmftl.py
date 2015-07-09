@@ -60,6 +60,10 @@ class HybridMapping():
         # for log page
         self.log_page_l2p = bidict.bidict()
 
+        self.rec = recorder.Recorder(recorder.FILE_TARGET,
+            path=os.path.join(self.conf['result_dir'], 'hybridmapping.log'),
+            verbose_level = 3)
+
     def has_lba_block(self, lba_block):
         return lba_block in self.data_blk_l2p
 
@@ -147,7 +151,12 @@ class HybridMapping():
                 "{lba_page}->{flash_page}. But flash page {flash_page} "\
                 "already exists".format(lba_page = lba_page,
                 flash_page = flash_page))
+
+        self.rec.put_and_count("add_log_page_mapping", lba_page, flash_page)
         self.log_page_l2p[lba_page] = flash_page
+
+    def rec_from_outside(self, op, lba_page, flash_page):
+        self.rec.put_and_count(op, lba_page, flash_page)
 
     def remove_log_page_mapping(self, lba_page=None, flash_page=None):
         "The mapping must exist. bidict should raise an exception."
@@ -160,6 +169,8 @@ class HybridMapping():
             del self.log_page_l2p[lba_page]
         if flash_page != None:
             del self.log_page_l2p[:flash_page]
+
+        self.rec.put_and_count("remove_log_page_mapping", lba_page, flash_page)
 
 class HybridBlockPool(object):
     def __init__(self, num_blocks):
@@ -440,6 +451,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         # writing this lba_pagenum could be an overwrite
         self.invalidate_lba_page(lba_pagenum)
 
+        self.mappings.rec_from_outside("user_write", lba_pagenum, toflashpage)
         self.mappings.add_log_page_mapping(lba_page=lba_pagenum, flash_page=toflashpage)
         self.bitmap.validate_page(toflashpage)
 
