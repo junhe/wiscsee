@@ -374,6 +374,7 @@ def synthetic_on_filesystems():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         "expname"               : "higher.mark",
+        "time"                  : time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime()),
 
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
