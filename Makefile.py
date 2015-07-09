@@ -427,8 +427,8 @@ def synthetic_on_filesystems():
         }
     }
 
-    filesystems = ('ext4',)
-    # filesystems = ('f2fs',)
+    # filesystems = ('ext4',)
+    filesystems = ('f2fs', 'btrfs')
     # filesystems = ('btrfs',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     for fs in filesystems:
