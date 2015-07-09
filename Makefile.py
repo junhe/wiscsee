@@ -373,7 +373,7 @@ def synthetic_on_filesystems():
         "####################################### Global": "",
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
-        "expname"               : "improved.gc",
+        "expname"               : "higher.mark",
 
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
@@ -384,7 +384,7 @@ def synthetic_on_filesystems():
         "ftl_type" : "hybridmap",
         # "ftl_type" : "pagemap",
 
-        "high_log_block_ratio"       : 0.4,
+        "high_log_block_ratio"       : 0.8,
         "high_data_block_ratio"      : 0.4,
         "hybridmapftl": {
             "low_log_block_ratio": 0.32
