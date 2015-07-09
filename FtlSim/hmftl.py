@@ -324,14 +324,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         self.recorder.put('lba_discard', pagenum, 'user')
         self.invalidate_lba_page(pagenum)
 
-    def is_log_map_overflow(self):
-        "it checks if there are too many log page mapping"
-        if len(self.block_pool.log_usedblocks) > \
-            self.conf['log_block_upperbound_ratio'] * self.conf['flash_num_blocks']:
-            return True
-        else:
-            return False
-
     # basic operations
     def read_page(self, pagenum, cat):
         self.flash.page_read(pagenum, cat)
@@ -881,11 +873,6 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         if self.is_block_total_ok() == False:
             self.recorder.debug("self.is_block_total_ok() is False")
             return False
-
-        # log block is not overflow
-        # if self.is_log_map_overflow() == True:
-            # self.recorder.debug("self.is_log_map_overflow() is True")
-            # return False
 
         return True
 
