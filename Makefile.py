@@ -374,7 +374,7 @@ def synthetic_on_filesystems():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         "expname"               : "higher.mark",
-        "time"                  : time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime()),
+        "time"                  : None,
 
         "####################################### For FtlSim": "",
         "flash_page_size"       : 4096,
@@ -434,6 +434,7 @@ def synthetic_on_filesystems():
         devsize_mb = 256
         conf = config.Config(confdic)
         conf['filesystem'] = fs
+        conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
         conf['result_dir'] = "/tmp/{}/".format(conf['expname']) + \
             '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
