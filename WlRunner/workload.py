@@ -228,6 +228,28 @@ class Synthetic(Workload):
         wllist.add_call(name='close', pid=0, path=filepath)
         return wllist
 
+    def generate_random_workload(self):
+        setting = self.conf['Synthetic']
+
+        wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
+        filepath = 'testfile'
+        wllist.add_call(name='open', pid=0, path=filepath)
+
+        random.seed(1)
+        random_seq = range(setting['chunk_count'])
+        random_seq = random.shuffle(random_seq)
+
+        for rep in range(setting['iterations']):
+            for i in random_seq:
+                offset = setting['chunk_size'] * i
+                size = setting['chunk_size']
+                wllist.add_call(name='write', pid=0, path=filepath,
+                    offset=offset, count=size)
+                wllist.add_call(name='fsync', pid=0, path=filepath)
+
+        wllist.add_call(name='close', pid=0, path=filepath)
+        return wllist
+
     def run_by(self, generator_func):
         wllist = generator_func()
         tmppath = '/tmp/tmp_workloadfile'
