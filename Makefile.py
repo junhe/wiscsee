@@ -373,7 +373,7 @@ def synthetic_on_filesystems():
         "####################################### Global": "",
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
-        "expname"               : "random",
+        "expname"               : "random.nojournal",
         "time"                  : None,
 
         "####################################### For FtlSim": "",
@@ -406,6 +406,9 @@ def synthetic_on_filesystems():
         "sector_size"           : 512,
 
         "filesystem"            : None,
+        "ext4" : {
+            "make_opts": {'-O':'^has_journal'}
+        },
 
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
@@ -427,8 +430,8 @@ def synthetic_on_filesystems():
         }
     }
 
-    # filesystems = ('ext4',)
-    filesystems = ('f2fs', 'btrfs')
+    filesystems = ('ext4',)
+    # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('btrfs',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     for fs in filesystems:

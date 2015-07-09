@@ -50,9 +50,15 @@ class FileSystemBase(object):
         common.shcmd("sync")
 
 class Ext4(FileSystemBase):
-    def make(self):
-        ret = utils.shcmd('mkfs.ext4 -b 4096 {dev}'.format(
-            dev = self.dev), ignore_error = True)
+    def make(self, opt_dic=None):
+        if opt_dic == None:
+            opt_str = ''
+        else:
+            items = [ ' '.join([k,v]) for k,v in opt_dic.items() ]
+            opt_str = ' '.join(items)
+
+        ret = utils.shcmd('mkfs.ext4 -b 4096 {opt_str} {dev}'.format(
+            opt_str = opt_str, dev = self.dev), ignore_error = True)
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
 
