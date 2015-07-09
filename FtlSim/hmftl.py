@@ -298,7 +298,8 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
         self.log_high_num_blocks = int(self.conf['high_log_block_ratio']
             * self.conf['flash_num_blocks'])
-        self.log_low_num_blocks = self.log_high_num_blocks * 0.8
+        self.log_low_num_blocks = int(self.conf['hybridmapftl']['low_log_block_ratio']
+            * self.conf['flash_num_blocks'])
         self.data_high_num_blocks = int(self.conf['high_data_block_ratio']
             * self.conf['flash_num_blocks'])
 

@@ -387,6 +387,9 @@ def synthetic_on_filesystems():
         "high_log_block_ratio"       : 0.4,
         "high_data_block_ratio"      : 0.4,
         "log_block_upperbound_ratio" : 0.5,
+        "hybridmapftl": {
+            "low_log_block_ratio": 0.32
+        },
 
         "verbose_level" : 1,
         # output_target: file, stdout",
