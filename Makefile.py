@@ -373,7 +373,7 @@ def synthetic_on_filesystems():
         "####################################### Global": "",
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
-        "expname"               : "random.nojournal",
+        "expname"               : "sequential.nojournal",
         "time"                  : None,
 
         "####################################### For FtlSim": "",
@@ -413,9 +413,9 @@ def synthetic_on_filesystems():
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
         "Synthetic" :{
-            # "generating_func": "self.generate_sequential_workload",
+            "generating_func": "self.generate_sequential_workload",
             # "generating_func": "self.generate_backward_workload",
-            "generating_func": "self.generate_random_workload",
+            # "generating_func": "self.generate_random_workload",
             "chunk_count": 100*2**20/(8*1024),
             "chunk_size" : 8*1024,
             "iterations" : 3
