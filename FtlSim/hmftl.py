@@ -566,6 +566,47 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
         return True
 
+    def is_partial_mergable(self, flash_block):
+        """
+        A flash block A is partial mergable when
+        CONDITION 1: all its first x > 0 pages are valid and aligned with logical
+        block A' and rest of the pages y in A are in the ERASED state (so they
+        can be programmed).
+        AND
+        CONDITION 2: we can find valid pages in data blocks for pages y
+        """
+        flash_pg_start, flash_pg_end = self.conf.block_to_page_range(
+            flash_blocknum)
+
+        has_one_valid = False
+        rest_start = None # the first page that is not valid
+        for flash_pg in range(flash_pg_start, flash_pg_end):
+            if self.bitmap.is_page_valid(flash_pg):
+                lba_pg = self.mappings.flash_page_to_lba_page(flash_pg)
+                if lba_pg % self.conf['flash_npage_per_block'] != \
+                    flash_pg % self.conf['flash_npage_per_block']:
+                    # if not aligned, it is definitely not partial mergable
+                    return False
+                else:
+                    has_one_valid = True
+                    continue
+            else:
+                # not valid, break and check if the rest of the pages are
+                break
+
+        if has_one_valid == False:
+            # it does not have even one valid page, it is not partial mergable
+            return False
+
+        # check if the rest of pages are writable (in ERASED state)
+        for flash_pg in range(rest_start, flash_pg_end):
+            if self.bitmap.page_state(flash_pg) != self.bitmap.ERASED:
+                return False
+
+        return True
+
+    def partial_merge(self, flash_block):
+
     def switch_merge(self, flash_blocknum):
         """
         Before calling, you need to make sure that flash_block is switch mergable
