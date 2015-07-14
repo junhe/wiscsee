@@ -446,6 +446,87 @@ def synthetic_on_filesystems():
 
         workflow(conf)
 
+def test_bitmap():
+    confdic = {
+        "####################################### Global": "",
+        "result_dir"            : None,
+        "workload_src"          : WLRUNNER,
+        "expname"               : "backwards.nojournal",
+        "time"                  : None,
+
+        "####################################### For FtlSim": "",
+        "flash_page_size"       : 4096,
+        "flash_npage_per_block" : 32,
+        "flash_num_blocks"      : None,
+
+        "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
+        "ftl_type" : "hybridmap",
+        # "ftl_type" : "pagemap",
+
+        "high_log_block_ratio"       : 0.4,
+        "high_data_block_ratio"      : 0.4,
+        "hybridmapftl": {
+            "low_log_block_ratio": 0.32
+        },
+
+        "verbose_level" : 1,
+        # output_target: file, stdout",
+        "output_target" : "file",
+
+        "####################################### For WlRunner": "",
+        "loop_path"             : "/dev/loop0",
+        "loop_dev_size_mb"      : None,
+        "tmpfs_mount_point"     : "/mnt/tmpfs",
+        "fs_mount_point"        : "/mnt/fsonloop",
+        "common_mnt_opts"       : ["discard"],
+        # "common_mnt_opts"       : ["discard", "nodatacow"],
+
+        "sector_size"           : 512,
+
+        "filesystem"            : None,
+        "ext4" : {
+            "make_opts": {'-O':'^has_journal'}
+        },
+
+        # "workload_class"        : "Simple",
+        "workload_class"        : "Synthetic",
+        "Synthetic" :{
+            # "generating_func": "self.generate_sequential_workload",
+            "generating_func": "self.generate_backward_workload",
+            # "generating_func": "self.generate_random_workload",
+            "chunk_count": 100*2**20/(8*1024),
+            "chunk_size" : 8*1024,
+            "iterations" : 3
+        },
+
+        # if you choose LBAGENERATOR for workload_src, the following will
+        # be used
+        "lba_workload_class"    : "Random",
+        "LBA" : {
+            "lba_to_flash_size_ratio": 0.6,
+            "write_to_lba_ratio"     : 2    #how many writes you want to have
+        }
+    }
+
+    devsize_mb = 256
+    conf = config.Config(confdic)
+    conf.set_flash_num_blocks_by_bytes(128*1024)
+    conf['loop_dev_size_mb'] = devsize_mb
+
+    bitmap = FtlSim.ftlbuilder.FlashBitmap2(conf)
+    bitmap.initialize()
+    print bitmap.bitmap
+    print bitmap.is_page_valid(0)
+    bitmap.validate_page(0)
+    print bitmap.bitmap
+    print bitmap.is_page_valid(0)
+    bitmap.invalidate_page(0)
+    print bitmap.bitmap
+    print bitmap.is_page_valid(0)
+    bitmap.erase_block(0)
+    print bitmap.bitmap
+    print bitmap.is_page_valid(0)
+
 def pure_sequential_or_random():
     confdic = {
         "####################################### Global": "",

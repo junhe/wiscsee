@@ -4,7 +4,8 @@ import config
 import flash
 import recorder
 
-class FlashBitmap(object):
+class FlashBitmap1(object):
+    "Using one bit to represent state of a page"
     VALID, INVALID = (True, False)
 
     def __init__(self, conf):
@@ -17,29 +18,114 @@ class FlashBitmap(object):
         self.bitmap = bitarray.bitarray(conf.total_num_pages())
 
     def validate_page(self, pagenum):
-        self.bitmap[pagenum] = FlashBitmap.VALID
+        self.bitmap[pagenum] = FlashBitmap1.VALID
 
     def invalidate_page(self, pagenum):
-        self.bitmap[pagenum] = FlashBitmap.INVALID
+        self.bitmap[pagenum] = FlashBitmap1.INVALID
 
     def validate_block(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
-        self.bitmap[start : end] = FlashBitmap.VALID
+        self.bitmap[start : end] = FlashBitmap1.VALID
 
     def invalidate_block(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
-        self.bitmap[start : end] = FlashBitmap.INVALID
+        self.bitmap[start : end] = FlashBitmap1.INVALID
 
     def block_invalid_ratio(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
-        return self.bitmap[start:end].count(FlashBitmap.INVALID) / \
+        return self.bitmap[start:end].count(FlashBitmap1.INVALID) / \
             float(self.conf['flash_npage_per_block'])
 
     def is_page_valid(self, pagenum):
         return self.bitmap[pagenum]
 
+    def page_bits(self, pagenum):
+        return self.bitmap[pagenum]
+
+    def block_bits(self, blocknum):
+        start, end = self.conf.block_to_page_range(blocknum)
+        return self.bitmap[start : end]
+
     def initialize(self):
-        self.bitmap.setall(FlashBitmap.INVALID)
+        self.bitmap.setall(FlashBitmap1.INVALID)
+
+class FlashBitmap2(object):
+    "Using two bit to represent state of a page"
+    ERASED, VALID, INVALID = (bitarray.bitarray('00'),
+        bitarray.bitarray('01'), bitarray.bitarray('10'))
+
+    def __init__(self, conf):
+        if not isinstance(conf, config.Config):
+            raise TypeError("conf is not conf.Config. it is {}".
+               format(type(conf).__name__))
+
+        self.conf  = conf
+
+        # We use two bits to record state of a page so that
+        # we will be able to record ERASED state
+        self.bitmap = bitarray.bitarray(2 * conf.total_num_pages())
+
+    def pagenum_to_slice_range(self, pagenum):
+        "2 is the number of bits representing the state of a page"
+        return 2 * pagenum, 2 * (pagenum + 1)
+
+    def blocknum_to_slice_range(self, blocknum):
+        start, end = self.conf.block_to_page_range(blocknum)
+        s, _ = self.pagenum_to_slice_range(start)
+        # not that end is the first page after the block, so
+        # the first bit of page end is the first bit after the block,
+        # not the second
+        e, _ = self.pagenum_to_slice_range(end)
+
+        return s, e
+
+    def validate_page(self, pagenum):
+        s, e = self.pagenum_to_slice_range(pagenum)
+        self.bitmap[s:e] = FlashBitmap2.VALID
+
+    def invalidate_page(self, pagenum):
+        s, e = self.pagenum_to_slice_range(pagenum)
+        self.bitmap[s:e] = FlashBitmap2.INVALID
+
+    def validate_block(self, blocknum):
+        start, end = self.conf.block_to_page_range(blocknum)
+        for pg in range(start, end):
+            self.validate_page(pg)
+
+    def invalidate_block(self, blocknum):
+        start, end = self.conf.block_to_page_range(blocknum)
+        for pg in range(start, end):
+            self.validate_page(pg)
+
+    def erase_block(self, blocknum):
+        s, e = self.blocknum_to_slice_range(blocknum)
+        self.bitmap[s:e] = 0
+
+    def block_invalid_ratio(self, blocknum):
+        start, end = self.conf.block_to_page_range(blocknum)
+        cnt = 0
+        for pg in range(start, end):
+            if not self.is_page_valid(pg):
+                cnt += 1
+
+        return cnt / float(self.conf['flash_npage_per_block'])
+
+    def is_page_valid(self, pagenum):
+        s, e = self.pagenum_to_slice_range(pagenum)
+        return self.bitmap[s:e] == FlashBitmap2.VALID
+
+    def page_bits(self, pagenum):
+        s, e = self.pagenum_to_slice_range(pagenum)
+        return self.bitmap[s:e]
+
+    def block_bits(self, blocknum):
+        s, e = self.blocknum_to_slice_range(blocknum)
+        return self.bitmap[s:e]
+
+    def initialize(self):
+        """ this method should be called in FTL """
+        self.bitmap.setall(0)
+        self.bitmap[0::2] = 1
 
 class FtlBuilder(object):
     def __init__(self, confobj, recorderobj, flashobj):
@@ -57,7 +143,7 @@ class FtlBuilder(object):
         self.recorder = recorderobj
         self.flash = flashobj
 
-        self.bitmap = FlashBitmap(self.conf)
+        self.bitmap = FlashBitmap2(self.conf)
 
     def lba_read(self, page_num):
         raise NotImplementedError
@@ -70,4 +156,28 @@ class FtlBuilder(object):
 
     def debug_info(self):
         raise NotImplementedError
+
+if __name__ == '__main__':
+    b = bitarray.bitarray(10)
+    print b
+    print b[0:2]
+    print b[0:2] == [False, False]
+    print b[0:2] & bitarray.bitarray('00')
+    print b[0:2] | bitarray.bitarray('10')
+    print b[0:2] == bitarray.bitarray('00')
+    print b[0:2] == bitarray.bitarray('10')
+    print b[0:2] == bitarray.bitarray('10')
+
+    print b[0:2]
+    print 'assign....'
+    b[0:2] = FlashBitmap.ERASED
+    print b[0:2]
+    b[0:2] = FlashBitmap.VALID
+    print b[0:2]
+    b[0:2] = FlashBitmap.INVALID
+    print b[0:2]
+    b[0:5] = 1
+    print b
+
+
 

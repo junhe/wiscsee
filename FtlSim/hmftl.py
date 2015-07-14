@@ -436,7 +436,9 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
         toflashpage = self.next_page_to_program()
         self.recorder.debug('Writing LBA {} to {}'.format(lba_pagenum, toflashpage))
-        assert self.bitmap.is_page_valid(toflashpage) == False
+        assert self.bitmap.is_page_valid(toflashpage) == False, \
+            "flash page {} has bits {}".format(toflashpage,
+            self.bitmap.page_bits(toflashpage))
         self.flash.page_write(toflashpage, cat)
         self.log_end_pagenum = toflashpage
 
