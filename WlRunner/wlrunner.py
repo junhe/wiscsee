@@ -72,9 +72,9 @@ class WorkloadRunner(object):
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
 
-            if self.conf.has_key('filesystem'):
+            try:
                 mk_opt_dic = self.conf[self.conf['filesystem']].get('make_opts', None)
-            else:
+            except KeyError:
                 mk_opt_dic = None
             self.fs.make(opt_dic = mk_opt_dic)
             self.fs.mount(opt_list=self.conf['common_mnt_opts'])

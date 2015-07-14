@@ -63,20 +63,28 @@ class Ext4(FileSystemBase):
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
 
 class F2fs(FileSystemBase):
-    def make(self, opt=None):
-        if opt == None:
-            opt = ''
+    def make(self, opt_dic=None):
+        if opt_dic == None:
+            opt_str = ''
+        else:
+            items = [ ' '.join([k,v]) for k,v in opt_dic.items() ]
+            opt_str = ' '.join(items)
+
         ret = utils.shcmd('mkfs.f2fs {opt} {dev}'.format(
-            opt=opt, dev = self.dev), ignore_error = True)
+            opt=opt_str, dev = self.dev), ignore_error = True)
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
 
 class Btrfs(FileSystemBase):
-    def make(self, opt=None):
-        if opt == None:
-            opt = ''
+    def make(self, opt_dic=None):
+        if opt_dic == None:
+            opt_str = ''
+        else:
+            items = [ ' '.join([k,v]) for k,v in opt_dic.items() ]
+            opt_str = ' '.join(items)
+
         ret = utils.shcmd('mkfs.btrfs {opt} {dev}'.format(
-            opt=opt, dev = self.dev), ignore_error = True)
+            opt=opt_str, dev = self.dev), ignore_error = True)
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
 
