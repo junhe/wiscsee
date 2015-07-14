@@ -339,6 +339,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             self.flash.page_write(pagenum, cat)
 
     def erase_block(self, blocknum, cat):
+        self.bitmap.erase_block(blocknum)
         self.flash.block_erase(blocknum, cat)
 
     def modify_page_in_ram(self, pagenum):
