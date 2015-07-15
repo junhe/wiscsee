@@ -21,7 +21,7 @@ import recorder
 #    if k is in page mapping:
 #        find k's old flash page k'' and invalidate the flash page k''
 #        remove k from log page mapping
-#    if k's block is in block mappping
+#    if k's block is in block mapping
 #        find k's old flash page k'' and invalidate the flash page k''
 #        block map stays the same
 # 5. add new log page mapping k -> k'
@@ -62,7 +62,7 @@ class HybridMapping():
 
         self.rec = recorder.Recorder(recorder.FILE_TARGET,
             path=os.path.join(self.conf['result_dir'], 'hybridmapping.log'),
-            verbose_level = 3)
+            verbose_level = -1)
 
     def has_lba_block(self, lba_block):
         return lba_block in self.data_blk_l2p
@@ -310,7 +310,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
         self.gc_cnt_rec = recorder.Recorder(recorder.FILE_TARGET,
             path=os.path.join(self.conf['result_dir'], 'gc_cnt.log'),
-            verbose_level = 1)
+            verbose_level = -1)
 
     def lba_read(self, pagenum):
         self.recorder.put('lba_read', pagenum, 'user')
@@ -470,7 +470,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
 
     def garbage_collect(self):
         # it is worth doing the most cost effective work first -
-        # simply reclaim all DATA blocks without valid pages
+        # simply reclaim all DATA blocks without any valid pages
         self.garbage_collect_data_blocks()
 
         self.garbage_collect_log_blocks()
@@ -555,18 +555,25 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         exactly corresponds to the lba block
         """
         flash_pg_start, flash_pg_end = self.conf.block_to_page_range(flash_blocknum)
+        lba_pg_head = None
 
         for flash_pg in range(flash_pg_start, flash_pg_end):
             if not self.bitmap.is_page_valid(flash_pg):
                 return False
             lba_pg = self.mappings.flash_page_to_lba_page(flash_pg)
-            if lba_pg % self.conf['flash_npage_per_block'] != \
-                flash_pg % self.conf['flash_npage_per_block']:
+            if lba_pg_head == None:
+                lba_block, lba_off = self.conf.page_to_block_off(lba_pg)
+                if lba_off != 0:
+                    # lba_pg has to be the first page in the block
+                    return False
+                lba_pg_head = lba_pg
+            if lba_pg - lba_pg_head != flash_pg - flash_pg_start:
+                # it has to be aligned
                 return False
 
         return True
 
-    def is_partial_mergable(self, flash_block):
+    def get_partial_merge_info(self, flash_block):
         """
         A flash block A is partial mergable when
         CONDITION 1: all its first x > 0 pages are valid and aligned with logical
@@ -576,22 +583,40 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         CONDITION 2: we can find valid pages in data blocks for pages y
         """
         flash_pg_start, flash_pg_end = self.conf.block_to_page_range(
-            flash_blocknum)
+            flash_block)
+
+        # get some info about lba
+        if self.bitmap.is_page_valid(flash_pg_start):
+            lba_pg_start = self.mappings.flash_page_to_lba_page(flash_pg_start)
+        else:
+            return False
+
+        lba_block, lba_off = self.conf.page_to_block_off(lba_pg_start)
+        if lba_off != 0:
+            # lba_pg has to be the first page in the block
+            return False
+
+        # this lba block has to be mapped to a data block
+        if not self.mappings.has_lba_block(lba_block):
+            return False
+        else:
+            datablock_num = self.mappings.lba_block_to_flash_block(lba_block)
 
         has_one_valid = False
-        rest_start = None # the first page that is not valid
+        rest_flash_start = None # the first page that is not valid
+
         for flash_pg in range(flash_pg_start, flash_pg_end):
             if self.bitmap.is_page_valid(flash_pg):
                 lba_pg = self.mappings.flash_page_to_lba_page(flash_pg)
-                if lba_pg % self.conf['flash_npage_per_block'] != \
-                    flash_pg % self.conf['flash_npage_per_block']:
-                    # if not aligned, it is definitely not partial mergable
+                if lba_pg - lba_pg_start != flash_pg - flash_pg_start:
+                    # it has to be aligned
                     return False
-                else:
-                    has_one_valid = True
-                    continue
+                # now we know that we have got one aligned.
+                has_one_valid = True
+                continue
             else:
                 # not valid, break and check if the rest of the pages are
+                rest_flash_start = flash_pg
                 break
 
         if has_one_valid == False:
@@ -603,9 +628,27 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             if self.bitmap.page_state(flash_pg) != self.bitmap.ERASED:
                 return False
 
-        return True
+        # check if the pages that are supposed to be in the rest of the flash block
+        # are currently in the data block
+        start_off = rest_flash_start % self.conf['flash_npage_per_block']
+        for off in range(start_off, self.conf['flash_npage_per_block']):
+            flash_addr = self.conf.block_off_to_page(datablock_num, off)
+            if not self.bitmap.is_page_valid(flash_addr):
+                return False
 
-    def partial_merge(self, flash_block):
+        # Now everything is good, we know this is partial mergable
+        return {'data_flash_block':datablock_num, 'start_off':start_off}
+
+    def partial_merge(self, log_flash_block, data_flash_block, start_off):
+        for off in range(start_off, self.conf['flash_npage_per_block']):
+            from_pg = self.conf.block_off_to_page(data_flash_block, off)
+            to_pg = self.conf.block_off_to_page(log_flash_block, off)
+            self.flash.page_read(from_pg, 'amplified')
+            self.bitmap.invalidate_page(from_pg)
+            self.flash.page_write(to_pg, 'amplified')
+            self.bitmap.validate_page(to_pg)
+
+            # we may choose to erase the data block here.
 
     def switch_merge(self, flash_blocknum):
         """
@@ -752,13 +795,17 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
         """
         if self.is_switch_mergable(flash_blocknum):
             self.switch_merge(flash_blocknum)
-        elif self.is_partial_mergable(flash_blocknum):
-            # let us do full mergen even the block is partial mergable for now
-            # but this branch will never be entered because
-            # is_partial_mergable() always return false
-            self.full_merge(flash_blocknum)
-        else:
-            self.full_merge(flash_blocknum)
+            return
+
+        partial_merge_info = self.get_partial_merge_info(flash_blocknum)
+        if partial_merge_info != False:
+            self.partial_merge(log_flash_block = flash_blocknum,
+                data_flash_block = partial_merge_info['data_flash_block'],
+                start_off = partial_merge_info['start_off'])
+            return
+
+        # last thing to do
+        self.full_merge(flash_blocknum)
 
     def garbage_collect_log_blocks(self):
         """
