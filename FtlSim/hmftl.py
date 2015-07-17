@@ -8,37 +8,47 @@ import config
 import ftlbuilder
 import recorder
 
+"""
+Design notes
+What happen when a lba_block -> flash_block mapping exists and we
+write to a page in lba_block? For example, lba_block 518->flash 882
+already exists, and we now write to the first lba page, k, in lba block 518.
+In the current design, we will
+1. find a free flash page k' for writing page k
+2. write to page k'
+3. set the end of log to k'
+4. invalidate lba page k
+   if k is in page mapping:
+       find k's old flash page k'' and invalidate the flash page k''
+       remove k from log page mapping
+   if k's block is in block mapping
+       find k's old flash page k'' and invalidate the flash page k''
+       block map stays the same
+5. add new log page mapping k -> k'
+6. validate k'
+# #
+this could lead to the case that a lba_block -> flash_block exists
+but none of the pages in flash_block is valid (all of them have been
+overwritten and are in log blocks). When we do switch merge (or other
+merges?), we will want to switch the block in log blocks to data blocks
+but we will found the lba_block->flash_block already exists.
+The solution is to
+1. consider adding mapping k->k' when k->k'' exist legal
+2. remove block mapping when all pages in a block are invalid
+1?
+# #
 
-# Design notes
-# What happen when a lba_block -> flash_block mapping exists and we
-# write to a page in lba_block? For example, lba_block 518->flash 882
-# already exists, and we now write to the first lba page, k, in lba block 518.
-# In the current design, we will
-# 1. find a free flash page k' for writing page k
-# 2. write to page k'
-# 3. set the end of log to k'
-# 4. invalidate lba page k
-#    if k is in page mapping:
-#        find k's old flash page k'' and invalidate the flash page k''
-#        remove k from log page mapping
-#    if k's block is in block mapping
-#        find k's old flash page k'' and invalidate the flash page k''
-#        block map stays the same
-# 5. add new log page mapping k -> k'
-# 6. validate k'
-#
-# this could lead to the case that a lba_block -> flash_block exists
-# but none of the pages in flash_block is valid (all of them have been
-# overwritten and are in log blocks). When we do switch merge (or other
-# merges?), we will want to switch the block in log blocks to data blocks
-# but we will found the lba_block->flash_block already exists.
-# The solution is to
-# 1. consider adding mapping k->k' when k->k'' exist legal
-# 2. remove block mapping when all pages in a block are invalid
-# 1?
-#
+TODO: improving cooperation between bitmap and mappings
 
-# TODO: improving cooperation between bitmap and mappings
+Components
+- Hybrid mapping: manages LPN->PPN, PPN->LPN, and all mapping related functions
+- HybridBlockPool: manage different free/used blocks
+- GcDecider: take ftlobject as an input and decite whether to do GC
+- bitmap for all the pages
+- appending point for the log
+-
+"""
+
 
 class HybridMapping():
     """
@@ -624,7 +634,7 @@ class HybridMapFtl(ftlbuilder.FtlBuilder):
             return False
 
         # check if the rest of pages are writable (in ERASED state)
-        for flash_pg in range(rest_start, flash_pg_end):
+        for flash_pg in range(rest_flash_start, flash_pg_end):
             if self.bitmap.page_state(flash_pg) != self.bitmap.ERASED:
                 return False
 

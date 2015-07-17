@@ -3,6 +3,27 @@ from collections import deque
 
 import ftlbuilder
 
+# Components:
+#    - GarbageCollectionDecider
+#    - bitmap
+#    - block pool manager
+#    - FTLclass
+#
+# The FTL class should implement the following:
+# - manage free and used blocks, which involves moving blocks to appropriate
+#  lists
+# - manage mapping, which is used for data accessing and garbage collection. It
+#  needs logical page number to physical page number mapping when read and write
+#  data. When writing, it needs to find the current physical page of a logical
+#  page and invalidate it. When garbage collecting it should help to find the
+#  logical page number of the valid pages in victim block.
+# - manage an appending point for future user writes.
+# - manage an appending point for GC writes. So it will not interrupt user writes.
+# - decide when to start garbage collection, there should a high and low water
+#  mark
+# - expose public interface for the FTL
+# - Record proper information for statistics
+
 class GarbageCollectionDecider(object):
     """
     it is a queue maintaining GC activity in the past a few
