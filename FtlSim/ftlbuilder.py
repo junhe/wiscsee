@@ -6,7 +6,7 @@ import recorder
 
 class FlashBitmap1(object):
     "Using one bit to represent state of a page"
-    VALID, INVALID = (True, False)
+    VALID, INVALID, ERASED = (True, False, False)
 
     def __init__(self, conf):
         if not isinstance(conf, config.Config):
@@ -31,6 +31,9 @@ class FlashBitmap1(object):
         start, end = self.conf.block_to_page_range(blocknum)
         self.bitmap[start : end] = self.INVALID
 
+    def erase_block(self, blocknum):
+        self.invalidate_block(blocknum)
+
     def block_invalid_ratio(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
         return self.bitmap[start:end].count(self.INVALID) / \
@@ -45,6 +48,16 @@ class FlashBitmap1(object):
     def block_bits(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
         return self.bitmap[start : end]
+
+    def page_state(self, pagenum):
+        return self.page_bits(pagenum)
+
+    def page_state_human(self, pagenum):
+        state = self.page_state(pagenum)
+        if state == self.VALID:
+            return "VALID"
+        elif state == self.INVALID:
+            return "INVALID/ERASED"
 
     def initialize(self):
         self.bitmap.setall(self.INVALID)
@@ -164,6 +177,7 @@ class FtlBuilder(object):
         self.flash = flashobj
 
         self.bitmap = FlashBitmap2(self.conf)
+        # self.bitmap = FlashBitmap1(self.conf)
 
     def lba_read(self, page_num):
         raise NotImplementedError
