@@ -16,7 +16,8 @@ Components
   blocks. We should be able to find out the next free block from here. The DFTL
   paper does not mention a in-RAM data structure like this. How do they find
   out the next free block?
-    - it manages the appending point for different purpose
+    - it manages the appending point for different purpose. No, it does not have
+    enough info to do that.
 
 - Cached Mapping Table (CMT): this class should do the following:
     - have logical page <-> physical page mapping entries.
@@ -71,6 +72,10 @@ Components
       appending point.
     - NOTE: the DFTL paper says DFTL also have partial merge and switch merge,
       I need to read their code to find out why.
+    - NOTE2: When cleaning a victim block, we need to know the corresponding logical
+    page number of a vadlid physical page in the block. However, the Global Mapping
+    Table does not provide physical to logical mapping. We can maintain such an
+    mapping table by our own and assume that information is stored in OOB.
 
     - How the garbage collector should interact with other components?
         - this cleaner will use free blocks and make used block free, so it
@@ -137,6 +142,69 @@ class BlockPool(object):
         ret = ' '.join('freeblocks', repr(self.freeblocks)) + '\n' + \
             ' '.join('trans_usedblocks', repr(self.trans_usedblocks)) + '\n' \
             ' '.join('data_usedblocks', repr(self.data_usedblocks)) + '\n'
+
+
+class GlobalMappingTable(object):
+    """
+    This mapping table is for data pages, not for translation pages.
+    """
+    def __init__(self, confobj, flashobj):
+        """
+        flashobj is the flash device that we may operate on.
+        """
+        if not isinstance(confobj, config.Config):
+            raise TypeError("confobj is not conf.Config. it is {}".
+               format(type(confobj).__name__))
+
+        self.conf = confobj
+
+        # bidirection mapping
+        self.l2p = bidict.bidict()
+
+    def has_logical_page(self, logical_page):
+        return logical_page in self.l2p
+
+    def has_physical_page(self, physical_page):
+        return physical_page in self.l2p.inv
+
+    def logical_to_physical_page(self, logical_page):
+        return self.l2p[logical_page]
+
+    def physical_to_logical_page(self, physical_page):
+        return self.l2p[:physical_page]
+
+        if flash_page != None:
+            del self.log_page_l2p[:flash_page]
+
+        self.rec.put_and_count("remove_log_page_mapping", lba_page, flash_page)
+
+
+class Dftl(ftlbuilder.FtlBuilder):
+    """
+    The implementation literally follows DFtl paper.
+    """
+    def __init__(self, confobj, recorderobj, flashobj):
+        super(HybridMapFtl, self).__init__(confobj, recorderobj, flashobj)
+
+        # bitmap has been created parent class
+        self.bitmap.initialize()
+
+        # initialize free list
+        self.block_pool = BlockPool(self.conf['flash_num_blocks'])
+
+    # FTL APIs
+    def lba_read(self, pagenum):
+        pass
+
+    def lba_write(self, pagenum):
+        pass
+
+    def lba_discard(self, pagenum):
+        pass
+
+    #
+
+
 
 
 
