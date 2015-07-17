@@ -16,6 +16,8 @@ Components
   blocks. We should be able to find out the next free block from here. The DFTL
   paper does not mention a in-RAM data structure like this. How do they find
   out the next free block?
+    - it manages the appending point for different purpose
+
 - Cached Mapping Table (CMT): this class should do the following:
     - have logical page <-> physical page mapping entries.
     - be able to translation LPN to PPN and PPN to LPN
@@ -39,6 +41,17 @@ Components
           are (so you can read/write), also, you need to update GTD when evicting
           pages to flash.
         - bitmap???
+
+- Global mapping table (GMT): this class holds the mappings of all the data pages. In
+  real implementation, this should be stored in flash. This data structure will be used
+  intensively. It should have a good interface.
+    - API, get_entries_of_Mvpn(virtual mapping page number). This is one of the
+      cases that it may be used: when reading a data page, its translation entry is not
+      in CMT. The translator will consult the GTD to find the physical
+      translation page number of virtual translation page number V. Then we need to get the
+      content of V by reading its corresponding physical page. We may provide an interface
+      to the translator like load_translation_physical_page(PPN), which internally, we
+      read from GMT.
 
 - Global Translation Directory, this should do the following:
     - maintains the locations of translation pages
@@ -77,10 +90,53 @@ Components
 - Appending points: there should be several appending points:
     - appending point for writing translation page
     - appending point for writing data page
-    - appending ponit for garbage collection
+    - appending ponit for garbage collection (NO, the paper says there is no
+      such a appending point
     - NOTE: these points should be maintained by block pool.
 """
 
+
+class BlockPool(object):
+    def __init__(self, num_blocks):
+        self.freeblocks = deque(range(num_blocks))
+
+        # initialize usedblocks
+        self.trans_usedblocks = []
+        self.data_usedblocks  = []
+
+    def pop_a_free_block(self):
+        if self.freeblocks:
+            blocknum = self.freeblocks.popleft()
+        else:
+            # nobody has free block
+            raise RuntimeError('No free blocks in device!!!!')
+
+        return blocknum
+
+    def pop_a_free_block_to_trans(self):
+        "take one block from freelist and add it to translation block list"
+        blocknum = self.pop_a_free_block()
+        self.trans_usedblocks.append(blocknum)
+        return blocknum
+
+    def pop_a_free_block_to_data(self):
+        "take one block from freelist and add it to data block list"
+        blocknum = self.pop_a_free_block()
+        self.data_usedblocks.append(blocknum)
+        return blocknum
+
+    def move_used_data_block_to_free(self, blocknum):
+        self.data_usedblocks.remove(blocknum)
+        self.freeblocks.append(blocknum)
+
+    def move_used_trans_block_to_free(self, blocknum):
+        self.trans_usedblocks.remove(blocknum)
+        self.freeblocks.append(blocknum)
+
+    def __repr__(self):
+        ret = ' '.join('freeblocks', repr(self.freeblocks)) + '\n' + \
+            ' '.join('trans_usedblocks', repr(self.trans_usedblocks)) + '\n' \
+            ' '.join('data_usedblocks', repr(self.data_usedblocks)) + '\n'
 
 
 
