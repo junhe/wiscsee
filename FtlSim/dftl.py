@@ -169,6 +169,12 @@ class CachedMappingTable(object):
     def remove_entry_by_lpn(self, lpn):
         del self.entries[lpn]
 
+    def is_full(self):
+        return False
+
+    def __repr__(self):
+        return repr(self.entries)
+
 class GlobalMappingTable(object):
     """
     This mapping table is for data pages, not for translation pages.
@@ -183,6 +189,12 @@ class GlobalMappingTable(object):
                format(type(confobj).__name__))
 
         self.conf = confobj
+
+        self.n_entries_per_page = self.conf.dft_n_mapping_entries_per_page()
+
+        # do the easy thing first, if necessary, we can later use list or
+        # other data structure
+        self.entries = {}
 
     def total_entries(self):
         """
@@ -200,8 +212,20 @@ class GlobalMappingTable(object):
             self.conf['dftl']['global_mapping_entry_bytes']) / \
             self.conf['flash_page_size']
 
+    def lpn_to_ppn(self, lpn):
+        """
+        GMT should always be able to answer query. It is perfectly OK to return
+        None because at the beginning there is no mapping. No valid data block
+        on device.
+        """
+        return self.entries.get(lpn, None)
+
 
 class GlobalTranslationDirectory(object):
+    """
+    This is an in-memory data structure. It is only for book keeping. It used
+    to remeber thing so that we don't lose it.
+    """
     def __init__(self, confobj):
         self.conf = confobj
 
@@ -210,8 +234,7 @@ class GlobalTranslationDirectory(object):
         self.flash_page_size = self.conf['flash_page_size']
         self.total_pages = self.conf.total_num_pages()
 
-        self.entry_bytes = self.conf['dftl']['global_mapping_entry_bytes']
-        self.n_entries_per_page = self.flash_page_size / self.entry_bytes
+        self.n_entries_per_page = self.conf.dft_n_mapping_entries_per_page()
 
         # M_VPN -> M_PPN
         # Virtual translation page number --> Physical translation page number
@@ -219,14 +242,28 @@ class GlobalTranslationDirectory(object):
         self.mapping = {}
 
     def m_vpn_to_m_ppn(self, m_vpn):
-        "m_vpn virtual translation page number"
-        return self.mapping.get(m_vpn, None)
+        """
+        m_vpn virtual translation page number. It should always be successfull.
+        """
+        return self.mapping[m_vpn]
 
     def add_mapping(self, m_vpn, m_ppn):
         if self.mapping.has_key(m_vpn):
-            raise RuntimeError("self.mapping already has m_vpn:{}".format(m_vpn))
+            raise RuntimeError("self.mapping already has m_vpn:{}"\
+                .format(m_vpn))
         self.mapping[m_vpn] = m_ppn
 
+    def remove_mapping(self, m_vpn):
+        del self.mapping[m_vpn]
+
+    def m_vpn_of_lpn(self, lpn):
+        "Find the virtual translation page that holds lpn"
+        return lpn / self.n_entries_per_page
+
+    def m_ppn_of_lpn(self, lpn):
+        m_vpn = self.m_vpn_of_lpn(lpn)
+        m_ppn = self.m_vpn_to_m_ppn(m_vpn)
+        return m_ppn
 
 class OutOfBandAreas(object):
     """
@@ -253,9 +290,10 @@ class MappingManager(object):
     This class is the supervisor of all the mappings. When initializing, it
     register CMT and GMT with it and provides higher level operations on top of
     them.
+    This class should act as a coordinator of all the mapping data structures.
     """
     def __init__(self, cached_mapping_table, global_mapping_table,
-        global_translation_directory, block_pool, confobj):
+        global_translation_directory, block_pool, confobj, flashobj):
         self.conf = confobj
 
         self.cached_mapping_table = cached_mapping_table
@@ -263,6 +301,8 @@ class MappingManager(object):
         self.directory = global_translation_directory
 
         self.block_pool = block_pool
+
+        self.flash = flashobj
 
     def lpn_to_ppn(self, lpn):
         """
@@ -273,24 +313,32 @@ class MappingManager(object):
         ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
         if ppn == None:
             # cache miss
-            # TODO:evict one entry from CMT
+            if self.cached_mapping_table.is_full():
+                # TODO:evict one entry from CMT
+                raise NotImplementedError("eviction has not been implemented")
 
-            # find the physical translation page holding lpn's mapping
+            # find the physical translation page holding lpn's mapping in GTD
+
             # Load mapping for lpn from global table
-            pass
+            m_ppn = self.directory.m_ppn_of_lpn(lpn)
+            self.flash.page_read(m_ppn, 'amplified')
 
-        # now the cache should have the ppn, try it again
-        ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
-        assert ppn != None
-        return ppn
+            # Now we have all the entries of m_ppn in memory, we need to put
+            # the mapping of lpn->ppn to CMT
+            ppn = self.global_mapping_table.lpn_to_ppn(lpn)
+            self.cached_mapping_table.add_entry(lpn = lpn, ppn = ppn)
+
+            return ppn
+        else:
+            return ppn
 
     def initialize_mappings(self):
         """
-        This function initialize all global mapping table and global mapping
-        directory. We assume the GTD is very small and stored in flash before
-        mounting. We also assume that the global mapping table has been prepared
-        by the vendor, so there is no other overhead except for reading the GTD
-        from flash. Since the overhead is very small, we ignore it.
+        This function initialize global translation directory. We assume the
+        GTD is very small and stored in flash before mounting. We also assume
+        that the global mapping table has been prepared by the vendor, so there
+        is no other overhead except for reading the GTD from flash. Since the
+        overhead is very small, we ignore it.
         """
         total_pages = self.global_mapping_table.total_translation_pages()
 
@@ -331,10 +379,10 @@ class Dftl(ftlbuilder.FtlBuilder):
             cached_mapping_table = self.cached_mapping_table,
             global_mapping_table = self.global_mapping_table,
             global_translation_directory = self.global_translation_directory,
-            block_pool = self.block_pool, confobj = self.conf)
+            block_pool = self.block_pool, confobj = self.conf,
+            flashobj = flashobj)
 
-        # TODO: we should initialize Globaltranslationdirectory in Dftl
-        # By default, let's use the first n pages of the translation
+        # We should initialize Globaltranslationdirectory in Dftl
         self.mapping_manager.initialize_mappings()
 
         self.oob = OutOfBandAreas(confobj)
