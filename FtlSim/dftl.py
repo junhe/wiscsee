@@ -222,6 +222,11 @@ class GlobalTranslationDirectory(object):
         "m_vpn virtual translation page number"
         return self.mapping.get(m_vpn, None)
 
+    def add_mapping(self, m_vpn, m_ppn):
+        if self.mapping.has_key(m_vpn):
+            raise RuntimeError("self.mapping already has m_vpn:{}".format(m_vpn))
+        self.mapping[m_vpn] = m_ppn
+
 
 class OutOfBandAreas(object):
     """
@@ -235,7 +240,7 @@ class OutOfBandAreas(object):
     def __init__(self, confobj):
         self.flash_num_blocks = confobj['flash_num_blocks']
         self.flash_npage_per_block = confobj['flash_npage_per_block']
-        self.total_pages = self.flash_num_blocks * flash_npage_per_block
+        self.total_pages = self.flash_num_blocks * self.flash_npage_per_block
 
         self.states = ftlbuilder.FlashBitmap2(confobj)
         self.lpn_of_phy_page = {} #
@@ -250,7 +255,9 @@ class MappingManager(object):
     them.
     """
     def __init__(self, cached_mapping_table, global_mapping_table,
-        global_translation_directory, block_pool):
+        global_translation_directory, block_pool, confobj):
+        self.conf = confobj
+
         self.cached_mapping_table = cached_mapping_table
         self.global_mapping_table = global_mapping_table
         self.directory = global_translation_directory
@@ -270,7 +277,7 @@ class MappingManager(object):
 
             # find the physical translation page holding lpn's mapping
             # Load mapping for lpn from global table
-
+            pass
 
         # now the cache should have the ppn, try it again
         ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
@@ -286,18 +293,25 @@ class MappingManager(object):
         from flash. Since the overhead is very small, we ignore it.
         """
         total_pages = self.global_mapping_table.total_translation_pages()
-        # use the pages in the beginning of the flash as translation pages
+
+        # use some free blocks to be translation blocks
+        tmp_blk_mapping = {}
         for m_vpn in range(total_pages):
-            self.directory.add_mapping(m_vpn=m_vpn, m_ppn=m_vpn)
+            vblock, off = self.conf.page_to_block_off(m_vpn)
+            if not tmp_blk_mapping.has_key(vblock):
+                phy_block = self.block_pool.pop_a_free_block_to_trans()
+                tmp_blk_mapping[vblock] = phy_block
+            phy_block = tmp_blk_mapping[vblock]
+            m_ppn = self.conf.block_off_to_page(phy_block, off)
 
-
+            self.directory.add_mapping(m_vpn=m_vpn, m_ppn=m_ppn)
 
 class Dftl(ftlbuilder.FtlBuilder):
     """
     The implementation literally follows DFtl paper.
     """
     def __init__(self, confobj, recorderobj, flashobj):
-        super(HybridMapFtl, self).__init__(confobj, recorderobj, flashobj)
+        super(Dftl, self).__init__(confobj, recorderobj, flashobj)
 
         # bitmap has been created parent class
         # Change: we now don't put the bitmap here
@@ -317,10 +331,11 @@ class Dftl(ftlbuilder.FtlBuilder):
             cached_mapping_table = self.cached_mapping_table,
             global_mapping_table = self.global_mapping_table,
             global_translation_directory = self.global_translation_directory,
-            block_pool = self.block_pool)
+            block_pool = self.block_pool, confobj = self.conf)
 
         # TODO: we should initialize Globaltranslationdirectory in Dftl
         # By default, let's use the first n pages of the translation
+        self.mapping_manager.initialize_mappings()
 
         self.oob = OutOfBandAreas(confobj)
 
