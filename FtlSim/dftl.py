@@ -318,19 +318,31 @@ class MappingManager(object):
                 raise NotImplementedError("eviction has not been implemented")
 
             # find the physical translation page holding lpn's mapping in GTD
-
-            # Load mapping for lpn from global table
-            m_ppn = self.directory.m_ppn_of_lpn(lpn)
-            self.flash.page_read(m_ppn, 'amplified')
-
-            # Now we have all the entries of m_ppn in memory, we need to put
-            # the mapping of lpn->ppn to CMT
-            ppn = self.global_mapping_table.lpn_to_ppn(lpn)
-            self.cached_mapping_table.add_entry(lpn = lpn, ppn = ppn)
+            ppn = self.load_mapping_entry_to_cache(lpn)
 
             return ppn
         else:
             return ppn
+
+    def load_mapping_entry_to_cache(self, lpn):
+        """
+        When a mapping entry is not in cache, you need to read the entry from
+        flash and put it to cache. This function does this.
+        Output: it return the ppn of lpn read from entry on flash.
+        """
+        # find the location of the translation page
+        m_ppn = self.directory.m_ppn_of_lpn(lpn)
+
+        # read it up, this operation is just for statistics
+        self.flash.page_read(m_ppn, 'amplified')
+
+        # Now we have all the entries of m_ppn in memory, we need to put
+        # the mapping of lpn->ppn to CMT
+        ppn = self.global_mapping_table.lpn_to_ppn(lpn)
+        self.cached_mapping_table.add_entry(lpn = lpn, ppn = ppn)
+
+        return ppn
+
 
     def initialize_mappings(self):
         """
