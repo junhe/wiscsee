@@ -489,12 +489,17 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         self.oob = OutOfBandAreas(confobj)
 
+    def __del__(self):
+        print self.cached_mapping_table
+
     # FTL APIs
     def lba_read(self, lpn):
         """
         ppn = translate(pagenum))
         flash.read(ppn)
         """
+        self.recorder.put('lba_read', lpn, 'user')
+
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
         self.flash.page_read(ppn, 'user')
 
@@ -521,7 +526,10 @@ class Dftl(ftlbuilder.FtlBuilder):
             We need to check if we need to do garbage collection
         Appending point
             It is automatically updated by next_data_page_to_program
+        Flash
         """
+        self.recorder.put('lba_write', lpn, 'user')
+
         old_ppn = self.mapping_manager.lpn_to_ppn(lpn)
 
         # appending point
@@ -535,6 +543,8 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.oob.new_data_write_event(lpn = lpn, old_ppn = old_ppn,
             new_ppn = new_ppn)
 
+        # Flash
+        self.flash.page_write(new_ppn, 'user')
 
     def lba_discard(self, lpn):
         """
@@ -555,6 +565,8 @@ class Dftl(ftlbuilder.FtlBuilder):
             updates should be done by GC
 
         """
+        self.recorder.put('lba_discard', lpn, 'user')
+
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
         if ppn == UNINITIATED:
             return
