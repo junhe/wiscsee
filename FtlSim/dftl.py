@@ -105,7 +105,6 @@ Components
     - NOTE: these points should be maintained by block pool.
 """
 
-
 class BlockPool(object):
     def __init__(self, num_blocks):
         self.freeblocks = deque(range(num_blocks))
@@ -279,11 +278,17 @@ class OutOfBandAreas(object):
         self.flash_npage_per_block = confobj['flash_npage_per_block']
         self.total_pages = self.flash_num_blocks * self.flash_npage_per_block
 
+        # Key data structures
         self.states = ftlbuilder.FlashBitmap2(confobj)
-        self.lpn_of_phy_page = {} #
+        # ppn->lpn mapping stored in OOB
+        self.ppn_to_lpn = {}
 
     def apply_event(self, event):
         pass
+
+    def discard_ppn(self, ppn):
+        self.states.invalidate_page(ppn)
+        del self.ppn_to_lpn[ppn]
 
 class MappingManager(object):
     """
@@ -415,14 +420,67 @@ class Dftl(ftlbuilder.FtlBuilder):
 
     def lba_discard(self, lpn):
         """
-        oob.apply_event(event)
-        This should invalidate the page and remove the LPN in OOB
+        1. Find the ppn of lpn
+        2. update OOB:
+            set state to invalid
+            remove the lpn stored there
+        3. update mappings
+            if entry in CMT, change it from lpn->ppn to lpn->None,
+        TODO: NOT FINISHED...
         """
         pass
 
-    def lpn_to_ppn(self, lpn):
-        pass
+    # Internal methods
+    def next_page_to_program(self, log_end_name_str, pop_free_block_func):
+        """
+        The following comment uses next_data_page_to_program() as a example.
 
+        it finds out the next available page to program
+        usually it is the page after log_end_pagenum.
+
+        If next=log_end_pagenum + 1 is in the same block with
+        log_end_pagenum, simply return log_end_pagenum + 1
+        If next=log_end_pagenum + 1 is out of the block of
+        log_end_pagenum, we need to pick a new block from self.freeblocks
+
+        This function is stateful, every time you call it, it will advance by
+        one.
+        """
+
+        if not hasattr(self, log_end_name_str):
+           # This is only executed for one time
+           cur_block = pop_free_block_func()
+           # use the first page of this block to be the
+           next_page = self.conf.block_off_to_page(cur_block, 0)
+           # log_end_name_str is the page that is currently being operated on
+           setattr(self, log_end_name_str, next_page)
+
+           return next_page
+
+        cur_page = getattr(self, log_end_name_str)
+        cur_block, cur_off = self.conf.page_to_block_off(cur_page)
+
+        next_page = (cur_page + 1) % self.conf.total_num_pages()
+        next_block, next_off = self.conf.page_to_block_off(next_page)
+
+        if cur_block == next_block:
+            ret = next_page
+        else:
+            # get a new block
+            block = pop_free_block_func()
+            start, _ = self.conf.block_to_page_range(block)
+            ret = start
+
+        setattr(self, log_end_name_str, ret)
+        return ret
+
+    def next_data_page_to_program(self):
+        return self.next_page_to_program('data_log_end_ppn',
+            self.block_pool.pop_a_free_block_to_data)
+
+    def next_translation_page_to_program(self):
+        return self.next_page_to_program('trans_log_end_ppn',
+            self.block_pool.pop_a_free_block_to_trans)
 
 def main():
     pass

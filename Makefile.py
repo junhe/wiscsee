@@ -413,8 +413,8 @@ def synthetic_on_filesystems():
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
         "Synthetic" :{
-            # "generating_func": "self.generate_sequential_workload",
-            "generating_func": "self.generate_backward_workload",
+            "generating_func": "self.generate_sequential_workload",
+            # "generating_func": "self.generate_backward_workload",
             # "generating_func": "self.generate_random_workload",
             "chunk_count": 100*2**20/(8*1024),
             "chunk_size" : 8*1024,
@@ -430,10 +430,11 @@ def synthetic_on_filesystems():
         }
     }
 
-    filesystems = ('ext4',)
+    # filesystems = ('ext4',)
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('btrfs',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
+    filesystems = ('btrfs', 'f2fs')
     for fs in filesystems:
         devsize_mb = 256
         conf = config.Config(confdic)
@@ -491,8 +492,8 @@ def test_bitmap():
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
         "Synthetic" :{
-            # "generating_func": "self.generate_sequential_workload",
-            "generating_func": "self.generate_backward_workload",
+            "generating_func": "self.generate_sequential_workload",
+            # "generating_func": "self.generate_backward_workload",
             # "generating_func": "self.generate_random_workload",
             "chunk_count": 100*2**20/(8*1024),
             "chunk_size" : 8*1024,
@@ -620,6 +621,124 @@ def mysql_change_data_dir():
         start_mysql()
 
     local_main()
+
+def test_dftl():
+    confdic = {
+        "####################################### Global": "",
+        "result_dir"            : None,
+        "workload_src"          : WLRUNNER,
+        "expname"               : "backwards.nojournal",
+        "time"                  : None,
+
+        "####################################### For FtlSim": "",
+        "flash_page_size"       : 4096,
+        "flash_npage_per_block" : 32,
+        "flash_num_blocks"      : None,
+
+        #########################
+        "dftl": {
+            # number of bytes per entry in global_mapping_table
+            "global_mapping_entry_bytes": 32
+        },
+
+        "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
+        "ftl_type" : "hybridmap",
+        # "ftl_type" : "pagemap",
+
+        "high_log_block_ratio"       : 0.4,
+        "high_data_block_ratio"      : 0.4,
+        "hybridmapftl": {
+            "low_log_block_ratio": 0.32
+        },
+
+        "verbose_level" : 1,
+        # output_target: file, stdout",
+        "output_target" : "file",
+
+        "####################################### For WlRunner": "",
+        "loop_path"             : "/dev/loop0",
+        "loop_dev_size_mb"      : None,
+        "tmpfs_mount_point"     : "/mnt/tmpfs",
+        "fs_mount_point"        : "/mnt/fsonloop",
+        "common_mnt_opts"       : ["discard"],
+        # "common_mnt_opts"       : ["discard", "nodatacow"],
+
+        "sector_size"           : 512,
+
+        "filesystem"            : None,
+        "ext4" : {
+            "make_opts": {'-O':'^has_journal'}
+        },
+
+        # "workload_class"        : "Simple",
+        "workload_class"        : "Synthetic",
+        "Synthetic" :{
+            "generating_func": "self.generate_sequential_workload",
+            # "generating_func": "self.generate_backward_workload",
+            # "generating_func": "self.generate_random_workload",
+            "chunk_count": 100*2**20/(8*1024),
+            "chunk_size" : 8*1024,
+            "iterations" : 3
+        },
+
+        # if you choose LBAGENERATOR for workload_src, the following will
+        # be used
+        "lba_workload_class"    : "Random",
+        "LBA" : {
+            "lba_to_flash_size_ratio": 0.6,
+            "write_to_lba_ratio"     : 2    #how many writes you want to have
+        }
+    }
+
+    """
+    # filesystems = ('ext4', 'btrfs', 'f2fs')
+    for fs in filesystems:
+        devsize_mb = 256
+        conf = config.Config(confdic)
+        conf['filesystem'] = fs
+        conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+        conf['result_dir'] = "/tmp/{}/".format(conf['expname']) + \
+            '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
+        conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
+        conf['loop_dev_size_mb'] = devsize_mb
+
+        workflow(conf)
+    """
+    devsize_mb = 256
+    fs = 'ext4'
+    conf = config.Config(confdic)
+    conf['filesystem'] = fs
+    conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+    conf['result_dir'] = "/tmp/{}/".format(conf['expname']) + \
+        '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
+    conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
+    conf['loop_dev_size_mb'] = devsize_mb
+
+    # sim = FtlSim.simulator.Simulator(conf)
+    # sim.run(event_iter)
+    rec = FtlSim.recorder.Recorder(output_target = conf['output_target'],
+        path = conf.get_output_file_path(),
+        verbose_level = conf['verbose_level'])
+    flashobj = FtlSim.flash.Flash(recorder = rec)
+    dftl = FtlSim.dftl.Dftl(conf, rec, flashobj)
+    dftl.lba_read(8)
+    # print dftl.cached_mapping_table
+    print dftl.next_data_page_to_program()
+    print dftl.next_data_page_to_program()
+    print dftl.next_data_page_to_program()
+    print dftl.next_data_page_to_program()
+    print dftl.next_data_page_to_program()
+    print dftl.next_data_page_to_program()
+    print dftl.next_data_page_to_program()
+    print dftl.next_data_page_to_program()
+    print dftl.next_translation_page_to_program()
+    print dftl.next_translation_page_to_program()
+    print dftl.next_translation_page_to_program()
+    print dftl.next_translation_page_to_program()
+    print dftl.next_translation_page_to_program()
+    print dftl.next_translation_page_to_program()
+    print dftl.next_translation_page_to_program()
+    print dftl.next_translation_page_to_program()
 
 
 def main(cmd_args):

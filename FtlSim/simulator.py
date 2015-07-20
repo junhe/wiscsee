@@ -42,6 +42,8 @@ class Simulator(object):
             ftl_class = pmftl.PageMapFtl
         elif self.conf['ftl_type'] == 'hybridmap':
             ftl_class = hmftl.HybridMapFtl
+        elif self.conf['ftl_type'] == 'dftl':
+            ftl_class = dftl.Dftl
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))

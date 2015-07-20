@@ -78,4 +78,8 @@ class Config(dict):
         self['flash_num_blocks'] = size_byte/ \
             (self['flash_page_size'] * self['flash_npage_per_block'])
 
+    def dft_n_mapping_entries_per_page(self):
+        "used by dftl, return the number of mapping entries in a page"
+        return self['flash_page_size'] \
+            / self['dftl']['global_mapping_entry_bytes']
 
