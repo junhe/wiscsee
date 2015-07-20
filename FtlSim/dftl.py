@@ -147,23 +147,51 @@ class BlockPool(object):
             ' '.join('trans_usedblocks', repr(self.trans_usedblocks)) + '\n' \
             ' '.join('data_usedblocks', repr(self.data_usedblocks)) + '\n'
 
+class CacheEntryData(object):
+    """
+    This is a helper class that store entry data for a LPN
+    """
+    ppn = None
+    dirty = None # True or False
+
+    def __init__(self, ppn, dirty):
+        self.ppn = ppn
+        self.dirty = dirty
+
+    def __repr__(self):
+        return "ppn {}, dirty {}".format(self.ppn, self.dirty)
+
 class CachedMappingTable(object):
     """
     """
     def __init__(self, confobj):
-        # let's begin by using simple dict, more advanced structure needed later
-        # it holds lpn->ppn
+        # let's begin by using simple dict, more advanced structure needed
+        # later it holds lpn->ppn
         self.entries = {}
 
     def lpn_to_ppn(self, lpn):
         "Try to find ppn of the given lpn in cache"
-        return self.entries.get(lpn, None)
+        entry_data = self.entries.get(lpn, MISS)
+        if entry_data == MISS:
+            return MISS
+        else:
+            return entry_data.ppn
 
-    def add_entry(self, lpn, ppn):
+    def add_new_entry(self, lpn, ppn, dirty):
+        "dirty is a boolean"
         if self.entries.has_key(lpn):
             raise RuntimeError("{}:{} already exists in CMT entries.".format(
-                lpn, self.entries[lpn]))
-        self.entries[lpn] = ppn
+                lpn, self.entries[lpn].ppn))
+        self.entries[lpn] = CacheEntryData(ppn = ppn, dirty = dirty)
+
+    def add_entry(self, lpn, ppn, dirty):
+        "You may end up remove the old one"
+        self.entries[lpn] = CacheEntryData(ppn = ppn, dirty = dirty)
+
+    def overwrite_entry(self, lpn, ppn, dirty):
+        "lpn must exist"
+        self.entries[lpn].ppn = ppn
+        self.entries[lpn].dirty = dirty
 
     def remove_entry_by_lpn(self, lpn):
         del self.entries[lpn]
@@ -171,8 +199,30 @@ class CachedMappingTable(object):
     def is_full(self):
         return False
 
+    def new_data_write_event(self, lpn, new_ppn):
+        """
+        This method should be used when there is a new write. The new mapping
+        is lpn->new_ppn.
+
+        if lpn's mapping entry is in cache, update it and mark it as
+        dirty. If it is not in cache, add such entry and mark as dirty.
+
+        when updating, do we need to keep the old mapping?
+        This relates to how we write back the entries in cache back go GMT.
+        Check GMT.write_back_cache for details.
+        Basically, we need only to keep track of the latest lpn->ppn in cache.
+        If you have overwritten one lpn for many times, those lpn->ppn you
+        discarded are not really lost, they are stored in OOB as ppn->lpn by
+        ftl.lba_write().
+        """
+        # self.add_entry(lpn = lpn, ppn = new_ppn, dirty = True)
+        self.overwrite_entry(lpn = lpn, ppn = new_ppn, dirty = True)
+
     def __repr__(self):
         return repr(self.entries)
+
+# UNINITIATED, MISS = (-1, -2)
+UNINITIATED, MISS = ('UNINIT', 'MISS')
 
 class GlobalMappingTable(object):
     """
@@ -217,7 +267,7 @@ class GlobalMappingTable(object):
         None because at the beginning there is no mapping. No valid data block
         on device.
         """
-        return self.entries.get(lpn, None)
+        return self.entries.get(lpn, UNINITIATED)
 
 
 class GlobalTranslationDirectory(object):
@@ -290,6 +340,19 @@ class OutOfBandAreas(object):
         self.states.invalidate_page(ppn)
         del self.ppn_to_lpn[ppn]
 
+    def new_data_write_event(self, lpn, old_ppn, new_ppn):
+        """
+        mark the new_ppn as valid
+        update the LPN in new page's OOB to lpn
+        invalidate the old_ppn, go cleaner can GC it
+        """
+        self.states.validate_page(new_ppn)
+        self.ppn_to_lpn[new_ppn] = lpn
+
+        if old_ppn != UNINITIATED:
+            # the lpn didn't have mapping before this write
+            self.states.invalidate_page(old_ppn)
+
 class MappingManager(object):
     """
     This class is the supervisor of all the mappings. When initializing, it
@@ -316,7 +379,7 @@ class MappingManager(object):
         """
         # try cached mapping table first.
         ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
-        if ppn == None:
+        if ppn == MISS:
             # cache miss
             if self.cached_mapping_table.is_full():
                 # TODO:evict one entry from CMT
@@ -344,7 +407,8 @@ class MappingManager(object):
         # Now we have all the entries of m_ppn in memory, we need to put
         # the mapping of lpn->ppn to CMT
         ppn = self.global_mapping_table.lpn_to_ppn(lpn)
-        self.cached_mapping_table.add_entry(lpn = lpn, ppn = ppn)
+        self.cached_mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
+            dirty = False)
 
         return ppn
 
@@ -370,6 +434,27 @@ class MappingManager(object):
             m_ppn = self.conf.block_off_to_page(phy_block, off)
 
             self.directory.add_mapping(m_vpn=m_vpn, m_ppn=m_ppn)
+
+    def write_back_cache(self):
+        """
+        It write the dirty entries in CMT back to GMT. This is how it works:
+        Note: 'dirty' means the entry in cache is differnt to the one in GMT
+        for entry in entrylist:
+            if entry is dirty:
+                GMT
+                load entry's LPN's translation page from GMT to memory
+                update LPN's entry in translation page
+                write the updated page to a free page
+                GTD
+                update GTD to redirect LPN's VPN to new PPN
+                OOB
+                invalidate the old page in OOB
+                validate new PPN in its OOB
+                write vpn to OOB
+                CMT
+                mark entry as clean
+        """
+        pass
 
 class Dftl(ftlbuilder.FtlBuilder):
     """
@@ -415,8 +500,41 @@ class Dftl(ftlbuilder.FtlBuilder):
 
     def lba_write(self, lpn):
         """
+        This is the interface for higher level to call, do NOT use it for
+        internal use. If you need, create new one and refactor the code.
+
+        block_pool
+            no need to update
+        CMT
+            if lpn's mapping entry is in cache, update it and mark it as
+            dirty. If it is not in cache, add such entry and mark as dirty
+        GMT
+            no need to update, it will be updated when we write back CMT
+        OOB
+            mark the new_ppn as valid
+            update the LPN to lpn
+            invalidate the old_ppn, go cleaner can GC it
+            TODO: should the DFtl paper have considered the operation in OOB
+        GTD
+            No need to update, because GMT does not change
+        Garbage collector
+            We need to check if we need to do garbage collection
+        Appending point
+            It is automatically updated by next_data_page_to_program
         """
-        pass
+        old_ppn = self.mapping_manager.lpn_to_ppn(lpn)
+
+        # appending point
+        new_ppn = self.next_data_page_to_program()
+
+        # CMT
+        self.cached_mapping_table.new_data_write_event(lpn = lpn,
+            new_ppn = new_ppn)
+
+        # OOB
+        self.oob.new_data_write_event(lpn = lpn, old_ppn = old_ppn,
+            new_ppn = new_ppn)
+
 
     def lba_discard(self, lpn):
         """
