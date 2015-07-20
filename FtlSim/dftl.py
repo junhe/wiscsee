@@ -184,7 +184,7 @@ class CachedMappingTable(object):
                 lpn, self.entries[lpn].ppn))
         self.entries[lpn] = CacheEntryData(ppn = ppn, dirty = dirty)
 
-    def add_entry(self, lpn, ppn, dirty):
+    def update_entry(self, lpn, ppn, dirty):
         "You may end up remove the old one"
         self.entries[lpn] = CacheEntryData(ppn = ppn, dirty = dirty)
 
@@ -215,7 +215,6 @@ class CachedMappingTable(object):
         discarded are not really lost, they are stored in OOB as ppn->lpn by
         ftl.lba_write().
         """
-        # self.add_entry(lpn = lpn, ppn = new_ppn, dirty = True)
         self.overwrite_entry(lpn = lpn, ppn = new_ppn, dirty = True)
 
     def __repr__(self):
@@ -376,6 +375,7 @@ class MappingManager(object):
         """
         This method does not fail. It will try everything to find the ppn of
         the given lpn.
+        return: real PPN or UNINITIATED
         """
         # try cached mapping table first.
         ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
@@ -538,15 +538,33 @@ class Dftl(ftlbuilder.FtlBuilder):
 
     def lba_discard(self, lpn):
         """
-        1. Find the ppn of lpn
-        2. update OOB:
-            set state to invalid
-            remove the lpn stored there
-        3. update mappings
-            if entry in CMT, change it from lpn->ppn to lpn->None,
-        TODO: NOT FINISHED...
+        block_pool:
+            no need to update
+        CMT:
+            if lpn->ppn exist, you need to update it to lpn->UNINITIATED
+            if not exist, you need to add lpn->UNINITIATED
+            the mapping lpn->UNINITIATED will be written back to GMT later
+        GMT:
+            no need to update
+            REMEMBER: all updates to GMT can and only can be maded through CMT
+        OOB:
+            invalidate the ppn
+            remove the lpn
+        GTD:
+            no updates needed
+            updates should be done by GC
+
         """
-        pass
+        ppn = self.mapping_manager.lpn_to_ppn(lpn)
+        if ppn == UNINITIATED:
+            return
+
+        # flash page ppn has valid data
+        self.cached_mapping_table.overwrite_entry(lpn = lpn, ppn = UNINITIATED,
+            dirty = True)
+
+        # OOB
+        self.oob.discard_ppn(ppn)
 
     # Internal methods
     def next_page_to_program(self, log_end_name_str, pop_free_block_func):
