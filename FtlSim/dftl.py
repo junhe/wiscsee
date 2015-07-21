@@ -105,8 +105,13 @@ Components
     - NOTE: these points should be maintained by block pool.
 """
 
+UNINITIATED, MISS = ('UNINIT', 'MISS')
+DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
+
 class BlockPool(object):
-    def __init__(self, num_blocks):
+    def __init__(self, num_blocks, confobj):
+        self.conf = confobj
+
         self.freeblocks = deque(range(num_blocks))
 
         # initialize usedblocks
@@ -141,6 +146,70 @@ class BlockPool(object):
     def move_used_trans_block_to_free(self, blocknum):
         self.trans_usedblocks.remove(blocknum)
         self.freeblocks.append(blocknum)
+
+    def total_used_blocks(self):
+        return len(self.trans_usedblocks) + len(self.data_usedblocks)
+
+    def used_blocks(self):
+        return self.trans_usedblocks + self.data_usedblocks
+
+    def next_page_to_program(self, log_end_name_str, pop_free_block_func):
+        """
+        The following comment uses next_data_page_to_program() as a example.
+
+        it finds out the next available page to program
+        usually it is the page after log_end_pagenum.
+
+        If next=log_end_pagenum + 1 is in the same block with
+        log_end_pagenum, simply return log_end_pagenum + 1
+        If next=log_end_pagenum + 1 is out of the block of
+        log_end_pagenum, we need to pick a new block from self.freeblocks
+
+        This function is stateful, every time you call it, it will advance by
+        one.
+        """
+
+        if not hasattr(self, log_end_name_str):
+           # This is only executed for the first time
+           cur_block = pop_free_block_func()
+           # use the first page of this block to be the
+           next_page = self.conf.block_off_to_page(cur_block, 0)
+           # log_end_name_str is the page that is currently being operated on
+           setattr(self, log_end_name_str, next_page)
+
+           return next_page
+
+        cur_page = getattr(self, log_end_name_str)
+        cur_block, cur_off = self.conf.page_to_block_off(cur_page)
+
+        next_page = (cur_page + 1) % self.conf.total_num_pages()
+        next_block, next_off = self.conf.page_to_block_off(next_page)
+
+        if cur_block == next_block:
+            ret = next_page
+        else:
+            # get a new block
+            block = pop_free_block_func()
+            start, _ = self.conf.block_to_page_range(block)
+            ret = start
+
+        setattr(self, log_end_name_str, ret)
+        return ret
+
+    def next_data_page_to_program(self):
+        return self.next_page_to_program('data_log_end_ppn',
+            self.pop_a_free_block_to_data)
+
+    def next_translation_page_to_program(self):
+        return self.next_page_to_program('trans_log_end_ppn',
+            self.pop_a_free_block_to_trans)
+
+    def current_blocks(self):
+        cur_data_block, _ = self.conf.page_to_block_off(
+            self.data_log_end_ppn)
+        cur_trans_block, _ = self.conf.page_to_block_off(
+            self.trans_log_end_ppn)
+        return (cur_data_block, cur_trans_block)
 
     def __repr__(self):
         ret = ' '.join('freeblocks', repr(self.freeblocks)) + '\n' + \
@@ -220,8 +289,6 @@ class CachedMappingTable(object):
     def __repr__(self):
         return repr(self.entries)
 
-# UNINITIATED, MISS = (-1, -2)
-UNINITIATED, MISS = ('UNINIT', 'MISS')
 
 class GlobalMappingTable(object):
     """
@@ -332,6 +399,9 @@ class OutOfBandAreas(object):
         # ppn->lpn mapping stored in OOB
         self.ppn_to_lpn = {}
 
+    def translate_ppn_to_lpn(self, ppn):
+        return self.ppn_to_lpn[ppn]
+
     def apply_event(self, event):
         pass
 
@@ -349,8 +419,8 @@ class OutOfBandAreas(object):
         self.ppn_to_lpn[new_ppn] = lpn
 
         if old_ppn != UNINITIATED:
-            # the lpn didn't have mapping before this write
-            self.states.invalidate_page(old_ppn)
+            # the lpn has mapping before this write
+            self.discard_ppn(old_ppn)
 
 class MappingManager(object):
     """
@@ -456,9 +526,41 @@ class MappingManager(object):
         """
         pass
 
+    def update_entry(self, lpn, new_ppn):
+        """
+        update entry of lpn to be lpn->new_ppn
+
+        block_pool:
+            it may be affect because we need a new page
+        CMT:
+            if lpn is in cache, we need to update it and mark it as clean
+            since after this function the cache will be consistent with GMT
+        GMT:
+            we need to read the old translation page, update it and write it
+            to a new flash page
+        OOB:
+            we need to wipe out the old_ppn and fill the new_ppn
+        GTD:
+            we need to update m_vpn to new m_ppn
+        """
+        cached_ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
+        if cached_ppn != MISS:
+            # in cache
+            self.cached_mapping_table.overwrite_entry(lpn = lpn,
+                ppn = new_ppn, dirty = False)
+
+        # update GMT
+        old_m_ppn = self.directory.m_ppn_of_lpn(lpn)
+        self.flash.page_read(old_m_ppn)
+        pass # modify in memory
+        new_m_ppn = sel
+
+
+
 class Dftl(ftlbuilder.FtlBuilder):
     """
     The implementation literally follows DFtl paper.
+    This class is a coordinator of other coordinators and data structures
     """
     def __init__(self, confobj, recorderobj, flashobj):
         super(Dftl, self).__init__(confobj, recorderobj, flashobj)
@@ -469,7 +571,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         del self.bitmap
 
         # initialize free list
-        self.block_pool = BlockPool(self.conf['flash_num_blocks'])
+        self.block_pool = BlockPool(self.conf['flash_num_blocks'], confobj)
 
         self.global_mapping_table = GlobalMappingTable(confobj, flashobj)
         self.cached_mapping_table = CachedMappingTable(confobj)
@@ -533,7 +635,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         old_ppn = self.mapping_manager.lpn_to_ppn(lpn)
 
         # appending point
-        new_ppn = self.next_data_page_to_program()
+        new_ppn = self.block_pool.next_data_page_to_program()
 
         # CMT
         self.cached_mapping_table.new_data_write_event(lpn = lpn,
@@ -578,57 +680,102 @@ class Dftl(ftlbuilder.FtlBuilder):
         # OOB
         self.oob.discard_ppn(ppn)
 
-    # Internal methods
-    def next_page_to_program(self, log_end_name_str, pop_free_block_func):
-        """
-        The following comment uses next_data_page_to_program() as a example.
-
-        it finds out the next available page to program
-        usually it is the page after log_end_pagenum.
-
-        If next=log_end_pagenum + 1 is in the same block with
-        log_end_pagenum, simply return log_end_pagenum + 1
-        If next=log_end_pagenum + 1 is out of the block of
-        log_end_pagenum, we need to pick a new block from self.freeblocks
-
-        This function is stateful, every time you call it, it will advance by
-        one.
-        """
-
-        if not hasattr(self, log_end_name_str):
-           # This is only executed for one time
-           cur_block = pop_free_block_func()
-           # use the first page of this block to be the
-           next_page = self.conf.block_off_to_page(cur_block, 0)
-           # log_end_name_str is the page that is currently being operated on
-           setattr(self, log_end_name_str, next_page)
-
-           return next_page
-
-        cur_page = getattr(self, log_end_name_str)
-        cur_block, cur_off = self.conf.page_to_block_off(cur_page)
-
-        next_page = (cur_page + 1) % self.conf.total_num_pages()
-        next_block, next_off = self.conf.page_to_block_off(next_page)
-
-        if cur_block == next_block:
-            ret = next_page
+    def need_cleaning(self):
+        if self.block_pool.total_used_blocks() > \
+            self.conf['dftl']['GC_threshold_ratio'] * \
+            self.conf['flash_num_blocks']:
+            return True
         else:
-            # get a new block
-            block = pop_free_block_func()
-            start, _ = self.conf.block_to_page_range(block)
-            ret = start
+            return False
 
-        setattr(self, log_end_name_str, ret)
-        return ret
+    def gc(self):
+        while self.need_cleaning():
+            victim_type, victim_block = self.next_victim_block()
+            if victim_type == DATA_BLOCK:
+                clean_data_block(victim_block)
+            elif victim_type == TRANS_BLOCK:
+                clean_trans_block(victim_block)
 
-    def next_data_page_to_program(self):
-        return self.next_page_to_program('data_log_end_ppn',
-            self.block_pool.pop_a_free_block_to_data)
+    def clean_data_block(self, flash_block):
+        pass
 
-    def next_translation_page_to_program(self):
-        return self.next_page_to_program('trans_log_end_ppn',
-            self.block_pool.pop_a_free_block_to_trans)
+    def clean_trans_block(self, flash_block):
+        pass
+
+    def move_valid_pages(self, flash_block):
+        start, end = self.conf.block_to_page_range(flash_block)
+
+        for ppn in range(start, end):
+            if self.oob.states.is_page_valid(ppn):
+                pass
+
+
+    def move_data_page(self, ppn):
+        """
+        page ppn must be valid.
+        This function is for garbage collection. The difference between this
+        one and the lba_write is that the input of this function is ppn,
+        while lba_write's is lpn. Because of this, we don't need to consult
+        mapping table to find the mapping. The lpn->ppn mapping is stored in
+        OOB.
+        Another difference is that, if the mapping exists in cache, update the
+        entry in cache. If not, update the entry in GMT (and thus GTD).
+        """
+        # for my damaged brain
+        old_ppn = ppn
+
+        # read the the data page
+        self.flash.page_read(old_ppn, 'amplified')
+
+        # find the mapping
+        lpn = self.oob.translate_ppn_to_lpn(old_ppn)
+
+        # write to new page
+        new_ppn = self.block_pool.next_data_page_to_program()
+        self.flash.page_write(new_ppn, 'amplified')
+
+        # update new page and old page's OOB
+        self.oob.new_data_write_event(lpn, old_ppn, new_ppn)
+
+        cached_ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
+        if cached_ppn == MISS:
+            raise NotImplemented()
+        else:
+            # lpn is in cache, update it
+            # This is a design from the original Dftl paper
+            self.cached_mapping_table.overwrite_entry(lpn = lpn, ppn = new_ppn,
+                dirty = True)
+
+    def next_victim_block(self):
+        "TODO: refactor the code"
+        maxratio = -1
+        maxblock = None
+        current_blocks = self.block_pool.current_blocks()
+
+        for blocknum in self.block_pool.data_usedblocks:
+            if blocknum in current_blocks:
+                continue
+
+            invratio = self.oob.states.block_invalid_ratio(blocknum)
+            if invratio > maxratio:
+                block_type = DATA_BLOCK
+                maxblock = blocknum
+                maxratio = invratio
+
+        for blocknum in self.block_pool.trans_usedblocks:
+            if blocknum in current_blocks:
+                continue
+
+            invratio = self.oob.states.block_invalid_ratio(blocknum)
+            if invratio > maxratio:
+                block_type = TRANS_BLOCK
+                maxblock = blocknum
+                maxratio = invratio
+
+        if maxblock == None:
+            self.recorder.debug("no block is used yet.")
+
+        return blcok_type, maxblock
 
 def main():
     pass
