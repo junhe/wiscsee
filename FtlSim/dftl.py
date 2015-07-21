@@ -405,7 +405,7 @@ class OutOfBandAreas(object):
     def apply_event(self, event):
         pass
 
-    def discard_ppn(self, ppn):
+    def wipe_ppn(self, ppn):
         self.states.invalidate_page(ppn)
         del self.ppn_to_lpn[ppn]
 
@@ -420,7 +420,7 @@ class OutOfBandAreas(object):
 
         if old_ppn != UNINITIATED:
             # the lpn has mapping before this write
-            self.discard_ppn(old_ppn)
+            self.wipe_ppn(old_ppn)
 
 class MappingManager(object):
     """
@@ -678,7 +678,7 @@ class Dftl(ftlbuilder.FtlBuilder):
             dirty = True)
 
         # OOB
-        self.oob.discard_ppn(ppn)
+        self.oob.wipe_ppn(ppn)
 
     def need_cleaning(self):
         if self.block_pool.total_used_blocks() > \
