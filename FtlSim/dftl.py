@@ -323,9 +323,11 @@ class GlobalMappingTable(object):
         total number of translation pages needed. It is:
         total_entries * entry size / page size
         """
-        return (self.total_entries() * \
-            self.conf['dftl']['global_mapping_entry_bytes']) / \
-            self.conf['flash_page_size']
+        entries = self.total_entries()
+        entry_bytes = self.conf['dftl']['global_mapping_entry_bytes']
+        flash_page_size = self.conf['flash_page_size']
+        # play the ceiling trick
+        return (entries * entry_bytes + (flash_page_size -1))/flash_page_size
 
     def lpn_to_ppn(self, lpn):
         """
