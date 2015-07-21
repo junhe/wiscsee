@@ -335,6 +335,9 @@ class GlobalMappingTable(object):
         """
         return self.entries.get(lpn, UNINITIATED)
 
+    def update(self, lpn, ppn):
+        self.entries[lpn] = ppn
+
 
 class GlobalTranslationDirectory(object):
     """
@@ -366,6 +369,9 @@ class GlobalTranslationDirectory(object):
         if self.mapping.has_key(m_vpn):
             raise RuntimeError("self.mapping already has m_vpn:{}"\
                 .format(m_vpn))
+        self.mapping[m_vpn] = m_ppn
+
+    def update_mapping(self, m_vpn, m_ppn):
         self.mapping[m_vpn] = m_ppn
 
     def remove_mapping(self, m_vpn):
@@ -430,7 +436,7 @@ class MappingManager(object):
     This class should act as a coordinator of all the mapping data structures.
     """
     def __init__(self, cached_mapping_table, global_mapping_table,
-        global_translation_directory, block_pool, confobj, flashobj):
+        global_translation_directory, block_pool, confobj, flashobj, oobobj):
         self.conf = confobj
 
         self.cached_mapping_table = cached_mapping_table
@@ -440,6 +446,7 @@ class MappingManager(object):
         self.block_pool = block_pool
 
         self.flash = flashobj
+        self.oob = oobobj
 
     def lpn_to_ppn(self, lpn):
         """
@@ -528,7 +535,7 @@ class MappingManager(object):
 
     def update_entry(self, lpn, new_ppn):
         """
-        update entry of lpn to be lpn->new_ppn
+        update entry of lpn to be lpn->new_ppn everywhere if necessary
 
         block_pool:
             it may be affect because we need a new page
@@ -549,13 +556,23 @@ class MappingManager(object):
             self.cached_mapping_table.overwrite_entry(lpn = lpn,
                 ppn = new_ppn, dirty = False)
 
-        # update GMT
-        old_m_ppn = self.directory.m_ppn_of_lpn(lpn)
-        self.flash.page_read(old_m_ppn)
+        m_vpn = self.directory.m_vpn_of_lpn(lpn)
+        old_m_ppn = self.directory.m_vpn_to_m_ppn(lpn)
+
+        # update GMT on flash
+        self.flash.page_read(old_m_ppn, 'amplified')
         pass # modify in memory
-        new_m_ppn = sel
+        new_m_ppn = self.block_pool.next_translation_page_to_program()
+        self.flash.page_write(new_m_ppn, 'amplified')
+        # update our fake 'on-flash' GMT
+        self.global_mapping_table.update(lpn = lpn, ppn = ppn)
 
+        # OOB
+        self.oob.new_data_write_event(lpn = m_vpn, old_ppn = old_m_ppn,
+            new_ppn = new_m_ppn)
 
+        # update GTD so we can find it
+        self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
 
 class Dftl(ftlbuilder.FtlBuilder):
     """
@@ -572,10 +589,12 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         # initialize free list
         self.block_pool = BlockPool(self.conf['flash_num_blocks'], confobj)
+        self.oob = OutOfBandAreas(confobj)
 
         self.global_mapping_table = GlobalMappingTable(confobj, flashobj)
         self.cached_mapping_table = CachedMappingTable(confobj)
         self.global_translation_directory = GlobalTranslationDirectory(confobj)
+
 
         # register the mapping data structures with the manger
         # later you may also need to register them with the cleaner
@@ -584,12 +603,10 @@ class Dftl(ftlbuilder.FtlBuilder):
             global_mapping_table = self.global_mapping_table,
             global_translation_directory = self.global_translation_directory,
             block_pool = self.block_pool, confobj = self.conf,
-            flashobj = flashobj)
+            flashobj = flashobj, oobobj=self.oob)
 
         # We should initialize Globaltranslationdirectory in Dftl
         self.mapping_manager.initialize_mappings()
-
-        self.oob = OutOfBandAreas(confobj)
 
     def __del__(self):
         print self.cached_mapping_table
@@ -709,15 +726,13 @@ class Dftl(ftlbuilder.FtlBuilder):
             if self.oob.states.is_page_valid(ppn):
                 pass
 
-
-    def move_data_page(self, ppn):
+    def move_data_page_to_new_location(self, ppn):
         """
-        page ppn must be valid.
+        Page ppn must be valid.
         This function is for garbage collection. The difference between this
-        one and the lba_write is that the input of this function is ppn,
-        while lba_write's is lpn. Because of this, we don't need to consult
-        mapping table to find the mapping. The lpn->ppn mapping is stored in
-        OOB.
+        one and the lba_write is that the input of this function is ppn, while
+        lba_write's is lpn. Because of this, we don't need to consult mapping
+        table to find the mapping. The lpn->ppn mapping is stored in OOB.
         Another difference is that, if the mapping exists in cache, update the
         entry in cache. If not, update the entry in GMT (and thus GTD).
         """
@@ -739,12 +754,38 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         cached_ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
         if cached_ppn == MISS:
-            raise NotImplemented()
+            # This will not add mapping to cache
+            self.mapping_manager.update_entry(lpn = lpn, new_ppn = new_ppn)
         else:
             # lpn is in cache, update it
             # This is a design from the original Dftl paper
             self.cached_mapping_table.overwrite_entry(lpn = lpn, ppn = new_ppn,
                 dirty = True)
+
+    def move_trans_page_to_new_location(self, m_ppn):
+        """
+        1. read the trans page
+        2. write to new location
+        3. update OOB
+        4. update GTD
+        """
+        old_m_ppn = m_ppn
+
+        m_vpn = self.oob.translate_ppn_to_lpn(old_m_ppn)
+
+        self.flash.page_read(old_m_ppn, 'amplified')
+
+        # write to new page
+        new_m_ppn = self.block_pool.next_translation_page_to_program()
+        self.flash.page_write(new_m_ppn, 'amplified')
+
+        # update new page and old page's OOB
+        self.oob.new_data_write_event(m_vpn, old_m_ppn, new_m_ppn)
+
+        # update GTD
+        self.global_translation_directory.update_mapping(m_vpn = m_vpn,
+            m_ppn = new_m_ppn)
+
 
     def next_victim_block(self):
         "TODO: refactor the code"
