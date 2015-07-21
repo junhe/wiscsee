@@ -5,6 +5,7 @@ import sys
 
 import bmftl
 import config
+import dftl
 import dmftl
 import flash
 import hmftl

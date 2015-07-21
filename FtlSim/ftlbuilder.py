@@ -39,6 +39,11 @@ class FlashBitmap1(object):
         return self.bitmap[start:end].count(self.INVALID) / \
             float(self.conf['flash_npage_per_block'])
 
+    def block_valid_ratio(self, blocknum):
+        start, end = self.conf.block_to_page_range(blocknum)
+        return self.bitmap[start:end].count(self.VALID) / \
+            float(self.conf['flash_npage_per_block'])
+
     def is_page_valid(self, pagenum):
         return self.bitmap[pagenum]
 
@@ -123,9 +128,27 @@ class FlashBitmap2(object):
 
         return cnt / float(self.conf['flash_npage_per_block'])
 
+    def block_valid_ratio(self, blocknum):
+        start, end = self.conf.block_to_page_range(blocknum)
+        cnt = 0
+        for pg in range(start, end):
+            if self.is_page_valid(pg):
+                cnt += 1
+
+        return cnt / float(self.conf['flash_npage_per_block'])
+
+
     def is_page_valid(self, pagenum):
         s, e = self.pagenum_to_slice_range(pagenum)
         return self.bitmap[s:e] == self.VALID
+
+    def is_page_invalid(self, pagenum):
+        s, e = self.pagenum_to_slice_range(pagenum)
+        return self.bitmap[s:e] == self.INVALID
+
+    def is_page_erased(self, pagenum):
+        s, e = self.pagenum_to_slice_range(pagenum)
+        return self.bitmap[s:e] == self.ERASED
 
     def page_bits(self, pagenum):
         s, e = self.pagenum_to_slice_range(pagenum)

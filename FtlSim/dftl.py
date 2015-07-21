@@ -77,10 +77,11 @@ Components
       appending point.
     - NOTE: the DFTL paper says DFTL also have partial merge and switch merge,
       I need to read their code to find out why.
-    - NOTE2: When cleaning a victim block, we need to know the corresponding logical
-    page number of a vadlid physical page in the block. However, the Global Mapping
-    Table does not provide physical to logical mapping. We can maintain such an
-    mapping table by our own and assume that information is stored in OOB.
+    - NOTE2: When cleaning a victim block, we need to know the corresponding
+      logical page number of a vadlid physical page in the block. However, the
+      Global Mapping Table does not provide physical to logical mapping. We can
+      maintain such an mapping table by our own and assume that information is
+      stored in OOB.
 
     - How the garbage collector should interact with other components?
         - this cleaner will use free blocks and make used block free, so it
@@ -107,6 +108,11 @@ Components
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')
 DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
+
+debugrec = recorder.Recorder(recorder.STDOUT_TARGET, verbose_level = 3)
+def db(*args):
+    debugrec.debug(*args)
+
 
 class BlockPool(object):
     def __init__(self, num_blocks, confobj):
@@ -212,9 +218,11 @@ class BlockPool(object):
         return (cur_data_block, cur_trans_block)
 
     def __repr__(self):
-        ret = ' '.join('freeblocks', repr(self.freeblocks)) + '\n' + \
-            ' '.join('trans_usedblocks', repr(self.trans_usedblocks)) + '\n' \
-            ' '.join('data_usedblocks', repr(self.data_usedblocks)) + '\n'
+        ret = ' '.join(['freeblocks', repr(self.freeblocks)]) + '\n' + \
+            ' '.join(['trans_usedblocks', repr(self.trans_usedblocks)]) + \
+            '\n' + \
+            ' '.join(['data_usedblocks', repr(self.data_usedblocks)])
+        return ret
 
 class CacheEntryData(object):
     """
@@ -340,6 +348,9 @@ class GlobalMappingTable(object):
     def update(self, lpn, ppn):
         self.entries[lpn] = ppn
 
+    def __repr__(self):
+        return "global mapping table: {}".format(repr(self.entries))
+
 
 class GlobalTranslationDirectory(object):
     """
@@ -388,6 +399,9 @@ class GlobalTranslationDirectory(object):
         m_ppn = self.m_vpn_to_m_ppn(m_vpn)
         return m_ppn
 
+    def __repr__(self):
+        return repr(self.mapping)
+
 class OutOfBandAreas(object):
     """
     It is used to hold page state and logical page number of a page.
@@ -398,6 +412,8 @@ class OutOfBandAreas(object):
     and lpn_of_phy_page.
     """
     def __init__(self, confobj):
+        self.conf = confobj
+
         self.flash_num_blocks = confobj['flash_num_blocks']
         self.flash_npage_per_block = confobj['flash_npage_per_block']
         self.total_pages = self.flash_num_blocks * self.flash_npage_per_block
@@ -416,6 +432,16 @@ class OutOfBandAreas(object):
     def wipe_ppn(self, ppn):
         self.states.invalidate_page(ppn)
         del self.ppn_to_lpn[ppn]
+
+    def erase_block(self, flash_block):
+        self.states.erase_block(flash_block)
+
+        start, end = self.conf.block_to_page_range(flash_block)
+        for ppn in range(start, end):
+            try:
+                del self.ppn_to_lpn[ppn]
+            except KeyError:
+                pass
 
     def new_data_write_event(self, lpn, old_ppn, new_ppn):
         """
@@ -505,13 +531,8 @@ class MappingManager(object):
         # use some free blocks to be translation blocks
         tmp_blk_mapping = {}
         for m_vpn in range(total_pages):
-            vblock, off = self.conf.page_to_block_off(m_vpn)
-            if not tmp_blk_mapping.has_key(vblock):
-                phy_block = self.block_pool.pop_a_free_block_to_trans()
-                tmp_blk_mapping[vblock] = phy_block
-            phy_block = tmp_blk_mapping[vblock]
-            m_ppn = self.conf.block_off_to_page(phy_block, off)
-
+            m_ppn = self.block_pool.next_translation_page_to_program()
+            # Note that we don't actually read or write flash
             self.directory.add_mapping(m_vpn=m_vpn, m_ppn=m_ppn)
 
     def write_back_cache(self):
@@ -575,6 +596,75 @@ class MappingManager(object):
 
         # update GTD so we can find it
         self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
+
+class GcDecider(object):
+    """
+    It is used to decide wheter we should do garbage collection.
+
+    When need_cleaning() is called the first time, use high water mark
+    to decide if we need GC.
+    Later, use low water mark and progress to decide. If we haven't make
+    progress in 10 times, stop GC
+    """
+    def __init__(self, confobj, block_pool):
+        self.conf = confobj
+        self.block_pool = block_pool
+        self.call_index = -1
+
+        self.high_watermark = self.conf['dftl']['GC_threshold_ratio'] * \
+            self.conf['flash_num_blocks']
+        self.low_watermark = self.conf['dftl']['GC_low_threshold_ratio'] * \
+            self.conf['flash_num_blocks']
+
+        self.last_used_blocks = None
+        self.freeze_count = 0
+
+    def need_cleaning(self):
+        "The logic is a little complicated"
+        self.call_index += 1
+
+        n_used_blocks = self.block_pool.total_used_blocks()
+
+        if self.call_index == 0:
+            # clean when above high_watermark
+            ret = n_used_blocks > self.high_watermark
+        else:
+            if self.freezed_too_long(n_used_blocks):
+                ret = False
+            else:
+                # common case
+                ret = n_used_blocks > self.low_watermark
+
+        return ret
+
+    def improved(self, cur_n_used_blocks):
+        """
+        wether we get some free blocks since last call of this function
+        """
+        if self.last_used_blocks == None:
+            ret = True
+        else:
+            # common case
+            ret = cur_n_used_blocks < self.last_used_blocks
+
+        self.last_used_blocks = cur_n_used_blocks
+        return ret
+
+    def freezed_too_long(self, cur_n_used_blocks):
+        if self.improved(cur_n_used_blocks):
+            self.freeze_count = 0
+            ret = False
+        else:
+            self.freeze_count += 1
+
+            if self.freeze_count > self.conf['flash_npage_per_block']:
+                ret = True
+            else:
+                ret = False
+
+        if ret == True:
+            print 'free too long', self.freeze_count
+        return ret
 
 class Dftl(ftlbuilder.FtlBuilder):
     """
@@ -667,6 +757,12 @@ class Dftl(ftlbuilder.FtlBuilder):
         # Flash
         self.flash.page_write(new_ppn, 'user')
 
+        print self.block_pool
+        print self.global_mapping_table
+
+        # garbage collection
+        self.gc()
+
     def lba_discard(self, lpn):
         """
         block_pool:
@@ -699,34 +795,58 @@ class Dftl(ftlbuilder.FtlBuilder):
         # OOB
         self.oob.wipe_ppn(ppn)
 
-    def need_cleaning(self):
-        if self.block_pool.total_used_blocks() > \
-            self.conf['dftl']['GC_threshold_ratio'] * \
-            self.conf['flash_num_blocks']:
-            return True
-        else:
-            return False
+    def erase_block(self, blocknum):
+        """
+        set pages' oob states to ERASED
+        electrionically erase the pages
+        """
+        # set page states to ERASED and in-OOB lpn to nothing
+        self.oob.erase_block(blocknum)
+
+        self.flash.block_erase(blocknum, 'amplified')
 
     def gc(self):
-        while self.need_cleaning():
-            victim_type, victim_block = self.next_victim_block()
+        debugrec.debug('start gc.............................................')
+        decider = GcDecider(self.conf, self.block_pool)
+        while decider.need_cleaning():
+            victim_type, victim_block, valid_ratio = self.next_victim_block()
+            print 'gc loop----->', victim_type, victim_block, valid_ratio
+            db(self.block_pool)
+            if valid_ratio == 1:
+                # all blocks are full of valid pages
+                break
             if victim_type == DATA_BLOCK:
-                clean_data_block(victim_block)
+                self.clean_data_block(victim_block)
             elif victim_type == TRANS_BLOCK:
-                clean_trans_block(victim_block)
+                self.clean_trans_block(victim_block)
+        debugrec.debug('end gc..............................................')
 
     def clean_data_block(self, flash_block):
-        pass
+        debugrec.debug('clean_data_block', flash_block)
+        self.move_valid_pages(flash_block, self.move_data_page_to_new_location)
+        # mark block as free
+        self.block_pool.move_used_data_block_to_free(flash_block)
 
     def clean_trans_block(self, flash_block):
-        pass
+        debugrec.debug('clean_trans_block', flash_block)
+        self.move_valid_pages(flash_block,
+            self.move_trans_page_to_new_location)
+        # mark block as free
+        self.block_pool.move_used_trans_block_to_free(flash_block)
 
-    def move_valid_pages(self, flash_block):
+    def move_valid_pages(self, flash_block, mover_func):
         start, end = self.conf.block_to_page_range(flash_block)
 
         for ppn in range(start, end):
+            debugrec.debug('check ppn:', ppn)
             if self.oob.states.is_page_valid(ppn):
-                pass
+                debugrec.debug('move ppn:', ppn)
+
+                assert self.oob.states.is_page_valid(ppn)
+                print self.oob.states.page_state_human(ppn)
+                mover_func(ppn)
+                assert self.oob.states.is_page_invalid(ppn)
+                print self.oob.states.page_state_human(ppn)
 
     def move_data_page_to_new_location(self, ppn):
         """
@@ -788,37 +908,39 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.global_translation_directory.update_mapping(m_vpn = m_vpn,
             m_ppn = new_m_ppn)
 
-
     def next_victim_block(self):
         "TODO: refactor the code"
-        maxratio = -1
-        maxblock = None
+        min_valid_ratio = 2
+        ret_block = None
+        block_type = None
+
         current_blocks = self.block_pool.current_blocks()
 
         for blocknum in self.block_pool.data_usedblocks:
             if blocknum in current_blocks:
                 continue
 
-            invratio = self.oob.states.block_invalid_ratio(blocknum)
-            if invratio > maxratio:
+            valid_ratio = self.oob.states.block_valid_ratio(blocknum)
+            if valid_ratio < min_valid_ratio:
                 block_type = DATA_BLOCK
-                maxblock = blocknum
-                maxratio = invratio
+                ret_block = blocknum
+                min_valid_ratio = valid_ratio
 
         for blocknum in self.block_pool.trans_usedblocks:
             if blocknum in current_blocks:
                 continue
 
-            invratio = self.oob.states.block_invalid_ratio(blocknum)
-            if invratio > maxratio:
+            valid_ratio = self.oob.states.block_valid_ratio(blocknum)
+            if valid_ratio < min_valid_ratio:
                 block_type = TRANS_BLOCK
-                maxblock = blocknum
-                maxratio = invratio
+                ret_block = blocknum
+                min_valid_ratio = valid_ratio
 
-        if maxblock == None:
+        if ret_block == None:
             self.recorder.debug("no block is used yet.")
 
-        return blcok_type, maxblock
+        # print maxblock, maxratio
+        return block_type, ret_block, min_valid_ratio
 
 def main():
     pass

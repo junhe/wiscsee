@@ -74,6 +74,7 @@ class SeqWithRandomStart(LBAWorkloadGenerator):
             offset = page * self.conf['flash_page_size']
             size = self.conf["flash_page_size"] * size_in_page
             event = 'write {} {}'.format(offset, size)
+            print event
             yield event
 
 
