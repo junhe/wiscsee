@@ -115,10 +115,10 @@ def db(*args):
 
 
 class BlockPool(object):
-    def __init__(self, num_blocks, confobj):
+    def __init__(self, confobj):
         self.conf = confobj
 
-        self.freeblocks = deque(range(num_blocks))
+        self.freeblocks = deque(range(self.conf['flash_num_blocks']))
 
         # initialize usedblocks
         self.trans_usedblocks = []
@@ -223,6 +223,12 @@ class BlockPool(object):
             '\n' + \
             ' '.join(['data_usedblocks', repr(self.data_usedblocks)])
         return ret
+
+    def visual(self):
+        block_states = [ 'O' if block in self.freeblocks else 'X'
+                for block in range(self.conf['flash_num_blocks'])]
+        return ''.join(block_states)
+
 
 class CacheEntryData(object):
     """
@@ -684,7 +690,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         del self.bitmap
 
         # initialize free list
-        self.block_pool = BlockPool(self.conf['flash_num_blocks'], confobj)
+        self.block_pool = BlockPool(confobj)
         self.oob = OutOfBandAreas(confobj)
 
         self.global_mapping_table = GlobalMappingTable(confobj, flashobj)
@@ -761,11 +767,10 @@ class Dftl(ftlbuilder.FtlBuilder):
         # Flash
         self.flash.page_write(new_ppn, 'user')
 
-        print self.block_pool
-        print self.global_mapping_table
-
         # garbage collection
         self.gc()
+
+        db( self.block_pool.visual() )
 
     def lba_discard(self, lpn):
         """
