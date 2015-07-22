@@ -7,6 +7,7 @@ import bidict
 
 import config
 import ftlbuilder
+import lrulist
 import recorder
 
 """
@@ -250,8 +251,7 @@ class CachedMappingTable(object):
     def __init__(self, confobj):
         self.conf = confobj
 
-        # let's begin by using simple dict, more advanced structure needed
-        # later it holds lpn->ppn
+        # self.entries = lrulist.LruList()
         self.entries = {}
 
         self.entry_bytes = 64 # lpn + ppn
