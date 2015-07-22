@@ -609,7 +609,7 @@ class MappingManager(object):
         new_m_ppn = self.block_pool.next_translation_page_to_program()
         self.flash.page_write(new_m_ppn, 'amplified')
         # update our fake 'on-flash' GMT
-        self.global_mapping_table.update(lpn = lpn, ppn = ppn)
+        self.global_mapping_table.update(lpn = lpn, ppn = new_ppn)
 
         # OOB
         self.oob.new_write(lpn = m_vpn, old_ppn = old_m_ppn,
