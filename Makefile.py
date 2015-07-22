@@ -692,7 +692,7 @@ def test_dftl():
         "lba_workload_class"    : "Random",
         "LBA" : {
             "lba_to_flash_size_ratio": 0.3,
-            "write_to_lba_ratio"     : 2    #how many writes you want to have
+            "write_to_lba_ratio"     : 10    #how many writes you want to have
         }
     }
 

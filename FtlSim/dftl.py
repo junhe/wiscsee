@@ -797,8 +797,6 @@ class Dftl(ftlbuilder.FtlBuilder):
         # garbage collection
         self.gc()
 
-        db( self.block_pool.visual() )
-
     def lba_discard(self, lpn):
         """
         block_pool:
@@ -846,8 +844,6 @@ class Dftl(ftlbuilder.FtlBuilder):
         decider = GcDecider(self.conf, self.block_pool)
         while decider.need_cleaning():
             victim_type, victim_block, valid_ratio = self.next_victim_block()
-            print 'gc loop----->', victim_type, victim_block, valid_ratio
-            db(self.block_pool)
             if valid_ratio == 1:
                 # all blocks are full of valid pages
                 break
