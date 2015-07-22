@@ -73,6 +73,12 @@ class LruList(collections.MutableMapping):
 
         old_prev.next = node
 
+    def has_key(self, key):
+        return self.table.has_key(key)
+
+    def keys(self):
+        return self.table.keys()
+
     def _delete_node_from_linked_list(self, node):
         "this will not delete from self.table"
         prev_node = node.prev
@@ -124,6 +130,7 @@ def main():
     print 'default', lru.get(5)
     print 'default', lru.get(88)
 
+    lru.has_key(3)
 if __name__ == '__main__':
     main()
 
