@@ -443,7 +443,7 @@ class OutOfBandAreas(object):
             except KeyError:
                 pass
 
-    def new_data_write_event(self, lpn, old_ppn, new_ppn):
+    def new_write(self, lpn, old_ppn, new_ppn):
         """
         mark the new_ppn as valid
         update the LPN in new page's OOB to lpn
@@ -534,6 +534,10 @@ class MappingManager(object):
             m_ppn = self.block_pool.next_translation_page_to_program()
             # Note that we don't actually read or write flash
             self.directory.add_mapping(m_vpn=m_vpn, m_ppn=m_ppn)
+            # update oob of the translation page
+            self.oob.new_write(lpn = m_vpn, old_ppn = UNINITIATED,
+                new_ppn = m_ppn)
+
 
     def write_back_cache(self):
         """
@@ -591,7 +595,7 @@ class MappingManager(object):
         self.global_mapping_table.update(lpn = lpn, ppn = ppn)
 
         # OOB
-        self.oob.new_data_write_event(lpn = m_vpn, old_ppn = old_m_ppn,
+        self.oob.new_write(lpn = m_vpn, old_ppn = old_m_ppn,
             new_ppn = new_m_ppn)
 
         # update GTD so we can find it
@@ -751,7 +755,7 @@ class Dftl(ftlbuilder.FtlBuilder):
             new_ppn = new_ppn)
 
         # OOB
-        self.oob.new_data_write_event(lpn = lpn, old_ppn = old_ppn,
+        self.oob.new_write(lpn = lpn, old_ppn = old_ppn,
             new_ppn = new_ppn)
 
         # Flash
@@ -872,7 +876,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.flash.page_write(new_ppn, 'amplified')
 
         # update new page and old page's OOB
-        self.oob.new_data_write_event(lpn, old_ppn, new_ppn)
+        self.oob.new_write(lpn, old_ppn, new_ppn)
 
         cached_ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
         if cached_ppn == MISS:
@@ -902,7 +906,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.flash.page_write(new_m_ppn, 'amplified')
 
         # update new page and old page's OOB
-        self.oob.new_data_write_event(m_vpn, old_m_ppn, new_m_ppn)
+        self.oob.new_write(m_vpn, old_m_ppn, new_m_ppn)
 
         # update GTD
         self.global_translation_directory.update_mapping(m_vpn = m_vpn,
