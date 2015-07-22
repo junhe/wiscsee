@@ -286,7 +286,7 @@ class CachedMappingTable(object):
         del self.entries[lpn]
 
     def victim_entry(self):
-        lpn = random.sample(self.entries, 1)
+        lpn = random.choice(self.entries.keys())
 
         # lpn, Cacheentrydata
         return lpn, self.entries[lpn]
