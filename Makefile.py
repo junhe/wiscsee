@@ -641,7 +641,8 @@ def test_dftl():
             # number of bytes per entry in global_mapping_table
             "global_mapping_entry_bytes": 32,
             "GC_threshold_ratio": 0.4,
-            "GC_low_threshold_ratio": 0.3
+            "GC_low_threshold_ratio": 0.3,
+            "max_cmt_bytes": 1024 # cmt: cached mapping table
         },
 
         "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],

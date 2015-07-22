@@ -1,5 +1,6 @@
 import bitarray
 from collections import deque
+import random
 import os
 
 import bidict
@@ -245,12 +246,17 @@ class CacheEntryData(object):
         return "ppn {}, dirty {}".format(self.ppn, self.dirty)
 
 class CachedMappingTable(object):
-    """
-    """
     def __init__(self, confobj):
+        self.conf = confobj
+
         # let's begin by using simple dict, more advanced structure needed
         # later it holds lpn->ppn
         self.entries = {}
+
+        self.entry_bytes = 64 # lpn + ppn
+        max_bytes = self.conf['dftl']['max_cmt_bytes']
+        self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
+            self.entry_bytes
 
     def lpn_to_ppn(self, lpn):
         "Try to find ppn of the given lpn in cache"
@@ -279,8 +285,16 @@ class CachedMappingTable(object):
     def remove_entry_by_lpn(self, lpn):
         del self.entries[lpn]
 
+    def victim_entry(self):
+        lpn = random.sample(self.entries, 1)
+
+        # lpn, Cacheentrydata
+        return lpn, self.entries[lpn]
+
     def is_full(self):
-        return False
+        n = len(self.entries)
+        assert n <= self.max_n_entries
+        return n == self.max_n_entries
 
     def new_data_write_event(self, lpn, new_ppn):
         """
@@ -493,15 +507,12 @@ class MappingManager(object):
         if ppn == MISS:
             # cache miss
             if self.cached_mapping_table.is_full():
-                # TODO:evict one entry from CMT
-                raise NotImplementedError("eviction has not been implemented")
+                self.evict_cache_entry()
 
             # find the physical translation page holding lpn's mapping in GTD
             ppn = self.load_mapping_entry_to_cache(lpn)
 
-            return ppn
-        else:
-            return ppn
+        return ppn
 
     def load_mapping_entry_to_cache(self, lpn):
         """
@@ -606,6 +617,21 @@ class MappingManager(object):
 
         # update GTD so we can find it
         self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
+
+    def evict_cache_entry(self):
+        """
+        Select one entry in cache
+        If the entry is dirty, write it back to GMT.
+        If it is not dirty, simply remove it.
+        """
+        vic_lpn, vic_entrydata = self.cached_mapping_table.victim_entry()
+
+        if vic_entrydata.dirty == True:
+            # update every data structure related
+            self.update_entry(vic_lpn, vic_entrydata.ppn)
+
+        # remove the entry
+        self.cached_mapping_table.remove_entry_by_lpn(vic_lpn)
 
 class GcDecider(object):
     """
