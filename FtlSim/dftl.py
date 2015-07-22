@@ -601,7 +601,7 @@ class MappingManager(object):
                 ppn = new_ppn, dirty = False)
 
         m_vpn = self.directory.m_vpn_of_lpn(lpn)
-        old_m_ppn = self.directory.m_vpn_to_m_ppn(lpn)
+        old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
 
         # update GMT on flash
         self.flash.page_read(old_m_ppn, 'amplified')
