@@ -16,157 +16,6 @@ class Node(object):
             prev = self.__dict__.get('prev', None),
             next = self.__dict__.get('next', None),
             empty = self.__dict__.get('empty', None))
-class LruList(collections.MutableMapping):
-    """
-    It should act like a dict.
-    It should be able to provide the newest and oldest entry.
-    No duplicated keys are allowed.
-    """
-    def __init__(self):
-        # for quick retrieving
-        # initially empty
-        # self.table has key X if and only if the linked list has a node
-        # with node.key = X
-        # self.table[x] is of Node class
-        self.table = {}
-
-        # head is newer than tail
-        self.head = Node(empty = True)
-        self.head.next = self.head
-        self.head.prev = self.head
-
-    def __getitem__(self, key):
-        # move to head
-        node = self.table[key]
-        self.move_to_head(node)
-
-        return node.value
-
-    def put_to_head(self, node):
-        "put a node to the head of the list, node should not exist in list"
-        old_head = self.head
-        old_prev = self.head.prev
-
-        # modify node's pointers
-        self.head = node
-        node.next = old_head
-        node.prev = old_head.prev
-
-        old_head.prev = node
-
-        old_prev.next = node
-
-    def has_key(self, key):
-        return self.table.has_key(key)
-
-    def keys(self):
-        return self.table.keys()
-
-        return node.value
-
-    def get(self, key, default = None):
-        if self.table.has_key(key):
-            # will affect list order
-            return self.__getitem__(key)
-        else:
-            # will not affect list order
-            return default
-
-    def __setitem__(self, key, value):
-        if self.table.has_key(key):
-            # update
-            self.table[key].value = value
-        else:
-            # create new
-            node = Node(key = key, value = value)
-            self.put_to_head(node)
-            self.table[key] = node
-
-    def move_to_head(self, node):
-        "move an existing node to the head of list"
-        self._delete_node_from_linked_list(node)
-        self.put_to_head(node)
-
-    def put_to_head(self, node):
-        "put a node to the head of the list, node should not exist in list"
-        old_head = self.head
-        old_prev = self.head.prev
-
-        # modify node's pointers
-        self.head = node
-        node.next = old_head
-        node.prev = old_head.prev
-
-        old_head.prev = node
-
-        old_prev.next = node
-
-    def has_key(self, key):
-        return self.table.has_key(key)
-
-    def keys(self):
-        return self.table.keys()
-
-    def _delete_node_from_linked_list(self, node):
-        "this will not delete from self.table"
-
-        # special case, node is the head
-        if node is self.head:
-            self.head = node.next
-
-        prev_node = node.prev
-        next_node = node.next
-
-        prev_node.next = node.next
-        next_node.prev = node.prev
-
-    def __delitem__(self, key):
-        node = self.table[key]
-        del self.table[key]
-
-        self._delete_node_from_linked_list(node)
-
-    def __iter__(self):
-        return self.table.keys()
-
-    def __len__(self):
-        return len(self.table)
-
-    def __repr__(self):
-        tablestr = 'Table:' + repr(self.table.keys())
-        listview = []
-        node = self.head
-        # while not node.next is self.head:
-        # while True:
-        while not node.empty:
-            listview.append(node.visual())
-            if node.empty:
-                break
-            node = node.next
-        listview = '->\n'.join(listview)
-
-        return tablestr+'\n'+listview
-
-
-"""
-Segmented LRU (SLRU)
-
-The motivation of SLRU is to avoid lines that is only used once to flush
-out lines that would be used with high probability.
-
-It consists of two segments:
-- probationary segment: misses go here
-    - line are discard from the LRU end here
-- protected segment: hits move here
-    - finite
-    - line may be evicted to probationary segment
-
-Both ordered.
-
-Parameter:
-- size of protected segment
-
-"""
 
 class LinkedList(object):
     """
@@ -269,7 +118,8 @@ class LinkedList(object):
 
         return 'LinkedList:\n' + listview
 
-class KeyValueStoreInLinkedList(collections.MutableMapping):
+
+class DictByLinkedList(collections.MutableMapping):
     def __init__(self):
         self.table = {}
         # node must be type 'class Node'
@@ -327,10 +177,10 @@ class KeyValueStoreInLinkedList(collections.MutableMapping):
 
         return listview
 
-
-class LruCache(KeyValueStoreInLinkedList):
+class LruCache(DictByLinkedList):
     """
     geeting and setting a value will move it to the head of the list
+    It provides mapping interfaces like dict.
     """
     def __getitem__(self, key):
         node = self.table[key]
@@ -353,33 +203,193 @@ class LruCache(KeyValueStoreInLinkedList):
         node = self.table[key]
         return node.value
 
+    def orderless_update(self, key, value):
+        node = self.table[key]
+        node.value = value
+
+    def least_recently_used_key(self):
+        return self.linked_list.tail().key
+
+    def most_recently_used_key(self):
+        return self.linked_list.tail().key
+
+
+"""
+Segmented LRU (SLRU)
+
+The motivation of SLRU is to avoid lines that is only used once to flush
+out lines that would be used with high probability.
+
+It consists of two segments:
+- probationary segment: misses go here
+    - line are discard from the LRU end here
+- protected segment: hits move here
+    - finite
+    - line may be evicted to probationary segment
+
+Both ordered.
+
+Parameter:
+- size of protected segment
+
+"""
+
+PROTECTED, PROBATIONARY = ("PROTECTED", "PROBATIONARY")
+
+
+class LinkedListVisNode(LinkedList):
+    def __repr__(self):
+        listview = []
+        node = self._head
+        while node is not self._end_guard:
+            listview.append(node.visual())
+            node = node.next
+        listview = '->\n'.join(listview)
+
+        return 'LinkedList:\n' + listview
+
+
+class SegmentedLruCache(object):
+    """
+    nodes should have a type attribute: PROTECTED, PROBATIONARY
+    It has key-value interface. Node is used internally.
+    """
+    def __init__(self, max_entries, max_protected_ratio):
+        self.protected_list = LinkedListVisNode()
+        self.probationary_list = LinkedListVisNode()
+
+        self.max_entries = max_entries
+        self.max_protected_entries = max_entries * max_protected_ratio
+
+        self.table = {}
+
+    def has_key(self, key):
+        return self.table.has_key(key)
+
+    def keys(self):
+        return self.table.keys()
+
+    def add_new_node(self, node):
+        """
+        this node does not exist in any list
+        add it to the MRU side of the probationary_list
+        """
+        node.owner_list = self.probationary_list
+        self.probationary_list.add_to_head(node)
+
+    def remove_item(self, key):
+        """
+        Remove this item from all lists
+        """
+        node = self.table[key]
+        del self.table[key]
+
+        l = node.owner_list
+        l.delete(node)
+
+    def move_from_prob_to_prot(self, node):
+        """
+        move from probationary to MRU side of protected.
+        This is the only gate to get into protected list.
+        The size of the overall cache does not change.
+        """
+        if len(self.protected_list) > self.max_protected_entries:
+            # need to evict
+            victim_node = self.protected_list.tail()
+            self.move_from_prot_to_prob(victim_node)
+
+        self.probationary_list.delete(node)
+        self.protected_list.add_to_head(node) # MRU side
+        node.owner_list = self.protected_list
+
+    def move_from_prot_to_prob(self, node):
+        "move from probationary to MRU side of protected"
+        self.protected_list.delete(node)
+        self.probationary_list.add_to_head(node) # MRU side
+        node.owner_list = self.probationary_list
+
+    def hit(self, node):
+        "this method should be called when we have a hit"
+        if node.owner_list is self.probationary_list:
+            self.move_from_prob_to_prot(node)
+        elif node.owner_list is self.protected_list:
+            self.protected_list.move_to_head(node)
+
+    ############### APIs  ################
+    def __getitem__(self, key):
+        node = self.table[key]
+        self.hit(node)
+        return node.value
+
+    def get(self, key, default = None):
+        if self.table.has_key(key):
+            # will affect list order
+            return self.__getitem__(key)
+        else:
+            # will not affect list order
+            return default
+
+    def __setitem__(self, key, value):
+        """
+        This should be the only API to add key-value to the cache!
+        """
+        if self.table.has_key(key):
+            # update
+            node = self.table[key]
+            node.value = value
+            self.hit(node)
+        else:
+            # create new
+            if self.is_full():
+                raise RuntimeError("Trying to add key-value to a full cache")
+
+            node = Node(key = key, value = value)
+            self.table[key] = node
+            self.add_new_node(node)
+
+    def victim_key(self):
+        v = self.probationary_list.tail()
+        if v != None:
+            return v
+
+        v = self.protected_list.tail()
+        if v != None:
+            return v
+
+        return None
+
+    def is_full(self):
+        return len(self.table) == self.max_entries
+
+    def __delitem__(self, key):
+        self.remove_item(key)
+
+    def __iter__(self):
+        return self.table.keys()
+
+    def __len__(self):
+        return len(self.table)
+
+    def __repr__(self):
+        return 'Protected List:' + repr(self.protected_list) + '\n' + \
+            'Probationary List:' + repr(self.probationary_list)
 
 def main():
-    ld = KeyValueStoreInLinkedList()
-    ld[2] = 22
-    ld[3] = 33
-    ld[4] = 44
+    sl = SegmentedLruCache(5, 0.5)
+    sl[2] = 22
+    sl[2] = 222
+    sl[3] = 33
+    sl[3] = 33
+    sl[4] = 44
+    sl[4] = 44
+    sl[5] =  55
+    sl[5] =  55
+    a = sl[2]
 
-    print ld
-    print '-----------'
+    sl[6] =  55
+    sl[1] =  11
 
-    lc = LruCache()
-    lc[1] = 11
-
-
-    lc[2] = 22
-    lc[3] = 33
-
-    print '-----initial------'
-    print lc
-
-    lc[1] = 3
-    print '-----lc[1]=3------'
-    print lc
-
-    a = lc[2]
-    print '-----a = lc[2]------'
-    print lc
+    print sl
 
 
 if __name__ == '__main__':
