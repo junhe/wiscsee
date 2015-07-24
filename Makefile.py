@@ -624,44 +624,43 @@ def mysql_change_data_dir():
 
 def test_dftl():
     confdic = {
-        "####################################### Global": "",
+        ############### Global #########
         "result_dir"            : None,
         # "workload_src"          : WLRUNNER,
         "workload_src"          : LBAGENERATOR,
         "expname"               : "test.dftl",
         "time"                  : None,
+        # directmap", "blockmap", "pagemap", "hybridmap", dftl
+        "ftl_type" : "dftl",
+        "sector_size"           : 512,
 
-        "####################################### For FtlSim": "",
+        ############## For FtlSim ######
         "flash_page_size"       : 4096,
         "flash_npage_per_block" : 4,
         "flash_num_blocks"      : 128,
 
-        #########################
+        ############## Dftl ############
         "dftl": {
             # number of bytes per entry in global_mapping_table
             "global_mapping_entry_bytes": 32,
             "GC_threshold_ratio": 0.4,
             "GC_low_threshold_ratio": 0.3,
-            "max_cmt_bytes": 1024 # cmt: cached mapping table
+            "max_cmt_bytes": 2**30 # cmt: cached mapping table
         },
 
-        "# dummycomment": ["directmap", "blockmap", "pagemap", "hybridmap"],
-        "ftl_type" : "dftl",
-        # "ftl_type" : "hybridmap",
-        # "ftl_type" : "pagemap",
-
+        ############## hybridmap ############
         "high_log_block_ratio"       : 0.4,
         "high_data_block_ratio"      : 0.4,
         "hybridmapftl": {
             "low_log_block_ratio": 0.32
         },
 
+        ############## recorder #############
         "verbose_level" : 1,
-        # output_target: file, stdout",
-        # "output_target" : "file",
-        "output_target" : "stdout",
+        "output_target" : "file",
+        # "output_target" : "stdout",
 
-        "####################################### For WlRunner": "",
+        ############## For WlRunner ########
         "loop_path"             : "/dev/loop0",
         "loop_dev_size_mb"      : None,
         "tmpfs_mount_point"     : "/mnt/tmpfs",
@@ -669,13 +668,14 @@ def test_dftl():
         "common_mnt_opts"       : ["discard"],
         # "common_mnt_opts"       : ["discard", "nodatacow"],
 
-        "sector_size"           : 512,
 
+        ############## FS ##################
         "filesystem"            : None,
         "ext4" : {
             "make_opts": {'-O':'^has_journal'}
         },
 
+        ############## workload.py on top of FS #########
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
         "Synthetic" :{
@@ -687,8 +687,10 @@ def test_dftl():
             "iterations" : 3
         },
 
+        ############## LBAGENERATOR  #########
         # if you choose LBAGENERATOR for workload_src, the following will
         # be used
+        # "lba_workload_class"    : "Sequential",
         "lba_workload_class"    : "Random",
         "LBA" : {
             "lba_to_flash_size_ratio": 0.3,
@@ -701,7 +703,7 @@ def test_dftl():
     conf['filesystem'] = fs
     conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
     conf['result_dir'] = "/tmp/{}/".format(conf['expname']) + \
-        '-'.join([conf['ftl_type']])
+        '-'.join([conf['ftl_type'], str(conf['dftl']['max_cmt_bytes'])])
 
     workflow(conf)
     return
