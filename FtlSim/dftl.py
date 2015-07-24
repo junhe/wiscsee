@@ -106,6 +106,8 @@ Components
     - appending ponit for garbage collection (NO, the paper says there is no
       such a appending point
     - NOTE: these points should be maintained by block pool.
+
+- FLASH
 """
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')
@@ -251,7 +253,7 @@ class CachedMappingTable(object):
     def __init__(self, confobj):
         self.conf = confobj
 
-        self.entries = lrulist.LruList()
+        self.entries = lrulist.LruCache()
         # self.entries = {}
 
         self.entry_bytes = 64 # lpn + ppn
@@ -699,8 +701,6 @@ class GcDecider(object):
             else:
                 ret = False
 
-        if ret == True:
-            print 'free too long', self.freeze_count
         return ret
 
 class Dftl(ftlbuilder.FtlBuilder):
@@ -737,8 +737,8 @@ class Dftl(ftlbuilder.FtlBuilder):
         # We should initialize Globaltranslationdirectory in Dftl
         self.mapping_manager.initialize_mappings()
 
-    def __del__(self):
-        print self.cached_mapping_table
+    # def __del__(self):
+        # print self.cached_mapping_table
 
     # FTL APIs
     def lba_read(self, lpn):
@@ -840,7 +840,6 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.flash.block_erase(blocknum, 'amplified')
 
     def gc(self):
-        debugrec.debug('start gc.............................................')
         decider = GcDecider(self.conf, self.block_pool)
         while decider.need_cleaning():
             victim_type, victim_block, valid_ratio = self.next_victim_block()
@@ -851,34 +850,29 @@ class Dftl(ftlbuilder.FtlBuilder):
                 self.clean_data_block(victim_block)
             elif victim_type == TRANS_BLOCK:
                 self.clean_trans_block(victim_block)
-        debugrec.debug('end gc..............................................')
 
     def clean_data_block(self, flash_block):
-        debugrec.debug('clean_data_block', flash_block)
         self.move_valid_pages(flash_block, self.move_data_page_to_new_location)
         # mark block as free
         self.block_pool.move_used_data_block_to_free(flash_block)
+        self.flash.block_erase(flash_block, 'amplified')
 
     def clean_trans_block(self, flash_block):
-        debugrec.debug('clean_trans_block', flash_block)
         self.move_valid_pages(flash_block,
             self.move_trans_page_to_new_location)
         # mark block as free
         self.block_pool.move_used_trans_block_to_free(flash_block)
+        self.flash.block_erase(flash_block, 'amplified')
 
     def move_valid_pages(self, flash_block, mover_func):
         start, end = self.conf.block_to_page_range(flash_block)
 
         for ppn in range(start, end):
-            debugrec.debug('check ppn:', ppn)
             if self.oob.states.is_page_valid(ppn):
-                debugrec.debug('move ppn:', ppn)
 
                 assert self.oob.states.is_page_valid(ppn)
-                print self.oob.states.page_state_human(ppn)
                 mover_func(ppn)
                 assert self.oob.states.is_page_invalid(ppn)
-                print self.oob.states.page_state_human(ppn)
 
     def move_data_page_to_new_location(self, ppn):
         """
