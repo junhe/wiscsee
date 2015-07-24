@@ -259,8 +259,8 @@ class CachedMappingTable(object):
             self.entry_bytes
 
         # self.entries = {}
-        # self.entries = lrulist.LruCache()
-        self.entries = lrulist.SegmentedLruCache(self.max_n_entries, 0.5)
+        self.entries = lrulist.LruCache()
+        # self.entries = lrulist.SegmentedLruCache(self.max_n_entries, 0.5)
 
     def lpn_to_ppn(self, lpn):
         "Try to find ppn of the given lpn in cache"
@@ -298,7 +298,7 @@ class CachedMappingTable(object):
             raise RuntimeError("You need to specify victim selection")
 
         # lpn, Cacheentrydata
-        return lpn, self.entries[lpn]
+        return lpn, self.entries.peek(lpn)
 
     def is_full(self):
         n = len(self.entries)
