@@ -333,6 +333,10 @@ class SegmentedLruCache(object):
             # will not affect list order
             return default
 
+    def peek(self, key):
+        node = self.table[key]
+        return node.value
+
     def __setitem__(self, key, value):
         """
         This should be the only API to add key-value to the cache!
@@ -355,13 +359,13 @@ class SegmentedLruCache(object):
         """
         Higher level class will handle the eviction.
         """
-        v = self.probationary_list.tail()
-        if v != None:
-            return v
+        node = self.probationary_list.tail()
+        if node != None:
+            return node.key
 
-        v = self.protected_list.tail()
-        if v != None:
-            return v
+        node = self.protected_list.tail()
+        if node != None:
+            return node.key
 
         return None
 
