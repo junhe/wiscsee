@@ -213,6 +213,10 @@ class LruCache(DictByLinkedList):
     def most_recently_used_key(self):
         return self.linked_list.tail().key
 
+    def victim_key(self):
+        return self.linked_list.tail().key
+
+
 
 """
 Segmented LRU (SLRU)
@@ -348,6 +352,9 @@ class SegmentedLruCache(object):
             self.add_new_node(node)
 
     def victim_key(self):
+        """
+        Higher level class will handle the eviction.
+        """
         v = self.probationary_list.tail()
         if v != None:
             return v
