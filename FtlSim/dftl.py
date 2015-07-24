@@ -253,13 +253,14 @@ class CachedMappingTable(object):
     def __init__(self, confobj):
         self.conf = confobj
 
-        self.entries = lrulist.LruCache()
-        # self.entries = {}
-
         self.entry_bytes = 64 # lpn + ppn
         max_bytes = self.conf['dftl']['max_cmt_bytes']
         self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
             self.entry_bytes
+
+        # self.entries = {}
+        # self.entries = lrulist.LruCache()
+        self.entries = lrulist.SegmentedLruCache(self.max_n_entries, 0.5)
 
     def lpn_to_ppn(self, lpn):
         "Try to find ppn of the given lpn in cache"
@@ -289,7 +290,12 @@ class CachedMappingTable(object):
         del self.entries[lpn]
 
     def victim_entry(self):
-        lpn = random.choice(self.entries.keys())
+        # lpn = random.choice(self.entries.keys())
+        classname = type(self.entries).__name__
+        if classname in ('SegmentedLruCache', 'LruCache'):
+            lpn = self.entries.victim_key()
+        else:
+            raise RuntimeError("You need to specify victim selection")
 
         # lpn, Cacheentrydata
         return lpn, self.entries[lpn]
