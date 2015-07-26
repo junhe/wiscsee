@@ -5,6 +5,7 @@ import argparse
 import re
 import subprocess
 import os
+import profile
 import sys
 import shlex
 import time
@@ -59,6 +60,7 @@ def workflow(conf):
     print "Start simulation.........."
     sim = FtlSim.simulator.Simulator(conf)
     sim.run(event_iter)
+
 
 def seq_with_rand_start():
     confdic = {
@@ -628,10 +630,10 @@ def test_dftl():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "fs.and.dftl",
+        "expname"               : "bricks",
         "time"                  : None,
         # directmap", "blockmap", "pagemap", "hybridmap", dftl
-        "ftl_type" : "dftl",
+        "ftl_type"              : "dftl",
         "sector_size"           : 512,
 
         ############## For FtlSim ######
@@ -643,9 +645,9 @@ def test_dftl():
         "dftl": {
             # number of bytes per entry in global_mapping_table
             "global_mapping_entry_bytes": 32,
-            "GC_threshold_ratio": 0.4,
-            "GC_low_threshold_ratio": 0.3,
-            "max_cmt_bytes": 32*100 # cmt: cached mapping table
+            "GC_threshold_ratio": 0.5,
+            "GC_low_threshold_ratio": 0.4,
+            "max_cmt_bytes": 32*1024 # cmt: cached mapping table
         },
 
         ############## hybridmap ############
@@ -679,12 +681,13 @@ def test_dftl():
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
         "Synthetic" :{
-            "generating_func": "self.generate_sequential_workload",
+            "generating_func": "self.generate_hotcold_workload",
+            # "generating_func": "self.generate_sequential_workload",
             # "generating_func": "self.generate_backward_workload",
             # "generating_func": "self.generate_random_workload",
             "chunk_count": 100*2**20/(8*1024),
             "chunk_size" : 8*1024,
-            "iterations" : 2
+            "iterations" : 1
         },
 
         ############## LBAGENERATOR  #########
@@ -699,16 +702,16 @@ def test_dftl():
     }
 
     # TODO: USE LARGER DISK
-    # filesystems = ('ext4', 'f2fs', 'btrfs')
+    filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('f2fs',)
-    filesystems = ('ext4',)
+    # filesystems = ('ext4',)
     for fs in filesystems:
         devsize_mb = 256
         conf = config.Config(confdic)
         conf['filesystem'] = fs
         conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-        conf['result_dir'] = "/tmp/{}/".format(conf['expname']) + \
+        conf['result_dir'] = "/tmp/results/{}/".format(conf['expname']) + \
             '-'.join([fs, conf['ftl_type'], str(devsize_mb), 'cmtsize',
             str(conf['dftl']['max_cmt_bytes'])])
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
@@ -758,6 +761,7 @@ def _main():
         targets = args.target.split(';')
         for target in targets:
             eval(target)
+            # profile.run(target)
 
 if __name__ == '__main__':
     _main()

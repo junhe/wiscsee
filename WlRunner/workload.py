@@ -251,6 +251,29 @@ class Synthetic(Workload):
         wllist.add_call(name='close', pid=0, path=filepath)
         return wllist
 
+    def generate_hotcold_workload(self):
+        def write_chunk(chunk_id):
+            offset = setting['chunk_size'] * chunk_id
+            size = setting['chunk_size']
+            wllist.add_call(name='write', pid=0, path=filepath,
+                offset=offset, count=size)
+            wllist.add_call(name='fsync', pid=0, path=filepath)
+
+        setting = self.conf['Synthetic']
+
+        wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
+        filepath = 'testfile'
+        wllist.add_call(name='open', pid=0, path=filepath)
+
+        chunkcnt = setting['chunk_count']
+
+        for rep in range(setting['iterations']):
+            for i in Bricks(2, chunkcnt):
+                write_chunk(i)
+
+        wllist.add_call(name='close', pid=0, path=filepath)
+        return wllist
+
     def run_by(self, generator_func):
         wllist = generator_func()
         tmppath = '/tmp/tmp_workloadfile'
@@ -268,17 +291,27 @@ class Synthetic(Workload):
     def stop(self):
         pass
 
-def bricks(n_col, n_pages):
-    pages_per_col = n_pages / n_col
-    assert n_pages % n_col == 0
+class Bricks(object):
+    def __init__(self, n_col, n_units):
+        self.n_col = n_col
+        self.n_units = n_units
+
+    def __iter__(self):
+        it = bricks(self.n_col, self.n_units)
+        for item in it:
+            yield item
+
+def bricks(n_col, n_units):
+    units_per_col = n_units / n_col
+    assert n_units % n_col == 0
 
     n_row = n_col
 
     for row in range(n_row):
         for col in range(row+1):
-            page_start = col * pages_per_col
-            page_end = (col + 1) * pages_per_col
-            for pg in range(page_start, page_end):
+            unit_start = col * units_per_col
+            unit_end = (col + 1) * units_per_col
+            for pg in range(unit_start, unit_end):
                 yield pg
 
 if __name__ == '__main__':
@@ -286,6 +319,10 @@ if __name__ == '__main__':
     # tpcc.run()
     # tpcc.stop()
 
-    sqlbench = Sqlbench()
-    sqlbench.run()
+    # sqlbench = Sqlbench()
+    # sqlbench.run()
+
+    for j in range(2):
+        for i in Bricks(2, 4):
+            print i
 

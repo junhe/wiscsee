@@ -113,7 +113,7 @@ Components
 
 
 
-Victim block selection:
+********* Victim block selection ****************
 Pick the block with the largest benefit/cost
 
 benefit/cost = age * (1-u) / 2u
@@ -137,6 +137,19 @@ Since ?
         - if use this and age is long, the rest of the valid pages are cold
         (long time no overwrite)
 
+
+********* Profiling result ****************
+   119377    0.628    0.000    0.829    0.000 ftlbuilder.py:100(validate_page)
+    93220    0.427    0.000    0.590    0.000 ftlbuilder.py:104(invalidate_page)
+  6507243   94.481    0.000  266.729    0.000 ftlbuilder.py:131(block_valid_ratio)
+ 26133103  105.411    0.000  147.733    0.000 ftlbuilder.py:141(is_page_valid)
+    10963    0.073    0.000    0.084    0.000 ftlbuilder.py:145(is_page_invalid)
+        1    0.000    0.000    0.000    0.000 ftlbuilder.py:187(__init__)
+        2    0.000    0.000    0.000    0.000 ftlbuilder.py:75(__init__)
+ 26356663   42.697    0.000   42.697    0.000 ftlbuilder.py:86(pagenum_to_slice_range)
+  6507243   29.636    0.000  296.394    0.000 dftl.py:1072(benefit_cost)
+    24285   16.029    0.001  314.736    0.013 dftl.py:1125(victim_blocks_iter)
+  6560378   12.825    0.000   12.825    0.000 config.py:53(block_to_page_range)
 """
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')
