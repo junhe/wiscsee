@@ -626,9 +626,9 @@ def test_dftl():
     confdic = {
         ############### Global #########
         "result_dir"            : None,
-        # "workload_src"          : WLRUNNER,
-        "workload_src"          : LBAGENERATOR,
-        "expname"               : "test.dftl",
+        "workload_src"          : WLRUNNER,
+        # "workload_src"          : LBAGENERATOR,
+        "expname"               : "fs.and.dftl",
         "time"                  : None,
         # directmap", "blockmap", "pagemap", "hybridmap", dftl
         "ftl_type" : "dftl",
@@ -645,7 +645,7 @@ def test_dftl():
             "global_mapping_entry_bytes": 32,
             "GC_threshold_ratio": 0.4,
             "GC_low_threshold_ratio": 0.3,
-            "max_cmt_bytes": 2**30 # cmt: cached mapping table
+            "max_cmt_bytes": 32*1024 # cmt: cached mapping table
         },
 
         ############## hybridmap ############
@@ -667,10 +667,10 @@ def test_dftl():
         "fs_mount_point"        : "/mnt/fsonloop",
         "common_mnt_opts"       : ["discard"],
         # "common_mnt_opts"       : ["discard", "nodatacow"],
+        "filesystem"            : None,
 
 
         ############## FS ##################
-        "filesystem"            : None,
         "ext4" : {
             "make_opts": {'-O':'^has_journal'}
         },
@@ -684,7 +684,7 @@ def test_dftl():
             # "generating_func": "self.generate_random_workload",
             "chunk_count": 100*2**20/(8*1024),
             "chunk_size" : 8*1024,
-            "iterations" : 3
+            "iterations" : 2
         },
 
         ############## LBAGENERATOR  #########
@@ -698,56 +698,24 @@ def test_dftl():
         }
     }
 
-    fs = 'ext4'
-    conf = config.Config(confdic)
-    conf['filesystem'] = fs
-    conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    conf['result_dir'] = "/tmp/{}/".format(conf['expname']) + \
-        '-'.join([conf['ftl_type'], str(conf['dftl']['max_cmt_bytes'])])
+    # TODO: USE LARGER DISK
+    filesystems = ('ext4', 'f2fs', 'btrfs')
+    # filesystems = ('f2fs', 'btrfs')
+    # filesystems = ('f2fs',)
+    # filesystems = ('ext4',)
+    for fs in filesystems:
+        devsize_mb = 256*8
+        conf = config.Config(confdic)
+        conf['filesystem'] = fs
+        conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+        conf['result_dir'] = "/tmp/{}/".format(conf['expname']) + \
+            '-'.join([fs, conf['ftl_type'], str(devsize_mb), 'cmtsize',
+            str(conf['dftl']['max_cmt_bytes'])])
+        conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
+        conf['loop_dev_size_mb'] = devsize_mb
 
-    workflow(conf)
-    return
+        workflow(conf)
 
-    "----------------------------------------"
-    devsize_mb = 256
-    fs = 'ext4'
-    conf = config.Config(confdic)
-    conf['filesystem'] = fs
-    conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    conf['result_dir'] = "/tmp/{}/".format(conf['expname']) + \
-        '-'.join([fs, conf['ftl_type'], str(devsize_mb)])
-    conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
-    conf['loop_dev_size_mb'] = devsize_mb
-
-    # sim = FtlSim.simulator.Simulator(conf)
-    # sim.run(event_iter)
-    rec = FtlSim.recorder.Recorder(output_target = conf['output_target'],
-        path = conf.get_output_file_path(),
-        verbose_level = conf['verbose_level'])
-    flashobj = FtlSim.flash.Flash(recorder = rec)
-    dftl = FtlSim.dftl.Dftl(conf, rec, flashobj)
-    dftl.lba_read(8)
-    print dftl.cached_mapping_table
-    dftl.lba_write(8)
-    print dftl.cached_mapping_table
-    dftl.lba_write(8)
-    print dftl.cached_mapping_table
-    dftl.lba_write(8)
-    print dftl.cached_mapping_table
-    dftl.lba_write(8)
-    print dftl.cached_mapping_table
-
-    dftl.lba_write(1999)
-    print dftl.cached_mapping_table
-    dftl.lba_write(1999)
-    print dftl.cached_mapping_table
-
-    dftl.lba_read(8)
-    dftl.lba_discard(8)
-    print dftl.cached_mapping_table
-
-    dftl.lba_discard(1999)
-    print dftl.cached_mapping_table
 
 def main(cmd_args):
     if cmd_args.git == True:
