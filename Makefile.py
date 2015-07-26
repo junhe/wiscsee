@@ -702,10 +702,11 @@ def test_dftl():
     }
 
     # TODO: USE LARGER DISK
-    filesystems = ('ext4', 'f2fs', 'btrfs')
+    # filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('f2fs',)
     # filesystems = ('ext4',)
+    filesystems = ('xfs',)
     for fs in filesystems:
         devsize_mb = 256
         conf = config.Config(confdic)

@@ -38,6 +38,8 @@ class WorkloadRunner(object):
             fsclass = filesystem.F2fs
         elif fs == 'btrfs':
             fsclass = filesystem.Btrfs
+        elif fs == 'xfs':
+            fsclass = filesystem.Xfs
         else:
             raise RuntimeError("{} is not a valid file system type"\
                 .format(fs))

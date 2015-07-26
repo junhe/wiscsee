@@ -88,6 +88,20 @@ class Btrfs(FileSystemBase):
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
 
+class Xfs(FileSystemBase):
+    def make(self, opt_dic=None):
+        if opt_dic == None:
+            opt_str = ''
+        else:
+            items = [ ' '.join([k,v]) for k,v in opt_dic.items() ]
+            opt_str = ' '.join(items)
+
+        ret = utils.shcmd("mkfs.xfs {opt} -f -s size=4096 -b size=4096 {dev}"\
+            .format(opt = opt_str, dev = self.dev), ignore_error = True)
+
+        if ret != 0:
+            raise RuntimeError("Failed to make dev:{}".format(self.dev))
+
 # loopdev = LoopDevice(dev_path = '/dev/loop0', tmpfs_mount_point = '/mnt/tmpfs',
         # size_mb = 4096)
 # loopdev.create()
