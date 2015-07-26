@@ -268,7 +268,7 @@ class Synthetic(Workload):
         chunkcnt = setting['chunk_count']
 
         for rep in range(setting['iterations']):
-            for i in Bricks(2, chunkcnt):
+            for i in Bricks(setting['n_col'], chunkcnt):
                 write_chunk(i)
 
         wllist.add_call(name='close', pid=0, path=filepath)

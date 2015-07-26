@@ -630,7 +630,7 @@ def test_dftl():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "bricks",
+        "expname"               : "bricks-10mb-chunk",
         "time"                  : None,
         # directmap", "blockmap", "pagemap", "hybridmap", dftl
         "ftl_type"              : "dftl",
@@ -685,9 +685,11 @@ def test_dftl():
             # "generating_func": "self.generate_sequential_workload",
             # "generating_func": "self.generate_backward_workload",
             # "generating_func": "self.generate_random_workload",
-            "chunk_count": 100*2**20/(8*1024),
-            "chunk_size" : 8*1024,
-            "iterations" : 1
+            # "chunk_count": 100*2**20/(8*1024),
+            "chunk_count": 10,
+            "chunk_size" : 10*1024*1024,
+            "iterations" : 1,
+            "n_col"      : 2
         },
 
         ############## LBAGENERATOR  #########
@@ -702,11 +704,11 @@ def test_dftl():
     }
 
     # TODO: USE LARGER DISK
-    # filesystems = ('ext4', 'f2fs', 'btrfs')
+    filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('f2fs',)
     # filesystems = ('ext4',)
-    filesystems = ('xfs',)
+    # filesystems = ('xfs',)
     for fs in filesystems:
         devsize_mb = 256
         conf = config.Config(confdic)
