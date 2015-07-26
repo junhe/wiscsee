@@ -237,12 +237,12 @@ class Synthetic(Workload):
         wllist.add_call(name='open', pid=0, path=filepath)
 
         random.seed(1)
-        random_seq = range(setting['chunk_count'])
-        random.shuffle(random_seq)
+        # random_seq = range(setting['chunk_count'])
+        chunkcnt = setting['chunk_count']
 
         for rep in range(setting['iterations']):
-            for i in random_seq:
-                offset = setting['chunk_size'] * i
+            for i in range(0, chunkcnt):
+                offset = setting['chunk_size'] * random.randint(0, chunkcnt)
                 size = setting['chunk_size']
                 wllist.add_call(name='write', pid=0, path=filepath,
                     offset=offset, count=size)
