@@ -21,12 +21,22 @@ class Config(dict):
     def get_blkparse_result_path(self):
         return os.path.join(self['result_dir'], 'blkparse-output.txt')
 
+    def get_blkparse_result_path_mkfs(self):
+        "for file system making"
+        return os.path.join(self['result_dir'], 'blkparse-output-mkfs.txt')
+
     def get_blkparse_result_table_path(self):
         return os.path.join(self['result_dir'], 'blkparse-output-table.txt')
 
     def get_ftlsim_events_output_path(self):
         "This is the path to output parsed blkparse results"
-        return os.path.join(self['result_dir'], 'blkparse-events-for-ftlsim.txt')
+        return os.path.join(self['result_dir'],
+            'blkparse-events-for-ftlsim.txt')
+
+    def get_ftlsim_events_output_path_mkfs(self):
+        "This is the path to output parsed blkparse results"
+        return os.path.join(self['result_dir'],
+            'blkparse-events-for-ftlsim-mkfs.txt')
 
     def byte_to_pagenum(self, offset, force_alignment = True):
         "offset to page number"

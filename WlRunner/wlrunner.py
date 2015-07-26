@@ -46,7 +46,14 @@ class WorkloadRunner(object):
         self.fs = fsclass(device = self.conf['loop_path'],
             mount_point = self.conf['fs_mount_point'])
 
-        # create blktrace manager object
+        # blktracer for making file system
+        self.blktracer_mkfs = blocktrace.BlockTraceManager(
+            dev = self.conf['loop_path'],
+            resultpath = self.conf.get_blkparse_result_path_mkfs(),
+            to_ftlsim_path = self.conf.get_ftlsim_events_output_path_mkfs(),
+            sector_size = self.conf['sector_size'])
+
+        # blktracer for running workload
         self.blktracer = blocktrace.BlockTraceManager(
             dev = self.conf['loop_path'],
             resultpath = self.conf.get_blkparse_result_path(),
@@ -66,14 +73,14 @@ class WorkloadRunner(object):
             self.loopdev.create()
 
             # strat blktrace
-            # You have to start blktrace before making file system
-            # Otherwise, the making and mounting will NOT be simulated
-            # by FtlSim
-            self.blktracer.start_tracing_and_collecting()
-            while self.blktracer.proc == None:
+            # This is only for making and mounting file system, because we
+            # want to separate them with workloads.
+            self.blktracer_mkfs.start_tracing_and_collecting()
+            while self.blktracer_mkfs.proc == None:
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
 
+            # Making and mounting file system
             try:
                 mk_opt_dic = self.conf[self.conf['filesystem']].get('make_opts', None)
             except KeyError:
@@ -82,14 +89,13 @@ class WorkloadRunner(object):
             self.fs.mount(opt_list=self.conf['common_mnt_opts'])
             utils.shcmd('sync')
 
+            self.blktracer_mkfs.stop_tracing_and_collecting()
+            self.blktracer_mkfs.blkparse_file_to_ftlsim_input_file()
 
-
-            # start Ftrace
-            # self.ftrace.set_filter('*f2fs*')
-            # self.ftrace.start_tracing()
-            # self.ftrace.clean_trace()
-            # self.ftrace.write_marker('JUN: beginning of workload..............')
-            # self.ftrace.run_stats()
+            self.blktracer.start_tracing_and_collecting()
+            while self.blktracer.proc == None:
+                print 'Waiting for blktrace to start.....'
+                time.sleep(0.5)
 
             self.workload.run()
 
@@ -97,16 +103,7 @@ class WorkloadRunner(object):
         except Exception:
             raise
         else:
-            # finish Ftrace
-            # self.ftrace.write_marker('JUN: end of workload..............')
-            # print "trying to stop stats"
-            # self.ftrace.write_marker('send to pipe.')
-            # self.ftrace.stop_stats()
-            # self.ftrace.write_marker('send to pipe.')
-
             self.blktracer.blkparse_file_to_ftlsim_input_file()
-            print 'file wrote to {}'.format(
-                self.conf.get_ftlsim_events_output_path())
             return self.get_event_iterator()
         finally:
             # always try to clean up the blktrace processes
