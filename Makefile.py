@@ -645,7 +645,7 @@ def test_dftl():
             "global_mapping_entry_bytes": 32,
             "GC_threshold_ratio": 0.4,
             "GC_low_threshold_ratio": 0.3,
-            "max_cmt_bytes": 32*1024 # cmt: cached mapping table
+            "max_cmt_bytes": 32*100 # cmt: cached mapping table
         },
 
         ############## hybridmap ############
@@ -699,12 +699,12 @@ def test_dftl():
     }
 
     # TODO: USE LARGER DISK
-    filesystems = ('ext4', 'f2fs', 'btrfs')
+    # filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('f2fs',)
-    # filesystems = ('ext4',)
+    filesystems = ('ext4',)
     for fs in filesystems:
-        devsize_mb = 256*8
+        devsize_mb = 256
         conf = config.Config(confdic)
         conf['filesystem'] = fs
         conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())

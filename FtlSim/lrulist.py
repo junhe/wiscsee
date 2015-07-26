@@ -320,6 +320,11 @@ class SegmentedLruCache(object):
             self.protected_list.move_to_head(node)
 
     ############### APIs  ################
+
+    def items(self):
+        for key in self.keys():
+            yield key, self.table[key].value
+
     def __getitem__(self, key):
         node = self.table[key]
         self.hit(node)

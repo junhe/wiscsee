@@ -1,7 +1,9 @@
 import bitarray
 from collections import deque
+import datetime
 import random
 import os
+import Queue
 
 import bidict
 
@@ -108,6 +110,33 @@ Components
     - NOTE: these points should be maintained by block pool.
 
 - FLASH
+
+
+
+Victim block selection:
+Pick the block with the largest benefit/cost
+
+benefit/cost = age * (1-u) / 2u
+
+where u is the utilization of the segment and age is the
+time since the most recent modification (i.e., the last
+block invalidation). The terms 2u and 1-u respectively
+represent the cost for copying (u to read valid blocks in
+the segment and u to write back them) and the free
+space reclaimed.
+
+What's age?
+The longer the age, the more benefit it has.
+Since ?
+    - the time the block was erased
+    - the first time a page become valid
+    - the last time a page become valid
+        - if use this and age is long, .... it does not say anything about
+        overwriting
+    - the last time a page become invalid in the block
+        - if use this and age is long, the rest of the valid pages are cold
+        (long time no overwrite)
+
 """
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')
@@ -239,17 +268,33 @@ class CacheEntryData(object):
     """
     This is a helper class that store entry data for a LPN
     """
-    ppn = None
-    dirty = None # True or False
-
-    def __init__(self, ppn, dirty):
+    def __init__(self, lpn, ppn, dirty):
+        self.lpn = lpn
         self.ppn = ppn
         self.dirty = dirty
 
     def __repr__(self):
-        return "ppn {}, dirty {}".format(self.ppn, self.dirty)
+        return "lpn:{}, ppn:{}, dirty:{}".format(self.lpn,
+            self.ppn, self.dirty)
 
 class CachedMappingTable(object):
+    """
+    3:30pm
+    When do we need batched update?
+    - do we need it when cleaning translation pages? NO. cleaning translation
+    pages does not change contents of translation page.
+    - do we need it when cleaning data page? Yes. When cleaning data page, you
+    need to modify some lpn->ppn. For those LPNs in the same translation page,
+    you can group them and update together. The process is: put those LPNs to
+    the same group, read the translation page, modify entries and write it to
+    flash. If you want batch updates here, you will need to buffer a few
+    lpn->ppn. Well, since we have limited SRAM, you cannot do this.
+    TODO: maybe you need to implement this.
+
+    - do we need it when writing a lpn? To be exact, we need it when evict an
+    entry in CMT. In that case, we need to find all the CMT entries in the same
+    translation page with the victim entry.
+    """
     def __init__(self, confobj):
         self.conf = confobj
 
@@ -275,11 +320,11 @@ class CachedMappingTable(object):
         if self.entries.has_key(lpn):
             raise RuntimeError("{}:{} already exists in CMT entries.".format(
                 lpn, self.entries[lpn].ppn))
-        self.entries[lpn] = CacheEntryData(ppn = ppn, dirty = dirty)
+        self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
 
     def update_entry(self, lpn, ppn, dirty):
         "You may end up remove the old one"
-        self.entries[lpn] = CacheEntryData(ppn = ppn, dirty = dirty)
+        self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
 
     def overwrite_entry(self, lpn, ppn, dirty):
         "lpn must exist"
@@ -452,14 +497,17 @@ class OutOfBandAreas(object):
         # ppn->lpn mapping stored in OOB
         self.ppn_to_lpn = {}
 
+        # flash block -> last invalidation time
+        # int -> timedate.timedate
+        self.last_inv_time_of_block = {}
+
     def translate_ppn_to_lpn(self, ppn):
         return self.ppn_to_lpn[ppn]
 
-    def apply_event(self, event):
-        pass
-
     def wipe_ppn(self, ppn):
         self.states.invalidate_page(ppn)
+        block, _ = self.conf.page_to_block_off(ppn)
+        self.last_inv_time_of_block[block] = datetime.datetime.now()
         del self.ppn_to_lpn[ppn]
 
     def erase_block(self, flash_block):
@@ -471,6 +519,8 @@ class OutOfBandAreas(object):
                 del self.ppn_to_lpn[ppn]
             except KeyError:
                 pass
+
+        del last_inv_time_of_block[flash_block]
 
     def new_write(self, lpn, old_ppn, new_ppn):
         """
@@ -635,12 +685,35 @@ class MappingManager(object):
         """
         vic_lpn, vic_entrydata = self.cached_mapping_table.victim_entry()
 
-        if vic_entrydata.dirty == True:
-            # update every data structure related
-            self.update_entry(vic_lpn, vic_entrydata.ppn)
+        # if vic_entrydata.dirty == True:
+            # # update every data structure related
+            # self.update_entry(vic_lpn, vic_entrydata.ppn)
 
-        # remove the entry
+        batch_entries = self.cmt_entries_in_same_trans_page(vic_lpn)
+        for entry in batch_entries:
+            if entry.dirty == True:
+                self.update_entry(entry.lpn, entry.ppn)
+
+        # remove only the victim entry
         self.cached_mapping_table.remove_entry_by_lpn(vic_lpn)
+
+    def cmt_entries_in_same_trans_page(self, lpn):
+        """
+        It returns all the CMT entries in the same translation page with lpn,
+        including lpn itself.
+        """
+        m_vpn = self.directory.m_vpn_of_lpn(lpn)
+
+        # TODO: this can be improved so we don't need to search the whole
+        # cache every time we call this function. To improve, group by
+        # m_vpn when adding to cache
+        retlist = []
+        for entry_lpn, datentry in self.cached_mapping_table.entries.items():
+            tmp_m_vpn = self.directory.m_vpn_of_lpn(entry_lpn)
+            if tmp_m_vpn == m_vpn:
+                retlist.append(datentry)
+
+        return retlist
 
 class GcDecider(object):
     """
@@ -708,6 +781,18 @@ class GcDecider(object):
                 ret = False
 
         return ret
+
+class BlockInfo(object):
+    """
+    This is for sorting blocks to clean the victim.
+    """
+    def __init__(self, block_type, block_num, value):
+        self.block_type = block_type
+        self.block_num = block_num
+        self.value = value
+
+    def __comp__(self, other):
+        return cmp(self.value, other.value)
 
 class Dftl(ftlbuilder.FtlBuilder):
     """
@@ -847,11 +932,19 @@ class Dftl(ftlbuilder.FtlBuilder):
 
     def gc(self):
         decider = GcDecider(self.conf, self.block_pool)
+
         while decider.need_cleaning():
-            victim_type, victim_block, valid_ratio = self.next_victim_block()
-            if valid_ratio == 1:
-                # all blocks are full of valid pages
+            if decider.call_index == 0:
+                block_iter = self.victim_blocks_iter()
+            # victim_type, victim_block, valid_ratio = self.next_victim_block()
+            # victim_type, victim_block, valid_ratio = \
+                # self.next_victim_block_benefit_cost()
+            try:
+                blockinfo = block_iter.next()
+            except StopIteration:
+                # nothing to be cleaned
                 break
+            victim_type, victim_block = (blockinfo.block_type, blockinfo.block_num)
             if victim_type == DATA_BLOCK:
                 self.clean_data_block(victim_block)
             elif victim_type == TRANS_BLOCK:
@@ -941,7 +1034,9 @@ class Dftl(ftlbuilder.FtlBuilder):
             m_ppn = new_m_ppn)
 
     def next_victim_block(self):
-        "TODO: refactor the code"
+        """
+        TODO: refactor the code
+        """
         min_valid_ratio = 2
         ret_block = None
         block_type = None
@@ -973,6 +1068,89 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         # print maxblock, maxratio
         return block_type, ret_block, min_valid_ratio
+
+    def benefit_cost(self, blocknum, current_time):
+        valid_ratio = self.oob.states.block_valid_ratio(blocknum)
+        if valid_ratio == 0:
+            # empty block is always the best deal
+            return float("inf")
+
+        if valid_ratio == 1:
+            # it is possible that none of the pages in the block has been
+            # invalidated yet. In that case, all pages in the block is valid.
+            # we don't need to clean it.
+            return 0
+
+        last_inv_time = self.oob.last_inv_time_of_block.get(blocknum, None)
+        if last_inv_time == None:
+            print blocknum
+
+        age = current_time - self.oob.last_inv_time_of_block[blocknum]
+        age = age.total_seconds()
+        bene_cost = age * ( 1 - valid_ratio ) / ( 2 * valid_ratio )
+
+        return bene_cost
+
+    def next_victim_block_benefit_cost(self):
+        """
+        TODO: to improve, maintain a bene cost priority queue, so you
+        don't need to compute repeatly
+        """
+        highest_bene_cost = -1
+        ret_block = None
+        block_type = None
+
+        current_blocks = self.block_pool.current_blocks()
+
+        current_time = datetime.datetime.now()
+
+        for usedblocks, block_type in (
+            (self.block_pool.data_usedblocks, DATA_BLOCK),
+            (self.block_pool.trans_usedblocks, TRANS_BLOCK)):
+            for blocknum in usedblocks:
+                if blocknum in current_blocks:
+                    continue
+
+                bene_cost = self.bene_cost(blocknum, current_time)
+                if bene_cost > highest_bene_cost:
+                    ret_block = blocknum
+                    highest_bene_cost = bene_cost
+                    ret_valid_ratio = valid_ratio
+
+        if ret_block == None:
+            self.recorder.debug("no block is used yet.")
+
+        return block_type, ret_block, ret_valid_ratio
+
+    def victim_blocks_iter(self):
+        """
+        Calculate benefit/cost and put it to a priority queue
+        """
+        current_blocks = self.block_pool.current_blocks()
+        current_time = datetime.datetime.now()
+        priority_q = Queue.PriorityQueue()
+
+        for usedblocks, block_type in (
+            (self.block_pool.data_usedblocks, DATA_BLOCK),
+            (self.block_pool.trans_usedblocks, TRANS_BLOCK)):
+            for blocknum in usedblocks:
+                if blocknum in current_blocks:
+                    continue
+
+                bene_cost = self.benefit_cost(blocknum, current_time)
+
+                if bene_cost == 0:
+                    # valid_ratio must be zero, we definitely don't
+                    # want to cleaning it because we cannot get any
+                    # free pages from it
+                    continue
+
+                blk_info = BlockInfo(block_type = block_type,
+                    block_num = blocknum, value = bene_cost)
+                priority_q.put(blk_info)
+
+        while not priority_q.empty():
+            yield priority_q.get()
 
 def main():
     pass
