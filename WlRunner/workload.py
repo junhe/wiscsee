@@ -268,6 +268,18 @@ class Synthetic(Workload):
     def stop(self):
         pass
 
+def bricks(n_col, n_pages):
+    pages_per_col = n_pages / n_col
+    assert n_pages % n_col == 0
+
+    n_row = n_col
+
+    for row in range(n_row):
+        for col in range(row+1):
+            page_start = col * pages_per_col
+            page_end = (col + 1) * pages_per_col
+            for pg in range(page_start, page_end):
+                yield pg
 
 if __name__ == '__main__':
     # tpcc = Tpcc()
