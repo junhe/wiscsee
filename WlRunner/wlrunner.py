@@ -110,5 +110,19 @@ class WorkloadRunner(object):
             self.blktracer.stop_tracing_and_collecting()
 
     def get_event_iterator(self):
-        return FileLineIterator(self.conf.get_ftlsim_events_output_path())
+        mkfs_iter = FileLineIterator(
+            self.conf.get_ftlsim_events_output_path_mkfs())
+
+        for event in mkfs_iter:
+            yield event
+
+        # special event indicates the start of workload
+        yield "workloadstart 0 0"
+
+        workload_iter = FileLineIterator(
+            self.conf.get_ftlsim_events_output_path())
+
+        for event in workload_iter:
+            yield event
+
 

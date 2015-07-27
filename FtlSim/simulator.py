@@ -68,18 +68,17 @@ class Simulator(object):
                 event['size'])
             for page in pages:
                 self.ftl.lba_discard(page)
+        elif event['operation'] == 'workloadstart':
+            # start statistics on workload
+            self.ftl.enable_recording()
         else:
             raise RuntimeError("operation '{}' is not supported".format(
                 event['operation']))
 
     def run(self, event_line_iter):
-        # This should be the only place that we load config
-        # do this before running the simulator, Not when initializing the
-        # simulator class
-        # config.conf.load_from_dict(confdic)
+        # disable recording so we ignore statistics of making fs
+        self.ftl.disable_recording()
 
-        # you have to load configuration first before initialize recorder
-        # recorder.initialize()
         for event_line in event_line_iter:
             event = event_line_to_dic(event_line)
             self.process_event(event)

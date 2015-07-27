@@ -214,6 +214,12 @@ class FtlBuilder(object):
     def debug_info(self):
         raise NotImplementedError
 
+    def enable_recording(self):
+        self.recorder.enable()
+
+    def disable_recording(self):
+        self.recorder.disable()
+
 if __name__ == '__main__':
     b = bitarray.bitarray(10)
     print b
