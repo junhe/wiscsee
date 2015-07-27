@@ -7,7 +7,7 @@ FILE_TARGET, STDOUT_TARGET = ('file', 'stdout')
 
 
 def switchable(function):
-    "decrator for class Recorder"
+    "decrator for class Recorder's method, so they can be switched on/off"
     def wrapper(self, *args, **kwargs):
         if self.enabled == None:
             raise RuntimeError("You need to explicity enable/disable Recorder."
@@ -28,6 +28,7 @@ class Recorder(object):
         self.verbose_level = verbose_level
         self.counter = {}
         self.put_and_count_counter = {}
+        self.count_counter = {}
 
         # enabled by default
         self.enabled = None
@@ -41,6 +42,7 @@ class Recorder(object):
         self.enabled = True
 
     def disable(self):
+        "Note that this will not clear the previous records"
         self.enabled = False
 
     def __del__(self):
@@ -56,6 +58,9 @@ class Recorder(object):
 
             path2 = '.'.join((self.path, 'put_and_count.stats'))
             utils.table_to_file([self.put_and_count_counter], path2)
+
+            path3 = '.'.join((self.path, 'count.stats'))
+            utils.table_to_file([self.count_counter], path3)
 
     @switchable
     def output(self, *args):
@@ -92,6 +97,11 @@ class Recorder(object):
 
         if self.verbose_level >= 1:
             self.output('PUTCOUNT', item, *args)
+
+    @switchable
+    def count(self, item, *args ):
+        """ The first parameter will be counted """
+        self.count_counter[item] = self.count_counter.setdefault(item, 0) + 1
 
     @switchable
     def warning(self, *args):
