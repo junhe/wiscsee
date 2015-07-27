@@ -596,7 +596,7 @@ class MappingManager(object):
         m_ppn = self.directory.m_ppn_of_lpn(lpn)
 
         # read it up, this operation is just for statistics
-        self.flash.page_read(m_ppn, 'amplified')
+        self.flash.page_read(m_ppn, TRANS_CACHE)
 
         # Now we have all the entries of m_ppn in memory, we need to put
         # the mapping of lpn->ppn to CMT
@@ -649,7 +649,7 @@ class MappingManager(object):
         """
         pass
 
-    def update_entry(self, lpn, new_ppn):
+    def update_entry(self, lpn, new_ppn, tag = "NA"):
         """
         update entry of lpn to be lpn->new_ppn everywhere if necessary
 
@@ -676,10 +676,10 @@ class MappingManager(object):
         old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
 
         # update GMT on flash
-        self.flash.page_read(old_m_ppn, 'amplified')
+        self.flash.page_read(old_m_ppn, tag)
         pass # modify in memory
         new_m_ppn = self.block_pool.next_translation_page_to_program()
-        self.flash.page_write(new_m_ppn, 'amplified')
+        self.flash.page_write(new_m_ppn, tag)
         # update our fake 'on-flash' GMT
         self.global_mapping_table.update(lpn = lpn, ppn = new_ppn)
 
@@ -705,7 +705,7 @@ class MappingManager(object):
         batch_entries = self.cmt_entries_in_same_trans_page(vic_lpn)
         for entry in batch_entries:
             if entry.dirty == True:
-                self.update_entry(entry.lpn, entry.ppn)
+                self.update_entry(entry.lpn, entry.ppn, tag=TRANS_CACHE)
 
         # remove only the victim entry
         self.cached_mapping_table.remove_entry_by_lpn(vic_lpn)
@@ -807,6 +807,25 @@ class BlockInfo(object):
     def __comp__(self, other):
         return cmp(self.value, other.value)
 
+#
+# - translation pages
+#   - cache miss read (trans.cache.load)
+#   - eviction write  (trans.cache.evict)
+#   - cleaning read   (trans.clean)
+#   - cleaning write  (trans.clean)
+# - data pages
+#   - user read       (data.user)
+#   - user write      (data.user)
+#   - cleaning read   (data.cleaning)
+#   - cleaning writes (data.cleaning)
+# Tag format
+# pagetype.
+# Example tags:
+TRANS_CACHE = "trans.cache" #read is due to miss, write is due to eviction
+TRANS_CLEAN = "trans.clean" #read/write are for moving pages
+DATA_USER = "data.user"
+DATA_CLEANING = "data.cleaning"
+
 class Dftl(ftlbuilder.FtlBuilder):
     """
     The implementation literally follows DFtl paper.
@@ -841,6 +860,10 @@ class Dftl(ftlbuilder.FtlBuilder):
         # We should initialize Globaltranslationdirectory in Dftl
         self.mapping_manager.initialize_mappings()
 
+        self.gcstats = recorder.Recorder(output_target = recorder.FILE_TARGET,
+            path = os.path.join(self.conf['result_dir'], 'gcstats.log'),
+            verbose_level = 1)
+
     # def __del__(self):
         # print self.cached_mapping_table
 
@@ -853,7 +876,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.recorder.put('lba_read', lpn, 'user')
 
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
-        self.flash.page_read(ppn, 'user')
+        self.flash.page_read(ppn, DATA_USER)
 
     def lba_write(self, lpn):
         """
@@ -896,7 +919,7 @@ class Dftl(ftlbuilder.FtlBuilder):
             new_ppn = new_ppn)
 
         # Flash
-        self.flash.page_write(new_ppn, 'user')
+        self.flash.page_write(new_ppn, DATA_USER)
 
         # garbage collection
         self.gc()
@@ -1000,14 +1023,14 @@ class Dftl(ftlbuilder.FtlBuilder):
         old_ppn = ppn
 
         # read the the data page
-        self.flash.page_read(old_ppn, 'amplified')
+        self.flash.page_read(old_ppn, DATA_CLEANING)
 
         # find the mapping
         lpn = self.oob.translate_ppn_to_lpn(old_ppn)
 
         # write to new page
         new_ppn = self.block_pool.next_data_page_to_program()
-        self.flash.page_write(new_ppn, 'amplified')
+        self.flash.page_write(new_ppn, DATA_CLEANING)
 
         # update new page and old page's OOB
         self.oob.new_write(lpn, old_ppn, new_ppn)
@@ -1015,7 +1038,8 @@ class Dftl(ftlbuilder.FtlBuilder):
         cached_ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
         if cached_ppn == MISS:
             # This will not add mapping to cache
-            self.mapping_manager.update_entry(lpn = lpn, new_ppn = new_ppn)
+            self.mapping_manager.update_entry(lpn = lpn, new_ppn = new_ppn,
+                tag = TRANS_CLEAN)
         else:
             # lpn is in cache, update it
             # This is a design from the original Dftl paper
@@ -1033,11 +1057,11 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         m_vpn = self.oob.translate_ppn_to_lpn(old_m_ppn)
 
-        self.flash.page_read(old_m_ppn, 'amplified')
+        self.flash.page_read(old_m_ppn, TRANS_CLEAN)
 
         # write to new page
         new_m_ppn = self.block_pool.next_translation_page_to_program()
-        self.flash.page_write(new_m_ppn, 'amplified')
+        self.flash.page_write(new_m_ppn, TRANS_CLEAN)
 
         # update new page and old page's OOB
         self.oob.new_write(m_vpn, old_m_ppn, new_m_ppn)
