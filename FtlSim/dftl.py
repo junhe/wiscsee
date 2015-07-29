@@ -873,7 +873,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         ppn = translate(pagenum))
         flash.read(ppn)
         """
-        self.recorder.put('lba_read', lpn, 'user')
+        self.recorder.put('logical_read', lpn, 'user')
 
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
         self.flash.page_read(ppn, DATA_USER)
@@ -903,7 +903,7 @@ class Dftl(ftlbuilder.FtlBuilder):
             It is automatically updated by next_data_page_to_program
         Flash
         """
-        self.recorder.put('lba_write', lpn, 'user')
+        self.recorder.put('logical_write', lpn, 'user')
 
         old_ppn = self.mapping_manager.lpn_to_ppn(lpn)
 
@@ -943,7 +943,7 @@ class Dftl(ftlbuilder.FtlBuilder):
             updates should be done by GC
 
         """
-        self.recorder.put('lba_discard', lpn, 'user')
+        self.recorder.put('logical_discard', lpn, 'user')
 
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
         if ppn == UNINITIATED:
