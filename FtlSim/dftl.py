@@ -533,7 +533,7 @@ class OutOfBandAreas(object):
             except KeyError:
                 pass
 
-        del last_inv_time_of_block[flash_block]
+        del self.last_inv_time_of_block[flash_block]
 
     def new_write(self, lpn, old_ppn, new_ppn):
         """
