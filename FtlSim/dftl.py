@@ -956,7 +956,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         # OOB
         self.oob.wipe_ppn(ppn)
 
-    def erase_block(self, blocknum):
+    def erase_block(self, blocknum, tag):
         """
         set pages' oob states to ERASED
         electrionically erase the pages
@@ -964,7 +964,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         # set page states to ERASED and in-OOB lpn to nothing
         self.oob.erase_block(blocknum)
 
-        self.flash.block_erase(blocknum, 'amplified')
+        self.flash.block_erase(blocknum, tag)
 
     def gc(self):
         decider = GcDecider(self.conf, self.block_pool)
