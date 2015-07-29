@@ -990,14 +990,16 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.move_valid_pages(flash_block, self.move_data_page_to_new_location)
         # mark block as free
         self.block_pool.move_used_data_block_to_free(flash_block)
-        self.flash.block_erase(flash_block, 'amplified')
+        # it handles oob and flash
+        self.erase_block(flash_block, DATA_CLEANING)
 
     def clean_trans_block(self, flash_block):
         self.move_valid_pages(flash_block,
             self.move_trans_page_to_new_location)
         # mark block as free
         self.block_pool.move_used_trans_block_to_free(flash_block)
-        self.flash.block_erase(flash_block, 'amplified')
+        # it handles oob and flash
+        self.erase_block(flash_block, TRANS_CLEAN)
 
     def move_valid_pages(self, flash_block, mover_func):
         start, end = self.conf.block_to_page_range(flash_block)
