@@ -1006,10 +1006,7 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         for ppn in range(start, end):
             if self.oob.states.is_page_valid(ppn):
-
-                assert self.oob.states.is_page_valid(ppn)
                 mover_func(ppn)
-                assert self.oob.states.is_page_invalid(ppn)
 
     def move_data_page_to_new_location(self, ppn):
         """
