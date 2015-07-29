@@ -76,6 +76,7 @@ class WorkloadRunner(object):
             # This is only for making and mounting file system, because we
             # want to separate them with workloads.
             self.blktracer_mkfs.start_tracing_and_collecting()
+            time.sleep(0.5)
             while self.blktracer_mkfs.proc == None:
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
@@ -93,6 +94,7 @@ class WorkloadRunner(object):
             self.blktracer_mkfs.blkparse_file_to_ftlsim_input_file()
 
             self.blktracer.start_tracing_and_collecting()
+            time.sleep(0.5)
             while self.blktracer.proc == None:
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
