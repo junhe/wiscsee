@@ -654,7 +654,7 @@ def test_dftl():
             "global_mapping_entry_bytes": 32,
             "GC_threshold_ratio": 0.8,
             "GC_low_threshold_ratio": 0.4,
-            "max_cmt_bytes": 64*1024*2 # cmt: cached mapping table
+            "max_cmt_bytes": None # cmt: cached mapping table
         },
 
         ############## hybridmap ############
@@ -713,12 +713,12 @@ def test_dftl():
     # TODO: USE LARGER DISK
     # filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
-    # filesystems = ('f2fs',)
+    filesystems = ('f2fs',)
     # filesystems = ('ext4',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     # filesystems = ('xfs',)
     # filesystems = ('btrfs',)
-    filesystems = ('btrfs','f2fs')
+    # filesystems = ('btrfs','f2fs')
     for fs in filesystems:
         devsize_mb = 256
         conf = config.Config(confdic)
@@ -729,6 +729,11 @@ def test_dftl():
             str(conf['dftl']['max_cmt_bytes'])])
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
         conf['loop_dev_size_mb'] = devsize_mb
+
+        # hold 3% flash pages' mapping entries
+        entries_need = devsize_mb * 2**20 * 0.03 / conf['flash_page_size']
+        conf['dftl']['max_cmt_bytes'] = int(entries_need * 64) # 64 bytes needed in mem
+        print conf['dftl']['max_cmt_bytes']
 
         workflow(conf)
 
