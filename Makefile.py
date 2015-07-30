@@ -637,7 +637,7 @@ def test_dftl():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "meeting-hotcold-betterbricks-optimal",
+        "expname"               : "meeting-hotcold-4mb-chunk",
         "time"                  : None,
         # directmap", "blockmap", "pagemap", "hybridmap", dftl
         "ftl_type"              : "dftl",
@@ -654,7 +654,7 @@ def test_dftl():
             "global_mapping_entry_bytes": 32,
             "GC_threshold_ratio": 0.8,
             "GC_low_threshold_ratio": 0.4,
-            "max_cmt_bytes": 32*1024*2*10000000 # cmt: cached mapping table
+            "max_cmt_bytes": 64*1024*2 # cmt: cached mapping table
         },
 
         ############## hybridmap ############
@@ -694,8 +694,8 @@ def test_dftl():
             # "generating_func": "self.generate_random_workload",
             # "chunk_count": 100*2**20/(8*1024),
             "chunk_count": 5,
-            "chunk_size" : 8*1024*1024,
-            "iterations" : 1,
+            "chunk_size" : 4*1024*1024,
+            "iterations" : 5,
             "n_col"      : 5   # only for hotcold workload
         },
 
@@ -713,10 +713,12 @@ def test_dftl():
     # TODO: USE LARGER DISK
     # filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
-    filesystems = ('f2fs',)
+    # filesystems = ('f2fs',)
     # filesystems = ('ext4',)
-    # filesystems = ('ext4', 'btrfs')
+    # filesystems = ('ext4', 'btrfs', 'f2fs')
     # filesystems = ('xfs',)
+    # filesystems = ('btrfs',)
+    filesystems = ('btrfs','f2fs')
     for fs in filesystems:
         devsize_mb = 256
         conf = config.Config(confdic)

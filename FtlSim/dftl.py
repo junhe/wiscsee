@@ -897,6 +897,14 @@ class Dftl(ftlbuilder.FtlBuilder):
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
         self.flash.page_read(ppn, DATA_USER)
 
+        # garbage collection checking and possibly doing
+        # even reading needs GC because logical reading needs translation,
+        # which may evict entries. When evicting, we need free pages to hold
+        # the evicted entries. If you don't check frequently enough, you will
+        # lose the opportunity to claim free blocks, because you keep using
+        # blocks without checking to see if we need GC.
+        self.gc()
+
     def lba_write(self, lpn):
         """
         This is the interface for higher level to call, do NOT use it for
@@ -974,6 +982,9 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         # OOB
         self.oob.wipe_ppn(ppn)
+
+        # garbage collection checking and possibly doing
+        self.gc()
 
     def erase_block(self, blocknum, tag):
         """
