@@ -90,12 +90,13 @@ class WorkloadRunner(object):
             self.fs.mount(opt_list=self.conf['common_mnt_opts'])
             utils.shcmd('sync')
 
+            time.sleep(1)
             self.blktracer_mkfs.stop_tracing_and_collecting()
-            time.sleep(0.5)
+            time.sleep(1)
             self.blktracer_mkfs.blkparse_file_to_ftlsim_input_file()
 
             self.blktracer.start_tracing_and_collecting()
-            time.sleep(0.5)
+            time.sleep(1)
             while self.blktracer.proc == None:
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
@@ -106,6 +107,7 @@ class WorkloadRunner(object):
         except Exception:
             raise
         else:
+            time.sleep(1)
             self.blktracer.blkparse_file_to_ftlsim_input_file()
             return self.get_event_iterator()
         finally:
