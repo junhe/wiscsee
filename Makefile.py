@@ -625,12 +625,19 @@ def mysql_change_data_dir():
     local_main()
 
 def test_dftl():
+    """
+    MEMO:
+    - you need to set the high watermark properly. Otherwise it will trigger
+    victim selection too often, which has high overhead.
+    - also, set low watermark to as low as possible, so we get the most free
+    pages out of each cleaning. So we don't need to trigger cleaning so often.
+    """
     confdic = {
         ############### Global #########
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "bricks-newtags",
+        "expname"               : "meeting-hotcold-betterbricks-optimal",
         "time"                  : None,
         # directmap", "blockmap", "pagemap", "hybridmap", dftl
         "ftl_type"              : "dftl",
@@ -638,16 +645,16 @@ def test_dftl():
 
         ############## For FtlSim ######
         "flash_page_size"       : 4096,
-        "flash_npage_per_block" : 4,
-        "flash_num_blocks"      : 128,
+        "flash_npage_per_block" : 32,
+        "flash_num_blocks"      : None,
 
         ############## Dftl ############
         "dftl": {
             # number of bytes per entry in global_mapping_table
             "global_mapping_entry_bytes": 32,
-            "GC_threshold_ratio": 0.5,
+            "GC_threshold_ratio": 0.8,
             "GC_low_threshold_ratio": 0.4,
-            "max_cmt_bytes": 32*1024 # cmt: cached mapping table
+            "max_cmt_bytes": 32*1024*2*10000000 # cmt: cached mapping table
         },
 
         ############## hybridmap ############
@@ -658,7 +665,7 @@ def test_dftl():
         },
 
         ############## recorder #############
-        "verbose_level" : 1,
+        "verbose_level" : -1,
         "output_target" : "file",
         # "output_target" : "stdout",
 
@@ -674,7 +681,7 @@ def test_dftl():
 
         ############## FS ##################
         "ext4" : {
-            "make_opts": {'-O':'^has_journal'}
+            "make_opts": {'-O':'has_journal'}
         },
 
         ############## workload.py on top of FS #########
@@ -686,10 +693,10 @@ def test_dftl():
             # "generating_func": "self.generate_backward_workload",
             # "generating_func": "self.generate_random_workload",
             # "chunk_count": 100*2**20/(8*1024),
-            "chunk_count": 10,
-            "chunk_size" : 10*1024*1024,
+            "chunk_count": 5,
+            "chunk_size" : 8*1024*1024,
             "iterations" : 1,
-            "n_col"      : 2
+            "n_col"      : 5   # only for hotcold workload
         },
 
         ############## LBAGENERATOR  #########
@@ -704,10 +711,11 @@ def test_dftl():
     }
 
     # TODO: USE LARGER DISK
-    filesystems = ('ext4', 'f2fs', 'btrfs')
+    # filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
-    # filesystems = ('f2fs',)
+    filesystems = ('f2fs',)
     # filesystems = ('ext4',)
+    # filesystems = ('ext4', 'btrfs')
     # filesystems = ('xfs',)
     for fs in filesystems:
         devsize_mb = 256

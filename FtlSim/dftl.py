@@ -150,6 +150,17 @@ Since ?
   6507243   29.636    0.000  296.394    0.000 dftl.py:1072(benefit_cost)
     24285   16.029    0.001  314.736    0.013 dftl.py:1125(victim_blocks_iter)
   6560378   12.825    0.000   12.825    0.000 config.py:53(block_to_page_range)
+
+
+************** SRAM size ******************
+In the DFTL paper, they say the minimum SRAM size is the size that is
+required for hybrid FTL to work. In hybrid ftl, they use 3% of the flash
+as log blocks. That means we need to keep the mapping for these 3% in SRAM.
+For a 256MB flash, the number of pages we need to keep mapping for is
+> (256*2^20/4096)*0.03
+[1] 1966.08
+about 2000 pages
+
 """
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')

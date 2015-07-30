@@ -12,7 +12,7 @@ def switchable(function):
         if self.enabled == None:
             raise RuntimeError("You need to explicity enable/disable Recorder."
                 " We raise exception here because we think you will create"
-                " unexpected behaviors that are hard to debug")
+                " unexpected behaviors that are hard to debug.")
         if self.enabled == False:
             return
         else:

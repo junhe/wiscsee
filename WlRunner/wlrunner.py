@@ -91,6 +91,7 @@ class WorkloadRunner(object):
             utils.shcmd('sync')
 
             self.blktracer_mkfs.stop_tracing_and_collecting()
+            time.sleep(0.5)
             self.blktracer_mkfs.blkparse_file_to_ftlsim_input_file()
 
             self.blktracer.start_tracing_and_collecting()
