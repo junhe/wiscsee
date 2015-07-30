@@ -651,7 +651,7 @@ def test_dftl():
         ############## Dftl ############
         "dftl": {
             # number of bytes per entry in global_mapping_table
-            "global_mapping_entry_bytes": 32,
+            "global_mapping_entry_bytes": 4, # 32 bits
             "GC_threshold_ratio": 0.8,
             "GC_low_threshold_ratio": 0.4,
             "max_cmt_bytes": None # cmt: cached mapping table
@@ -711,9 +711,9 @@ def test_dftl():
     }
 
     # TODO: USE LARGER DISK
-    # filesystems = ('ext4', 'f2fs', 'btrfs')
+    filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
-    filesystems = ('f2fs',)
+    # filesystems = ('f2fs',)
     # filesystems = ('ext4',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     # filesystems = ('xfs',)
@@ -724,16 +724,18 @@ def test_dftl():
         conf = config.Config(confdic)
         conf['filesystem'] = fs
         conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+
+        # hold 3% flash pages' mapping entries
+        entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
+        conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        print "conf['dftl']['max_cmt_bytes']", conf['dftl']['max_cmt_bytes']
+
         conf['result_dir'] = "/tmp/results/{}/".format(conf['expname']) + \
             '-'.join([fs, conf['ftl_type'], str(devsize_mb), 'cmtsize',
             str(conf['dftl']['max_cmt_bytes'])])
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
         conf['loop_dev_size_mb'] = devsize_mb
 
-        # hold 3% flash pages' mapping entries
-        entries_need = devsize_mb * 2**20 * 0.03 / conf['flash_page_size']
-        conf['dftl']['max_cmt_bytes'] = int(entries_need * 64) # 64 bytes needed in mem
-        print conf['dftl']['max_cmt_bytes']
 
         workflow(conf)
 

@@ -322,7 +322,7 @@ class CachedMappingTable(object):
     def __init__(self, confobj):
         self.conf = confobj
 
-        self.entry_bytes = 64 # lpn + ppn
+        self.entry_bytes = 8 # lpn + ppn
         max_bytes = self.conf['dftl']['max_cmt_bytes']
         self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
             self.entry_bytes
