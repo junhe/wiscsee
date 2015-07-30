@@ -326,6 +326,7 @@ class CachedMappingTable(object):
         max_bytes = self.conf['dftl']['max_cmt_bytes']
         self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
             self.entry_bytes
+        print 'cache max entries', self.max_n_entries
 
         # self.entries = {}
         # self.entries = lrulist.LruCache()
@@ -579,6 +580,9 @@ class MappingManager(object):
         self.flash = flashobj
         self.oob = oobobj
 
+    def __del__(self):
+        print self.flash.recorder.count_counter
+
     def lpn_to_ppn(self, lpn):
         """
         This method does not fail. It will try everything to find the ppn of
@@ -594,6 +598,10 @@ class MappingManager(object):
 
             # find the physical translation page holding lpn's mapping in GTD
             ppn = self.load_mapping_entry_to_cache(lpn)
+
+            self.flash.recorder.count("miss")
+        else:
+            self.flash.recorder.count("hit")
 
         return ppn
 

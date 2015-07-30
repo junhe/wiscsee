@@ -392,6 +392,8 @@ class SegmentedLruCache(object):
 
 def main():
     sl = SegmentedLruCache(5, 0.5)
+    sl[1] = 11
+    sl[1] = 11
     sl[2] = 22
     sl[2] = 222
     sl[3] = 33
@@ -400,10 +402,6 @@ def main():
     sl[4] = 44
     sl[5] =  55
     sl[5] =  55
-    a = sl[2]
-
-    sl[6] =  55
-    sl[1] =  11
 
     print sl
 
