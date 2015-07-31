@@ -322,7 +322,7 @@ class GlobalMappingTable(object):
 
         self.conf = confobj
 
-        self.n_entries_per_page = self.conf.dft_n_mapping_entries_per_page()
+        self.n_entries_per_page = self.conf.dftl_n_mapping_entries_per_page()
 
         # do the easy thing first, if necessary, we can later use list or
         # other data structure
