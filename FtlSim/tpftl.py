@@ -63,8 +63,8 @@ class TwoLevelMppingCache(object):
         self.page_node_list  = PageNodeList()
         self.page_node_table = {} # indexed by m_vpn
 
-
-        print 'entries per page', self.conf.dftl_n_mapping_entries_per_page()
+        self.page_node_bytes = self.conf['dftl']['tpftl']['page_node_bytes']
+        self.entry_node_bytes = self.conf['dftl']['tpftl']['entry_node_bytes']
 
     def _traverse_entry_nodes(self):
         for page_node in self.page_node_list:
@@ -218,9 +218,18 @@ class TwoLevelMppingCache(object):
         raise NotImplementedError
 
     def __len__(self):
+        "Number of entries"
         total = 0
         for page_node in self.page_node_list:
             total += len(page_node.entry_list)
+
+        return total
+
+    def bytes(self):
+        total = 0
+        for page_node in self.page_node_list:
+            total += self.page_node_bytes + \
+                len(page_node.entry_list) * self.entry_node_bytes
 
         return total
 

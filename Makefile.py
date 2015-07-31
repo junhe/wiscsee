@@ -768,7 +768,11 @@ def test_tpftl():
             "global_mapping_entry_bytes": 4, # 32 bits
             "GC_threshold_ratio": 0.8,
             "GC_low_threshold_ratio": 0.4,
-            "max_cmt_bytes": None # cmt: cached mapping table
+            "max_cmt_bytes": None, # cmt: cached mapping table
+            "tpftl": {
+                "entry_node_bytes": 6, # page 8, TPFTL paper
+                "page_node_bytes": 8   # m_vpn, pointer to entrylist
+            }
         },
 
         ############## hybridmap ############
