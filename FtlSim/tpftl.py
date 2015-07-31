@@ -260,14 +260,24 @@ class CachedMappingTable(dftl2.CachedMappingTable):
         # lpn, Cacheentrydata
         return lpn, self.entries.peek(lpn)
 
+    def is_full(self):
+        return self.entries.bytes() >= self.max_bytes
+
 class MappingManager(dftl2.MappingManager):
     def __init__(self, confobj, block_pool, flashobj, oobobj):
-        super(MappingManager, self).__init__(confobj, block_pool, flashobj,
-            oobobj)
+        "completely overwrite base class"
+        self.conf = confobj
 
-        del self.cached_mapping_table
-        # use CachedMappingTable in tpftl.py
+        self.flash = flashobj
+        self.oob = oobobj
+        self.block_pool = block_pool
+
+        # managed and owned by Mappingmanager
+        self.global_mapping_table = dftl2.GlobalMappingTable(confobj, flashobj)
+        # used CMT defined in this file (tpftl.py)
         self.cached_mapping_table = CachedMappingTable(confobj)
+        self.directory = dftl2.GlobalTranslationDirectory(confobj)
+
 
 class Tpftl(dftl2.Dftl):
     def __init__(self, confobj, recorderobj, flashobj):
