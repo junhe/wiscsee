@@ -635,12 +635,12 @@ def test_dftl():
     confdic = {
         ############### Global #########
         "result_dir"            : None,
-        "workload_src"          : WLRUNNER,
-        # "workload_src"          : LBAGENERATOR,
+        # "workload_src"          : WLRUNNER,
+        "workload_src"          : LBAGENERATOR,
         "expname"               : "debugdftl2",
         "time"                  : None,
-        # directmap", "blockmap", "pagemap", "hybridmap", dftl
-        "ftl_type"              : "dftl2",
+        # directmap", "blockmap", "pagemap", "hybridmap", dftl2
+        "ftl_type"              : "tpftl",
         "sector_size"           : 512,
 
         ############## For FtlSim ######
@@ -693,10 +693,10 @@ def test_dftl():
             # "generating_func": "self.generate_backward_workload",
             # "generating_func": "self.generate_random_workload",
             # "chunk_count": 100*2**20/(8*1024),
-            "chunk_count": 1,
+            "chunk_count": 5,
             "chunk_size" : 4*1024*1024,
-            "iterations" : 1,
-            "n_col"      : 1   # only for hotcold workload
+            "iterations" : 5,
+            "n_col"      : 5   # only for hotcold workload
         },
 
         ############## LBAGENERATOR  #########
@@ -737,6 +737,121 @@ def test_dftl():
         conf['loop_dev_size_mb'] = devsize_mb
 
         workflow(conf)
+
+def test_tpftl():
+    """
+    MEMO:
+    - you need to set the high watermark properly. Otherwise it will trigger
+    victim selection too often, which has high overhead.
+    - also, set low watermark to as low as possible, so we get the most free
+    pages out of each cleaning. So we don't need to trigger cleaning so often.
+    """
+    confdic = {
+        ############### Global #########
+        "result_dir"            : None,
+        # "workload_src"          : WLRUNNER,
+        "workload_src"          : LBAGENERATOR,
+        "expname"               : "debugdftl2",
+        "time"                  : None,
+        # directmap", "blockmap", "pagemap", "hybridmap", dftl2
+        "ftl_type"              : "tpftl",
+        "sector_size"           : 512,
+
+        ############## For FtlSim ######
+        "flash_page_size"       : 4096,
+        "flash_npage_per_block" : 32,
+        "flash_num_blocks"      : None,
+
+        ############## Dftl ############
+        "dftl": {
+            # number of bytes per entry in global_mapping_table
+            "global_mapping_entry_bytes": 4, # 32 bits
+            "GC_threshold_ratio": 0.8,
+            "GC_low_threshold_ratio": 0.4,
+            "max_cmt_bytes": None # cmt: cached mapping table
+        },
+
+        ############## hybridmap ############
+        "high_log_block_ratio"       : 0.4,
+        "high_data_block_ratio"      : 0.4,
+        "hybridmapftl": {
+            "low_log_block_ratio": 0.32
+        },
+
+        ############## recorder #############
+        "verbose_level" : -1,
+        "output_target" : "file",
+        # "output_target" : "stdout",
+
+        ############## For WlRunner ########
+        "loop_path"             : "/dev/loop0",
+        "loop_dev_size_mb"      : None,
+        "tmpfs_mount_point"     : "/mnt/tmpfs",
+        "fs_mount_point"        : "/mnt/fsonloop",
+        "common_mnt_opts"       : ["discard"],
+        # "common_mnt_opts"       : ["discard", "nodatacow"],
+        "filesystem"            : None,
+
+
+        ############## FS ##################
+        "ext4" : {
+            "make_opts": {'-O':'has_journal'}
+        },
+
+        ############## workload.py on top of FS #########
+        # "workload_class"        : "Simple",
+        "workload_class"        : "Synthetic",
+        "Synthetic" :{
+            "generating_func": "self.generate_hotcold_workload",
+            # "generating_func": "self.generate_sequential_workload",
+            # "generating_func": "self.generate_backward_workload",
+            # "generating_func": "self.generate_random_workload",
+            # "chunk_count": 100*2**20/(8*1024),
+            "chunk_count": 5,
+            "chunk_size" : 4*1024*1024,
+            "iterations" : 5,
+            "n_col"      : 5   # only for hotcold workload
+        },
+
+        ############## LBAGENERATOR  #########
+        # if you choose LBAGENERATOR for workload_src, the following will
+        # be used
+        "lba_workload_class"    : "Sequential",
+        # "lba_workload_class"    : "Random",
+        "LBA" : {
+            "lba_to_flash_size_ratio": 0.1,
+            "write_to_lba_ratio"     : 1    #how many writes you want to have
+        }
+    }
+
+    # TODO: USE LARGER DISK
+    # filesystems = ('ext4', 'f2fs', 'btrfs')
+    # filesystems = ('f2fs', 'btrfs')
+    # filesystems = ('f2fs',)
+    filesystems = ('ext4',)
+    # filesystems = ('ext4', 'btrfs', 'f2fs')
+    # filesystems = ('xfs',)
+    # filesystems = ('btrfs',)
+    # filesystems = ('btrfs','f2fs')
+    for fs in filesystems:
+        devsize_mb = 256
+        conf = config.Config(confdic)
+        conf['filesystem'] = fs
+        conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+
+        # hold 3% flash pages' mapping entries
+        entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
+        conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+
+        conf['result_dir'] = "/tmp/results/{}/".format(conf['expname']) + \
+            '-'.join([fs, conf['ftl_type'], str(devsize_mb), 'cmtsize',
+            str(conf['dftl']['max_cmt_bytes'])])
+        conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
+        conf['loop_dev_size_mb'] = devsize_mb
+
+        # workflow(conf)
+        FtlSim.tpftl.main(conf)
+
 
 
 def main(cmd_args):
