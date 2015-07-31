@@ -598,9 +598,6 @@ class MappingManager(object):
 
         return retlist
 
-    def new_data_write_event(self, lpn, new_ppn):
-        self.cached_mapping_table.new_data_write_event(lpn = lpn,
-            new_ppn = new_ppn)
 
 class GcDecider(object):
     """
@@ -687,6 +684,7 @@ class GarbageCollector(object):
         self.flash = flashobj
         self.oob = oobobj
         self.block_pool = block_pool
+
         self.mapping_manager = mapping_manager
 
     def try_gc(self):
@@ -758,7 +756,7 @@ class GarbageCollector(object):
         # update new page and old page's OOB
         self.oob.new_write(lpn, old_ppn, new_ppn)
 
-        cached_ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
+        cached_ppn = self.mapping_manager.cached_mapping_table.lpn_to_ppn(lpn)
         if cached_ppn == MISS:
             # This will not add mapping to cache
             self.mapping_manager.update_entry(lpn = lpn, new_ppn = new_ppn,
@@ -766,8 +764,8 @@ class GarbageCollector(object):
         else:
             # lpn is in cache, update it
             # This is a design from the original Dftl paper
-            self.cached_mapping_table.overwrite_entry(lpn = lpn, ppn = new_ppn,
-                dirty = True)
+            self.mapping_manager.cached_mapping_table.overwrite_entry(lpn = lpn,
+                ppn = new_ppn, dirty = True)
 
     def move_trans_page_to_new_location(self, m_ppn):
         """
@@ -790,46 +788,13 @@ class GarbageCollector(object):
         self.oob.new_write(m_vpn, old_m_ppn, new_m_ppn)
 
         # update GTD
-        self.global_translation_directory.update_mapping(m_vpn = m_vpn,
+        self.mapping_manager.directory.update_mapping(m_vpn = m_vpn,
             m_ppn = new_m_ppn)
 
-    def next_victim_block(self):
-        """
-        TODO: refactor the code
-        """
-        min_valid_ratio = 2
-        ret_block = None
-        block_type = None
-
-        current_blocks = self.block_pool.current_blocks()
-
-        for blocknum in self.block_pool.data_usedblocks:
-            if blocknum in current_blocks:
-                continue
-
-            valid_ratio = self.oob.states.block_valid_ratio(blocknum)
-            if valid_ratio < min_valid_ratio:
-                block_type = DATA_BLOCK
-                ret_block = blocknum
-                min_valid_ratio = valid_ratio
-
-        for blocknum in self.block_pool.trans_usedblocks:
-            if blocknum in current_blocks:
-                continue
-
-            valid_ratio = self.oob.states.block_valid_ratio(blocknum)
-            if valid_ratio < min_valid_ratio:
-                block_type = TRANS_BLOCK
-                ret_block = blocknum
-                min_valid_ratio = valid_ratio
-
-        if ret_block == None:
-            self.recorder.debug("no block is used yet.")
-
-        # print maxblock, maxratio
-        return block_type, ret_block, min_valid_ratio
-
     def benefit_cost(self, blocknum, current_time):
+        """
+        This follows the DFTL paper
+        """
         valid_ratio = self.oob.states.block_valid_ratio(blocknum)
         if valid_ratio == 0:
             # empty block is always the best deal
@@ -912,7 +877,16 @@ class GarbageCollector(object):
         while not priority_q.empty():
             yield priority_q.get()
 
+    def erase_block(self, blocknum, tag):
+        """
+        THIS IS NOT A PUBLIC API
+        set pages' oob states to ERASED
+        electrionically erase the pages
+        """
+        # set page states to ERASED and in-OOB lpn to nothing
+        self.oob.erase_block(blocknum)
 
+        self.flash.block_erase(blocknum, tag)
 
 #
 # - translation pages
@@ -1018,8 +992,8 @@ class Dftl(ftlbuilder.FtlBuilder):
         new_ppn = self.block_pool.next_data_page_to_program()
 
         # CMT
-        self.mapping_manager.new_data_write_event(lpn = lpn,
-            new_ppn = new_ppn)
+        self.mapping_manager.cached_mapping_table.new_data_write_event(
+            lpn = lpn, new_ppn = new_ppn)
 
         # OOB
         self.oob.new_write(lpn = lpn, old_ppn = old_ppn,
@@ -1057,25 +1031,14 @@ class Dftl(ftlbuilder.FtlBuilder):
             return
 
         # flash page ppn has valid data
-        self.mapping_manager.new_data_write_event(lpn = lpn,
-            new_ppn = new_ppn)
+        self.mapping_manager.cached_mapping_table.overwrite_entry(lpn = lpn,
+            ppn = UNINITIATED, dirty = True)
 
         # OOB
         self.oob.wipe_ppn(ppn)
 
         # garbage collection checking and possibly doing
         self.garbage_collector.try_gc()
-
-    def erase_block(self, blocknum, tag):
-        """
-        THIS IS NOT A PUBLIC API
-        set pages' oob states to ERASED
-        electrionically erase the pages
-        """
-        # set page states to ERASED and in-OOB lpn to nothing
-        self.oob.erase_block(blocknum)
-
-        self.flash.block_erase(blocknum, tag)
 
 def main():
     pass
