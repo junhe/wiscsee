@@ -49,6 +49,8 @@ class cd:
 def table_to_file(table, filepath, adddic=None):
     'save table to a file with additional columns'
     with open(filepath, 'w') as f:
+        if len(table) == 0:
+            return
         colnames = table[0].keys()
         if adddic != None:
             colnames += adddic.keys()
