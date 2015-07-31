@@ -56,6 +56,30 @@ class LinkedList(object):
 
         self.size += 1
 
+    def add_before2(self, new_node, node):
+        """
+        add new_node before node
+        current: ->node1->node->
+        later  : ->node1->new_node->node
+
+        Note: this DOES handle list head
+        """
+        node1 = node.prev
+
+        # modify new_node's pointers
+        new_node.next = node
+        new_node.prev = node1
+
+        # node1
+        node1.next = new_node
+        # node
+        node.prev = new_node
+
+        if self._head is node:
+            self._head = new_node
+
+        self.size += 1
+
     def add_to_head(self, node):
         old_head = self._head
         self._head = node
@@ -64,6 +88,26 @@ class LinkedList(object):
 
     def add_to_tail(self, node):
         self.add_before(node, self._end_guard)
+
+    def move_toward_head_by_one(self, node):
+        "Boolean is returned to indicate status"
+        if node is not self._head:
+            # node is not head
+            prev_node = node.prev
+            self.delete(node)
+            self.add_before2(new_node = node, node = prev_node)
+        else:
+            return False
+
+    def move_toward_tail_by_one(self, node):
+        "Boolean is returned to indicate status"
+        if node.next is not self._end_guard:
+            # node is not the tail
+            next_next_node = node.next.next
+            self.delete(node) # _head is handled properly here
+            self.add_before2(new_node = node, node = next_next_node)
+        else:
+            return False
 
     def move_to_head(self, node):
         if self.size <= 0:
