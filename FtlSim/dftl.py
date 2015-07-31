@@ -850,6 +850,8 @@ class Dftl(ftlbuilder.FtlBuilder):
     This class is a coordinator of other coordinators and data structures
     """
     def __init__(self, confobj, recorderobj, flashobj):
+        raise RuntimeError("This class is deprecated. Use Dftl in dftl2.py, "
+            "while has been refactored and is easier to maintain.")
         super(Dftl, self).__init__(confobj, recorderobj, flashobj)
 
         # bitmap has been created parent class
