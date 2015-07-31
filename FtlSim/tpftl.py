@@ -209,9 +209,56 @@ class TwoLevelMppingCache(object):
 
         return rep
 
-class Tpftl(dftl2.Dftl):
-    pass
 
+class CachedMappingTable(dftl2.CachedMappingTable):
+    def __init__(self, confobj):
+        super(CachedMappingTable, self).__init(confobj)
+
+        del self.entries
+        self.entries = TwoLevelMppingCache(confobj)
+
+class MappingManager(dftl2.MappingManager):
+    def __init__(self, confobj, block_pool, flashobj, oobobj):
+        super(MappingManager, self).__init__(confobj, block_pool, flashobj,
+            oobobj)
+
+        del self.cached_mapping_table
+        # use CachedMappingTable in tpftl.py
+        self.cached_mapping_table = CachedMappingTable(confobj)
+
+class Tpftl(dftl2.Dftl):
+    def __init__(self, confobj, recorderobj, flashobj):
+        super(Dftl, self).__init__(confobj, recorderobj, flashobj)
+
+        # bitmap has been created parent class
+        # Change: we now don't put the bitmap here
+        # self.bitmap.initialize()
+        del self.bitmap
+
+        self.block_pool = dftl2.BlockPool(confobj)
+        self.oob = dftl2.OutOfBandAreas(confobj)
+
+        ###### the managers ######
+        self.mapping_manager = MappingManager(
+            confobj = self.conf,
+            block_pool = self.block_pool,
+            flashobj = flashobj,
+            oobobj=self.oob)
+
+        self.garbage_collector = dftl2.GarbageCollector(
+            confobj = self.conf,
+            flashobj = flashobj,
+            oobobj=self.oob,
+            block_pool = self.block_pool,
+            mapping_manager = self.mapping_manager
+            )
+
+        # We should initialize Globaltranslationdirectory in Dftl
+        self.mapping_manager.initialize_mappings()
+
+        self.gcstats = recorder.Recorder(output_target = recorder.FILE_TARGET,
+            path = os.path.join(self.conf['result_dir'], 'gcstats.log'),
+            verbose_level = 1)
 
 
 def main(conf):
@@ -227,8 +274,9 @@ def main(conf):
 
     cache[1025] = 'page1024'
 
-    del cache[1025]
-    del cache[1024]
+    a = cache[5]
+    a = cache[600]
+
     print cache
 
 
