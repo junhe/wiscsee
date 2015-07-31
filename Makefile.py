@@ -849,8 +849,8 @@ def test_tpftl():
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
         conf['loop_dev_size_mb'] = devsize_mb
 
-        # workflow(conf)
-        FtlSim.tpftl.main(conf)
+        workflow(conf)
+        # FtlSim.tpftl.main(conf)
 
 
 

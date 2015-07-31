@@ -1,5 +1,8 @@
+import os
+
 import dftl2
 import lrulist
+import recorder
 
 class EntryNode(object):
     def __init__(self, lpn, value, owner_list):
@@ -137,7 +140,7 @@ class TwoLevelMppingCache(object):
     ############### APIs  ################
     def items(self):
         for entry_node in self._traverse_entry_nodes():
-            yield entry_node.key, entry_node.value
+            yield entry_node.lpn, entry_node.value
 
     def __getitem__(self, lpn):
         "It affects order"
@@ -148,7 +151,7 @@ class TwoLevelMppingCache(object):
         else:
             raise KeyError
 
-    def get(self, key, default = None):
+    def get(self, lpn, default = None):
         "It affects order"
         has_it, entry_node = self._get_entry_node(lpn)
         if has_it:
@@ -156,7 +159,7 @@ class TwoLevelMppingCache(object):
         else:
             return default
 
-    def peek(self, key):
+    def peek(self, lpn):
         "It does NOT affects order"
         has_it, entry_node = self._get_entry_node(lpn)
         if has_it:
@@ -176,10 +179,18 @@ class TwoLevelMppingCache(object):
             self._hit(new_entry_node)
 
     def victim_key(self):
-        pass
+        tail_page_node = self.page_node_list.tail()
+        if tail_page_node == None:
+            return None
+
+        tail_entry = tail_page_node.entry_list.tail()
+        if tail_entry == None:
+            return None
+        else:
+            return tail_entry.lpn
 
     def is_full(self):
-        pass
+        raise NotImplementedError
 
     def __delitem__(self, lpn):
         has_it, entry_node = self._get_entry_node(lpn)
@@ -195,12 +206,15 @@ class TwoLevelMppingCache(object):
             # we need to remove the page node from page_node_list
             self.page_node_list.delete(page_node)
 
-
     def __iter__(self):
-        pass
+        raise NotImplementedError
 
     def __len__(self):
-        pass
+        total = 0
+        for page_node in self.page_node_list:
+            total += len(page_node.entry_list)
+
+        return total
 
     def __str__(self):
         rep = ''
@@ -212,10 +226,22 @@ class TwoLevelMppingCache(object):
 
 class CachedMappingTable(dftl2.CachedMappingTable):
     def __init__(self, confobj):
-        super(CachedMappingTable, self).__init(confobj)
+        super(CachedMappingTable, self).__init__(confobj)
 
         del self.entries
         self.entries = TwoLevelMppingCache(confobj)
+
+    def victim_entry(self):
+        # lpn = random.choice(self.entries.keys())
+        classname = type(self.entries).__name__
+        if classname in ('SegmentedLruCache', 'LruCache',
+            'TwoLevelMppingCache'):
+            lpn = self.entries.victim_key()
+        else:
+            raise RuntimeError("You need to specify victim selection")
+
+        # lpn, Cacheentrydata
+        return lpn, self.entries.peek(lpn)
 
 class MappingManager(dftl2.MappingManager):
     def __init__(self, confobj, block_pool, flashobj, oobobj):
@@ -228,7 +254,7 @@ class MappingManager(dftl2.MappingManager):
 
 class Tpftl(dftl2.Dftl):
     def __init__(self, confobj, recorderobj, flashobj):
-        super(Dftl, self).__init__(confobj, recorderobj, flashobj)
+        super(dftl2.Dftl, self).__init__(confobj, recorderobj, flashobj)
 
         # bitmap has been created parent class
         # Change: we now don't put the bitmap here
@@ -239,6 +265,7 @@ class Tpftl(dftl2.Dftl):
         self.oob = dftl2.OutOfBandAreas(confobj)
 
         ###### the managers ######
+        # Note that we are using Mappingmanager defined in tpftl.py
         self.mapping_manager = MappingManager(
             confobj = self.conf,
             block_pool = self.block_pool,
