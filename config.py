@@ -2,6 +2,8 @@ import json
 import math
 import os
 
+WLRUNNER, LBAGENERATOR = ('WLRUNNER', 'LBAGENERATOR')
+
 class Config(dict):
     def show(self):
         print self

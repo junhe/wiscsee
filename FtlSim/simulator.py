@@ -71,17 +71,15 @@ class Simulator(object):
                 event['size'])
             for page in pages:
                 self.ftl.lba_discard(page)
-        elif event['operation'] == 'workloadstart':
-            # start statistics on workload
+        elif event['operation'] == 'enable_recorder':
             self.ftl.enable_recording()
+        elif event['operation'] == 'disable_recorder':
+            self.ftl.disable_recording()
         else:
             raise RuntimeError("operation '{}' is not supported".format(
                 event['operation']))
 
     def run(self, event_line_iter):
-        # disable recording so we ignore statistics of making fs
-        self.ftl.disable_recording()
-
         for event_line in event_line_iter:
             event = event_line_to_dic(event_line)
             self.process_event(event)

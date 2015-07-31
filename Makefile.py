@@ -13,11 +13,11 @@ import glob
 from time import localtime, strftime
 
 import config
+from config import WLRUNNER, LBAGENERATOR
 import FtlSim
 import WlRunner
 from utils import *
 
-WLRUNNER, LBAGENERATOR = ('WLRUNNER', 'LBAGENERATOR')
 
 #########################################################
 # Git helper

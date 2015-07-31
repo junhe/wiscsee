@@ -38,6 +38,8 @@ class Random(LBAWorkloadGenerator):
         self.conf = confobj
 
     def __iter__(self):
+        yield "enable_recorder 0 0"
+
         n_flash_pages = self.conf.total_num_pages()
         n_lba_pages = int(n_flash_pages * \
             self.conf["LBA"]["lba_to_flash_size_ratio"])
@@ -59,6 +61,8 @@ class SeqWithRandomStart(LBAWorkloadGenerator):
         self.conf = confobj
 
     def __iter__(self):
+        yield "enable_recorder 0 0"
+
         n_flash_pages = self.conf.total_num_pages()
         n_lba_pages = int(n_flash_pages * \
             self.conf["LBA"]["lba_to_flash_size_ratio"])

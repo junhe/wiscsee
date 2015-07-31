@@ -202,6 +202,14 @@ class FtlBuilder(object):
         self.bitmap = FlashBitmap2(self.conf)
         # self.bitmap = FlashBitmap1(self.conf)
 
+        if self.conf['workload_src'] == config.LBAGENERATOR:
+            self.recorder.enable()
+        elif self.conf['workload_src'] == config.WLRUNNER:
+            self.recorder.disable()
+        else:
+            raise RuntimeError("workload_src:{} is not supported".format(
+                self.conf['workload_src']))
+
     def lba_read(self, page_num):
         raise NotImplementedError
 
