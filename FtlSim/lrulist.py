@@ -85,6 +85,10 @@ class LinkedList(object):
 
         self.size -= 1
 
+    def remove(self, node):
+        "just another name for delete()"
+        self.delete(node)
+
     def head(self):
         if self.size == 0:
             return None
@@ -108,15 +112,15 @@ class LinkedList(object):
     def __len__(self):
         return self.size
 
-    def __repr__(self):
+    def __str__(self):
         listview = []
         node = self._head
         while node is not self._end_guard:
             listview.append(str(node))
             node = node.next
-        listview = '->\n'.join(listview)
+        listview = '->'.join(listview)
 
-        return 'LinkedList:\n' + listview
+        return listview
 
 
 class DictByLinkedList(collections.MutableMapping):
@@ -242,6 +246,11 @@ PROTECTED, PROBATIONARY = ("PROTECTED", "PROBATIONARY")
 
 
 class LinkedListVisNode(LinkedList):
+    """
+    It is the same as LinkedList except it calls node.visual()
+    in __repr__(). This requires the node in the list to have
+    visual() method.
+    """
     def __repr__(self):
         listview = []
         node = self._head
@@ -389,6 +398,7 @@ class SegmentedLruCache(object):
     def __repr__(self):
         return 'Protected List:' + repr(self.protected_list) + '\n' + \
             'Probationary List:' + repr(self.probationary_list)
+
 
 def main():
     sl = SegmentedLruCache(5, 0.5)
