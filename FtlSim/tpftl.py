@@ -9,9 +9,10 @@ class EntryNode(object):
         self.lpn = lpn
         self.value = value # it may be ANYTHING, don't make assumption
         self.owner_list = owner_list
+        self.hits = 0
 
     def __str__(self):
-        return "lpn:{}".format(self.lpn)
+        return "lpn:{}({})".format(self.lpn, self.hits)
 
 class EntryList(lrulist.LinkedList):
     def __init__(self, owner_page_node):
@@ -24,9 +25,10 @@ class PageNode(object):
         self.entry_list = EntryList(owner_page_node = self)
         self.entry_table = {}
         self.owner_list = owner_list
+        self.hotness = 0 # sum of hits of entry nodes
 
     def __str__(self):
-        return "m_vpn:{}\n entrylist:{}".format(self.m_vpn,
+        return "m_vpn:{}({})\n entrylist:{}".format(self.m_vpn, self.hotness,
             str(self.entry_list))
 
 class PageNodeList(lrulist.LinkedList):
@@ -132,10 +134,25 @@ class TwoLevelMppingCache(object):
         """
         # move up in the entrylist
         entry_node.owner_list.move_to_head(entry_node)
+        entry_node.hits += 1
 
-        # move up in the page_node_list
+        # move according to hotness
         page_node = entry_node.owner_list.owner_page_node
-        page_node.owner_list.move_to_head(page_node)
+        page_node.hotness += 1
+        self._adjust_by_hotness(page_node)
+
+    def _adjust_by_hotness(self, page_node):
+        """
+        shift towards head util
+        page_node.prev.hotness > page_node.hotness > page_node.next.hotness
+        """
+        while page_node != self.page_node_list.head() and \
+            page_node.hotness > page_node.prev.hotness:
+            self.page_node_list.move_toward_head_by_one(page_node)
+
+        while page_node != self.page_node_list.tail() and \
+            page_node.hotness < page_node.next.hotness:
+            self.page_node_list.move_toward_tail_by_one(page_node)
 
     ############### APIs  ################
     def items(self):
@@ -203,9 +220,11 @@ class TwoLevelMppingCache(object):
 
         entry_list = entry_node.owner_list
         page_node = entry_list.owner_page_node
+        entry_hits = entry_node.hits
 
         entry_list.delete(entry_node)
         del page_node.entry_table[lpn]
+        page_node.hotness -= entry_hits
 
         if len(entry_list) == 0:
             # this page node's entry list is empty
@@ -213,6 +232,8 @@ class TwoLevelMppingCache(object):
             m_vpn = self.conf.dftl_lpn_to_m_vpn(lpn)
             del self.page_node_table[m_vpn]
             self.page_node_list.delete(page_node)
+        else:
+            self._adjust_by_hotness(page_node)
 
     def __iter__(self):
         raise NotImplementedError
@@ -330,6 +351,14 @@ def main(conf):
 
     a = cache[5]
     a = cache[600]
+
+    cache[3000] = 3000
+    cache[3000] = 3000
+    cache[3000] = 3000
+
+    del cache[5]
+    del cache[3]
+    del cache[4]
 
     print cache
 
