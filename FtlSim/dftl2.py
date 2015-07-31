@@ -13,154 +13,7 @@ import lrulist
 import recorder
 
 """
-Notes for DFTL design
-
-Components
-- block pool: it should have free list, used data blocks and used translation
-  blocks. We should be able to find out the next free block from here. The DFTL
-  paper does not mention a in-RAM data structure like this. How do they find
-  out the next free block?
-    - it manages the appending point for different purpose. No, it does not
-      have enough info to do that.
-
-- Cached Mapping Table (CMT): this class should do the following:
-    - have logical page <-> physical page mapping entries.
-    - be able to translation LPN to PPN and PPN to LPN
-    - implement a replacement policy
-    - has a size() method to output the size of the CMT, so we know it does not
-      exceed the size of SRAM
-    - be able to add one entry
-    - be able to remove one entry
-    - be able to find the proper entry to be moved.
-    - be able to set the number of entries allows by size
-    - be able to set the number of entries directly
-    - be able to fetch a mapping entry (this need to consult the Global
-      Translation Directory)
-    - be able to evict one entrie to flash
-    - be able to evict entries to flash in batch
-
-    - CMT interacts with
-        - Flash: to save and read translation pages
-        - block pool: to find free block to evict translation pages
-        - Global Translation Directory: to find out where the translation pages
-          are (so you can read/write), also, you need to update GTD when
-          evicting pages to flash.
-        - bitmap???
-
-- Global mapping table (GMT): this class holds the mappings of all the data
-  pages. In real implementation, this should be stored in flash. This data
-  structure will be used intensively. It should have a good interface.
-    - API, get_entries_of_Mvpn(virtual mapping page number). This is one of the
-      cases that it may be used: when reading a data page, its translation
-      entry is not in CMT. The translator will consult the GTD to find the
-      physical translation page number of virtual translation page number V.
-      Then we need to get the content of V by reading its corresponding
-      physical page. We may provide an interface to the translator like
-      load_translation_physical_page(PPN), which internally, we read from GMT.
-
-- Out of Band Area (OOB) of a page: it can hold:
-    - page state (Invalid, Valid, Erased)
-    - logical page number
-    - ECC
-
-- Global Translation Directory, this should do the following:
-    - maintains the locations of translation pages
-    - given a Virtual Translation Page Number, find out the physical
-      translation page number
-    - given a Logical Data Page Number, find out the physical data page number
-
-    - GTD should be a pretty passive class, it interacts with
-        - CMT. When CMT changes the location of translation pages, GTD should
-          be updated to reflect the changes
-
-- Garbage Collector
-    - clean data blocks: to not interrupt current writing of pages, garbage
-      collector should have its own appending point to write the garbage
-      collected data
-    - clean translation blocks. This cleaning should also have its own
-      appending point.
-    - NOTE: the DFTL paper says DFTL also have partial merge and switch merge,
-      I need to read their code to find out why.
-    - NOTE2: When cleaning a victim block, we need to know the corresponding
-      logical page number of a vadlid physical page in the block. However, the
-      Global Mapping Table does not provide physical to logical mapping. We can
-      maintain such an mapping table by our own and assume that information is
-      stored in OOB.
-
-    - How the garbage collector should interact with other components?
-        - this cleaner will use free blocks and make used block free, so it
-          will need to interact with block pool to move blocks between
-          different lists.
-        - the cleaner also need to interact with CMT because it may move
-          translation pages around
-        - the cleaner also need to interact with bitmap because it needs to
-          find out the if a page is valid or not.  It also need to find out the
-          invalid ratio of the blocks
-        - the cleaner also need to update the global translation directory
-          since it moved pages.
-        - NOTE: all the classes above should a provide an easy interface for
-          the cleaner to use, so the cleaner does not need to use the low-level
-          interfaces to implement these functions
-
-- Appending points: there should be several appending points:
-    - appending point for writing translation page
-    - appending point for writing data page
-    - appending ponit for garbage collection (NO, the paper says there is no
-      such a appending point
-    - NOTE: these points should be maintained by block pool.
-
-- FLASH
-
-
-
-********* Victim block selection ****************
-Pick the block with the largest benefit/cost
-
-benefit/cost = age * (1-u) / 2u
-
-where u is the utilization of the segment and age is the
-time since the most recent modification (i.e., the last
-block invalidation). The terms 2u and 1-u respectively
-represent the cost for copying (u to read valid blocks in
-the segment and u to write back them) and the free
-space reclaimed.
-
-What's age?
-The longer the age, the more benefit it has.
-Since ?
-    - the time the block was erased
-    - the first time a page become valid
-    - the last time a page become valid
-        - if use this and age is long, .... it does not say anything about
-        overwriting
-    - the last time a page become invalid in the block
-        - if use this and age is long, the rest of the valid pages are cold
-        (long time no overwrite)
-
-
-********* Profiling result ****************
-   119377    0.628    0.000    0.829    0.000 ftlbuilder.py:100(validate_page)
-    93220    0.427    0.000    0.590    0.000 ftlbuilder.py:104(invalidate_page)
-  6507243   94.481    0.000  266.729    0.000 ftlbuilder.py:131(block_valid_ratio)
- 26133103  105.411    0.000  147.733    0.000 ftlbuilder.py:141(is_page_valid)
-    10963    0.073    0.000    0.084    0.000 ftlbuilder.py:145(is_page_invalid)
-        1    0.000    0.000    0.000    0.000 ftlbuilder.py:187(__init__)
-        2    0.000    0.000    0.000    0.000 ftlbuilder.py:75(__init__)
- 26356663   42.697    0.000   42.697    0.000 ftlbuilder.py:86(pagenum_to_slice_range)
-  6507243   29.636    0.000  296.394    0.000 dftl.py:1072(benefit_cost)
-    24285   16.029    0.001  314.736    0.013 dftl.py:1125(victim_blocks_iter)
-  6560378   12.825    0.000   12.825    0.000 config.py:53(block_to_page_range)
-
-
-************** SRAM size ******************
-In the DFTL paper, they say the minimum SRAM size is the size that is
-required for hybrid FTL to work. In hybrid ftl, they use 3% of the flash
-as log blocks. That means we need to keep the mapping for these 3% in SRAM.
-For a 256MB flash, the number of pages we need to keep mapping for is
-> (256*2^20/4096)*0.03
-[1] 1966.08
-about 2000 pages
-
+This refactors Dftl
 """
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')
@@ -171,6 +24,64 @@ debugrec = recorder.Recorder(recorder.STDOUT_TARGET, verbose_level = 3)
 def db(*args):
     debugrec.debug(*args)
 
+class OutOfBandAreas(object):
+    """
+    It is used to hold page state and logical page number of a page.
+    It is not necessary to implement it as list. But the interface should
+    appear to be so.  It consists of page state (bitmap) and logical page
+    number (dict).  Let's proivde more intuitive interfaces: OOB should accept
+    events, and react accordingly to this event. The action may involve state
+    and lpn_of_phy_page.
+    """
+    def __init__(self, confobj):
+        self.conf = confobj
+
+        self.flash_num_blocks = confobj['flash_num_blocks']
+        self.flash_npage_per_block = confobj['flash_npage_per_block']
+        self.total_pages = self.flash_num_blocks * self.flash_npage_per_block
+
+        # Key data structures
+        self.states = ftlbuilder.FlashBitmap2(confobj)
+        # ppn->lpn mapping stored in OOB
+        self.ppn_to_lpn = {}
+
+        # flash block -> last invalidation time
+        # int -> timedate.timedate
+        self.last_inv_time_of_block = {}
+
+    def translate_ppn_to_lpn(self, ppn):
+        return self.ppn_to_lpn[ppn]
+
+    def wipe_ppn(self, ppn):
+        self.states.invalidate_page(ppn)
+        block, _ = self.conf.page_to_block_off(ppn)
+        self.last_inv_time_of_block[block] = datetime.datetime.now()
+        del self.ppn_to_lpn[ppn]
+
+    def erase_block(self, flash_block):
+        self.states.erase_block(flash_block)
+
+        start, end = self.conf.block_to_page_range(flash_block)
+        for ppn in range(start, end):
+            try:
+                del self.ppn_to_lpn[ppn]
+            except KeyError:
+                pass
+
+        del self.last_inv_time_of_block[flash_block]
+
+    def new_write(self, lpn, old_ppn, new_ppn):
+        """
+        mark the new_ppn as valid
+        update the LPN in new page's OOB to lpn
+        invalidate the old_ppn, go cleaner can GC it
+        """
+        self.states.validate_page(new_ppn)
+        self.ppn_to_lpn[new_ppn] = lpn
+
+        if old_ppn != UNINITIATED:
+            # the lpn has mapping before this write
+            self.wipe_ppn(old_ppn)
 
 class BlockPool(object):
     def __init__(self, confobj):
@@ -500,64 +411,6 @@ class GlobalTranslationDirectory(object):
     def __repr__(self):
         return repr(self.mapping)
 
-class OutOfBandAreas(object):
-    """
-    It is used to hold page state and logical page number of a page.
-    It is not necessary to implement it as list. But the interface should
-    appear to be so.  It consists of page state (bitmap) and logical page
-    number (dict).  Let's proivde more intuitive interfaces: OOB should accept
-    events, and react accordingly to this event. The action may involve state
-    and lpn_of_phy_page.
-    """
-    def __init__(self, confobj):
-        self.conf = confobj
-
-        self.flash_num_blocks = confobj['flash_num_blocks']
-        self.flash_npage_per_block = confobj['flash_npage_per_block']
-        self.total_pages = self.flash_num_blocks * self.flash_npage_per_block
-
-        # Key data structures
-        self.states = ftlbuilder.FlashBitmap2(confobj)
-        # ppn->lpn mapping stored in OOB
-        self.ppn_to_lpn = {}
-
-        # flash block -> last invalidation time
-        # int -> timedate.timedate
-        self.last_inv_time_of_block = {}
-
-    def translate_ppn_to_lpn(self, ppn):
-        return self.ppn_to_lpn[ppn]
-
-    def wipe_ppn(self, ppn):
-        self.states.invalidate_page(ppn)
-        block, _ = self.conf.page_to_block_off(ppn)
-        self.last_inv_time_of_block[block] = datetime.datetime.now()
-        del self.ppn_to_lpn[ppn]
-
-    def erase_block(self, flash_block):
-        self.states.erase_block(flash_block)
-
-        start, end = self.conf.block_to_page_range(flash_block)
-        for ppn in range(start, end):
-            try:
-                del self.ppn_to_lpn[ppn]
-            except KeyError:
-                pass
-
-        del self.last_inv_time_of_block[flash_block]
-
-    def new_write(self, lpn, old_ppn, new_ppn):
-        """
-        mark the new_ppn as valid
-        update the LPN in new page's OOB to lpn
-        invalidate the old_ppn, go cleaner can GC it
-        """
-        self.states.validate_page(new_ppn)
-        self.ppn_to_lpn[new_ppn] = lpn
-
-        if old_ppn != UNINITIATED:
-            # the lpn has mapping before this write
-            self.wipe_ppn(old_ppn)
 
 class MappingManager(object):
     """
@@ -566,18 +419,17 @@ class MappingManager(object):
     them.
     This class should act as a coordinator of all the mapping data structures.
     """
-    def __init__(self, cached_mapping_table, global_mapping_table,
-        global_translation_directory, block_pool, confobj, flashobj, oobobj):
+    def __init__(self, confobj, block_pool, flashobj, oobobj):
         self.conf = confobj
-
-        self.cached_mapping_table = cached_mapping_table
-        self.global_mapping_table = global_mapping_table
-        self.directory = global_translation_directory
-
-        self.block_pool = block_pool
 
         self.flash = flashobj
         self.oob = oobobj
+        self.block_pool = block_pool
+
+        # managed and owned by Mappingmanager
+        self.global_mapping_table = GlobalMappingTable(confobj, flashobj)
+        self.cached_mapping_table = CachedMappingTable(confobj)
+        self.directory = GlobalTranslationDirectory(confobj)
 
     def __del__(self):
         print self.flash.recorder.count_counter
@@ -746,6 +598,10 @@ class MappingManager(object):
 
         return retlist
 
+    def new_data_write_event(self, lpn, new_ppn):
+        self.cached_mapping_table.new_data_write_event(lpn = lpn,
+            new_ppn = new_ppn)
+
 class GcDecider(object):
     """
     It is used to decide wheter we should do garbage collection.
@@ -825,177 +681,15 @@ class BlockInfo(object):
     def __comp__(self, other):
         return cmp(self.value, other.value)
 
-#
-# - translation pages
-#   - cache miss read (trans.cache.load)
-#   - eviction write  (trans.cache.evict)
-#   - cleaning read   (trans.clean)
-#   - cleaning write  (trans.clean)
-# - data pages
-#   - user read       (data.user)
-#   - user write      (data.user)
-#   - cleaning read   (data.cleaning)
-#   - cleaning writes (data.cleaning)
-# Tag format
-# pagetype.
-# Example tags:
-TRANS_CACHE = "trans.cache" #read is due to miss, write is due to eviction
-TRANS_CLEAN = "trans.clean" #read/write are for moving pages
-DATA_USER = "data.user"
-DATA_CLEANING = "data.cleaning"
+class GarbageCollector(object):
+    def __init__(self, confobj, flashobj, oobobj, block_pool, mapping_manager):
+        self.conf = confobj
+        self.flash = flashobj
+        self.oob = oobobj
+        self.block_pool = block_pool
+        self.mapping_manager = mapping_manager
 
-class Dftl(ftlbuilder.FtlBuilder):
-    """
-    The implementation literally follows DFtl paper.
-    This class is a coordinator of other coordinators and data structures
-    """
-    def __init__(self, confobj, recorderobj, flashobj):
-        super(Dftl, self).__init__(confobj, recorderobj, flashobj)
-
-        # bitmap has been created parent class
-        # Change: we now don't put the bitmap here
-        # self.bitmap.initialize()
-        del self.bitmap
-
-        # initialize free list
-        self.block_pool = BlockPool(confobj)
-        self.oob = OutOfBandAreas(confobj)
-
-        self.global_mapping_table = GlobalMappingTable(confobj, flashobj)
-        self.cached_mapping_table = CachedMappingTable(confobj)
-        self.global_translation_directory = GlobalTranslationDirectory(confobj)
-
-
-        # register the mapping data structures with the manger
-        # later you may also need to register them with the cleaner
-        self.mapping_manager = MappingManager(
-            cached_mapping_table = self.cached_mapping_table,
-            global_mapping_table = self.global_mapping_table,
-            global_translation_directory = self.global_translation_directory,
-            block_pool = self.block_pool, confobj = self.conf,
-            flashobj = flashobj, oobobj=self.oob)
-
-        # We should initialize Globaltranslationdirectory in Dftl
-        self.mapping_manager.initialize_mappings()
-
-        self.gcstats = recorder.Recorder(output_target = recorder.FILE_TARGET,
-            path = os.path.join(self.conf['result_dir'], 'gcstats.log'),
-            verbose_level = 1)
-
-    # def __del__(self):
-        # print self.cached_mapping_table
-
-    # FTL APIs
-    def lba_read(self, lpn):
-        """
-        ppn = translate(pagenum))
-        flash.read(ppn)
-        """
-        self.recorder.put('logical_read', lpn, 'user')
-
-        ppn = self.mapping_manager.lpn_to_ppn(lpn)
-        self.flash.page_read(ppn, DATA_USER)
-
-        # garbage collection checking and possibly doing
-        # even reading needs GC because logical reading needs translation,
-        # which may evict entries. When evicting, we need free pages to hold
-        # the evicted entries. If you don't check frequently enough, you will
-        # lose the opportunity to claim free blocks, because you keep using
-        # blocks without checking to see if we need GC.
-        self.gc()
-
-    def lba_write(self, lpn):
-        """
-        This is the interface for higher level to call, do NOT use it for
-        internal use. If you need, create new one and refactor the code.
-
-        block_pool
-            no need to update
-        CMT
-            if lpn's mapping entry is in cache, update it and mark it as
-            dirty. If it is not in cache, add such entry and mark as dirty
-        GMT
-            no need to update, it will be updated when we write back CMT
-        OOB
-            mark the new_ppn as valid
-            update the LPN to lpn
-            invalidate the old_ppn, go cleaner can GC it
-            TODO: should the DFtl paper have considered the operation in OOB
-        GTD
-            No need to update, because GMT does not change
-        Garbage collector
-            We need to check if we need to do garbage collection
-        Appending point
-            It is automatically updated by next_data_page_to_program
-        Flash
-        """
-        self.recorder.put('logical_write', lpn, 'user')
-
-        old_ppn = self.mapping_manager.lpn_to_ppn(lpn)
-
-        # appending point
-        new_ppn = self.block_pool.next_data_page_to_program()
-
-        # CMT
-        self.cached_mapping_table.new_data_write_event(lpn = lpn,
-            new_ppn = new_ppn)
-
-        # OOB
-        self.oob.new_write(lpn = lpn, old_ppn = old_ppn,
-            new_ppn = new_ppn)
-
-        # Flash
-        self.flash.page_write(new_ppn, DATA_USER)
-
-        # garbage collection
-        self.gc()
-
-    def lba_discard(self, lpn):
-        """
-        block_pool:
-            no need to update
-        CMT:
-            if lpn->ppn exist, you need to update it to lpn->UNINITIATED
-            if not exist, you need to add lpn->UNINITIATED
-            the mapping lpn->UNINITIATED will be written back to GMT later
-        GMT:
-            no need to update
-            REMEMBER: all updates to GMT can and only can be maded through CMT
-        OOB:
-            invalidate the ppn
-            remove the lpn
-        GTD:
-            no updates needed
-            updates should be done by GC
-
-        """
-        self.recorder.put('logical_discard', lpn, 'user')
-
-        ppn = self.mapping_manager.lpn_to_ppn(lpn)
-        if ppn == UNINITIATED:
-            return
-
-        # flash page ppn has valid data
-        self.cached_mapping_table.overwrite_entry(lpn = lpn, ppn = UNINITIATED,
-            dirty = True)
-
-        # OOB
-        self.oob.wipe_ppn(ppn)
-
-        # garbage collection checking and possibly doing
-        self.gc()
-
-    def erase_block(self, blocknum, tag):
-        """
-        set pages' oob states to ERASED
-        electrionically erase the pages
-        """
-        # set page states to ERASED and in-OOB lpn to nothing
-        self.oob.erase_block(blocknum)
-
-        self.flash.block_erase(blocknum, tag)
-
-    def gc(self):
+    def try_gc(self):
         decider = GcDecider(self.conf, self.block_pool)
 
         while decider.need_cleaning():
@@ -1009,7 +703,8 @@ class Dftl(ftlbuilder.FtlBuilder):
             except StopIteration:
                 # nothing to be cleaned
                 break
-            victim_type, victim_block = (blockinfo.block_type, blockinfo.block_num)
+            victim_type, victim_block = (blockinfo.block_type,
+                blockinfo.block_num)
             if victim_type == DATA_BLOCK:
                 self.clean_data_block(victim_block)
             elif victim_type == TRANS_BLOCK:
@@ -1216,6 +911,171 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         while not priority_q.empty():
             yield priority_q.get()
+
+
+
+#
+# - translation pages
+#   - cache miss read (trans.cache.load)
+#   - eviction write  (trans.cache.evict)
+#   - cleaning read   (trans.clean)
+#   - cleaning write  (trans.clean)
+# - data pages
+#   - user read       (data.user)
+#   - user write      (data.user)
+#   - cleaning read   (data.cleaning)
+#   - cleaning writes (data.cleaning)
+# Tag format
+# pagetype.
+# Example tags:
+TRANS_CACHE = "trans.cache" #read is due to miss, write is due to eviction
+TRANS_CLEAN = "trans.clean" #read/write are for moving pages
+DATA_USER = "data.user"
+DATA_CLEANING = "data.cleaning"
+
+class Dftl(ftlbuilder.FtlBuilder):
+    """
+    The implementation literally follows DFtl paper.
+    This class is a coordinator of other coordinators and data structures
+    """
+    def __init__(self, confobj, recorderobj, flashobj):
+        super(Dftl, self).__init__(confobj, recorderobj, flashobj)
+
+        # bitmap has been created parent class
+        # Change: we now don't put the bitmap here
+        # self.bitmap.initialize()
+        del self.bitmap
+
+        self.block_pool = BlockPool(confobj)
+        self.oob = OutOfBandAreas(confobj)
+
+        ###### the managers ######
+        self.mapping_manager = MappingManager(
+            confobj = self.conf,
+            block_pool = self.block_pool,
+            flashobj = flashobj,
+            oobobj=self.oob)
+
+        self.garbage_collector = GarbageCollector(
+            confobj = self.conf,
+            flashobj = flashobj,
+            oobobj=self.oob,
+            block_pool = self.block_pool,
+            mapping_manager = self.mapping_manager
+            )
+
+        # We should initialize Globaltranslationdirectory in Dftl
+        self.mapping_manager.initialize_mappings()
+
+        self.gcstats = recorder.Recorder(output_target = recorder.FILE_TARGET,
+            path = os.path.join(self.conf['result_dir'], 'gcstats.log'),
+            verbose_level = 1)
+
+
+    # FTL APIs
+    def lba_read(self, lpn):
+        """
+        ppn = translate(pagenum))
+        flash.read(ppn)
+        """
+        self.recorder.put('logical_read', lpn, 'user')
+
+        ppn = self.mapping_manager.lpn_to_ppn(lpn)
+        self.flash.page_read(ppn, DATA_USER)
+
+        self.garbage_collector.try_gc()
+
+    def lba_write(self, lpn):
+        """
+        This is the interface for higher level to call, do NOT use it for
+        internal use. If you need, create new one and refactor the code.
+
+        block_pool
+            no need to update
+        CMT
+            if lpn's mapping entry is in cache, update it and mark it as
+            dirty. If it is not in cache, add such entry and mark as dirty
+        GMT
+            no need to update, it will be updated when we write back CMT
+        OOB
+            mark the new_ppn as valid
+            update the LPN to lpn
+            invalidate the old_ppn, go cleaner can GC it
+            TODO: should the DFtl paper have considered the operation in OOB
+        GTD
+            No need to update, because GMT does not change
+        Garbage collector
+            We need to check if we need to do garbage collection
+        Appending point
+            It is automatically updated by next_data_page_to_program
+        Flash
+        """
+        self.recorder.put('logical_write', lpn, 'user')
+
+        old_ppn = self.mapping_manager.lpn_to_ppn(lpn)
+
+        # appending point
+        new_ppn = self.block_pool.next_data_page_to_program()
+
+        # CMT
+        self.mapping_manager.new_data_write_event(lpn = lpn,
+            new_ppn = new_ppn)
+
+        # OOB
+        self.oob.new_write(lpn = lpn, old_ppn = old_ppn,
+            new_ppn = new_ppn)
+
+        # Flash
+        self.flash.page_write(new_ppn, DATA_USER)
+
+        # garbage collection
+        self.garbage_collector.try_gc()
+
+    def lba_discard(self, lpn):
+        """
+        block_pool:
+            no need to update
+        CMT:
+            if lpn->ppn exist, you need to update it to lpn->UNINITIATED
+            if not exist, you need to add lpn->UNINITIATED
+            the mapping lpn->UNINITIATED will be written back to GMT later
+        GMT:
+            no need to update
+            REMEMBER: all updates to GMT can and only can be maded through CMT
+        OOB:
+            invalidate the ppn
+            remove the lpn
+        GTD:
+            no updates needed
+            updates should be done by GC
+
+        """
+        self.recorder.put('logical_discard', lpn, 'user')
+
+        ppn = self.mapping_manager.lpn_to_ppn(lpn)
+        if ppn == UNINITIATED:
+            return
+
+        # flash page ppn has valid data
+        self.mapping_manager.new_data_write_event(lpn = lpn,
+            new_ppn = new_ppn)
+
+        # OOB
+        self.oob.wipe_ppn(ppn)
+
+        # garbage collection checking and possibly doing
+        self.garbage_collector.try_gc()
+
+    def erase_block(self, blocknum, tag):
+        """
+        THIS IS NOT A PUBLIC API
+        set pages' oob states to ERASED
+        electrionically erase the pages
+        """
+        # set page states to ERASED and in-OOB lpn to nothing
+        self.oob.erase_block(blocknum)
+
+        self.flash.block_erase(blocknum, tag)
 
 def main():
     pass

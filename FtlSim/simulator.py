@@ -6,6 +6,7 @@ import sys
 import bmftl
 import config
 import dftl
+import dftl2
 import dmftl
 import flash
 import hmftl
@@ -45,6 +46,8 @@ class Simulator(object):
             ftl_class = hmftl.HybridMapFtl
         elif self.conf['ftl_type'] == 'dftl':
             ftl_class = dftl.Dftl
+        elif self.conf['ftl_type'] == 'dftl2':
+            ftl_class = dftl2.Dftl
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))

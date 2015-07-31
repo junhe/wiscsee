@@ -637,10 +637,10 @@ def test_dftl():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "meeting-hotcold-4mb-chunk",
+        "expname"               : "debugdftl2",
         "time"                  : None,
         # directmap", "blockmap", "pagemap", "hybridmap", dftl
-        "ftl_type"              : "dftl",
+        "ftl_type"              : "dftl2",
         "sector_size"           : 512,
 
         ############## For FtlSim ######
@@ -693,28 +693,28 @@ def test_dftl():
             # "generating_func": "self.generate_backward_workload",
             # "generating_func": "self.generate_random_workload",
             # "chunk_count": 100*2**20/(8*1024),
-            "chunk_count": 5,
+            "chunk_count": 1,
             "chunk_size" : 4*1024*1024,
-            "iterations" : 5,
-            "n_col"      : 5   # only for hotcold workload
+            "iterations" : 1,
+            "n_col"      : 1   # only for hotcold workload
         },
 
         ############## LBAGENERATOR  #########
         # if you choose LBAGENERATOR for workload_src, the following will
         # be used
-        # "lba_workload_class"    : "Sequential",
-        "lba_workload_class"    : "Random",
+        "lba_workload_class"    : "Sequential",
+        # "lba_workload_class"    : "Random",
         "LBA" : {
-            "lba_to_flash_size_ratio": 0.3,
-            "write_to_lba_ratio"     : 10    #how many writes you want to have
+            "lba_to_flash_size_ratio": 0.1,
+            "write_to_lba_ratio"     : 1    #how many writes you want to have
         }
     }
 
     # TODO: USE LARGER DISK
-    filesystems = ('ext4', 'f2fs', 'btrfs')
+    # filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('f2fs',)
-    # filesystems = ('ext4',)
+    filesystems = ('ext4',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     # filesystems = ('xfs',)
     # filesystems = ('btrfs',)
@@ -735,7 +735,6 @@ def test_dftl():
             str(conf['dftl']['max_cmt_bytes'])])
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
         conf['loop_dev_size_mb'] = devsize_mb
-
 
         workflow(conf)
 
