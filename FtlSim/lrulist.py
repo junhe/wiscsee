@@ -66,12 +66,14 @@ class LinkedList(object):
         self.add_before(node, self._end_guard)
 
     def move_to_head(self, node):
-        assert self.size > 0
+        if self.size <= 0:
+            raise RuntimeError("List size should be larger than 0")
         self.delete(node)
         self.add_to_head(node)
 
     def delete(self, node):
-        assert self.size > 0
+        if self.size <= 0:
+            raise RuntimeError("List size should be larger than 0")
 
         # special case, node is the head
         if node is self._head:
