@@ -146,7 +146,12 @@ class TwoLevelMppingCache(object):
         "It affects order"
         has_it, entry_node = self._get_entry_node(lpn)
         if has_it:
-            self._hit(entry_node)
+            try:
+                self._hit(entry_node)
+            except RuntimeError:
+                print 'inquired entry', entry_node
+                print 'list', self.__str__()
+                raise
             return entry_node.value
         else:
             raise KeyError
@@ -200,10 +205,13 @@ class TwoLevelMppingCache(object):
         page_node = entry_list.owner_page_node
 
         entry_list.delete(entry_node)
+        del page_node.entry_table[lpn]
 
         if len(entry_list) == 0:
             # this page node's entry list is empty
             # we need to remove the page node from page_node_list
+            m_vpn = self.conf.dftl_lpn_to_m_vpn(lpn)
+            del self.page_node_table[m_vpn]
             self.page_node_list.delete(page_node)
 
     def __iter__(self):
