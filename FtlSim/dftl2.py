@@ -374,7 +374,7 @@ class GlobalTranslationDirectory(object):
         self.flash_page_size = self.conf['flash_page_size']
         self.total_pages = self.conf.total_num_pages()
 
-        self.n_entries_per_page = self.conf.dft_n_mapping_entries_per_page()
+        self.n_entries_per_page = self.conf.dftl_n_mapping_entries_per_page()
 
         # M_VPN -> M_PPN
         # Virtual translation page number --> Physical translation page number
