@@ -1,4 +1,6 @@
+import collections
 import os
+import pprint
 import sys
 
 import utils
@@ -29,6 +31,8 @@ class Recorder(object):
         self.counter = {}
         self.put_and_count_counter = {}
         self.count_counter = {}
+        self.counters = {} # for count_me, counter_name:collections.counter
+
 
         # enabled by default
         self.enabled = None
@@ -61,6 +65,36 @@ class Recorder(object):
 
             path3 = '.'.join((self.path, 'count.stats'))
             utils.table_to_file([self.count_counter], path3)
+
+            count_table_path = '.'.join((self.path, 'count_table'))
+            count_table = self.counters_to_table()
+            utils.table_to_file(count_table, count_table_path)
+
+            print 'recorder counters'
+            pprint.pprint(self.counters)
+
+    @switchable
+    def count_me(self, counter_name, item):
+        """
+        use counter named counter_name to count the apperance of item_name
+        """
+        counter = self.counters.setdefault(counter_name, collections.Counter())
+        counter[item] += 1
+
+    def counters_to_table(self):
+        """
+        columns
+        counter.name   item.name    count
+        """
+        table = []
+        for counter_name, counter in self.counters.items():
+            for item_name, count in counter.items():
+                d = {'counter.name': counter_name,
+                     'item.name'   : item_name,
+                     'count'       : count}
+                table.append(d)
+
+        return table
 
     @switchable
     def output(self, *args):
