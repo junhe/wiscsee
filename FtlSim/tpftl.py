@@ -243,13 +243,13 @@ class TwoLevelMppingCache(object):
 
 class CachedMappingTable(dftl2.CachedMappingTable):
     def __init__(self, confobj):
-        super(CachedMappingTable, self).__init__(confobj)
+        self.conf = confobj
 
-        del self.entries
+        self.max_bytes = self.conf['dftl']['max_cmt_bytes']
+
         self.entries = TwoLevelMppingCache(confobj)
 
     def victim_entry(self):
-        # lpn = random.choice(self.entries.keys())
         classname = type(self.entries).__name__
         if classname in ('SegmentedLruCache', 'LruCache',
             'TwoLevelMppingCache'):
