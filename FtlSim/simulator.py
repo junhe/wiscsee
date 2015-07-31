@@ -11,6 +11,7 @@ import flash
 import hmftl
 import pmftl
 import recorder
+import tpftl
 
 
 def event_line_to_dic(line):
@@ -45,6 +46,8 @@ class Simulator(object):
             ftl_class = hmftl.HybridMapFtl
         elif self.conf['ftl_type'] == 'dftl2':
             ftl_class = dftl2.Dftl
+        elif self.conf['ftl_type'] == 'tpftl':
+            ftl_class = tpftl.Tpftl
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))
