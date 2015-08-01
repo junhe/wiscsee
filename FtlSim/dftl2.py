@@ -14,7 +14,160 @@ import recorder
 
 """
 This refactors Dftl
+
+Notes for DFTL design
+
+Components
+- block pool: it should have free list, used data blocks and used translation
+  blocks. We should be able to find out the next free block from here. The DFTL
+  paper does not mention a in-RAM data structure like this. How do they find
+  out the next free block?
+    - it manages the appending point for different purpose. No, it does not
+      have enough info to do that.
+
+- Cached Mapping Table (CMT): this class should do the following:
+    - have logical page <-> physical page mapping entries.
+    - be able to translation LPN to PPN and PPN to LPN
+    - implement a replacement policy
+    - has a size() method to output the size of the CMT, so we know it does not
+      exceed the size of SRAM
+    - be able to add one entry
+    - be able to remove one entry
+    - be able to find the proper entry to be moved.
+    - be able to set the number of entries allows by size
+    - be able to set the number of entries directly
+    - be able to fetch a mapping entry (this need to consult the Global
+      Translation Directory)
+    - be able to evict one entrie to flash
+    - be able to evict entries to flash in batch
+
+    - CMT interacts with
+        - Flash: to save and read translation pages
+        - block pool: to find free block to evict translation pages
+        - Global Translation Directory: to find out where the translation pages
+          are (so you can read/write), also, you need to update GTD when
+          evicting pages to flash.
+        - bitmap???
+
+- Global mapping table (GMT): this class holds the mappings of all the data
+  pages. In real implementation, this should be stored in flash. This data
+  structure will be used intensively. It should have a good interface.
+    - API, get_entries_of_Mvpn(virtual mapping page number). This is one of the
+      cases that it may be used: when reading a data page, its translation
+      entry is not in CMT. The translator will consult the GTD to find the
+      physical translation page number of virtual translation page number V.
+      Then we need to get the content of V by reading its corresponding
+      physical page. We may provide an interface to the translator like
+      load_translation_physical_page(PPN), which internally, we read from GMT.
+
+- Out of Band Area (OOB) of a page: it can hold:
+    - page state (Invalid, Valid, Erased)
+    - logical page number
+    - ECC
+
+- Global Translation Directory, this should do the following:
+    - maintains the locations of translation pages
+    - given a Virtual Translation Page Number, find out the physical
+      translation page number
+    - given a Logical Data Page Number, find out the physical data page number
+
+    - GTD should be a pretty passive class, it interacts with
+        - CMT. When CMT changes the location of translation pages, GTD should
+          be updated to reflect the changes
+
+- Garbage Collector
+    - clean data blocks: to not interrupt current writing of pages, garbage
+      collector should have its own appending point to write the garbage
+      collected data
+    - clean translation blocks. This cleaning should also have its own
+      appending point.
+    - NOTE: the DFTL paper says DFTL also have partial merge and switch merge,
+      I need to read their code to find out why.
+    - NOTE2: When cleaning a victim block, we need to know the corresponding
+      logical page number of a vadlid physical page in the block. However, the
+      Global Mapping Table does not provide physical to logical mapping. We can
+      maintain such an mapping table by our own and assume that information is
+      stored in OOB.
+
+    - How the garbage collector should interact with other components?
+        - this cleaner will use free blocks and make used block free, so it
+          will need to interact with block pool to move blocks between
+          different lists.
+        - the cleaner also need to interact with CMT because it may move
+          translation pages around
+        - the cleaner also need to interact with bitmap because it needs to
+          find out the if a page is valid or not.  It also need to find out the
+          invalid ratio of the blocks
+        - the cleaner also need to update the global translation directory
+          since it moved pages.
+        - NOTE: all the classes above should a provide an easy interface for
+          the cleaner to use, so the cleaner does not need to use the low-level
+          interfaces to implement these functions
+
+- Appending points: there should be several appending points:
+    - appending point for writing translation page
+    - appending point for writing data page
+    - appending ponit for garbage collection (NO, the paper says there is no
+      such a appending point
+    - NOTE: these points should be maintained by block pool.
+
+- FLASH
+
+
+
+********* Victim block selection ****************
+Pick the block with the largest benefit/cost
+
+benefit/cost = age * (1-u) / 2u
+
+where u is the utilization of the segment and age is the
+time since the most recent modification (i.e., the last
+block invalidation). The terms 2u and 1-u respectively
+represent the cost for copying (u to read valid blocks in
+the segment and u to write back them) and the free
+space reclaimed.
+
+What's age?
+The longer the age, the more benefit it has.
+Since ?
+    - the time the block was erased
+    - the first time a page become valid
+    - the last time a page become valid
+        - if use this and age is long, .... it does not say anything about
+        overwriting
+    - the last time a page become invalid in the block
+        - if use this and age is long, the rest of the valid pages are cold
+        (long time no overwrite)
+
+
+********* Profiling result ****************
+   119377    0.628    0.000    0.829    0.000 ftlbuilder.py:100(validate_page)
+    93220    0.427    0.000    0.590    0.000 ftlbuilder.py:104(invalidate_page)
+  6507243   94.481    0.000  266.729    0.000 ftlbuilder.py:131(block_valid_ratio)
+ 26133103  105.411    0.000  147.733    0.000 ftlbuilder.py:141(is_page_valid)
+    10963    0.073    0.000    0.084    0.000 ftlbuilder.py:145(is_page_invalid)
+        1    0.000    0.000    0.000    0.000 ftlbuilder.py:187(__init__)
+        2    0.000    0.000    0.000    0.000 ftlbuilder.py:75(__init__)
+ 26356663   42.697    0.000   42.697    0.000 ftlbuilder.py:86(pagenum_to_slice_range)
+  6507243   29.636    0.000  296.394    0.000 dftl.py:1072(benefit_cost)
+    24285   16.029    0.001  314.736    0.013 dftl.py:1125(victim_blocks_iter)
+  6560378   12.825    0.000   12.825    0.000 config.py:53(block_to_page_range)
+
+
+************** SRAM size ******************
+In the DFTL paper, they say the minimum SRAM size is the size that is
+required for hybrid FTL to work. In hybrid ftl, they use 3% of the flash
+as log blocks. That means we need to keep the mapping for these 3% in SRAM.
+For a 256MB flash, the number of pages we need to keep mapping for is
+> (256*2^20/4096)*0.03
+[1] 1966.08
+about 2000 pages
+
 """
+
+
+
+
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')
 DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
