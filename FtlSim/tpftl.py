@@ -9,10 +9,10 @@ class EntryNode(object):
         self.lpn = lpn
         self.value = value # it may be ANYTHING, don't make assumption
         self.owner_list = owner_list
-        self.hits = 0
+        self.timestamp = 0
 
     def __str__(self):
-        return "lpn:{}({})".format(self.lpn, self.hits)
+        return "lpn:{}({})".format(self.lpn, self.timestamp)
 
 class EntryList(lrulist.LinkedList):
     def __init__(self, owner_page_node):
@@ -25,7 +25,7 @@ class PageNode(object):
         self.entry_list = EntryList(owner_page_node = self)
         self.entry_table = {}
         self.owner_list = owner_list
-        self.hotness = 0 # sum of hits of entry nodes
+        self.hotness = 0 # sum of timestamps of entry nodes
 
     def __str__(self):
         return "m_vpn:{}({})\n entrylist:{}".format(self.m_vpn, self.hotness,
@@ -67,6 +67,13 @@ class TwoLevelMppingCache(object):
 
         self.page_node_bytes = self.conf['dftl']['tpftl']['page_node_bytes']
         self.entry_node_bytes = self.conf['dftl']['tpftl']['entry_node_bytes']
+
+        self._timestamp = 0
+
+
+    def timestamp(self):
+        self._timestamp += 1
+        return self._timestamp
 
     def _traverse_entry_nodes(self):
         for page_node in self.page_node_list:
@@ -134,7 +141,7 @@ class TwoLevelMppingCache(object):
         """
         # move up in the entrylist
         entry_node.owner_list.move_to_head(entry_node)
-        entry_node.hits += 1
+        entry_node.timestamp = self.timestamp()
 
         # move according to hotness
         page_node = entry_node.owner_list.owner_page_node
@@ -220,11 +227,11 @@ class TwoLevelMppingCache(object):
 
         entry_list = entry_node.owner_list
         page_node = entry_list.owner_page_node
-        entry_hits = entry_node.hits
+        entry_timestamp = entry_node.timestamp
 
         entry_list.delete(entry_node)
         del page_node.entry_table[lpn]
-        page_node.hotness -= entry_hits
+        page_node.hotness -= entry_timestamp
 
         if len(entry_list) == 0:
             # this page node's entry list is empty
