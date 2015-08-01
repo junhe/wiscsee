@@ -558,6 +558,10 @@ class GlobalTranslationDirectory(object):
         "Find the virtual translation page that holds lpn"
         return lpn / self.n_entries_per_page
 
+    def m_vpn_to_lpns(self, m_vpn):
+        start_lpn = m_vpn * self.n_entries_per_page
+        return range(start_lpn, start_lpn + self.n_entries_per_page)
+
     def m_ppn_of_lpn(self, lpn):
         m_vpn = self.m_vpn_of_lpn(lpn)
         m_ppn = self.m_vpn_to_m_ppn(m_vpn)
