@@ -57,20 +57,47 @@ class Simulator(object):
 
     def process_event(self, event):
         if event['operation'] == 'read':
-            pages = self.conf.off_size_to_page_list(event['offset'],
-                event['size'], force_alignment = False)
-            for page in pages:
-                self.ftl.lba_read(page)
+            if self.conf['interface_level'] == 'page':
+                pages = self.conf.off_size_to_page_list(event['offset'],
+                    event['size'], force_alignment = False)
+                for page in pages:
+                    self.ftl.lba_read(page)
+            elif self.conf['interface_level'] == 'range':
+                start_page, npages = self.conf.off_size_to_page_range(
+                    event['offset'], event['size'], force_alignment = False)
+                self.ftl.read_range(start_page, npages)
+            else:
+                raise RuntimeError("interface_level {} not supported".format(
+                    self.conf['interface_level']))
+
         elif event['operation'] == 'write':
-            pages = self.conf.off_size_to_page_list(event['offset'],
-                event['size'])
-            for page in pages:
-                self.ftl.lba_write(page)
+            if self.conf['interface_level'] == 'page':
+                pages = self.conf.off_size_to_page_list(event['offset'],
+                    event['size'])
+                for page in pages:
+                    self.ftl.lba_write(page)
+            elif self.conf['interface_level'] == 'range':
+                start_page, npages = self.conf.off_size_to_page_range(
+                    event['offset'], event['size'])
+                self.ftl.write_range(start_page, npages)
+            else:
+                raise RuntimeError("interface_level {} not supported".format(
+                    self.conf['interface_level']))
+
         elif event['operation'] == 'discard':
-            pages = self.conf.off_size_to_page_list(event['offset'],
-                event['size'])
-            for page in pages:
-                self.ftl.lba_discard(page)
+            if self.conf['interface_level'] == 'page':
+                pages = self.conf.off_size_to_page_list(event['offset'],
+                    event['size'])
+                for page in pages:
+                    self.ftl.lba_discard(page)
+            elif self.conf['interface_level'] == 'range':
+                start_page, npages = self.conf.off_size_to_page_range(
+                    event['offset'], event['size'])
+                self.ftl.discard_range(start_page, npages)
+            else:
+                raise RuntimeError("interface_level {} not supported".format(
+                    self.conf['interface_level']))
+
         elif event['operation'] == 'enable_recorder':
             self.ftl.enable_recording()
         elif event['operation'] == 'disable_recorder':

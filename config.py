@@ -83,6 +83,21 @@ class Config(dict):
 
             return range(start_page, start_page+npages)
 
+    def off_size_to_page_range(self, offset, size, force_alignment = True):
+        "The input is in bytes"
+        if force_alignment:
+            assert size % self['flash_page_size'] == 0, \
+                'size:{}, flash_page_size:{}'.format(size, self['flash_page_size'])
+            npages = size / self['flash_page_size']
+            start_page = self.byte_to_pagenum(off)
+
+            return start_page, npages
+        else:
+            start_page = self.byte_to_pagenum(off, force_alignment = False)
+            npages = int(math.ceil(float(size) / self['flash_page_size']))
+
+            return start_page, npages
+
     def get_output_file_path(self):
         return os.path.join(self['result_dir'], 'ftlsim.out')
 

@@ -358,6 +358,14 @@ class Tpftl(dftl2.Dftl):
             path = os.path.join(self.conf['result_dir'], 'gcstats.log'),
             verbose_level = 1)
 
+    def write_range(self, lpn, npages):
+        raise NotImplemented
+
+    def read_range(self, lpn, npages):
+        raise NotImplemented
+
+    def discard_range(self, lpn, npages):
+        raise NotImplemented
 
 def main(conf):
     cache = TwoLevelMppingCache(conf)
