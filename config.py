@@ -83,7 +83,7 @@ class Config(dict):
 
             return range(start_page, start_page+npages)
 
-    def off_size_to_page_range(self, offset, size, force_alignment = True):
+    def off_size_to_page_range(self, off, size, force_alignment = True):
         "The input is in bytes"
         if force_alignment:
             assert size % self['flash_page_size'] == 0, \
