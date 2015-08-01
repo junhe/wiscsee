@@ -165,10 +165,6 @@ about 2000 pages
 
 """
 
-
-
-
-
 UNINITIATED, MISS = ('UNINIT', 'MISS')
 DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
 random.seed(0)
@@ -209,7 +205,13 @@ class OutOfBandAreas(object):
         self.states.invalidate_page(ppn)
         block, _ = self.conf.page_to_block_off(ppn)
         self.last_inv_time_of_block[block] = datetime.datetime.now()
-        del self.ppn_to_lpn[ppn]
+
+        try:
+            del self.ppn_to_lpn[ppn]
+        except KeyError:
+            # it is OK that the key does not exist, for example,
+            # when discarding without writing to it
+            pass
 
     def erase_block(self, flash_block):
         self.states.erase_block(flash_block)
