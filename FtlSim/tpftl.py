@@ -3,6 +3,8 @@ import os
 import dftl2
 import lrulist
 import recorder
+import utils
+from dftl2 import TRANS_CACHE, TRANS_CLEAN, DATA_USER, DATA_CLEANING
 
 class EntryNode(object):
     def __init__(self, lpn, value, owner_list):
@@ -274,6 +276,8 @@ class CachedMappingTable(dftl2.CachedMappingTable):
         self.conf = confobj
 
         self.max_bytes = self.conf['dftl']['max_cmt_bytes']
+        self.lowest_n_entries = self.max_bytes / \
+            self.conf['dftl']['tpftl']['page_node_bytes']
 
         self.entries = TwoLevelMppingCache(confobj)
 
@@ -308,6 +312,7 @@ class MappingManager(dftl2.MappingManager):
 
     def lpn_to_ppn(self, lpn):
         """
+        OVERRIDE dftl2
         This method does not fail. It will try everything to find the ppn of
         the given lpn.
         return: real PPN or UNINITIATED
@@ -328,6 +333,56 @@ class MappingManager(dftl2.MappingManager):
 
         return ppn
 
+    def read_mapping_page(self, m_vpn):
+        """
+        NEW FUNCTION in tpftl
+        This function returns all mapping in a translation page
+        Note that this function does not add the mapping to cache. You need to
+        do it elsewhere.
+        """
+        m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
+
+        # read it up, this operation is just for statistics
+        self.flash.page_read(m_ppn, TRANS_CACHE)
+
+        # now we return all the mappings of m_vpn
+        mappings = {}
+        for lpn in self.directory.m_vpn_to_lpns(m_vpn):
+            ppn = self.global_mapping_table.lpn_to_ppn(lpn)
+            mappings[lpn] = ppn
+
+        return mappings
+
+    def load_mapping_for_extent(self, start_lpn, npages):
+        """
+        NEW FUNCTION in tpftl
+        """
+        start_m_vpn = self.directory.m_vpn_of_lpn(start_lpn)
+        end_m_vpn = self.directory.m_vpn_of_lpn(start_lpn + npages - 1)
+
+        mappings = {}
+        for m_vpn in range(start_m_vpn, end_m_vpn + 1):
+            m = self.read_mapping_page(m_vpn)
+            # add mappings in m_vpn to mappings
+            mappings.update(m)
+
+        # add only the needed to cache
+        # the number of new entries should not exceed the ideal number of
+        # entries of the cache, otherwise, it will evict some just-added
+        # entries
+        new_count = min(npages, self.cached_mapping_table.lowest_n_entries)
+        # new_count = npages
+        for lpn in range(start_lpn, start_lpn + new_count):
+            ppn = mappings[lpn]
+            # Note that the mapping may already exist in cache. If it does, we
+            # don't add the just-loaded mapping to cache because the one in
+            # cache is newer. If it's not in cache, we add, but we may
+            # need to evict entry from cache to accomodate the new one.
+            if not self.cached_mapping_table.entries.has_key(lpn):
+                while self.cached_mapping_table.is_full():
+                    self.evict_cache_entry()
+                self.cached_mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
+                    dirty = False)
 
 
 class Tpftl(dftl2.Dftl):
@@ -365,14 +420,29 @@ class Tpftl(dftl2.Dftl):
             path = os.path.join(self.conf['result_dir'], 'gcstats.log'),
             verbose_level = 1)
 
-    def write_range(self, lpn, npages):
-        raise NotImplemented
-
+    # @utils.debug_decor
     def read_range(self, lpn, npages):
-        raise NotImplemented
+        # prefetch mapping
+        self.mapping_manager.load_mapping_for_extent(lpn, npages)
 
+        for page in range(lpn, lpn + npages):
+            self.lba_read(page)
+
+    # @utils.debug_decor
+    def write_range(self, lpn, npages):
+        # prefetch mapping
+        self.mapping_manager.load_mapping_for_extent(lpn, npages)
+
+        for page in range(lpn, lpn + npages):
+            self.lba_write(page)
+
+    # @utils.debug_decor
     def discard_range(self, lpn, npages):
-        raise NotImplemented
+        # prefetch mapping
+        self.mapping_manager.load_mapping_for_extent(lpn, npages)
+
+        for page in range(lpn, lpn + npages):
+            self.lba_discard(page)
 
 def main(conf):
     cache = TwoLevelMppingCache(conf)
