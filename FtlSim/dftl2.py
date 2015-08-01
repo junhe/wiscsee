@@ -603,7 +603,7 @@ class MappingManager(object):
         ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
         if ppn == MISS:
             # cache miss
-            if self.cached_mapping_table.is_full():
+            while self.cached_mapping_table.is_full():
                 self.evict_cache_entry()
 
             # find the physical translation page holding lpn's mapping in GTD
