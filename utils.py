@@ -94,3 +94,10 @@ def ParameterCombinations(parameter_dict):
     d = parameter_dict
     return [dict(zip(d, v)) for v in itertools.product(*d.values())]
 
+def debug_decor(function):
+    def wrapper(*args, **kwargs):
+        ret = function(*args, **kwargs)
+        print function.__name__, args, kwargs, 'ret:', ret
+        return ret
+    return wrapper
+
