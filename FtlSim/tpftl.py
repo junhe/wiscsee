@@ -152,11 +152,13 @@ class TwoLevelMppingCache(object):
         """
         # move up in the entrylist
         entry_node.owner_list.move_to_head(entry_node)
+        oldtimestamp = entry_node.timestamp
         entry_node.timestamp = self.timestamp()
 
         # move according to hotness
         page_node = entry_node.owner_list.owner_page_node
-        page_node.hotness += 1
+        page_node.hotness = page_node.hotness - oldtimestamp + \
+            entry_node.timestamp
         self._adjust_by_hotness(page_node)
 
     def _adjust_by_hotness(self, page_node):
