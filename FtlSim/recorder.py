@@ -59,6 +59,8 @@ class Recorder(object):
             # only write stats when we output to file
             stats_path = '.'.join((self.path, 'stats'))
             utils.table_to_file([self.counter], stats_path)
+            print 'stats'
+            pprint.pprint(self.counter)
 
             path2 = '.'.join((self.path, 'put_and_count.stats'))
             utils.table_to_file([self.put_and_count_counter], path2)
