@@ -1,10 +1,12 @@
 import os
 
 import dftl2
+from dftl2 import TRANS_CACHE, TRANS_CLEAN, DATA_USER, DATA_CLEANING
 import lrulist
 import recorder
 import utils
-from dftl2 import TRANS_CACHE, TRANS_CLEAN, DATA_USER, DATA_CLEANING
+import traceback
+
 
 class EntryNode(object):
     def __init__(self, lpn, value, owner_list):
