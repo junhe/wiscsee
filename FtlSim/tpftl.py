@@ -298,6 +298,8 @@ class CachedMappingTable(dftl2.CachedMappingTable):
         self.lowest_n_entries = self.max_bytes / \
             self.conf['dftl']['tpftl']['page_node_bytes']
 
+        print 'self.lowest_n_entries', self.lowest_n_entries
+
         self.entries = TwoLevelMppingCache(confobj)
 
     def victim_entry(self):
