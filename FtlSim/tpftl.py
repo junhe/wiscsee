@@ -166,6 +166,7 @@ class TwoLevelMppingCache(object):
         shift towards head util
         page_node.prev.hotness > page_node.hotness > page_node.next.hotness
         """
+        return
         while page_node != self.page_node_list.head() and \
             page_node.hotness > page_node.prev.hotness:
             self.page_node_list.move_toward_head_by_one(page_node)
