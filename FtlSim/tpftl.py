@@ -84,6 +84,10 @@ class TwoLevelMppingCache(object):
             for entry_node in page_node.entry_list:
                 yield entry_node
 
+    def _traverse_page_nodes(self):
+        for page_node in self.page_node_list:
+            yield page_node
+
     def has_key(self, lpn):
         "check if lpn->ppn is in the cache"
         has_it, _ = self._get_entry_node(lpn)
@@ -119,6 +123,9 @@ class TwoLevelMppingCache(object):
         entry_node.value = value
 
     def _add_entry_node_to_page_node(self, lpn, value, page_node):
+        """
+        This does not change the hotness of page node because the default is 0
+        """
         entry_list = page_node.entry_list
 
         new_entry_node = EntryNode(lpn = lpn, value = value,
@@ -264,6 +271,14 @@ class TwoLevelMppingCache(object):
                 len(page_node.entry_list) * self.entry_node_bytes
 
         return total
+
+    def show_hotness(self):
+        ret = 'current timestamp:{}\n'.format(self._timestamp)
+        ret += 'm_vpn\thotness\n'
+        for page_node in self._traverse_page_nodes():
+            ret += "{}\t{}\n".format(page_node.m_vpn, page_node.hotness)
+
+        return ret
 
     def __str__(self):
         rep = ''
