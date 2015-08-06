@@ -197,12 +197,7 @@ class TwoLevelMppingCache(object):
         "It affects order"
         has_it, entry_node = self._get_entry_node(lpn)
         if has_it:
-            try:
-                self._hit(entry_node)
-            except RuntimeError:
-                print 'inquired entry', entry_node
-                print 'list', self.__str__()
-                raise
+            self._hit(entry_node)
             return entry_node.value
         else:
             raise KeyError
