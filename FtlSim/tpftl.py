@@ -408,29 +408,20 @@ class MappingManager(dftl2.MappingManager):
                 self.cached_mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
                     dirty = False)
 
-    def evict_cache_entry(self):
+    def cmt_entries_in_same_trans_page(self, lpn):
         """
-        Select one entry in cache
-        If the entry is dirty, write it back to GMT.
-        If it is not dirty, simply remove it.
+        It returns all the CMT entries in the same translation page with lpn,
+        including lpn itself.
         """
-        vic_lpn, vic_entrydata = self.cached_mapping_table.victim_entry()
+        m_vpn = self.directory.m_vpn_of_lpn(lpn)
 
-        # if vic_entrydata.dirty == True:
-            # # update every data structure related
-            # self.update_entry(vic_lpn, vic_entrydata.ppn)
+        retlist = []
+        # iterating the entry list
+        for entry_node in self.cached_mapping_table.\
+            entries.page_node_table[m_vpn].entry_list:
+            retlist.append(entry_node.value)
 
-        batch_entries = self.cmt_entries_in_same_trans_page(vic_lpn)
-        for entry in batch_entries:
-            if entry.dirty == True:
-                self.update_entry(entry.lpn, entry.ppn, tag=TRANS_CACHE)
-
-        # remove only the victim entry
-        # if self.flash.recorder.enabled:
-            # print 'evict lpn', vic_lpn
-        self.cached_mapping_table.remove_entry_by_lpn(vic_lpn)
-
-
+        return retlist
 
 class Tpftl(dftl2.Dftl):
     def __init__(self, confobj, recorderobj, flashobj):
