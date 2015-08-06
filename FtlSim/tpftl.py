@@ -390,13 +390,18 @@ class MappingManager(dftl2.MappingManager):
         """
         Get all dirty entries in translation page m_vpn.
         """
-        retlist = []
         # iterating the entry list
-        for entry_node in self.cached_mapping_table.\
-            entries.page_node_table[m_vpn].entry_list:
-            retlist.append(entry_node.value)
+        page_node = self.cached_mapping_table.entries.page_node_table.get(
+            m_vpn, None)
 
-        return retlist
+        if page_node == None:
+            return []
+        else:
+            retlist = []
+            for entry_node in page_node.entry_list:
+                retlist.append(entry_node.value)
+
+            return retlist
 
 class Tpftl(dftl2.Dftl):
     def __init__(self, confobj, recorderobj, flashobj):

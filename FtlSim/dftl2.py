@@ -693,7 +693,7 @@ class MappingManager(object):
 
         m_vpn = self.directory.m_vpn_of_lpn(lpn)
 
-        # update everywhere except cache
+        # batch_entries may be empty
         batch_entries = self.dirty_entries_of_translation_page(m_vpn)
 
         new_mappings = {lpn:new_ppn} # lpn->new_ppn may not be in cache
