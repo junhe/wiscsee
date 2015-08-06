@@ -159,7 +159,9 @@ class TwoLevelMppingCache(object):
         page_node = entry_node.owner_list.owner_page_node
         page_node.hotness = page_node.hotness - oldtimestamp + \
             entry_node.timestamp
-        self._adjust_by_hotness(page_node)
+        # move most recently used to the head
+        page_node.owner_list.move_to_head(page_node)
+        # self._adjust_by_hotness(page_node)
 
     def _adjust_by_hotness(self, page_node):
         """
