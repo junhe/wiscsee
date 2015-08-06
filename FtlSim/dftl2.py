@@ -588,12 +588,13 @@ class MappingManager(object):
     them.
     This class should act as a coordinator of all the mapping data structures.
     """
-    def __init__(self, confobj, block_pool, flashobj, oobobj):
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
         self.conf = confobj
 
         self.flash = flashobj
         self.oob = oobobj
         self.block_pool = block_pool
+        self.recorder = recorderobj
 
         # managed and owned by Mappingmanager
         self.global_mapping_table = GlobalMappingTable(confobj, flashobj)
@@ -619,9 +620,9 @@ class MappingManager(object):
             # find the physical translation page holding lpn's mapping in GTD
             ppn = self.load_mapping_entry_to_cache(lpn)
 
-            self.flash.recorder.count_me("cache", "miss")
+            self.recorder.count_me("cache", "miss")
         else:
-            self.flash.recorder.count_me("cache", "hit")
+            self.recorder.count_me("cache", "hit")
 
         return ppn
 
@@ -644,7 +645,6 @@ class MappingManager(object):
             dirty = False)
 
         return ppn
-
 
     def initialize_mappings(self):
         """
@@ -871,11 +871,13 @@ class BlockInfo(object):
 
 
 class GarbageCollector(object):
-    def __init__(self, confobj, flashobj, oobobj, block_pool, mapping_manager):
+    def __init__(self, confobj, flashobj, oobobj, block_pool, mapping_manager,
+        recorderobj):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
         self.block_pool = block_pool
+        self.recorder = recorderobj
 
         self.mapping_manager = mapping_manager
 
@@ -1121,14 +1123,17 @@ class Dftl(ftlbuilder.FtlBuilder):
             confobj = self.conf,
             block_pool = self.block_pool,
             flashobj = flashobj,
-            oobobj=self.oob)
+            oobobj=self.oob,
+            recorderobj = recorderobj
+            )
 
         self.garbage_collector = GarbageCollector(
             confobj = self.conf,
             flashobj = flashobj,
             oobobj=self.oob,
             block_pool = self.block_pool,
-            mapping_manager = self.mapping_manager
+            mapping_manager = self.mapping_manager,
+            recorderobj = recorderobj
             )
 
         # We should initialize Globaltranslationdirectory in Dftl

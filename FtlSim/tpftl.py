@@ -320,13 +320,14 @@ class CachedMappingTable(dftl2.CachedMappingTable):
         return self.entries.bytes() >= self.max_bytes
 
 class MappingManager(dftl2.MappingManager):
-    def __init__(self, confobj, block_pool, flashobj, oobobj):
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
         "completely overwrite base class"
         self.conf = confobj
 
         self.flash = flashobj
         self.oob = oobobj
         self.block_pool = block_pool
+        self.recorder = recorderobj
 
         # managed and owned by Mappingmanager
         self.global_mapping_table = dftl2.GlobalMappingTable(confobj, flashobj)
@@ -399,6 +400,7 @@ class MappingManager(dftl2.MappingManager):
 
 class Tpftl(dftl2.Dftl):
     def __init__(self, confobj, recorderobj, flashobj):
+        # Note that this calls grandpa
         super(dftl2.Dftl, self).__init__(confobj, recorderobj, flashobj)
 
         # bitmap has been created parent class
@@ -415,14 +417,17 @@ class Tpftl(dftl2.Dftl):
             confobj = self.conf,
             block_pool = self.block_pool,
             flashobj = flashobj,
-            oobobj=self.oob)
+            oobobj=self.oob,
+            recorderobj = recorderobj
+            )
 
         self.garbage_collector = dftl2.GarbageCollector(
             confobj = self.conf,
             flashobj = flashobj,
             oobobj=self.oob,
             block_pool = self.block_pool,
-            mapping_manager = self.mapping_manager
+            mapping_manager = self.mapping_manager,
+            recorderobj = recorderobj
             )
 
         # We should initialize Globaltranslationdirectory in Dftl
