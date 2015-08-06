@@ -352,7 +352,7 @@ class SegmentedLruCache(object):
         This is the only gate to get into protected list.
         The size of the overall cache does not change.
         """
-        if len(self.protected_list) > self.max_protected_entries:
+        if len(self.protected_list) >= self.max_protected_entries:
             # need to evict
             victim_node = self.protected_list.tail()
             self.move_from_prot_to_prob(victim_node)
