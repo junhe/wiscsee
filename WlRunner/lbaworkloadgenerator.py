@@ -2,6 +2,7 @@ import abc
 import random
 
 import config
+import workload
 
 class LBAWorkloadGenerator(object):
     __metaclass__ = abc.ABCMeta
@@ -79,6 +80,23 @@ class SeqWithRandomStart(LBAWorkloadGenerator):
             size = self.conf["flash_page_size"] * size_in_page
             event = 'write {} {}'.format(offset, size)
             print event
+            yield event
+
+class HotCold(LBAWorkloadGenerator):
+    def __init__(self, confobj):
+        if not isinstance(confobj, config.Config):
+            raise TypeError("confobj is not config.Config. It is {}".
+                format(type(confobj).__name__))
+        self.conf = confobj
+
+    def __iter__(self):
+        chunk_bytes = self.conf['flash_page_size'] * 1024
+        chunk_count = 2
+        n_col = 2
+        for chunkid in workload.Bricks(n_col, chunk_count):
+            offset = chunkid * chunk_bytes
+            size = chunk_bytes
+            event = 'write {} {}'.format(offset, size)
             yield event
 
 
