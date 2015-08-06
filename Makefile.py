@@ -975,11 +975,11 @@ def test_tpftl():
     confdic = {
         ############### Global #########
         "result_dir"            : None,
-        # "workload_src"          : WLRUNNER,
-        "workload_src"          : LBAGENERATOR,
-        "expname"               : "tpftl",
+        "workload_src"          : WLRUNNER,
+        # "workload_src"          : LBAGENERATOR,
+        "expname"               : "tpftl-hotness",
         "time"                  : None,
-        "subexpname"            : "batchupdate",
+        "subexpname"            : "hotness",
         # directmap", "blockmap", "pagemap", "hybridmap", dftl2
         "ftl_type"              : "tpftl",
         "sector_size"           : 512,
@@ -1049,7 +1049,7 @@ def test_tpftl():
         ############## LBAGENERATOR  #########
         # if you choose LBAGENERATOR for workload_src, the following will
         # be used
-        "lba_workload_class"    : "Sequential",
+        "lba_workload_class"    : "HotCold",
         # "lba_workload_class"    : "Random",
         "LBA" : {
             "lba_to_flash_size_ratio": 0.05,
