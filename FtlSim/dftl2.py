@@ -246,6 +246,7 @@ class OutOfBandAreas(object):
             # the lpn has mapping before this write
             self.wipe_ppn(old_ppn)
 
+
 class BlockPool(object):
     def __init__(self, confobj):
         self.conf = confobj
@@ -374,6 +375,7 @@ class CacheEntryData(object):
     def __repr__(self):
         return "lpn:{}, ppn:{}, dirty:{}".format(self.lpn,
             self.ppn, self.dirty)
+
 
 class CachedMappingTable(object):
     """
@@ -664,28 +666,6 @@ class MappingManager(object):
             self.oob.new_write(lpn = m_vpn, old_ppn = UNINITIATED,
                 new_ppn = m_ppn)
 
-
-    def write_back_cache(self):
-        """
-        It write the dirty entries in CMT back to GMT. This is how it works:
-        Note: 'dirty' means the entry in cache is differnt to the one in GMT
-        for entry in entrylist:
-            if entry is dirty:
-                GMT
-                load entry's LPN's translation page from GMT to memory
-                update LPN's entry in translation page
-                write the updated page to a free page
-                GTD
-                update GTD to redirect LPN's VPN to new PPN
-                OOB
-                invalidate the old page in OOB
-                validate new PPN in its OOB
-                write vpn to OOB
-                CMT
-                mark entry as clean
-        """
-        pass
-
     def update_entry(self, lpn, new_ppn, tag = "NA"):
         """
         Update mapping of lpn to be lpn->new_ppn everywhere if necessary.
@@ -894,6 +874,7 @@ class GcDecider(object):
 
         return ret
 
+
 class BlockInfo(object):
     """
     This is for sorting blocks to clean the victim.
@@ -905,6 +886,7 @@ class BlockInfo(object):
 
     def __comp__(self, other):
         return cmp(self.value, other.value)
+
 
 class GarbageCollector(object):
     def __init__(self, confobj, flashobj, oobobj, block_pool, mapping_manager):
@@ -1115,6 +1097,7 @@ class GarbageCollector(object):
         self.oob.erase_block(blocknum)
 
         self.flash.block_erase(blocknum, tag)
+
 
 #
 # - translation pages
