@@ -334,29 +334,6 @@ class MappingManager(dftl2.MappingManager):
         self.cached_mapping_table = CachedMappingTable(confobj)
         self.directory = dftl2.GlobalTranslationDirectory(confobj)
 
-    def lpn_to_ppn(self, lpn):
-        """
-        OVERRIDE dftl2
-        This method does not fail. It will try everything to find the ppn of
-        the given lpn.
-        return: real PPN or UNINITIATED
-        """
-        # try cached mapping table first.
-        ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
-        if ppn == dftl2.MISS:
-            # cache miss
-            if self.cached_mapping_table.is_full():
-                self.evict_cache_entry()
-
-            # find the physical translation page holding lpn's mapping in GTD
-            ppn = self.load_mapping_entry_to_cache(lpn)
-
-            self.flash.recorder.count_me("cache", "miss")
-        else:
-            self.flash.recorder.count_me("cache", "hit")
-
-        return ppn
-
     def read_mapping_page(self, m_vpn):
         """
         NEW FUNCTION in tpftl
@@ -408,13 +385,10 @@ class MappingManager(dftl2.MappingManager):
                 self.cached_mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
                     dirty = False)
 
-    def cmt_entries_in_same_trans_page(self, lpn):
+    def dirty_entries_of_translation_page(self, m_vpn):
         """
-        It returns all the CMT entries in the same translation page with lpn,
-        including lpn itself.
+        Get all dirty entries in translation page m_vpn.
         """
-        m_vpn = self.directory.m_vpn_of_lpn(lpn)
-
         retlist = []
         # iterating the entry list
         for entry_node in self.cached_mapping_table.\

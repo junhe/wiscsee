@@ -788,24 +788,6 @@ class MappingManager(object):
         # update GTD so we can find it
         self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
 
-    def cmt_entries_in_same_trans_page(self, lpn):
-        """
-        It returns all the CMT entries in the same translation page with lpn,
-        including lpn itself.
-        """
-        m_vpn = self.directory.m_vpn_of_lpn(lpn)
-
-        # TODO: this can be improved so we don't need to search the whole
-        # cache every time we call this function. To improve, group by
-        # m_vpn when adding to cache
-        retlist = []
-        for entry_lpn, datentry in self.cached_mapping_table.entries.items():
-            tmp_m_vpn = self.directory.m_vpn_of_lpn(entry_lpn)
-            if tmp_m_vpn == m_vpn:
-                retlist.append(datentry)
-
-        return retlist
-
 
 class GcDecider(object):
     """
