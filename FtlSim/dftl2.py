@@ -713,6 +713,8 @@ class MappingManager(object):
         If the entry is dirty, write it back to GMT.
         If it is not dirty, simply remove it.
         """
+        self.recorder.count_me('cache', 'evict')
+
         vic_lpn, vic_entrydata = self.cached_mapping_table.victim_entry()
 
         if vic_entrydata.dirty == True:
@@ -727,6 +729,8 @@ class MappingManager(object):
         """
         Write dirty entries in a translation page with a flash read and a flash write.
         """
+        self.recorder.count_me('cache', 'batch_write_back')
+
         batch_entries = self.dirty_entries_of_translation_page(m_vpn)
 
         new_mappings = {}
@@ -734,6 +738,7 @@ class MappingManager(object):
             new_mappings[entry.lpn] = entry.ppn
 
         # update translation page
+        self.recorder.count_me('batch.size', len(new_mappings))
         self.update_translation_page_on_flash(m_vpn, new_mappings, TRANS_CACHE)
 
         # mark them as clean
@@ -771,6 +776,8 @@ class MappingManager(object):
         if len(new_mappings) < self.conf.dftl_n_mapping_entries_per_page():
             # need to read some mappings
             self.flash.page_read(old_m_ppn, tag)
+        else:
+            self.recorder.count_me('cache', 'saved.1.read')
 
         pass # modify in memory
         new_m_ppn = self.block_pool.next_translation_page_to_program()
