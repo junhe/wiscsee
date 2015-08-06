@@ -447,19 +447,17 @@ class SegmentedLruCache(object):
 
 
 def main():
-    sl = SegmentedLruCache(5, 0.5)
+    sl = SegmentedLruCache(4, 0.5)
+    sl[0] = 11
     sl[1] = 11
+    sl[2] = 11
+    sl[0] = 11
     sl[1] = 11
-    sl[2] = 22
-    sl[2] = 222
-    sl[3] = 33
-    sl[3] = 33
-    sl[4] = 44
-    sl[4] = 44
-    sl[5] =  55
-    sl[5] =  55
+    sl[2] = 11
+    sl[3] = 11
 
     print sl
+    print sl.victim_key()
 
 
 if __name__ == '__main__':
