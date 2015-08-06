@@ -311,8 +311,8 @@ def bricks(n_col, n_units):
         for col in range(row+1):
             unit_start = col * units_per_col
             unit_end = (col + 1) * units_per_col
-            for pg in range(unit_start, unit_end):
-                yield pg
+            for unit_id in range(unit_start, unit_end):
+                yield unit_id
 
 if __name__ == '__main__':
     # tpcc = Tpcc()
