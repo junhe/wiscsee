@@ -157,18 +157,29 @@ class TwoLevelMppingCache(object):
 
         # move according to hotness
         page_node = entry_node.owner_list.owner_page_node
-        page_node.hotness = page_node.hotness - oldtimestamp + \
-            entry_node.timestamp
-        # move most recently used to the head
-        page_node.owner_list.move_to_head(page_node)
-        # self._adjust_by_hotness(page_node)
+        self._update_hotness(page_node)
+
+        # page_node.owner_list.move_to_head(page_node)
+        self._adjust_by_hotness(page_node)
+
+    def _update_hotness(self, page_node):
+        """
+        Calculate hotness by averaging entry timestamp
+        """
+        total = 0
+        cnt = 0
+        for entry_node in page_node.entry_list:
+            total += entry_node.timestamp
+            cnt += 1
+        page_node.hotness = (total / float(cnt)) if cnt > 0 else 0
+
+        return page_node.hotness
 
     def _adjust_by_hotness(self, page_node):
         """
         shift towards head util
         page_node.prev.hotness > page_node.hotness > page_node.next.hotness
         """
-        return
         while page_node != self.page_node_list.head() and \
             page_node.hotness > page_node.prev.hotness:
             self.page_node_list.move_toward_head_by_one(page_node)
@@ -243,11 +254,9 @@ class TwoLevelMppingCache(object):
 
         entry_list = entry_node.owner_list
         page_node = entry_list.owner_page_node
-        entry_timestamp = entry_node.timestamp
 
         entry_list.delete(entry_node)
         del page_node.entry_table[lpn]
-        page_node.hotness -= entry_timestamp
 
         if len(entry_list) == 0:
             # this page node's entry list is empty
@@ -256,6 +265,7 @@ class TwoLevelMppingCache(object):
             del self.page_node_table[m_vpn]
             self.page_node_list.delete(page_node)
         else:
+            self._update_hotness(page_node)
             self._adjust_by_hotness(page_node)
 
     def __iter__(self):
