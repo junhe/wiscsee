@@ -619,9 +619,9 @@ class MappingManager(object):
             # find the physical translation page holding lpn's mapping in GTD
             ppn = self.load_mapping_entry_to_cache(lpn)
 
-            self.flash.recorder.count_me("miss")
+            self.flash.recorder.count_me("cache", "miss")
         else:
-            self.flash.recorder.count_me("hit")
+            self.flash.recorder.count_me("cache", "hit")
 
         return ppn
 
