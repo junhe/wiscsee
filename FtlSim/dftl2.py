@@ -163,6 +163,14 @@ For a 256MB flash, the number of pages we need to keep mapping for is
 [1] 1966.08
 about 2000 pages
 
+
+*************** Batch update ***************
+When evicting one mapping, do the following
+- find all dirty mappings in the same translation page
+- write all dirty mappings in the same translation page to flash
+- mark all dirty mappings as clean
+- delete the one mapping
+
 """
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')
@@ -680,7 +688,9 @@ class MappingManager(object):
 
     def update_entry(self, lpn, new_ppn, tag = "NA"):
         """
-        update entry of lpn to be lpn->new_ppn everywhere if necessary
+        Update mapping of lpn to be lpn->new_ppn everywhere if necessary.
+
+        if lpn is not in cache, it will NOT be added to it.
 
         block_pool:
             it may be affect because we need a new page
@@ -702,22 +712,20 @@ class MappingManager(object):
                 ppn = new_ppn, dirty = False)
 
         m_vpn = self.directory.m_vpn_of_lpn(lpn)
-        old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
 
-        # update GMT on flash
-        self.flash.page_read(old_m_ppn, tag)
-        pass # modify in memory
-        new_m_ppn = self.block_pool.next_translation_page_to_program()
-        self.flash.page_write(new_m_ppn, tag)
-        # update our fake 'on-flash' GMT
-        self.global_mapping_table.update(lpn = lpn, ppn = new_ppn)
+        # update everywhere except cache
+        batch_entries = self.dirty_entries_of_translation_page(m_vpn)
 
-        # OOB
-        self.oob.new_write(lpn = m_vpn, old_ppn = old_m_ppn,
-            new_ppn = new_m_ppn)
+        new_mappings = {lpn:new_ppn} # lpn->new_ppn may not be in cache
+        for entry in batch_entries:
+            new_mappings[entry.lpn] = entry.ppn
 
-        # update GTD so we can find it
-        self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
+        # update translation page
+        self.update_translation_page_on_flash(m_vpn, new_mappings, tag)
+
+        # mark as clean
+        for entry in batch_entries:
+            entry.dirty = False
 
     def evict_cache_entry(self):
         """
@@ -727,17 +735,78 @@ class MappingManager(object):
         """
         vic_lpn, vic_entrydata = self.cached_mapping_table.victim_entry()
 
-        # if vic_entrydata.dirty == True:
-            # # update every data structure related
-            # self.update_entry(vic_lpn, vic_entrydata.ppn)
-
-        batch_entries = self.cmt_entries_in_same_trans_page(vic_lpn)
-        for entry in batch_entries:
-            if entry.dirty == True:
-                self.update_entry(entry.lpn, entry.ppn, tag=TRANS_CACHE)
+        if vic_entrydata.dirty == True:
+            # If we have to write to flash, we write in batch
+            m_vpn = self.directory.m_vpn_of_lpn(vic_lpn)
+            self.batch_write_back(m_vpn)
 
         # remove only the victim entry
         self.cached_mapping_table.remove_entry_by_lpn(vic_lpn)
+
+    def batch_write_back(self, m_vpn):
+        """
+        Write dirty entries in a translation page with a flash read and a flash write.
+        """
+        batch_entries = self.dirty_entries_of_translation_page(m_vpn)
+
+        new_mappings = {}
+        for entry in batch_entries:
+            new_mappings[entry.lpn] = entry.ppn
+
+        # update translation page
+        self.update_translation_page_on_flash(m_vpn, new_mappings, TRANS_CACHE)
+
+        # mark them as clean
+        for entry in batch_entries:
+            entry.dirty = False
+
+    def dirty_entries_of_translation_page(self, m_vpn):
+        """
+        Get all dirty entries in translation page m_vpn.
+        """
+        retlist = []
+        for entry_lpn, dataentry in self.cached_mapping_table.entries.items():
+            if dataentry.dirty == True:
+                tmp_m_vpn = self.directory.m_vpn_of_lpn(entry_lpn)
+                if tmp_m_vpn == m_vpn:
+                    retlist.append(dataentry)
+
+        return retlist
+
+    def update_translation_page_on_flash(self, m_vpn, new_mappings, tag):
+        """
+        Use new_mappings to replace their corresponding mappings in m_vpn
+
+        read translationo page
+        modify it with new_mappings
+        write translation page to new location
+        update related data structures
+
+        Notes:
+        - Note that it does not modify cached mapping table
+        """
+        old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
+
+        # update GMT on flash
+        if len(new_mappings) < self.conf.dftl_n_mapping_entries_per_page():
+            # need to read some mappings
+            self.flash.page_read(old_m_ppn, tag)
+
+        pass # modify in memory
+        new_m_ppn = self.block_pool.next_translation_page_to_program()
+
+        # update flash
+        self.flash.page_write(new_m_ppn, tag)
+        # update our fake 'on-flash' GMT
+        for lpn, new_ppn in new_mappings.items():
+            self.global_mapping_table.update(lpn = lpn, ppn = new_ppn)
+
+        # OOB, keep m_vpn as lpn
+        self.oob.new_write(lpn = m_vpn, old_ppn = old_m_ppn,
+            new_ppn = new_m_ppn)
+
+        # update GTD so we can find it
+        self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
 
     def cmt_entries_in_same_trans_page(self, lpn):
         """
