@@ -340,6 +340,13 @@ class MappingManager(dftl2.MappingManager):
         self.cached_mapping_table = CachedMappingTable(confobj)
         self.directory = dftl2.GlobalTranslationDirectory(confobj)
 
+        self.entries_per_m_vpn = self.conf.dftl_n_mapping_entries_per_page()
+
+    def lpn_range_of_m_vpn(self, m_vpn):
+        start_lpn = self.entries_per_m_vpn * m_vpn
+        end_lpn = start_lpn + self.entries_per_m_vpn
+        return start_lpn, end_lpn
+
     def read_mapping_page(self, m_vpn):
         """
         NEW FUNCTION in tpftl
@@ -360,12 +367,39 @@ class MappingManager(dftl2.MappingManager):
 
         return mappings
 
+    def _get_vic_m_vpn(self, avoid_m_vpn):
+        vic_lpn, _ = self.cached_mapping_table.victim_entry()
+        vic_m_vpn = self.directory.m_vpn_of_lpn(vic_lpn)
+
+        # try not to be the same m_vpn
+        if vic_m_vpn == avoid_m_vpn:
+            page_node = self.cached_mapping_table.entries.\
+                page_node_table[vic_m_vpn]
+            if page_node != self.cached_mapping_table.entries.page_node_list\
+                .head():
+                vic_m_vpn = page_node.prev.m_vpn
+            elif page_node != self.cached_mapping_table.entries.page_node_list\
+                .tail():
+                vic_m_vpn = page_node.next.m_vpn
+            else:
+                raise RuntimeError(
+                    "Maybe you should increase your mapping cache size")
+
+        return vic_m_vpn
+
+
     def load_mapping_for_extent(self, start_lpn, npages):
         """
+        Try to load mappings for start_lpn, npages
+
+        (start_lpn, npages) must be within the same m_vpn
+        It is possible that less than npages are loaded
+
         NEW FUNCTION in tpftl
         """
         start_m_vpn = self.directory.m_vpn_of_lpn(start_lpn)
         end_m_vpn = self.directory.m_vpn_of_lpn(start_lpn + npages - 1)
+        assert start_m_vpn == end_m_vpn
 
         mappings = {}
         for m_vpn in range(start_m_vpn, end_m_vpn + 1):
@@ -373,23 +407,30 @@ class MappingManager(dftl2.MappingManager):
             # add mappings in m_vpn to mappings
             mappings.update(m)
 
-        # add only the needed to cache
-        # the number of new entries should not exceed the ideal number of
-        # entries of the cache, otherwise, it will evict some just-added
-        # entries
-        new_count = min(npages, self.cached_mapping_table.lowest_n_entries)
-        # new_count = npages
-        for lpn in range(start_lpn, start_lpn + new_count):
-            ppn = mappings[lpn]
+        vic_m_vpn = None
+        for lpn in range(start_lpn, start_lpn + npages):
             # Note that the mapping may already exist in cache. If it does, we
             # don't add the just-loaded mapping to cache because the one in
             # cache is newer. If it's not in cache, we add, but we may
             # need to evict entry from cache to accomodate the new one.
             if not self.cached_mapping_table.entries.has_key(lpn):
                 while self.cached_mapping_table.is_full():
-                    self.evict_cache_entry()
+                    if vic_m_vpn == None:
+                        vic_m_vpn = self._get_vic_m_vpn(
+                            avoid_m_vpn = start_m_vpn)
+
+                    evicted = self.evict_cache_entry_of_m_vpn(vic_m_vpn)
+                    if evicted == False:
+                        # nothing evicted, return the number of new mappings
+                        # added
+                        return lpn - start_lpn
+
+                ppn = mappings[lpn]
                 self.cached_mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
                     dirty = False)
+
+        # all mappings are loaded
+        return npages
 
     def dirty_entries_of_translation_page(self, m_vpn):
         """
@@ -408,7 +449,18 @@ class MappingManager(dftl2.MappingManager):
 
             return retlist
 
+
 class Tpftl(dftl2.Dftl):
+    """
+    Thu 06 Aug 2015 06:17:14 PM CDT
+    ***** Request-level prefetching *****
+    1 find out the extent of (lpn L, last lpn of L's TP node)
+    2 prefetch this extent
+    3 access th extent
+    3 update the remaining request
+    4 go to 1
+
+    """
     def __init__(self, confobj, recorderobj, flashobj):
         # Note that this calls grandpa
         super(dftl2.Dftl, self).__init__(confobj, recorderobj, flashobj)
@@ -447,29 +499,46 @@ class Tpftl(dftl2.Dftl):
             path = os.path.join(self.conf['result_dir'], 'gcstats.log'),
             verbose_level = 1)
 
+    def split_request(self, lpn, npages):
+        """
+        Split the request to multiple subrequest aligned with tp nodes
+        """
+        total_pages = npages
+        while total_pages > 0:
+            sub_lpn, sub_npages = self.subrequest(lpn, total_pages)
+
+            lpn += sub_npages
+            total_pages -= sub_npages
+
+            yield sub_lpn, sub_npages
+
+    def subrequest(self, lpn, npages):
+        m_vpn = self.conf.dftl_lpn_to_m_vpn(lpn)
+        s, e = self.mapping_manager.lpn_range_of_m_vpn(m_vpn)
+        new_npages = min(e - lpn, npages)
+
+        return lpn, new_npages
+
+    def prefetch_and_access(self, lpn, npages, page_access_func):
+        for sub_lpn, sub_npages in self.split_request(lpn, npages):
+            # TODO: we should check if the mappings are in cache before reading
+            # from flash pages in load_mapping_for_extent
+            self.mapping_manager.load_mapping_for_extent(sub_lpn, sub_npages)
+            for page in range(sub_lpn, sub_lpn + sub_npages):
+                # self.lba_read(page)
+                page_access_func(page)
+
     # @utils.debug_decor
     def read_range(self, lpn, npages):
-        # prefetch mapping
-        self.mapping_manager.load_mapping_for_extent(lpn, npages)
-
-        for page in range(lpn, lpn + npages):
-            self.lba_read(page)
+        self.prefetch_and_access(lpn, npages, self.lba_read)
 
     # @utils.debug_decor
     def write_range(self, lpn, npages):
-        # prefetch mapping
-        self.mapping_manager.load_mapping_for_extent(lpn, npages)
-
-        for page in range(lpn, lpn + npages):
-            self.lba_write(page)
+        self.prefetch_and_access(lpn, npages, self.lba_write)
 
     # @utils.debug_decor
     def discard_range(self, lpn, npages):
-        # prefetch mapping
-        self.mapping_manager.load_mapping_for_extent(lpn, npages)
-
-        for page in range(lpn, lpn + npages):
-            self.lba_discard(page)
+        self.prefetch_and_access(lpn, npages, self.lba_discard)
 
 def main(conf):
     cache = TwoLevelMppingCache(conf)
