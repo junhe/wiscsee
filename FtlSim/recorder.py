@@ -72,8 +72,8 @@ class Recorder(object):
             count_table = self.counters_to_table()
             utils.table_to_file(count_table, count_table_path)
 
-            print 'recorder counters'
-            pprint.pprint(self.counters)
+            print '*********  recorder counters (count_me()) **********'
+            print utils.table_to_str(count_table, sep = '\t')
 
     @switchable
     def count_me(self, counter_name, item):

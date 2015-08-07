@@ -66,6 +66,30 @@ def table_to_file(table, filepath, adddic=None):
             rowstr = ';'.join(rowstr) + '\n'
             f.write(rowstr)
 
+def adjust_width(s, width = 32):
+    return s.rjust(width)
+
+def table_to_str(table, adddic = None, sep = ';'):
+    if len(table) == 0:
+        return None
+
+    tablestr = ''
+    colnames = table[0].keys()
+    if adddic != None:
+        colnames += adddic.keys()
+    colnamestr = sep.join([adjust_width(s) for s in colnames]) + '\n'
+    tablestr += colnamestr
+    for row in table:
+        if adddic != None:
+            rowcopy = dict(row.items() + adddic.items())
+        else:
+            rowcopy = row
+        rowstr = [rowcopy[k] for k in colnames]
+        rowstr = [adjust_width(str(x)) for x in rowstr]
+        rowstr = sep.join(rowstr) + '\n'
+        tablestr += rowstr
+
+    return tablestr
 
 def load_json(fpath):
     decoded = json.load(open(fpath, 'r'))
