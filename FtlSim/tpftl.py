@@ -210,8 +210,8 @@ class TwoLevelMppingCache(object):
         else:
             return default
 
-    def peek(self, lpn):
-        "It does NOT affects order"
+    def peek(self, lpn, default = None):
+        "It does NOT affect order"
         has_it, entry_node = self._get_entry_node(lpn)
         if has_it:
             return entry_node.value
