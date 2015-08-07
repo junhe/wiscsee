@@ -312,18 +312,32 @@ class CachedMappingTable(dftl2.CachedMappingTable):
         self.entries = TwoLevelMppingCache(confobj)
 
     def victim_entry(self):
-        classname = type(self.entries).__name__
-        if classname in ('SegmentedLruCache', 'LruCache',
-            'TwoLevelMppingCache'):
-            lpn = self.entries.victim_key()
-        else:
-            raise RuntimeError("You need to specify victim selection")
-
+        entry_node = self.coldest_clean_entry()
         # lpn, Cacheentrydata
-        return lpn, self.entries.peek(lpn)
+        return entry_node.lpn, entry_node.value
 
     def is_full(self):
         return self.entries.bytes() >= self.max_bytes
+
+    def coldest_clean_entry(self):
+        """
+        Return the least used entry in the coldest TP node
+        """
+        page_node = self.entries.page_node_list.tail()
+        entry_list = page_node.entry_list
+        last_entry = entry_list.tail()
+        entry_node = last_entry
+        while entry_node.value.dirty == True and \
+            entry_node != entry_list.head():
+            entry_node = entry_node.prev
+
+        if entry_node.value.dirty == False:
+            self.recorder.count_me('CMT', 'clean.victim')
+            return entry_node
+        else:
+            self.recorder.count_me('CMT', 'last.victim')
+            return last_entry
+
 
 class MappingManager(dftl2.MappingManager):
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
