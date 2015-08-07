@@ -402,6 +402,17 @@ class MappingManager(dftl2.MappingManager):
 
         return vic_m_vpn
 
+    def is_extent_in_cache(self, start_lpn, npages):
+        """
+        See if all mappings for the extent are in cache
+
+        This function should not affect cache.
+        """
+        for lpn in range(start_lpn, start_lpn + npages):
+            if not self.cached_mapping_table.entries.has_key(lpn):
+                return False
+
+        return True
 
     def load_mapping_for_extent(self, start_lpn, npages):
         """
@@ -538,7 +549,13 @@ class Tpftl(dftl2.Dftl):
         for sub_lpn, sub_npages in self.split_request(lpn, npages):
             # TODO: we should check if the mappings are in cache before reading
             # from flash pages in load_mapping_for_extent
-            self.mapping_manager.load_mapping_for_extent(sub_lpn, sub_npages)
+            if not self.mapping_manager.is_extent_in_cache(
+                sub_lpn, sub_npages):
+                # prefetch only when needed
+                self.mapping_manager.load_mapping_for_extent(sub_lpn,
+                    sub_npages)
+            # self.mapping_manager.load_mapping_for_extent(sub_lpn,
+                # sub_npages)
             for page in range(sub_lpn, sub_lpn + sub_npages):
                 # self.lba_read(page)
                 page_access_func(page)
