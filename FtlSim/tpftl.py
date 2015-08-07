@@ -299,8 +299,9 @@ class TwoLevelMppingCache(object):
 
 
 class CachedMappingTable(dftl2.CachedMappingTable):
-    def __init__(self, confobj):
+    def __init__(self, confobj, recorderobj):
         self.conf = confobj
+        self.recorder = recorderobj
 
         self.max_bytes = self.conf['dftl']['max_cmt_bytes']
         self.lowest_n_entries = self.max_bytes / \
@@ -337,7 +338,7 @@ class MappingManager(dftl2.MappingManager):
         # managed and owned by Mappingmanager
         self.global_mapping_table = dftl2.GlobalMappingTable(confobj, flashobj)
         # used CMT defined in this file (tpftl.py)
-        self.cached_mapping_table = CachedMappingTable(confobj)
+        self.cached_mapping_table = CachedMappingTable(confobj, recorderobj)
         self.directory = dftl2.GlobalTranslationDirectory(confobj)
 
         self.entries_per_m_vpn = self.conf.dftl_n_mapping_entries_per_page()
