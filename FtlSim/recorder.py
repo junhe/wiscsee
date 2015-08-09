@@ -75,6 +75,14 @@ class Recorder(object):
             print '*********  recorder counters (count_me()) **********'
             print utils.table_to_str(count_table, sep = '\t')
 
+        if self.output_target == STDOUT_TARGET:
+            count_table = self.counters_to_table()
+
+            print '*********  recorder counters (count_me()) **********'
+            print utils.table_to_str(count_table, sep = '\t')
+
+
+
     @switchable
     def count_me(self, counter_name, item):
         """
