@@ -979,9 +979,9 @@ def test_tpftl():
         # "workload_src"          : LBAGENERATOR,
         "expname"               : "tpftl-almost",
         "time"                  : None,
-        "subexpname"            : "hotness",
-        # directmap", "blockmap", "pagemap", "hybridmap", dftl2
-        "ftl_type"              : "tpftl",
+        "subexpname"            : "oftl",
+        # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl
+        "ftl_type"              : "dftl2",
         "sector_size"           : 512,
 
         ############## For FtlSim ######
@@ -1023,7 +1023,6 @@ def test_tpftl():
         "common_mnt_opts"       : ["discard"],
         # "common_mnt_opts"       : ["discard", "nodatacow"],
         "filesystem"            : None,
-
 
         ############## FS ##################
         "ext4" : {
@@ -1070,29 +1069,35 @@ def test_tpftl():
     # filesystems = ('xfs',)
     # filesystems = ('btrfs',)
     # filesystems = ('btrfs','f2fs')
+
+    toresult = raw_input('Save this experiments to /tmp/results? (y/n)')
+    if toresult.lower() == 'y':
+        targetdir = '/tmp/results'
+    else:
+        targetdir = '/tmp/' + str(random.random())
+
     exptime = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    for interface in ('range',):
-        for fs in filesystems:
-            devsize_mb = 256
-            conf = config.Config(confdic)
-            conf['filesystem'] = fs
-            conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+    for fs in filesystems:
+        devsize_mb = 256
+        conf = config.Config(confdic)
+        conf['filesystem'] = fs
+        conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
 
-            # hold 3% flash pages' mapping entries
-            entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
-            conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        # hold 3% flash pages' mapping entries
+        entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
+        conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) * 10**10 # 8 bytes (64bits) needed in mem
 
-            conf['interface_level'] =  interface
-            conf['result_dir'] = "/tmp/results/{}/".format(conf['expname']) + \
-                '-'.join([fs, conf['ftl_type'], str(devsize_mb), 'cmtsize',
-                str(conf['dftl']['max_cmt_bytes']), conf['interface_level'],
-                conf['subexpname'], exptime])
-            conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
-            conf['loop_dev_size_mb'] = devsize_mb
+        conf['result_dir'] = "{target}/{expname}/".format(
+                target = targetdir, expname = conf['expname']) + \
+            '-'.join([fs, conf['ftl_type'], str(devsize_mb), 'cmtsize',
+            str(conf['dftl']['max_cmt_bytes']),
+            conf['subexpname'], exptime])
+        conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
+        conf['loop_dev_size_mb'] = devsize_mb
 
-            print conf['result_dir']
-            workflow(conf)
-            # FtlSim.tpftl.main(conf)
+        print conf['result_dir']
+        workflow(conf)
+        # FtlSim.tpftl.main(conf)
 
 
 def main(cmd_args):
