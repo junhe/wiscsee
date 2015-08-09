@@ -125,3 +125,5 @@ def debug_decor(function):
         return ret
     return wrapper
 
+def breakpoint():
+    import pdb; pdb.set_trace()
