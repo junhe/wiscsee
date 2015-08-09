@@ -787,9 +787,10 @@ class GcDecider(object):
     Later, use low water mark and progress to decide. If we haven't make
     progress in 10 times, stop GC
     """
-    def __init__(self, confobj, block_pool):
+    def __init__(self, confobj, block_pool, recorderobj):
         self.conf = confobj
         self.block_pool = block_pool
+        self.recorder = recorderobj
         self.call_index = -1
 
         self.high_watermark = self.conf['dftl']['GC_threshold_ratio'] * \
@@ -812,9 +813,12 @@ class GcDecider(object):
         else:
             if self.freezed_too_long(n_used_blocks):
                 ret = False
+                self.recorder.count_me("GC", 'freezed_too_long')
             else:
                 # common case
                 ret = n_used_blocks > self.low_watermark
+                if ret == False:
+                    self.recorder.count_me("GC", 'below_lowerwatermark')
 
         return ret
 
@@ -871,10 +875,11 @@ class GarbageCollector(object):
         self.mapping_manager = mapping_manager
 
     def try_gc(self):
-        decider = GcDecider(self.conf, self.block_pool)
+        decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
         while decider.need_cleaning():
             if decider.call_index == 0:
+                self.recorder.count_me("GC", "invoked")
                 block_iter = self.victim_blocks_iter()
             # victim_type, victim_block, valid_ratio = self.next_victim_block()
             # victim_type, victim_block, valid_ratio = \
@@ -882,6 +887,7 @@ class GarbageCollector(object):
             try:
                 blockinfo = block_iter.next()
             except StopIteration:
+                self.recorder.count_me("GC", "StopIteration")
                 # nothing to be cleaned
                 break
             victim_type, victim_block = (blockinfo.block_type,
