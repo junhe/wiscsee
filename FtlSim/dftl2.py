@@ -981,13 +981,13 @@ class GarbageCollector(object):
         valid_ratio = self.oob.states.block_valid_ratio(blocknum)
         if valid_ratio == 0:
             # empty block is always the best deal
-            return float("inf")
+            return float("inf"), valid_ratio
 
         if valid_ratio == 1:
             # it is possible that none of the pages in the block has been
             # invalidated yet. In that case, all pages in the block is valid.
             # we don't need to clean it.
-            return 0
+            return 0, valid_ratio
 
         last_inv_time = self.oob.last_inv_time_of_block.get(blocknum, None)
         if last_inv_time == None:
@@ -997,7 +997,7 @@ class GarbageCollector(object):
         age = age.total_seconds()
         bene_cost = age * ( 1 - valid_ratio ) / ( 2 * valid_ratio )
 
-        return bene_cost
+        return bene_cost, valid_ratio
 
     def next_victim_block_benefit_cost(self):
         """
@@ -1045,7 +1045,8 @@ class GarbageCollector(object):
                 if blocknum in current_blocks:
                     continue
 
-                bene_cost = self.benefit_cost(blocknum, current_time)
+                bene_cost, valid_ratio = self.benefit_cost(blocknum,
+                    current_time)
 
                 if bene_cost == 0:
                     # valid_ratio must be zero, we definitely don't
@@ -1055,10 +1056,16 @@ class GarbageCollector(object):
 
                 blk_info = BlockInfo(block_type = block_type,
                     block_num = blocknum, value = bene_cost)
+                blk_info.valid_ratio = valid_ratio
                 priority_q.put(blk_info)
 
         while not priority_q.empty():
-            yield priority_q.get()
+            b_info =  priority_q.get()
+            self.recorder.count_me('block.info.valid_ratio',
+                round(b_info.valid_ratio, 2))
+            self.recorder.count_me('block.info.bene_cost',
+                round(b_info.value))
+            yield b_info
 
     def erase_block(self, blocknum, tag):
         """
