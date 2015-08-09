@@ -988,8 +988,6 @@ def test_tpftl():
         "flash_page_size"       : 4096,
         "flash_npage_per_block" : 32,
         "flash_num_blocks"      : None,
-        # "interface_level"       : "page", # or range
-        "interface_level"       : None,
 
         ############## Dftl ############
         "dftl": {
