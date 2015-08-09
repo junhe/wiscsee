@@ -707,32 +707,6 @@ class MappingManager(object):
         # remove only the victim entry
         self.cached_mapping_table.remove_entry_by_lpn(vic_lpn)
 
-    def evict_cache_entry_of_m_vpn(self, m_vpn):
-        """
-        Evict an entry from a particular m_vpn
-
-        Return False if nothing is evicted.
-        """
-        self.recorder.count_me('cache', 'evict_cache_entry_of_m_vpn')
-
-        if not self.cached_mapping_table.entries.page_node_table.has_key(
-            m_vpn):
-            return False
-
-        entry_node = self.cached_mapping_table.entries\
-            .page_node_table[m_vpn].entry_list.tail()
-        vic_lpn = entry_node.lpn
-        vic_entrydata = entry_node.value
-
-        if vic_entrydata.dirty == True:
-            # If we have to write to flash, we write in batch
-            m_vpn = self.directory.m_vpn_of_lpn(vic_lpn)
-            self.batch_write_back(m_vpn)
-
-        # remove only the victim entry
-        self.cached_mapping_table.remove_entry_by_lpn(vic_lpn)
-        return True
-
     def batch_write_back(self, m_vpn):
         """
         Write dirty entries in a translation page with a flash read and a flash write.

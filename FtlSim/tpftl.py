@@ -1,3 +1,44 @@
+"""
+************* Selective prefetching *************
+The problem is that how it cooperates with request-level prefetching. Some
+requests are large and may trigger selective prefetching.
+
+The motivation of selective prefetching is that it may reduce the page reads
+that request-level prefetching cannot reduce. Why? Because they request-level
+prefetching only takes care of pages within a request, not between. So if you
+have several consecutive requests, prefetching the first request only guarantee
+the translation of the first request, not the second and thereafter. But if you
+have selective prefetching, when you missed the first page of the second
+request, selective prefetching may be activated and prefetching the mappings
+for request 3, 4, 5, ... So request 3, 4, 5, ... don't even need request-level
+prefetching (which needs to read flash pages).
+
+To impelement it:
+Sat 08 Aug 2015 02:00:22 PM CDT
+1. in mapping_manager.lpn_to_ppn(), if missed, check
+cache.selective_prefetch_enabled, if enabled, disable it and start selective
+prefetching.
+2. to do selective prefetching, first we need to figure the prefetch length.
+The length is p_len = min(consecutive predecessors of lpn, number of entries in
+the coldest tp node). If lpn will be in the coldest TP node, it is OK to evict
+its entry and prefetch to it. Because we need to read the translation page
+anyway (lpn is missing).
+3. evict p_len entries from the coldes tp node
+4. read lpn's translation page and add lpn and lpn's p_len successors to tp
+node
+5. let the ftl use the cache to do the translation. For the next a few
+translations, selective prefetching will not be triggered because there will
+not be misses.
+
+- mapping_manager.selective_prefetch_length(lpn)
+- evict_n_from_tp_node(n, m_vpn)
+- load_mapping_for_extent2(self, start_lpn, npages):
+    - version 2 will raise an exception if the extent is across larger than
+    one tp node. So you should make sure there npages free slots in cache
+
+
+"""
+
 import os
 
 import dftl2
@@ -74,6 +115,42 @@ class TwoLevelMppingCache(object):
 
         self._timestamp = 0
 
+        # For selective prefetching
+        self._page_node_change = 0
+        self._selective_threshold = \
+            self.conf['dftl']['tpftl']['selective_threshold']
+        # It can only be set True by page_node_change()
+        # It can only be set False by the executor of selective prefetch
+        # How to use it?
+        #   if True: do selective prefetching; set it to false
+        #   if false: do nothing
+        self.selective_prefetch_enabled = False
+
+        # self.localrec = recorder.Recorder(recorder.STDOUT_TARGET)
+        # self.localrec.enable()
+
+    @property
+    def page_node_change(self):
+        return self._page_node_change
+
+    @page_node_change.setter
+    def page_node_change(self, val):
+        """
+        It can only be increased/decreased by 1.
+        """
+        self._page_node_change = val
+
+        # self.localrec.count_me("page_node_change", val)
+
+        if self._page_node_change == self._selective_threshold:
+            self.selective_prefetch_enabled = False
+            # reset when reaching threshold
+            self._page_node_change = 0
+
+        if self._page_node_change == -self._selective_threshold:
+            self.selective_prefetch_enabled = True
+            # reset when reaching threshold
+            self._page_node_change = 0
 
     def timestamp(self):
         self._timestamp += 1
@@ -142,6 +219,9 @@ class TwoLevelMppingCache(object):
         # add node to page_node_list
         self.page_node_table[m_vpn] = node
         self.page_node_list.add_to_head(node)
+
+        # update page_node_change
+        self.page_node_change += 1
 
         return node
 
@@ -243,6 +323,13 @@ class TwoLevelMppingCache(object):
     def is_full(self):
         raise NotImplementedError
 
+    def _del_page_node(self, m_vpn):
+        page_node = self.page_node_table[m_vpn]
+        del self.page_node_table[m_vpn]
+        self.page_node_list.delete(page_node)
+
+        self.page_node_change -= 1
+
     def __delitem__(self, lpn):
         has_it, entry_node = self._get_entry_node(lpn)
         assert has_it == True
@@ -257,8 +344,7 @@ class TwoLevelMppingCache(object):
             # this page node's entry list is empty
             # we need to remove the page node from page_node_list
             m_vpn = self.conf.dftl_lpn_to_m_vpn(lpn)
-            del self.page_node_table[m_vpn]
-            self.page_node_list.delete(page_node)
+            self._del_page_node(m_vpn)
         else:
             self._update_hotness(page_node)
             self._adjust_by_hotness(page_node)
@@ -311,19 +397,21 @@ class CachedMappingTable(dftl2.CachedMappingTable):
 
         self.entries = TwoLevelMppingCache(confobj)
 
-    def victim_entry(self):
-        entry_node = self.coldest_clean_entry()
-        # lpn, Cacheentrydata
-        return entry_node.lpn, entry_node.value
-
     def is_full(self):
         return self.entries.bytes() >= self.max_bytes
 
-    def coldest_clean_entry(self):
+    def victim_entry(self):
         """
-        Return the least used entry in the coldest TP node
+        Return the least used entry node in the coldest TP node
         """
         page_node = self.entries.page_node_list.tail()
+        vic_entry_node = self.victim_entry_in_page_node(page_node)
+        return vic_entry_node.lpn, vic_entry_node.value
+
+    def victim_entry_in_page_node(self, page_node):
+        """
+        Return the victim entry in a particular page node
+        """
         entry_list = page_node.entry_list
         last_entry = entry_list.tail()
         entry_node = last_entry
@@ -423,6 +511,7 @@ class MappingManager(dftl2.MappingManager):
 
         NEW FUNCTION in tpftl
         """
+
         start_m_vpn = self.directory.m_vpn_of_lpn(start_lpn)
         end_m_vpn = self.directory.m_vpn_of_lpn(start_lpn + npages - 1)
         assert start_m_vpn == end_m_vpn
@@ -474,6 +563,118 @@ class MappingManager(dftl2.MappingManager):
                 retlist.append(entry_node.value)
 
             return retlist
+
+    def selective_prefetch_length(self, lpn):
+        """
+        Decide how long we need to prefetch
+
+        lpn is the entry that we miss.
+        The length is p_len = min(consecutive predecessors of lpn,
+            max number of successors in the same tp node with lpn,
+            number of entries in the coldest TP node).
+        """
+        m_vpn = self.directory.m_vpn_of_lpn(lpn)
+
+        # Consecutive predecessors
+        entry_table = self.cached_mapping_table.entries.\
+            page_node_table[m_vpn].entry_table
+        pred_lpn = lpn - 1
+        consec_len = 1 # at least we have lpn
+        while entry_table.has_key(pred_lpn):
+            # complexity O(nlogn), same as sorting
+            consec_len += 1
+            pred_lpn -= 1
+
+        # max number of successors in the same tp node with lpn
+        # this is to ensure the prefetch does not go over one TP
+        next_start = (m_vpn + 1) * self.entries_per_m_vpn
+        max_successors = next_start - lpn
+
+        # number of entries in the coldes tp node
+        n_entries = len(self.cached_mapping_table.entries.page_node_list\
+            .tail().entry_list)
+
+        # if lpn == 3642:
+            # import pdb; pdb.set_trace()
+        return min(consec_len, max_successors, n_entries)
+
+    def evict_cache_entry_of_m_vpn(self, m_vpn, n = 1):
+        """
+        Evict n entries from a particular m_vpn
+
+        m_vpn: the TP node to evict from
+        n: the number of entries to evict
+
+        Return the number of evicted entries
+
+        This is a new function of TPFTL.
+        """
+        self.recorder.count_me('cache', 'evict_cache_entry_of_m_vpn')
+
+        page_node = self.cached_mapping_table.entries.page_node_table.get(
+                m_vpn, None)
+
+        if page_node == None:
+            return 0
+
+        n_left = n
+        while n_left > 0 and self.cached_mapping_table.entries.page_node_table\
+            .has_key(m_vpn):
+            vic_entry_node = self.cached_mapping_table\
+                .victim_entry_in_page_node(page_node)
+            if vic_entry_node.value.dirty == True:
+                # after this, noboy in the tp node will be dirty
+                # so we will not enter here again
+                # if there is no dirty entry in the tp node, we never enter
+                # here
+                self.batch_write_back(m_vpn)
+            self.cached_mapping_table.remove_entry_by_lpn(vic_entry_node.lpn)
+
+            n_left -= 1
+
+        return n - n_left
+
+    def selective_prefetch(self, lpn):
+        """
+        lpn: the lpn in the last cache miss.
+
+        You can only do this when cache.selective_prefetch_enabled == True
+        """
+        m_vpn = self.directory.m_vpn_of_lpn(lpn)
+
+        # if lpn == 40037:
+            # utils.breakpoint()
+
+        # prefetch length includes lpn itself
+        pref_len =  self.selective_prefetch_length(lpn)
+        vic_m_vpn = self.cached_mapping_table.entries.page_node_list.tail()\
+            .m_vpn
+        evicted = self.evict_cache_entry_of_m_vpn(vic_m_vpn, pref_len)
+        # assert pref_len == evicted
+
+        self.load_mapping_for_extent(lpn, pref_len)
+
+    def lpn_to_ppn(self, lpn):
+        """
+        This method does not fail. It will try everything to find the ppn of
+        the given lpn.
+        return: real PPN or UNINITIATED
+        """
+        # try cached mapping table first.
+        ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
+        if ppn == dftl2.MISS:
+            # Cache miss
+            # Use selective prefetching
+            self.selective_prefetch(lpn)
+
+            # now it should have it
+            ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
+
+            self.recorder.count_me("cache", "miss")
+        else:
+            self.recorder.count_me("cache", "hit")
+
+        return ppn
 
 
 class Tpftl(dftl2.Dftl):
