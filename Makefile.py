@@ -977,7 +977,7 @@ def test_tpftl():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "investigate",
+        "expname"               : "everyone-1gc",
         "time"                  : None,
         "subexpname"            : "dftl",
         # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl
@@ -1040,7 +1040,7 @@ def test_tpftl():
             # "chunk_count": 100*2**20/(8*1024),
             "chunk_count": 5,
             "chunk_size" : 4*1024*1024,
-            "iterations" : 5,
+            "iterations" : 4,
             "n_col"      : 5   # only for hotcold workload
         },
 
@@ -1061,13 +1061,13 @@ def test_tpftl():
     }
 
     # TODO: USE LARGER DISK
-    # filesystems = ('ext4', 'f2fs', 'btrfs')
+    filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('f2fs',)
     # filesystems = ('ext4',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     # filesystems = ('xfs',)
-    filesystems = ('btrfs',)
+    # filesystems = ('btrfs',)
     # filesystems = ('btrfs','f2fs')
 
     toresult = raw_input('Save this experiments to /tmp/results? (y/n)')
