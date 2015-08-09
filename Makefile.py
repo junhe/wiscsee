@@ -977,9 +977,9 @@ def test_tpftl():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "tpftl-almost",
+        "expname"               : "investigate",
         "time"                  : None,
-        "subexpname"            : "oftl",
+        "subexpname"            : "dftl",
         # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl
         "ftl_type"              : "dftl2",
         "sector_size"           : 512,
@@ -1061,13 +1061,13 @@ def test_tpftl():
     }
 
     # TODO: USE LARGER DISK
-    filesystems = ('ext4', 'f2fs', 'btrfs')
+    # filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('f2fs',)
     # filesystems = ('ext4',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     # filesystems = ('xfs',)
-    # filesystems = ('btrfs',)
+    filesystems = ('btrfs',)
     # filesystems = ('btrfs','f2fs')
 
     toresult = raw_input('Save this experiments to /tmp/results? (y/n)')
@@ -1085,7 +1085,7 @@ def test_tpftl():
 
         # hold 3% flash pages' mapping entries
         entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
-        conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) * 10**10 # 8 bytes (64bits) needed in mem
+        conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
 
         conf['result_dir'] = "{target}/{expname}/".format(
                 target = targetdir, expname = conf['expname']) + \
