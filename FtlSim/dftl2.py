@@ -177,9 +177,9 @@ UNINITIATED, MISS = ('UNINIT', 'MISS')
 DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
 random.seed(0)
 
-debugrec = recorder.Recorder(recorder.STDOUT_TARGET, verbose_level = 3)
-def db(*args):
-    debugrec.debug(*args)
+# debugrec = recorder.Recorder(recorder.STDOUT_TARGET, verbose_level = 3)
+# def db(*args):
+    # debugrec.debug(*args)
 
 class OutOfBandAreas(object):
     """
@@ -1171,11 +1171,6 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         # We should initialize Globaltranslationdirectory in Dftl
         self.mapping_manager.initialize_mappings()
-
-        self.gcstats = recorder.Recorder(output_target = recorder.FILE_TARGET,
-            path = os.path.join(self.conf['result_dir'], 'gcstats.log'),
-            verbose_level = 1)
-
 
     # FTL APIs
     def lba_read(self, lpn):

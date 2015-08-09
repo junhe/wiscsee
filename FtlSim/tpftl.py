@@ -521,10 +521,6 @@ class Tpftl(dftl2.Dftl):
         # We should initialize Globaltranslationdirectory in Dftl
         self.mapping_manager.initialize_mappings()
 
-        self.gcstats = recorder.Recorder(output_target = recorder.FILE_TARGET,
-            path = os.path.join(self.conf['result_dir'], 'gcstats.log'),
-            verbose_level = 1)
-
     def split_request(self, lpn, npages):
         """
         Split the request to multiple subrequest aligned with tp nodes
