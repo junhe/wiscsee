@@ -977,7 +977,7 @@ def test_tpftl():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "tpftl-hotness",
+        "expname"               : "tpftl-almost",
         "time"                  : None,
         "subexpname"            : "hotness",
         # directmap", "blockmap", "pagemap", "hybridmap", dftl2
@@ -989,7 +989,7 @@ def test_tpftl():
         "flash_npage_per_block" : 32,
         "flash_num_blocks"      : None,
         # "interface_level"       : "page", # or range
-        "interface_level"       : "range",
+        "interface_level"       : None,
 
         ############## Dftl ############
         "dftl": {
@@ -1000,7 +1000,8 @@ def test_tpftl():
             "max_cmt_bytes": None, # cmt: cached mapping table
             "tpftl": {
                 "entry_node_bytes": 6, # page 8, TPFTL paper
-                "page_node_bytes": 8   # m_vpn, pointer to entrylist
+                "page_node_bytes": 8,   # m_vpn, pointer to entrylist
+                "selective_threshold": 3
             }
         },
 
@@ -1053,21 +1054,26 @@ def test_tpftl():
         # "lba_workload_class"    : "Random",
         "LBA" : {
             "lba_to_flash_size_ratio": 0.05,
-            "write_to_lba_ratio"     : 1    #how many writes you want to have
+            "write_to_lba_ratio"     : 1,    #how many writes you want to have
+            "HotCold": {
+                'chunk_bytes': 4096 * 1024,
+                'chunk_count': 4,
+                'n_col'      : 4
+            }
         }
     }
 
     # TODO: USE LARGER DISK
-    # filesystems = ('ext4', 'f2fs', 'btrfs')
+    filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('f2fs',)
-    filesystems = ('ext4',)
+    # filesystems = ('ext4',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     # filesystems = ('xfs',)
     # filesystems = ('btrfs',)
     # filesystems = ('btrfs','f2fs')
     exptime = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    for interface in ('page',):
+    for interface in ('range',):
         for fs in filesystems:
             devsize_mb = 256
             conf = config.Config(confdic)

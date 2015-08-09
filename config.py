@@ -114,4 +114,3 @@ class Config(dict):
         n_entries_per_page = self.dftl_n_mapping_entries_per_page()
         return lpn / n_entries_per_page
 
-

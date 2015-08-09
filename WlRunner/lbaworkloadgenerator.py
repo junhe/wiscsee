@@ -90,9 +90,9 @@ class HotCold(LBAWorkloadGenerator):
         self.conf = confobj
 
     def __iter__(self):
-        chunk_bytes = self.conf['flash_page_size'] * 1024
-        chunk_count = 4
-        n_col = 4
+        chunk_bytes = self.conf['LBA']['HotCold']['chunk_bytes']
+        chunk_count = self.conf['LBA']['HotCold']['chunk_count']
+        n_col = self.conf['LBA']['HotCold']['n_col']
         for chunkid in workload.Bricks(n_col, chunk_count):
             offset = chunkid * chunk_bytes
             size = chunk_bytes
