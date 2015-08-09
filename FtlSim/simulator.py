@@ -112,7 +112,12 @@ class Simulator(object):
                 event['operation']))
 
     def run(self, event_line_iter):
+        cnt = 0
         for event_line in event_line_iter:
             event = event_line_to_dic(event_line)
             self.process_event(event)
+            cnt += 1
+            if cnt % 100 == 0:
+                print '|',
+                sys.stdout.flush()
 
