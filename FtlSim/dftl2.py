@@ -450,24 +450,6 @@ class CachedMappingTable(object):
         assert n <= self.max_n_entries
         return n == self.max_n_entries
 
-    def new_data_write_event(self, lpn, new_ppn):
-        """
-        This method should be used when there is a new write. The new mapping
-        is lpn->new_ppn.
-
-        if lpn's mapping entry is in cache, update it and mark it as
-        dirty. If it is not in cache, add such entry and mark as dirty.
-
-        when updating, do we need to keep the old mapping?
-        This relates to how we write back the entries in cache back go GMT.
-        Check GMT.write_back_cache for details.
-        Basically, we need only to keep track of the latest lpn->ppn in cache.
-        If you have overwritten one lpn for many times, those lpn->ppn you
-        discarded are not really lost, they are stored in OOB as ppn->lpn by
-        ftl.lba_write().
-        """
-        self.overwrite_entry(lpn = lpn, ppn = new_ppn, dirty = True)
-
     def __repr__(self):
         return repr(self.entries)
 
@@ -1218,8 +1200,9 @@ class Dftl(ftlbuilder.FtlBuilder):
         new_ppn = self.block_pool.next_data_page_to_program()
 
         # CMT
-        self.mapping_manager.cached_mapping_table.new_data_write_event(
-            lpn = lpn, new_ppn = new_ppn)
+        # lpn must be in cache thanks to self.mapping_manager.lpn_to_ppn()
+        self.mapping_manager.cached_mapping_table.overwrite_entry(
+            lpn = lpn, ppn = new_ppn, dirty = True)
 
         # OOB
         self.oob.new_write(lpn = lpn, old_ppn = old_ppn,
