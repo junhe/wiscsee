@@ -33,6 +33,7 @@ class Recorder(object):
         self.count_counter = {}
         self.counters = {} # for count_me, counter_name:collections.counter
 
+        self.file_pool = {} # {filename:descriptor}
 
         # enabled by default
         self.enabled = None
@@ -81,7 +82,8 @@ class Recorder(object):
             print '*********  recorder counters (count_me()) **********'
             print utils.table_to_str(count_table, sep = '\t')
 
-
+        for fd in file_pool.values():
+            fd.close()
 
     @switchable
     def count_me(self, counter_name, item):
@@ -105,6 +107,15 @@ class Recorder(object):
                 table.append(d)
 
         return table
+
+    def write_file(filename, *args):
+        """
+        Write args to filename as a line
+        """
+        fd = self.file_pool.setdefault(filename, open(
+            os.path.join( os.path.basename(self.path), filename ), 'w'))
+        args = [str(s).rjust(12) for s in args]
+        fd.write(' '.join(args))
 
     @switchable
     def _output(self, *args):
