@@ -247,6 +247,13 @@ class OutOfBandAreas(object):
             # the lpn has mapping before this write
             self.wipe_ppn(old_ppn)
 
+    def lpns_of_block(self, flash_block):
+        s, e = self.conf.block_to_page_range(flash_block)
+        lpns = []
+        for ppn in range(s, e):
+            lpns.append(self.ppn_to_lpn.get(ppn, 'NA'))
+
+        return lpns
 
 class BlockPool(object):
     def __init__(self, confobj):
