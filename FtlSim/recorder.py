@@ -69,14 +69,14 @@ class Recorder(object):
             utils.table_to_file([self.count_counter], path3)
 
             count_table_path = '.'.join((self.path, 'count_table'))
-            count_table = self.counters_to_table()
+            count_table = self._counters_to_table()
             utils.table_to_file(count_table, count_table_path)
 
             print '*********  recorder counters (count_me()) **********'
             print utils.table_to_str(count_table, sep = '\t')
 
         if self.output_target == STDOUT_TARGET:
-            count_table = self.counters_to_table()
+            count_table = self._counters_to_table()
 
             print '*********  recorder counters (count_me()) **********'
             print utils.table_to_str(count_table, sep = '\t')
@@ -91,7 +91,7 @@ class Recorder(object):
         counter = self.counters.setdefault(counter_name, collections.Counter())
         counter[item] += 1
 
-    def counters_to_table(self):
+    def _counters_to_table(self):
         """
         columns
         counter.name   item.name    count
