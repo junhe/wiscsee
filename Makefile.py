@@ -977,9 +977,9 @@ def test_tpftl():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "everyone-1gc",
+        "expname"               : "study-btrfs",
         "time"                  : None,
-        "subexpname"            : "dftl",
+        "subexpname"            : "outputstuff",
         # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl
         "ftl_type"              : "dftl2",
         "sector_size"           : 512,
@@ -1061,13 +1061,13 @@ def test_tpftl():
     }
 
     # TODO: USE LARGER DISK
-    filesystems = ('ext4', 'f2fs', 'btrfs')
+    # filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('f2fs',)
     # filesystems = ('ext4',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     # filesystems = ('xfs',)
-    # filesystems = ('btrfs',)
+    filesystems = ('btrfs',)
     # filesystems = ('btrfs','f2fs')
 
     toresult = raw_input('Save this experiments to /tmp/results? (y/n)')
