@@ -1071,6 +1071,16 @@ class GarbageCollector(object):
                 blk_info = BlockInfo(block_type = block_type,
                     block_num = blocknum, value = bene_cost)
                 blk_info.valid_ratio = valid_ratio
+
+                if blk_info.valid_ratio > 0:
+                    lpns = self.oob.lpns_of_block(blocknum)
+                    s, e = self.conf.block_to_page_range(blocknum)
+                    ppns = range(s, e)
+
+                    ppn_states = [self.oob.states.page_state_human(ppn)
+                        for ppn in ppns]
+                    blk_info.mappings = zip(ppns, lpns, ppn_states)
+
                 priority_q.put(blk_info)
 
         while not priority_q.empty():
@@ -1079,6 +1089,24 @@ class GarbageCollector(object):
                 round(b_info.valid_ratio, 2))
             self.recorder.count_me('block.info.bene_cost',
                 round(b_info.value))
+
+            if b_info.valid_ratio > 0:
+                self.recorder.write_file('bad_victim_blocks',
+                    block_type = b_info.block_type,
+                    block_num = b_info.block_num,
+                    bene_cost = b_info.value,
+                    valid_ratio = round(b_info.valid_ratio, 2))
+
+                # lpn ppn ppn_states blocknum
+                for ppn, lpn, ppn_state in b_info.mappings:
+                    self.recorder.write_file('bad.block.mappings',
+                        ppn = ppn,
+                        lpn = lpn,
+                        ppn_state = ppn_state,
+                        block_num = b_info.block_num,
+                        valid_ratio = b_info.valid_ratio
+                        )
+
             yield b_info
 
     def erase_block(self, blocknum, tag):
