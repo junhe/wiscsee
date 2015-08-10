@@ -214,12 +214,13 @@ class OutOfBandAreas(object):
         block, _ = self.conf.page_to_block_off(ppn)
         self.last_inv_time_of_block[block] = datetime.datetime.now()
 
-        try:
-            del self.ppn_to_lpn[ppn]
-        except KeyError:
-            # it is OK that the key does not exist, for example,
-            # when discarding without writing to it
-            pass
+        # It is OK to delay it until we erase the block
+        # try:
+            # del self.ppn_to_lpn[ppn]
+        # except KeyError:
+            # # it is OK that the key does not exist, for example,
+            # # when discarding without writing to it
+            # pass
 
     def erase_block(self, flash_block):
         self.states.erase_block(flash_block)
