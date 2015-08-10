@@ -56,7 +56,7 @@ class Recorder(object):
             self.fhandle.close()
 
         if self.path:
-            # only write stats when we output to file
+            # only write stats when we _output to file
             stats_path = '.'.join((self.path, 'stats'))
             utils.table_to_file([self.counter], stats_path)
             print 'stats'
@@ -107,7 +107,7 @@ class Recorder(object):
         return table
 
     @switchable
-    def output(self, *args):
+    def _output(self, *args):
         line = ' '.join( str(x) for x in args)
         line += '\n'
         if self.output_target == FILE_TARGET:
@@ -118,12 +118,12 @@ class Recorder(object):
     @switchable
     def debug(self, *args):
         if self.verbose_level >= 3:
-            self.output('DEBUG', *args)
+            self._output('DEBUG', *args)
 
     @switchable
     def debug2(self, *args):
         if self.verbose_level >= 3:
-            self.output('DEBUG', *args)
+            self._output('DEBUG', *args)
 
     @switchable
     def put(self, operation, page_num, category):
@@ -132,7 +132,7 @@ class Recorder(object):
         self.counter[item] = self.counter.setdefault(item, 0) + 1
 
         if self.verbose_level >= 1:
-            self.output('RECORD', operation, page_num, category)
+            self._output('RECORD', operation, page_num, category)
 
     @switchable
     def put_and_count(self, item, *args ):
@@ -140,7 +140,7 @@ class Recorder(object):
         self.put_and_count_counter[item] = self.put_and_count_counter.setdefault(item, 0) + 1
 
         if self.verbose_level >= 1:
-            self.output('PUTCOUNT', item, *args)
+            self._output('PUTCOUNT', item, *args)
 
     @switchable
     def count(self, item, *args ):
@@ -150,11 +150,11 @@ class Recorder(object):
     @switchable
     def warning(self, *args):
         if self.verbose_level >= 2:
-            self.output('WARNING', *args)
+            self._output('WARNING', *args)
 
     @switchable
     def error(self, *args):
         if self.verbose_level >= 0:
-            self.output('ERROR', *args)
+            self._output('ERROR', *args)
 
 
