@@ -1073,6 +1073,14 @@ def test_tpftl():
     toresult = raw_input('Save this experiments to /tmp/results? (y/n)')
     if toresult.lower() == 'y':
         targetdir = '/tmp/results'
+        expname = raw_input('Enter expname ({}):'.format(confdic['expname']))
+        if expname.strip() != '':
+            confdic['expname'] = expname
+
+        subexpname = raw_input('Enter subexpname ({}):'.format(
+            confdic['subexpname']))
+        if subexpname.strip() != '':
+            confdic['subexpname'] = subexpname
     else:
         targetdir = '/tmp/' + str(random.random())
 
