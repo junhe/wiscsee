@@ -34,6 +34,7 @@ class Recorder(object):
         self.counters = {} # for count_me, counter_name:collections.counter
 
         self.file_pool = {} # {filename:descriptor}
+        self.file_colnames = {} # {filename:[colname1, 2, ...]
 
         # enabled by default
         self.enabled = None
@@ -82,7 +83,11 @@ class Recorder(object):
             print '*********  recorder counters (count_me()) **********'
             print utils.table_to_str(count_table, sep = '\t')
 
-        for fd in file_pool.values():
+        for fd in self.file_pool.values():
+            fd.seek(0)
+            lines = fd.readlines()
+            lines[:] = [l.strip() for l in lines]
+            print '\n'.join(lines)
             fd.close()
 
     @switchable
@@ -108,14 +113,27 @@ class Recorder(object):
 
         return table
 
-    def write_file(filename, *args):
+    def write_file(self, filename, **kwargs):
         """
         Write args to filename as a line
+
+        You must provide kwargs with exactly the same keys. And you must
+        provide keys in the parameter as they become columns in the file.
         """
-        fd = self.file_pool.setdefault(filename, open(
-            os.path.join( os.path.basename(self.path), filename ), 'w'))
-        args = [str(s).rjust(12) for s in args]
-        fd.write(' '.join(args))
+        width = 20
+        if not self.file_pool.has_key(filename):
+            fd = open( os.path.join(
+                os.path.dirname(self.path), filename ), 'wr+')
+            self.file_pool[filename] = fd
+            self.file_colnames[filename] = kwargs.keys()
+            colnames = [str(colname).rjust(width) for colname in kwargs.keys()]
+            fd.write(' '.join(colnames) + '\n')
+        else:
+            fd = self.file_pool[filename]
+
+        colnames = self.file_colnames[filename]
+        args = [str(kwargs[colname]).rjust(width) for colname in colnames]
+        fd.write(' '.join(args) + '\n')
 
     @switchable
     def _output(self, *args):
