@@ -82,6 +82,7 @@ class FlashBitmap2(object):
         # We use two bits to record state of a page so that
         # we will be able to record ERASED state
         self.bitmap = bitarray.bitarray(2 * conf.total_num_pages())
+        self.bitmap.setall(0)
 
     def pagenum_to_slice_range(self, pagenum):
         "2 is the number of bits representing the state of a page"
@@ -199,7 +200,7 @@ class FtlBuilder(object):
         self.recorder = recorderobj
         self.flash = flashobj
 
-        self.bitmap = FlashBitmap2(self.conf)
+        # self.bitmap = FlashBitmap2(self.conf)
         # self.bitmap = FlashBitmap1(self.conf)
 
         if self.conf['workload_src'] == config.LBAGENERATOR:

@@ -1151,7 +1151,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         # bitmap has been created parent class
         # Change: we now don't put the bitmap here
         # self.bitmap.initialize()
-        del self.bitmap
+        # del self.bitmap
 
         self.block_pool = BlockPool(confobj)
         self.oob = OutOfBandAreas(confobj)
