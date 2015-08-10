@@ -136,8 +136,8 @@ class FlashBitmap2(object):
             if self.is_page_valid(pg):
                 cnt += 1
 
-        return cnt / float(self.conf['flash_npage_per_block'])
-
+        ret = cnt / float(self.conf['flash_npage_per_block'])
+        return ret
 
     def is_page_valid(self, pagenum):
         s, e = self.pagenum_to_slice_range(pagenum)
@@ -177,7 +177,8 @@ class FlashBitmap2(object):
         elif state == self.ERASED:
             return "ERASED"
         else:
-            raise RuntimeError("state is not recognized: {}".format(state))
+            raise RuntimeError("page {} state is not recognized: {}".format(
+                pagenum, state))
 
     def initialize(self):
         """ this method should be called in FTL """
