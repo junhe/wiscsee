@@ -1104,7 +1104,8 @@ class GarbageCollector(object):
                         lpn = lpn,
                         ppn_state = ppn_state,
                         block_num = b_info.block_num,
-                        valid_ratio = b_info.valid_ratio
+                        valid_ratio = b_info.valid_ratio,
+                        block_type = b_info.block_type
                         )
 
             yield b_info
