@@ -888,6 +888,7 @@ class GarbageCollector(object):
         while decider.need_cleaning():
             if decider.call_index == 0:
                 self.recorder.count_me("GC", "invoked")
+                print 'GC is triggerred'
                 block_iter = self.victim_blocks_iter()
             # victim_type, victim_block, valid_ratio = self.next_victim_block()
             # victim_type, victim_block, valid_ratio = \
@@ -1121,6 +1122,13 @@ class GarbageCollector(object):
 
         self.flash.block_erase(blocknum, tag)
 
+def dec_debug(function):
+    def wrapper(self, lpn):
+        ret = function(self, lpn)
+        if lpn == 38356:
+            print function.__name__, 'lpn:', lpn, 'ret:', ret
+        return ret
+    return wrapper
 
 #
 # - translation pages
@@ -1272,6 +1280,7 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         # garbage collection checking and possibly doing
         self.garbage_collector.try_gc()
+
 
 def main():
     pass
