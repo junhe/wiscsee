@@ -692,11 +692,6 @@ class Tpftl(dftl2.Dftl):
         # Note that this calls grandpa
         super(dftl2.Dftl, self).__init__(confobj, recorderobj, flashobj)
 
-        # bitmap has been created parent class
-        # Change: we now don't put the bitmap here
-        # self.bitmap.initialize()
-        del self.bitmap
-
         self.block_pool = dftl2.BlockPool(confobj)
         self.oob = dftl2.OutOfBandAreas(confobj)
 
