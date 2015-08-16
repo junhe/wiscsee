@@ -977,7 +977,7 @@ def test_tpftl():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "study-btrfs",
+        "expname"               : "study-btrfs-latest",
         "time"                  : None,
         "subexpname"            : "outputstuff",
         # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl
