@@ -87,7 +87,8 @@ class WorkloadRunner(object):
             except KeyError:
                 mk_opt_dic = None
             self.fs.make(opt_dic = mk_opt_dic)
-            self.fs.mount(opt_list=self.conf['common_mnt_opts'])
+            self.fs.mount(opt_list =
+                self.conf['mnt_opts'][ self.conf['filesystem'] ])
             utils.shcmd('sync')
 
             time.sleep(1)
