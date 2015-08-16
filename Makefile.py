@@ -1020,7 +1020,12 @@ def test_tpftl():
         "loop_dev_size_mb"      : None,
         "tmpfs_mount_point"     : "/mnt/tmpfs",
         "fs_mount_point"        : "/mnt/fsonloop",
-        "common_mnt_opts"       : ["discard"],
+        "mnt_opts" : {
+            "ext4":   ["discard"],
+            "btrfs":  ["discard", "ssd", "autodefrag"],
+            "xfs":    ['discard'],
+            "f2fs":   ['discard']
+        },
         # "common_mnt_opts"       : ["discard", "nodatacow"],
         "filesystem"            : None,
 
