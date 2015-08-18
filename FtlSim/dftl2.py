@@ -1356,7 +1356,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.oob.wipe_ppn(ppn)
 
         # garbage collection checking and possibly doing
-        self.garbage_collector.try_gc()
+        # self.garbage_collector.try_gc()
 
 
 def main():
