@@ -351,12 +351,41 @@ class BlockPool(object):
         return self.next_page_to_program('trans_log_end_ppn',
             self.pop_a_free_block_to_trans)
 
+    def next_gc_data_page_to_program(self):
+        return self.next_page_to_program('gc_data_log_end_ppn',
+            self.pop_a_free_block_to_data)
+
+    def next_gc_translation_page_to_program(self):
+        return self.next_page_to_program('gc_trans_log_end_ppn',
+            self.pop_a_free_block_to_trans)
+
     def current_blocks(self):
-        cur_data_block, _ = self.conf.page_to_block_off(
-            self.data_log_end_ppn)
-        cur_trans_block, _ = self.conf.page_to_block_off(
-            self.trans_log_end_ppn)
-        return (cur_data_block, cur_trans_block)
+        try:
+            cur_data_block, _ = self.conf.page_to_block_off(
+                self.data_log_end_ppn)
+        except AttributeError:
+            cur_data_block = None
+
+        try:
+            cur_trans_block, _ = self.conf.page_to_block_off(
+                self.trans_log_end_ppn)
+        except AttributeError:
+            cur_trans_block = None
+
+        try:
+            cur_gc_data_block, _ = self.conf.page_to_block_off(
+                self.gc_data_log_end_ppn)
+        except AttributeError:
+            cur_gc_data_block = None
+
+        try:
+            cur_gc_trans_block, _ = self.conf.page_to_block_off(
+                self.gc_trans_log_end_ppn)
+        except AttributeError:
+            cur_gc_trans_block = None
+
+        return (cur_data_block, cur_trans_block, cur_gc_data_block,
+            cur_gc_trans_block)
 
     def __repr__(self):
         ret = ' '.join(['freeblocks', repr(self.freeblocks)]) + '\n' + \
@@ -948,7 +977,7 @@ class GarbageCollector(object):
         lpn = self.oob.translate_ppn_to_lpn(old_ppn)
 
         # write to new page
-        new_ppn = self.block_pool.next_data_page_to_program()
+        new_ppn = self.block_pool.next_gc_data_page_to_program()
         self.flash.page_write(new_ppn, DATA_CLEANING)
 
         # update new page and old page's OOB
@@ -979,7 +1008,7 @@ class GarbageCollector(object):
         self.flash.page_read(old_m_ppn, TRANS_CLEAN)
 
         # write to new page
-        new_m_ppn = self.block_pool.next_translation_page_to_program()
+        new_m_ppn = self.block_pool.next_gc_translation_page_to_program()
         self.flash.page_write(new_m_ppn, TRANS_CLEAN)
 
         # update new page and old page's OOB
