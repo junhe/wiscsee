@@ -83,12 +83,12 @@ class Recorder(object):
             print '*********  recorder counters (count_me()) **********'
             print utils.table_to_str(count_table, sep = '\t')
 
-        for fd in self.file_pool.values():
-            fd.seek(0)
-            lines = fd.readlines()
-            lines[:] = [l.strip() for l in lines]
-            print '\n'.join(lines)
-            fd.close()
+            for fd in self.file_pool.values():
+                fd.seek(0)
+                lines = fd.readlines()
+                lines[:] = [l.strip() for l in lines]
+                print '\n'.join(lines)
+                fd.close()
 
     @switchable
     def count_me(self, counter_name, item):
