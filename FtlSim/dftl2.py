@@ -399,6 +399,9 @@ class BlockPool(object):
                 for block in range(self.conf['flash_num_blocks'])]
         return ''.join(block_states)
 
+    def used_ratio(self):
+        return (len(self.trans_usedblocks) + len(self.data_usedblocks))\
+            / float(self.conf['flash_num_blocks'])
 
 class CacheEntryData(object):
     """
@@ -828,13 +831,22 @@ class GcDecider(object):
         self.conf = confobj
         self.block_pool = block_pool
         self.recorder = recorderobj
-        self.call_index = -1
 
         self.high_watermark = self.conf['dftl']['GC_threshold_ratio'] * \
             self.conf['flash_num_blocks']
+        self.high_watermark_orig = self.high_watermark
         self.low_watermark = self.conf['dftl']['GC_low_threshold_ratio'] * \
             self.conf['flash_num_blocks']
 
+        self.call_index = -1
+        self.last_used_blocks = None
+        self.freeze_count = 0
+
+    def refresh(self):
+        """
+        TODO: this class needs refactoring.
+        """
+        self.call_index = -1
         self.last_used_blocks = None
         self.freeze_count = 0
 
@@ -847,17 +859,43 @@ class GcDecider(object):
         if self.call_index == 0:
             # clean when above high_watermark
             ret = n_used_blocks > self.high_watermark
+            # raise the high water mark because we want to avoid frequent GC
+            self.raise_high_watermark()
         else:
             if self.freezed_too_long(n_used_blocks):
                 ret = False
+                print 'freezed too long, stop GC'
                 self.recorder.count_me("GC", 'freezed_too_long')
             else:
-                # common case
+                # Is it higher than low watermark?
                 ret = n_used_blocks > self.low_watermark
                 if ret == False:
                     self.recorder.count_me("GC", 'below_lowerwatermark')
+                    # We were able to bring used block to below lower
+                    # watermark. It means we still have a lot free space
+                    # We don't need to worry about frequent GC.
+                    self.reset_high_watermark()
 
         return ret
+
+    def reset_high_watermark(self):
+        self.high_watermark = self.high_watermark_orig
+
+    def raise_high_watermark(self):
+        """
+        Raise high watermark.
+
+        95% of the total blocks are the highest possible
+        """
+        self.high_watermark = min(self.high_watermark * 1.01,
+            self.conf['flash_num_blocks'] * 0.95)
+
+    def lower_high_watermark(self):
+        """
+        THe lowest is the original value
+        """
+        self.high_watermark = max(self.high_watermark_orig,
+            self.high_watermark / 1.01)
 
     def improved(self, cur_n_used_blocks):
         """
@@ -911,13 +949,17 @@ class GarbageCollector(object):
 
         self.mapping_manager = mapping_manager
 
-    def try_gc(self):
-        decider = GcDecider(self.conf, self.block_pool, self.recorder)
+        self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
-        while decider.need_cleaning():
-            if decider.call_index == 0:
+    def try_gc(self):
+        triggered = False
+
+        self.decider.refresh()
+        while self.decider.need_cleaning():
+            if self.decider.call_index == 0:
+                triggered = True
                 self.recorder.count_me("GC", "invoked")
-                print 'GC is triggerred'
+                print 'GC is triggerred', self.block_pool.used_ratio()
                 block_iter = self.victim_blocks_iter()
             # victim_type, victim_block, valid_ratio = self.next_victim_block()
             # victim_type, victim_block, valid_ratio = \
@@ -925,7 +967,10 @@ class GarbageCollector(object):
             try:
                 blockinfo = block_iter.next()
             except StopIteration:
+                print 'GC stoped from StopIteration exception'
                 self.recorder.count_me("GC", "StopIteration")
+                # high utilization, raise watermarkt to reduce GC attempts
+                self.decider.raise_high_watermark()
                 # nothing to be cleaned
                 break
             victim_type, victim_block = (blockinfo.block_type,
@@ -934,6 +979,9 @@ class GarbageCollector(object):
                 self.clean_data_block(victim_block)
             elif victim_type == TRANS_BLOCK:
                 self.clean_trans_block(victim_block)
+
+        if triggered:
+            print 'GC is finished', self.block_pool.used_ratio()
 
     def clean_data_block(self, flash_block):
         self.move_valid_pages(flash_block, self.move_data_page_to_new_location)
