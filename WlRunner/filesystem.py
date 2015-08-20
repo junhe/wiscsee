@@ -30,7 +30,7 @@ class FileSystemBase(object):
         raise NotImplementedError
 
     def mount(self, opt_list=None):
-        if opt_list == None:
+        if opt_list == None or len(opt_list) == 0:
             opt_str = ''
         else:
             opt_str = '-o ' + ','.join(opt_list)
