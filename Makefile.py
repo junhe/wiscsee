@@ -967,7 +967,8 @@ def start_ftrace():
     clear_ftrace()
     with cd("/sys/kernel/debug/tracing"):
         shcmd("echo function > current_tracer")
-        shcmd("echo 'btrfs_discard_extent*' > set_ftrace_filter")
+        # shcmd("echo function_graph > current_tracer")
+        shcmd("echo '*:mod:btrfs' > set_ftrace_filter")
         shcmd("echo 1 > tracing_on")
         send_marker("JUN.trace.start")
 
@@ -1154,7 +1155,8 @@ def main(cmd_args):
     # mdtest_on_filesystems()
     # tpcc_on_filesystems()
     # sqlbench_on_filesystems()
-    synthetic_on_filesystems()
+    # synthetic_on_filesystems()
+    test_ftl()
 
 def _main():
     parser = argparse.ArgumentParser(
