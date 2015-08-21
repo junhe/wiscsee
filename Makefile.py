@@ -963,8 +963,28 @@ def test_with_conf():
         print event
 
 
+def start_ftrace():
+    clear_ftrace()
+    with cd("/sys/kernel/debug/tracing"):
+        shcmd("echo function > current_tracer")
+        shcmd("echo 'btrfs_discard_extent*' > set_ftrace_filter")
+        shcmd("echo 1 > tracing_on")
+        send_marker("JUN.trace.start")
 
-def test_tpftl():
+def stop_ftrace():
+    send_marker("JUN.trace.end")
+    with cd("/sys/kernel/debug/tracing"):
+        shcmd("echo 0 > tracing_on")
+
+def clear_ftrace():
+    with cd("/sys/kernel/debug/tracing"):
+        shcmd("echo '' > trace")
+
+def send_marker(msg):
+    with cd("/sys/kernel/debug/tracing"):
+        shcmd("echo {} > trace_marker".format(msg))
+
+def test_ftl():
     """
     MEMO:
     - you need to set the high watermark properly. Otherwise it will trigger
@@ -977,9 +997,9 @@ def test_tpftl():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "study-btrfs-latest",
+        "expname"               : "study-btrfs-0820",
         "time"                  : None,
-        "subexpname"            : "outputstuff",
+        "subexpname"            : "trace.kernel",
         # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl
         "ftl_type"              : "dftl2",
         "sector_size"           : 512,
@@ -1043,10 +1063,10 @@ def test_tpftl():
             # "generating_func": "self.generate_backward_workload",
             # "generating_func": "self.generate_random_workload",
             # "chunk_count": 100*2**20/(8*1024),
-            "chunk_count": 5,
+            "chunk_count": 1,
             "chunk_size" : 4*1024*1024,
-            "iterations" : 4,
-            "n_col"      : 5   # only for hotcold workload
+            "iterations" : 50,
+            "n_col"      : 1   # only for hotcold workload
         },
 
         ############## LBAGENERATOR  #########
@@ -1102,15 +1122,16 @@ def test_tpftl():
 
         conf['result_dir'] = "{target}/{expname}/".format(
                 target = targetdir, expname = conf['expname']) + \
-            '-'.join([fs, conf['ftl_type'], str(devsize_mb), 'cmtsize',
-            str(conf['dftl']['max_cmt_bytes']),
-            conf['subexpname'], exptime])
+            '-'.join([conf['subexpname'], exptime, fs, conf['ftl_type'], str(devsize_mb), 'cmtsize',
+            str(conf['dftl']['max_cmt_bytes'])])
         conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
         conf['loop_dev_size_mb'] = devsize_mb
 
         print conf['result_dir']
+
+        start_ftrace()
         workflow(conf)
-        # FtlSim.tpftl.main(conf)
+        stop_ftrace()
 
 
 def main(cmd_args):
