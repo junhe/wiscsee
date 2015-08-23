@@ -738,16 +738,33 @@ class Tpftl(dftl2.Dftl):
         return lpn, new_npages
 
     def prefetch_and_access(self, lpn, npages, page_access_func):
+        """
+        From TPFTL authors:
+
+        Request-level prefetching is activated under two conditions:
+        1. the first page access split from a request is not in the mapping
+        cache;
+        2. if the request-level prefetching length is reduced according to
+        Section 4.5, the request-level prefetching will be activated when a
+        cache miss starts again during the address translation of the request.
+
+        Considering the example (a large request LPN 0--2047), the
+        request-level prefetching length is firstly set as 2048, but then
+        reduced to 1024.  When LPN-0 misses in the cache,  LPN-0 to LPN-1023
+        from translation page 0 is firstly loaded; then LPN-1024 misses in the
+        cache, the request-level prefetching is activated again since the large
+        request is not completed.  This time the length is set as 1024
+        (2048-1024), so LPN-1024 to LPN-2047 from translation page 1 will be
+        loaded.
+        """
+
+        # The following for loop would behave the same as the author indicated
         for sub_lpn, sub_npages in self.split_request(lpn, npages):
-            # TODO: we should check if the mappings are in cache before reading
-            # from flash pages in load_mapping_for_extent
             if not self.mapping_manager.is_extent_in_cache(
-                sub_lpn, sub_npages):
-                # prefetch only when needed
+                sub_lpn, 1):
+                # prefetch the whole TP when the first page misses
                 self.mapping_manager.load_mapping_for_extent(sub_lpn,
                     sub_npages)
-            # self.mapping_manager.load_mapping_for_extent(sub_lpn,
-                # sub_npages)
             for page in range(sub_lpn, sub_lpn + sub_npages):
                 # self.lba_read(page)
                 page_access_func(page)
