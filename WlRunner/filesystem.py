@@ -75,6 +75,24 @@ class F2fs(FileSystemBase):
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
 
+    def mount(self, opt_list=None):
+        """
+        Overriding mount() in parent since you need to have '-t f2fs' to
+        mount f2fs, somehow.
+        """
+        if opt_list == None or len(opt_list) == 0:
+            opt_str = ''
+        else:
+            opt_str = '-o ' + ','.join(opt_list)
+
+        ret = utils.shcmd('mount -t f2fs {opt} {dev} {mp}'.format(
+            opt = opt_str, dev = self.dev, mp = self.mount_point), ignore_error = True)
+        if ret != 0:
+            raise RuntimeError("Failed to mount dev:{} to dir:{}".format(
+                self.dev, self.mount_point))
+
+
+
 class Btrfs(FileSystemBase):
     def make(self, opt_dic=None):
         if opt_dic == None:
