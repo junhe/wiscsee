@@ -14,18 +14,22 @@ for request 3, 4, 5, ... So request 3, 4, 5, ... don't even need request-level
 prefetching (which needs to read flash pages).
 
 To impelement it:
-Sat 08 Aug 2015 02:00:22 PM CDT
+
 1. in mapping_manager.lpn_to_ppn(), if missed, check
 cache.selective_prefetch_enabled, if enabled, disable it and start selective
 prefetching.
+
 2. to do selective prefetching, first we need to figure the prefetch length.
 The length is p_len = min(consecutive predecessors of lpn, number of entries in
 the coldest tp node). If lpn will be in the coldest TP node, it is OK to evict
 its entry and prefetch to it. Because we need to read the translation page
 anyway (lpn is missing).
-3. evict p_len entries from the coldes tp node
+
+3. evict p_len entries from the coldest tp node
+
 4. read lpn's translation page and add lpn and lpn's p_len successors to tp
 node
+
 5. let the ftl use the cache to do the translation. For the next a few
 translations, selective prefetching will not be triggered because there will
 not be misses.
@@ -642,9 +646,6 @@ class MappingManager(dftl2.MappingManager):
         """
         m_vpn = self.directory.m_vpn_of_lpn(lpn)
 
-        # if lpn == 40037:
-            # utils.breakpoint()
-
         # prefetch length includes lpn itself
         pref_len =  self.selective_prefetch_length(lpn)
         vic_m_vpn = self.cached_mapping_table.entries.page_node_list.tail()\
@@ -747,6 +748,11 @@ class Tpftl(dftl2.Dftl):
         2. if the request-level prefetching length is reduced according to
         Section 4.5, the request-level prefetching will be activated when a
         cache miss starts again during the address translation of the request.
+
+        JUN: efffectively, what they are saying is, to try prefetching whenever
+        there is a miss for page i. The prefetching length is limited by
+        min(size of page i's TP, size of the coldest TP node, size of the
+        request).
 
         Considering the example (a large request LPN 0--2047), the
         request-level prefetching length is firstly set as 2048, but then
