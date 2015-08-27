@@ -860,7 +860,8 @@ class GcDecider(object):
             # clean when above high_watermark
             ret = n_used_blocks > self.high_watermark
             # raise the high water mark because we want to avoid frequent GC
-            self.raise_high_watermark()
+            if ret == True:
+                self.raise_high_watermark()
         else:
             if self.freezed_too_long(n_used_blocks):
                 ret = False
