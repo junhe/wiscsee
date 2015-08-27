@@ -2712,7 +2712,7 @@ explore.stack <- function()
         # suite("~/datahouse/localresults/tpftl-compare-page-extent")
         # suite("~/datahouse/localresults/tpftl-batch")
         # suite("~/datahouse/localresults/tpftl-right-hotness")
-        suite(c("~/datahouse/localresults/tpftl-almost", "~/datahouse/localresults/study-btrfs-20iter/btrfs-dftl2-256-cmtsize-15728-discard.no.gc..improved.decider.sepappend-2015-08-18-09-28-48"))
+        # suite(c("~/datahouse/localresults/tpftl-almost", "~/datahouse/localresults/study-btrfs-20iter/btrfs-dftl2-256-cmtsize-15728-discard.no.gc..improved.decider.sepappend-2015-08-18-09-28-48"))
         # suite("~/datahouse/localresults/investigate/")
         # suite("~/datahouse/localresults/everyone-1gc/")
 
@@ -2725,6 +2725,7 @@ explore.stack <- function()
 
         # suite("~/datahouse/localresults/study-ext4-weird")
         # suite("~/datahouse/localresults/study-ext4-tpftl")
+        suite("~/datahouse/localresults/compare-ext4-f2fs")
 
 
         # For meeting 07/10
@@ -2856,12 +2857,12 @@ btrfs.discard.analysis.wftrace <- function()
         # d$seqid = factor(d$seqid)
         p = ggplot(d) +
             geom_segment(aes(x = offset, xend = offset + size, 
-                y = seqid, yend = seqid, color = operation), size = 5, alpha=0.5) + 
+                y = seqid, yend = seqid, color = operation), size = 5) + 
             scale_x_continuous(breaks = seq(0, 10000, 4)) +
             theme(axis.text.x = element_text(angle=90))  +
+            xlab("LBA (MB)") +
+            ylab("Sequence ID") +
             coord_flip()
-
-
 
         print(p)
     }
@@ -2869,8 +2870,11 @@ btrfs.discard.analysis.wftrace <- function()
     do_main <- function()
     {
         d = load.file(
-                paste("~/datahouse/localresults/blkparse/fstrim2-2015-08-25-00-40-46-btrfs-dftl2-256-cmtsize-15728",
-                      "blkparse-events-for-ftlsim.txt", sep='/'))
+                # paste("~/datahouse/localresults/sync-wait60sec/events.txt",
+                      # "blkparse-events-for-ftlsim.txt", sep='/'))
+                # "~/datahouse/localresults/sync-wait60sec/events.txt")
+                "~/datahouse/localresults/sync-each-write/events.txt")
+
         d = clean(d)
         func(d)
     }
@@ -2894,7 +2898,7 @@ main <- function()
     # explore.stats()
     # explore.function.hist()
 
-    # explore.stack()
-    btrfs.discard.analysis.wftrace()
+    explore.stack()
+    # btrfs.discard.analysis.wftrace()
 }
 main()
