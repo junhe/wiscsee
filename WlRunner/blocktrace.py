@@ -28,7 +28,8 @@ class BlockTraceManager(object):
 
 def start_blktrace_on_bg(dev, resultpath):
     utils.prepare_dir_for_path(resultpath)
-    cmd = "sudo blktrace -a write -a read -d {dev} -o - | blkparse -i - > "\
+    # cmd = "sudo blktrace -a write -a read -d {dev} -o - | blkparse -i - > "\
+    cmd = "sudo blktrace -a queue -d {dev} -o - | blkparse -i - > "\
         "{resultpath}".format(dev = dev, resultpath = resultpath)
     print cmd
     p = subprocess.Popen(cmd, shell=True)

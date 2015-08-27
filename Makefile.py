@@ -998,9 +998,9 @@ def test_ftl():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "study-btrfs-0820",
+        "expname"               : "compare-ext4-f2fs",
         "time"                  : None,
-        "subexpname"            : "trace.kernel",
+        "subexpname"            : "optimal",
         # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl
         "ftl_type"              : "dftl2",
         "sector_size"           : 512,
@@ -1064,10 +1064,10 @@ def test_ftl():
             # "generating_func": "self.generate_backward_workload",
             # "generating_func": "self.generate_random_workload",
             # "chunk_count": 100*2**20/(8*1024),
-            "chunk_count": 1,
+            "chunk_count": 5,
             "chunk_size" : 4*1024*1024,
             "iterations" : 50,
-            "n_col"      : 1   # only for hotcold workload
+            "n_col"      : 5   # only for hotcold workload
         },
 
         ############## LBAGENERATOR  #########
@@ -1090,10 +1090,10 @@ def test_ftl():
     # filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('f2fs',)
-    # filesystems = ('ext4',)
+    filesystems = ('ext4', 'f2fs')
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     # filesystems = ('xfs',)
-    filesystems = ('btrfs',)
+    # filesystems = ('btrfs',)
     # filesystems = ('btrfs','f2fs')
 
     toresult = raw_input('Save this experiments to /tmp/results? (y/n)')
@@ -1119,7 +1119,7 @@ def test_ftl():
 
         # hold 3% flash pages' mapping entries
         entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
-        conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) * 100000000 # 8 bytes (64bits) needed in mem
 
         conf['result_dir'] = "{target}/{expname}/".format(
                 target = targetdir, expname = conf['expname']) + \
@@ -1130,9 +1130,9 @@ def test_ftl():
 
         print conf['result_dir']
 
-        start_ftrace()
+        # start_ftrace()
         workflow(conf)
-        stop_ftrace()
+        # stop_ftrace()
 
 
 def main(cmd_args):
