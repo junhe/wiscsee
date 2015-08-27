@@ -847,7 +847,13 @@ set_missing_to_default <- function(d, id_cols, val_col, default_val)
 {
     level_list = lapply(as.list(d[, id_cols]), unique)
     d.temp = expand.grid(level_list)
-    d.new = merge(d, d.temp, all=T)
+    print('d.temp')
+    print(head(d.temp))
+    print('d-------------')
+    print(head(d))
+    d <<- d
+    d.temp <<-d.temp
+    d.new = merge(d, d.temp, by=id_cols, all=T)
     d.new[, val_col] = ifelse(is.na(d.new[, val_col]), default_val, 
                               d.new[, val_col])
     return(d.new)
@@ -2191,11 +2197,24 @@ explore.stack <- function()
                     print(f)
                     d = read.csv(f, header=T, sep=';')
                     d = melt(d)
+                    names(d) = c("operation", "count")
+
                     conf = get_conf_by_datafile_path(f)
                     d$filesystem = as.character(conf['filesystem'])
                     d$ftl_type = as.character(conf['ftl_type'])
                     d$subexpname = as.character(conf['subexpname'])
-                    # print(head(d))
+
+                    pagesize = as.numeric(conf['flash_page_size'])
+                    npage.per.block = as.numeric(conf['flash_npage_per_block'])
+
+                    d$is.block.op = sapply(d$operation, function(op) {
+                                           grepl("phy_block_erase", op)})
+                    d$bytes = ifelse( d$is.block.op, 
+                                     d$count * pagesize * npage.per.block, 
+                                     d$count * pagesize)
+                    
+                    print(d)
+
                     fileitems = unlist(strsplit(f, "/"))
                     d$file = paste(fileitems[-c(1:4, length(fileitems))], collapse="/")
                     ret = rbind(ret, d)
@@ -2211,25 +2230,33 @@ explore.stack <- function()
 
         func <- function(d)
         {
-            cols = split_column_to_columns(as.character(d$variable), 3, '.')
+            cols = split_column_to_columns(as.character(d$operation), 3, '.')
             names(cols) = c('operation', 'page.type', 'purpose')
             d = cbind(d, cols)
 
-            d$variable = factor(d$variable, levels=sort(levels(d$variable), 
+
+            d$operation = factor(d$operation, levels=sort(levels(d$operation), 
                 decreasing=F))
 
+            d = d[,c('operation', 'subexpname', 'filesystem', 'bytes', 'count')]
+
             d = set_missing_to_default(d, 
-                id_cols=c("variable", "filesystem", "subexpname"), val_col="value",
+                id_cols=c("operation", "filesystem", "subexpname"), val_col="bytes",
                 default_val = 0)
 
-            p = ggplot(d, aes(y=value, x=filesystem, fill=subexpname)) +
+            print("I reached here")
+            print(head(d))
+
+            d$bytes = d$bytes / 2^30
+
+            p = ggplot(d, aes(y=bytes, x=filesystem, fill=subexpname)) +
                 geom_bar(stat='identity', position='dodge') + 
-                geom_text(aes(label = value), size=4, 
+                geom_text(aes(label = round(bytes, 2)), size=4, 
                           angle=90, hjust=0, position = position_dodge(width=1)) +
-                facet_grid(~variable) +
+                facet_grid(~operation) +
                 scale_fill_manual(values=cbPalette, 
                     guide = guide_legend(byrow=T, ncol=3)) +
-                ylab("Count") +
+                # ylab("Count") +
                 # theme(axis.text.x = element_text(angle=90)) +
                 # theme(axis.text.x = element_blank()) +
                 theme(legend.position = 'top', legend.direction = 'vertical')
@@ -2902,3 +2929,4 @@ main <- function()
     # btrfs.discard.analysis.wftrace()
 }
 main()
+
