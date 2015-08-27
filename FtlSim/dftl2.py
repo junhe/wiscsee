@@ -880,6 +880,8 @@ class GcDecider(object):
         return ret
 
     def reset_high_watermark(self):
+        return
+
         self.high_watermark = self.high_watermark_orig
 
     def raise_high_watermark(self):
@@ -888,6 +890,8 @@ class GcDecider(object):
 
         95% of the total blocks are the highest possible
         """
+        return
+
         self.high_watermark = min(self.high_watermark * 1.01,
             self.conf['flash_num_blocks'] * 0.95)
 
@@ -895,6 +899,8 @@ class GcDecider(object):
         """
         THe lowest is the original value
         """
+        return
+
         self.high_watermark = max(self.high_watermark_orig,
             self.high_watermark / 1.01)
 
