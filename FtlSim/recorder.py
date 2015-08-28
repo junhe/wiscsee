@@ -22,12 +22,15 @@ def switchable(function):
     return wrapper
 
 class Recorder(object):
-    def __init__(self, output_target, path=None, verbose_level=1):
+    def __init__(self, output_target, path = None, verbose_level = 1,
+            print_when_finished = False):
         """This can be improved by passing in file descriptor, then you don't
         need output_target"""
         self.output_target = output_target
         self.path = path
         self.verbose_level = verbose_level
+        self.print_when_finished = print_when_finished
+
         self.counter = {}
         self.put_and_count_counter = {}
         self.count_counter = {}
@@ -61,8 +64,9 @@ class Recorder(object):
             # only write stats when we _output to file
             stats_path = '.'.join((self.path, 'stats'))
             utils.table_to_file([self.counter], stats_path)
-            print 'stats'
-            pprint.pprint(self.counter)
+            if self.print_when_finished:
+                print 'stats'
+                pprint.pprint(self.counter)
 
             path2 = '.'.join((self.path, 'put_and_count.stats'))
             utils.table_to_file([self.put_and_count_counter], path2)
@@ -74,20 +78,23 @@ class Recorder(object):
             count_table = self._counters_to_table()
             utils.table_to_file(count_table, count_table_path)
 
-            print '*********  recorder counters (count_me()) **********'
-            print utils.table_to_str(count_table, sep = '\t')
+            if self.print_when_finished:
+                print '*********  recorder counters (count_me()) **********'
+                print utils.table_to_str(count_table, sep = '\t')
 
         if self.output_target == STDOUT_TARGET:
             count_table = self._counters_to_table()
 
-            print '*********  recorder counters (count_me()) **********'
-            print utils.table_to_str(count_table, sep = '\t')
+            if self.print_when_finished:
+                print '*********  recorder counters (count_me()) **********'
+                print utils.table_to_str(count_table, sep = '\t')
 
             for fd in self.file_pool.values():
                 fd.seek(0)
                 lines = fd.readlines()
                 lines[:] = [l.strip() for l in lines]
-                print '\n'.join(lines)
+                if self.print_when_finished:
+                    print '\n'.join(lines)
                 fd.close()
 
     @switchable

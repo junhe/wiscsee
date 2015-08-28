@@ -34,7 +34,9 @@ class Simulator(object):
         # initialize recorder
         self.rec = recorder.Recorder(output_target = self.conf['output_target'],
             path = self.conf.get_output_file_path(),
-            verbose_level = self.conf['verbose_level'])
+            verbose_level = self.conf['verbose_level'],
+            print_when_finished = self.conf['print_when_finished']
+            )
 
         if self.conf['ftl_type'] == 'directmap':
             ftl_class = dmftl.DirectMapFtl

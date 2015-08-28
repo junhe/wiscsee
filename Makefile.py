@@ -1034,6 +1034,7 @@ def test_ftl():
         ############## recorder #############
         "verbose_level" : -1,
         "output_target" : "file",
+        "print_when_finished": True,
         # "output_target" : "stdout",
 
         ############## For WlRunner ########
