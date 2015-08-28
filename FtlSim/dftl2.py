@@ -1170,12 +1170,15 @@ class GarbageCollector(object):
 
         while not priority_q.empty():
             b_info =  priority_q.get()
+
+            # record the information of victim block
             self.recorder.count_me('block.info.valid_ratio',
                 round(b_info.valid_ratio, 2))
             self.recorder.count_me('block.info.bene_cost',
                 round(b_info.value))
 
-            if b_info.valid_ratio > 0:
+            # disabled
+            if False and b_info.valid_ratio > 0:
                 self.recorder.write_file('bad_victim_blocks',
                     block_type = b_info.block_type,
                     block_num = b_info.block_num,
