@@ -1140,10 +1140,11 @@ explore.stack <- function()
                            size = size / 2^20})
 
             p = ggplot(d) + 
-                # geom_segment( aes(x = seqid, xend = seqid,
-                                  # y = offset, yend = offset + size,
-                                  # color = operation), size = 5)
-                geom_point(aes(x = seqid, y = offset))
+                geom_segment( aes(x = seqid, xend = seqid,
+                                  y = offset, yend = offset + size,
+                                  color = operation), size = 5)+
+                geom_point(aes(x = seqid, y = offset)) +
+                scale_x_continuous(limits = c(5000, 5100))
             print(p)
         }
 
