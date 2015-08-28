@@ -1092,6 +1092,73 @@ explore.stack <- function()
         do_main(dir.path)
     }
 
+    analyze.dir.blkparse.events.for.ftlsim.txt <- function(dir.path)
+    {
+        load.file <- function(filepath)
+        {
+            d = read.table(filepath, header=F, 
+               col.names = c('operation', 'offset', 'size'))
+            return(d)
+        }
+
+        get_file_list <- function(dir.path)
+        {
+            files = list.files(dir.path, recursive = T, 
+                pattern = "blkparse-events-for-ftlsim.txt$", full.names = T)
+            return(files)
+        }
+
+        load.dir <- function(dirpath)
+        {
+            d.all = data.frame()
+            files = get_file_list(dir.path)
+            for ( f in files ) {
+                print(f)
+                # d = load.file(f)
+                d = load_file_from_cache(f, "load.file")
+
+                conf = get_conf_by_datafile_path(f)
+                d$fs = conf[['filesystem']]
+                d$subexpname = conf[['subexpname']]
+
+                d.all = rbind(d.all, d)
+            }
+            return(d.all)
+        }
+
+        clean <- function(d)
+        {
+            return(d)
+        }
+
+        func <- function(d)
+        {
+            print(head(d))
+            
+            d$seqid = seq_along(d$operation)
+            d = within(d, {offset = offset / 2^20
+                           size = size / 2^20})
+
+            p = ggplot(d) + 
+                geom_segment( aes(x = seqid, xend = seqid,
+                                  y = offset, yend = offset + size,
+                                  color = operation))
+            print(p)
+        }
+
+        do_main <- function(dir.path)
+        {
+            d = load.dir(dir.path)
+            d = clean(d)
+            func(d)
+        }
+
+        do_main(dir.path)
+    }
+
+
+
+
     local_main <- function()
     {
         # analyze.dir.ftilsim.out("~/datahouse/sequential14")
@@ -1161,7 +1228,9 @@ explore.stack <- function()
 
         # suite("~/datahouse/localresults/study-ext4-weird")
         # suite("~/datahouse/localresults/study-ext4-tpftl")
-        suite("~/datahouse/localresults/compare-ext4-f2fs")
+        # suite("~/datahouse/localresults/compare-ext4-f2fs")
+        # suite("~/datahouse/localresults/explore-f2fs/")
+        suite("~/datahouse/localresults/explore-f2fs/1gbdisk-2015-08-28-04-09-07-f2fs-dftl2-1024-cmtsize-629120000000000")
 
 
         # For meeting 07/10
@@ -1182,9 +1251,10 @@ explore.stack <- function()
         # analyze.dir.ftlsim.out.stats(dirpath)
         # analyze.dir.gc_cnt.log(dirpath) # ** USEFUL **
         # analyze.dir.mapping.activity(dirpath)
-        analyze.dir.ftlsim.out.count_table(dirpath)
+        # analyze.dir.ftlsim.out.count_table(dirpath)
         # analyze.dir.events.for.ftlsim2(dirpath)
         # analyze.dir.bad.block.mappings(dirpath)
+        analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
     }
 
     local_main()
