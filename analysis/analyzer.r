@@ -836,7 +836,8 @@ explore.stack <- function()
             ret = data.frame()
             for (expdir in expdirs) {
                 files = list.files(expdir, recursive = T, 
-                   pattern = "bad.block.mappings$", full.names = T)
+                   pattern = "lines$", full.names = T)
+                   # pattern = "bad.block.mappings$", full.names = T)
                 for (f in files) {
                     print(f)
                     d = read.table(f, header=T)
@@ -856,6 +857,27 @@ explore.stack <- function()
         {
             return(d)
         }
+
+        func.f2fs <- function(d)
+        {
+            print(head(d))
+            d = subset(d, block_type == 'data_block')
+            d = head(d, 320)
+            p = ggplot(d, aes(x = lpn, y = 1, color = ppn_state)) +
+                # geom_jitter(alpha = 0.5) + 
+                geom_point() +
+                facet_grid(block_num~., scales = 'free_y') +
+                xlab("Logical Page Number") +
+                ylab("Flash Block Number") +
+                ggtitle("Data block") +
+                scale_x_continuous(breaks = seq(1, 100000)) +
+                scale_y_continuous(breaks = 1) +
+                theme(axis.text.x = element_text(angle=90)) 
+
+            print(p)
+        }
+
+
 
         func.ext4 <- function(d)
         {
@@ -1010,10 +1032,11 @@ explore.stack <- function()
         {
             d = load(expdirs)
             d = clean(d)
+            func.f2fs(d)
             # func.btrfs(d)
             # func.lpn.hist(d)
             # func.simple.print(d)
-            func.check.existence(d)
+            # func.check.existence(d)
         }
         do_main(expdirs)
     }
@@ -1234,7 +1257,8 @@ explore.stack <- function()
         # suite("~/datahouse/localresults/explore-f2fs/")
         # suite("~/datahouse/localresults/explore-f2fs/1gbdisk-2015-08-28-04-09-07-f2fs-dftl2-1024-cmtsize-629120000000000")
         # suite("~/datahouse/localresults/explore-f2fs/64gb-2015-08-28-05-29-59-f2fs-dftl2-65536-cmtsize-40265280000000000")
-        suite("~/datahouse/localresults/explore-f2fs/50iter-2015-08-28-02-04-19-f2fs-dftl2-256-cmtsize-157280000000000")
+        # suite("~/datahouse/localresults/explore-f2fs/50iter-2015-08-28-02-04-19-f2fs-dftl2-256-cmtsize-157280000000000")
+        suite("~/datahouse/localresults/explore-f2fs/trace.bad-2015-08-28-06-09-40-f2fs-dftl2-256-cmtsize-157280000000000")
 
 
         # For meeting 07/10
@@ -1257,8 +1281,8 @@ explore.stack <- function()
         # analyze.dir.mapping.activity(dirpath)
         # analyze.dir.ftlsim.out.count_table(dirpath)
         # analyze.dir.events.for.ftlsim2(dirpath)
-        # analyze.dir.bad.block.mappings(dirpath)
-        analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
+        analyze.dir.bad.block.mappings(dirpath)
+        # analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
     }
 
     local_main()
