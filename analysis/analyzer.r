@@ -1140,9 +1140,10 @@ explore.stack <- function()
                            size = size / 2^20})
 
             p = ggplot(d) + 
-                geom_segment( aes(x = seqid, xend = seqid,
-                                  y = offset, yend = offset + size,
-                                  color = operation))
+                # geom_segment( aes(x = seqid, xend = seqid,
+                                  # y = offset, yend = offset + size,
+                                  # color = operation), size = 5)
+                geom_point(aes(x = seqid, y = offset))
             print(p)
         }
 
@@ -1230,7 +1231,8 @@ explore.stack <- function()
         # suite("~/datahouse/localresults/study-ext4-tpftl")
         # suite("~/datahouse/localresults/compare-ext4-f2fs")
         # suite("~/datahouse/localresults/explore-f2fs/")
-        suite("~/datahouse/localresults/explore-f2fs/1gbdisk-2015-08-28-04-09-07-f2fs-dftl2-1024-cmtsize-629120000000000")
+        # suite("~/datahouse/localresults/explore-f2fs/1gbdisk-2015-08-28-04-09-07-f2fs-dftl2-1024-cmtsize-629120000000000")
+        suite("~/datahouse/localresults/explore-f2fs/64gb-2015-08-28-05-29-59-f2fs-dftl2-65536-cmtsize-40265280000000000")
 
 
         # For meeting 07/10
