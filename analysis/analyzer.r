@@ -561,6 +561,7 @@ explore.stack <- function()
         do_main(dir.paths)
     }
 
+    #bookmark
     analyze.dir.ftlsim.out.stats <- function(expdirs)
     {
         # This function takes a vector of directories as input
@@ -651,7 +652,6 @@ explore.stack <- function()
                "phy_block_erase.trans.clean"    = "TRANS:\nGC:\nblock erasures", 
                "physical_read.trans.clean"      = "TRANS:\nGC:\npage moves r",
                "physical_write.trans.clean"     = "TRANS:\nGC:\npage moves w"
-               
                )
             # reorder
             d$operation = factor(d$operation, levels=unlist(attributes(map)))
@@ -1179,10 +1179,10 @@ explore.stack <- function()
     suite <- function(dirpath)
     {
         # analyze.dir.ftilsim.out(dirpath)
-        analyze.dir.ftlsim.out.stats(dirpath)
+        # analyze.dir.ftlsim.out.stats(dirpath)
         # analyze.dir.gc_cnt.log(dirpath) # ** USEFUL **
         # analyze.dir.mapping.activity(dirpath)
-        # analyze.dir.ftlsim.out.count_table(dirpath)
+        analyze.dir.ftlsim.out.count_table(dirpath)
         # analyze.dir.events.for.ftlsim2(dirpath)
         # analyze.dir.bad.block.mappings(dirpath)
     }
