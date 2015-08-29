@@ -847,10 +847,10 @@ explore.stack <- function()
             ret = data.frame()
             for (expdir in expdirs) {
                 files = list.files(expdir, recursive = T, 
-                   pattern = "lines$", full.names = T)
-                   # pattern = "bad.block.mappings$", full.names = T)
+                   pattern = "bad.block.mappings$", full.names = T)
+                   # pattern = "lines$", full.names = T)
                 for (f in files) {
-                    print(f)
+                    # print(f)
                     d = read.table(f, header=T)
                     conf = get_conf_by_datafile_path(f)
                     d$filesystem = as.character(conf['filesystem'])
@@ -871,17 +871,27 @@ explore.stack <- function()
 
         func.f2fs <- function(d)
         {
-            print(head(d))
+            d = ddply(d, .(block_num), transform, offset = ppn - min(ppn), 
+                    lpn.stride = lpn - min(lpn))
+            d = transform(d, seq = lpn.stride == offset)
+            dd = ddply(d, .(block_num), function (x) { return( c("seq"=all(x$seq)) ) })
+            dd2 = ddply(d, .(block_num), function (x) { 
+                    return( c("long.jump"=any(x$lpn.stride > 32)) ) })
+            print("Writes are sequential in a block")
+            print(table(dd$seq))
+            print("Writes jump far in a block")
+            print(table(dd2$long.jump))
+            return()
+
             d = subset(d, block_type == 'data_block')
-            d = head(d, 320)
+
             p = ggplot(d, aes(x = lpn, y = ppn, color = ppn_state)) +
                 # geom_jitter(alpha = 0.5) + 
                 geom_point() +
-                facet_grid(block_num~.) +
+                facet_grid(block_num~., scale = 'free_y') +
                 xlab("Logical Page Number") +
                 ylab("Flash Block Number") +
                 ggtitle("Data block") +
-                scale_x_continuous(breaks = seq(1, 100000)) +
                 theme(axis.text.x = element_text(angle=90))
 
             print(p)
@@ -1222,8 +1232,8 @@ explore.stack <- function()
 
     local_main <- function()
     {
-        suite("~/datahouse/localresults/compare-ext4-f2fs-2/")
-        # suite("~/datahouse/localresults/compare-ext4-f2fs-2/small-cache-wide-threshold-2015-08-28-21-48-20-f2fs-dftl2-256-cmtsize-15728")
+        # suite("~/datahouse/localresults/compare-ext4-f2fs-2/")
+        suite("~/datahouse/localresults/compare-ext4-f2fs-2/small-cache-wide-threshold-2015-08-28-21-48-20-f2fs-dftl2-256-cmtsize-15728")
     }
 
     suite <- function(dirpath)
@@ -1233,9 +1243,9 @@ explore.stack <- function()
         # analyze.dir.ftilsim.out(dirpath)
         # analyze.dir.gc_cnt.log(dirpath) # ** USEFUL **
         # analyze.dir.mapping.activity(dirpath)
-        analyze.dir.ftlsim.out.count_table(dirpath)
+        # analyze.dir.ftlsim.out.count_table(dirpath)
         # analyze.dir.events.for.ftlsim2(dirpath)
-        # analyze.dir.bad.block.mappings(dirpath)
+        analyze.dir.bad.block.mappings(dirpath)
         # analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
     }
 
