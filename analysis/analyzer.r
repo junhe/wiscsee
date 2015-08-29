@@ -914,19 +914,35 @@ explore.stack <- function()
 
         func.f2fs <- function(d)
         {
+            d = subset(d, block_type == 'data_block')
+
             d = ddply(d, .(block_num), transform, offset = ppn - min(ppn), 
                     lpn.stride = lpn - min(lpn))
             d = transform(d, seq = lpn.stride == offset)
+
+
             dd = ddply(d, .(block_num), function (x) { return( c("seq"=all(x$seq)) ) })
+            # print("Writes are sequential in a block")
+            # print(table(dd$seq))
+
             dd2 = ddply(d, .(block_num), function (x) { 
-                    return( c("long.jump"=any(x$lpn.stride > 32)) ) })
-            print("Writes are sequential in a block")
-            print(table(dd$seq))
-            print("Writes jump far in a block")
-            print(table(dd2$long.jump))
+                    return( c("long.jump"=any(x$lpn.stride > 4*2^20/4096)) ) })
+            # print("Writes jump far in a block")
+            # print(table(dd2$long.jump))
+
+            # Find out if LPNs clustered in different groups have different
+            # valid state
+            dd3 = transform(d, group = lpn.stride > 32*2, 
+                state.bool = ppn_state == 'VALID') 
+            dd3 = transform(dd3, sumxor = as.numeric(group + state.bool))
+            dd3 = ddply(dd3, .(block_num), function (x) { 
+                    return( c( 'state.sep' = all(x$sumxor == 1) ) ) })
+
+            print("LPNs far apart has different valid state?")
+            print(table(dd3$state.sep))
+
             return()
 
-            d = subset(d, block_type == 'data_block')
 
             p = ggplot(d, aes(x = lpn, y = ppn, color = ppn_state)) +
                 # geom_jitter(alpha = 0.5) + 
@@ -1242,7 +1258,6 @@ explore.stack <- function()
             d = transform(d, end = offset + size)
 
             print(summary(d$size))
-            return()
             d = subset(d, seqid > 5000 & seqid < 5050)
 
             d = transform(d, seqid = factor(seqid))
@@ -1251,7 +1266,10 @@ explore.stack <- function()
                                   y = offset, yend = offset + size,
                                   color = operation), size = 5)+
                 geom_point(aes(x = seqid, y = offset)) +
-                geom_text(aes(label = paste(offset, size), x = seqid, y = offset))
+                geom_text(aes(label = paste(offset, size), x = seqid, y = offset),
+                          position = 'jitter') +
+                theme(axis.text.x = element_text(angle=90)) 
+
                 # scale_y_continuous(limits = c(20642*4096, 20827*4096)/2^20)
             print(p)
         }
@@ -1285,8 +1303,8 @@ explore.stack <- function()
         # analyze.dir.mapping.activity(dirpath)
         # analyze.dir.ftlsim.out.count_table(dirpath)
         # analyze.dir.events.for.ftlsim2(dirpath)
-        # analyze.dir.bad.block.mappings(dirpath)
-        analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
+        analyze.dir.bad.block.mappings(dirpath)
+        # analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
     }
 
     local_main()
