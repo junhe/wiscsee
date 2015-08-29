@@ -1242,7 +1242,7 @@ explore.stack <- function()
             d = transform(d, end = offset + size)
 
             print(summary(d$size))
-            return
+            return()
             d = subset(d, seqid > 5000 & seqid < 5050)
 
             d = transform(d, seqid = factor(seqid))
