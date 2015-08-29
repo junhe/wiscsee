@@ -1176,8 +1176,8 @@ explore.stack <- function()
                 geom_segment( aes(x = seqid, xend = seqid,
                                   y = offset, yend = offset + size,
                                   color = operation), size = 5)+
-                geom_point(aes(x = seqid, y = offset)) +
-                scale_x_continuous(limits = c(5000, 5100))
+                geom_point(aes(x = seqid, y = offset), size=1) + 
+                facet_wrap(~subexpname)
             print(p)
         }
         
@@ -1206,14 +1206,12 @@ explore.stack <- function()
             print(p)
         }
 
-
-
         do_main <- function(dir.path)
         {
             d = load.dir(dir.path)
             d = clean(d)
-            # func(d)
-            func.specific.range(d)
+            func(d)
+            # func.specific.range(d)
         }
 
         do_main(dir.path)
@@ -1224,12 +1222,12 @@ explore.stack <- function()
 
     local_main <- function()
     {
-        suite("~/datahouse/localresults/compare-ext4-f2fs-2/")
+        suite("~/datahouse/localresults/compare-ext4-f2fs-2/small-cache-close-threshold-2015-08-28-08-37-05-ext4-dftl2-256-cmtsize-15728")
     }
 
     suite <- function(dirpath)
     {
-        analyze.dir.ftlsim.out.stats(dirpath)
+        # analyze.dir.ftlsim.out.stats(dirpath)
 
         # analyze.dir.ftilsim.out(dirpath)
         # analyze.dir.gc_cnt.log(dirpath) # ** USEFUL **
@@ -1237,7 +1235,7 @@ explore.stack <- function()
         # analyze.dir.ftlsim.out.count_table(dirpath)
         # analyze.dir.events.for.ftlsim2(dirpath)
         # analyze.dir.bad.block.mappings(dirpath)
-        # analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
+        analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
     }
 
     local_main()
