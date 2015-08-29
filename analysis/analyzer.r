@@ -572,10 +572,6 @@ explore.stack <- function()
                 files = list.files(expdir, recursive = T, 
                    pattern = "ftlsim.out.stats$", full.names = T)
                 for (f in files) {
-                    # if (! grepl('ext4', f)) {
-                        # next
-                    # }
-                    # conf = get_conf_by_datafile_path(f)
                     print(f)
                     d = read.csv(f, header=T, sep=';')
                     d = melt(d)
@@ -660,7 +656,7 @@ explore.stack <- function()
 
             p = ggplot(d, aes(y=bytes, x=filesystem, fill=subexpname)) +
                 geom_bar(stat='identity', position='dodge') + 
-                geom_text(aes(label = round(bytes, 2)), size=4, 
+                geom_text(aes(label = round(bytes, 4)), size=4, 
                           angle=90, hjust=0, position = position_dodge(width=1)) +
                 facet_grid(~operation) +
                 scale_fill_manual(values=cbPalette, 
@@ -863,16 +859,15 @@ explore.stack <- function()
             print(head(d))
             d = subset(d, block_type == 'data_block')
             d = head(d, 320)
-            p = ggplot(d, aes(x = lpn, y = 1, color = ppn_state)) +
+            p = ggplot(d, aes(x = lpn, y = ppn, color = ppn_state)) +
                 # geom_jitter(alpha = 0.5) + 
                 geom_point() +
-                facet_grid(block_num~., scales = 'free_y') +
+                facet_grid(block_num~.) +
                 xlab("Logical Page Number") +
                 ylab("Flash Block Number") +
                 ggtitle("Data block") +
                 scale_x_continuous(breaks = seq(1, 100000)) +
-                scale_y_continuous(breaks = 1) +
-                theme(axis.text.x = element_text(angle=90)) 
+                theme(axis.text.x = element_text(angle=90))
 
             print(p)
         }
@@ -1170,12 +1165,40 @@ explore.stack <- function()
                 scale_x_continuous(limits = c(5000, 5100))
             print(p)
         }
+        
+        # exam a specific range
+        func.specific.range <- function(d)
+        {
+            print(head(d))
+            
+            d$seqid = seq_along(d$operation)
+            # d = within(d, {offset = offset / 2^20
+                           # size = size / 2^20})
+            d = transform(d, end = offset + size)
+
+            limits = c(20642*4096, 20827*4096)
+            d = subset(d, offset >= limits[1] & end <= limits[2])
+
+            d = transform(d, seqid = factor(seqid))
+            p = ggplot(d) + 
+                geom_segment( aes(x = seqid, xend = seqid,
+                                  y = offset, yend = offset + size,
+                                  color = operation), size = 5)+
+                geom_point(aes(x = seqid, y = offset)) +
+                geom_text(aes(label = offset, x = seqid, y = offset),
+                          position = 'jitter')
+                # scale_y_continuous(limits = c(20642*4096, 20827*4096)/2^20)
+            print(p)
+        }
+
+
 
         do_main <- function(dir.path)
         {
             d = load.dir(dir.path)
             d = clean(d)
-            func(d)
+            # func(d)
+            func.specific.range(d)
         }
 
         do_main(dir.path)
@@ -1186,102 +1209,19 @@ explore.stack <- function()
 
     local_main <- function()
     {
-        # analyze.dir.ftilsim.out("~/datahouse/sequential14")
-        # analyze.dir.gc.log("~/datahouse/sequential14")
-        # analyze.dir.events.for.ftlsim("~/datahouse/sequential14")
-        # analyze.dir.stats(c("~/datahouse/sequential.btrfs.nocow",
-                            # "~/datahouse/sequential13"))
-        # analyze.dir.gc_cnt.log.put_and_count.stats(
-           # c("~/datahouse/backwards.blktrace.right"))
-        # analyze.dir.gc_cnt.log.put_and_count.stats(
-           # c("~/datahouse/sequential.blktrace.right"))
-        # analyze.dir.ftlsim.out.stats(c("~/datahouse/sequential.blktrace.right.btrfs", 
-                                       # "~/datahouse/sequential.blktrace.right"))
-        # analyze.dir.gc.log(c("~/datahouse/sequential.blktrace.right.btrfs"))
-        # analyze.dir.ftlsim.out.stats(c("~/datahouse/improved.gc2/", 
-                                       # "~/datahouse/sequential.blktrace.right"))
-
-        # analyze.dir.ftlsim.out.stats(c("~/datahouse/mapping.activity"))
-        # analyze.dir.mapping.activity("~/datahouse/mapping.activity")
-        # analyze.dir.gc_cnt.log(c("~/datahouse/mapping.activity")) # ** USEFUL **
-
-        # higher.mark
-        # dirpath = "~/datahouse/higher.mark"
-        # analyze.dir.ftlsim.out.stats(dirpath)
-
-        # analyze.dir.ftilsim.out("~/datahouse/backwards.impr.gc")
-        # analyze.dir.ftlsim.out.stats("~/datahouse/backwards.impr.gc")
-
-        # suite("~/datahouse/backwards.impr.gc")
-        # suite("~/datahouse/sequential.nojournal")
-        # suite("~/datahouse/backwards.nojournal")
-        # analyze.dir.ftlsim.out.stats(c("~/datahouse/backwards.impr.gc",
-                                       # "~/datahouse/backwards.nojournal"))
-
-        # analyze.dir.ftilsim.out("~/datahouse/dftl")
-        # analyze.dir.ftlsim.out.stats("~/datahouse/dftl")
-
-        # suite("~/datahouse/compare.caches/")
-        # suite("~/datahouse/fs.and.dftl/")
-        # suite("~/datahouse/localresults/bricks")
-        # suite("~/datahouse/localresults/bricks-large-chunk")
-        # suite("~/datahouse/localresults/bricks-10mb-chunk")
-        # suite("~/datahouse/localresults/bricks-newtags3/")
-        # suite("~/datahouse/localresults/bricks-2-iter/")
-        # suite("~/datahouse/localresults/bricks-0.8-highwatermark/")
-        # suite("~/datahouse/localresults/meeting-tmp")
-        # suite("~/datahouse/localresults/meeting-hotcold-betterbricks-optimal")
-        # suite("~/datahouse/localresults/meeting-hotcold-optimal-2iter")
-        # suite("~/datahouse/localresults/meeting-hotcold-2iter")
-        # suite("~/datahouse/localresults/meeting-hotcold-4mb-chunk")
-        # suite("~/datahouse/localresults/debugdftl2new")
-        # suite("~/datahouse/localresults/debugtpftl")
-        # suite("~/datahouse/localresults/tpftl-to-4.2")
-        # suite("~/datahouse/localresults/tpftl-compare-page-extent")
-        # suite("~/datahouse/localresults/tpftl-batch")
-        # suite("~/datahouse/localresults/tpftl-right-hotness")
-        # suite(c("~/datahouse/localresults/tpftl-almost", "~/datahouse/localresults/study-btrfs-20iter/btrfs-dftl2-256-cmtsize-15728-discard.no.gc..improved.decider.sepappend-2015-08-18-09-28-48"))
-        # suite("~/datahouse/localresults/investigate/")
-        # suite("~/datahouse/localresults/everyone-1gc/")
-
-        # suite("~/datahouse/localresults/study-btrfs-20iter/")
-        # suite("~/datahouse/localresults/study-btrfs-20iter/btrfs-dftl2-256-cmtsize-15728-recording-2015-08-17-02-24-22")
-        # suite("~/datahouse/localresults/study-btrfs-20iter/btrfs-dftl2-256-cmtsize-15728-deciderimproved-2015-08-17-22-02-12")
-        # suite("~/datahouse/localresults/study-btrfs-20iter/btrfs-dftl2-256-cmtsize-15728-sepappend.baddecider-2015-08-18-03-44-05")
-        # suite("~/datahouse/localresults/study-f2fs")
-        # suite("~/datahouse/localresults/study-ext4-v2")
-
-        # suite("~/datahouse/localresults/study-ext4-weird")
-        # suite("~/datahouse/localresults/study-ext4-tpftl")
-        # suite("~/datahouse/localresults/compare-ext4-f2fs")
-        # suite("~/datahouse/localresults/explore-f2fs/")
-        # suite("~/datahouse/localresults/explore-f2fs/1gbdisk-2015-08-28-04-09-07-f2fs-dftl2-1024-cmtsize-629120000000000")
-        # suite("~/datahouse/localresults/explore-f2fs/64gb-2015-08-28-05-29-59-f2fs-dftl2-65536-cmtsize-40265280000000000")
-        # suite("~/datahouse/localresults/explore-f2fs/50iter-2015-08-28-02-04-19-f2fs-dftl2-256-cmtsize-157280000000000")
-        suite("~/datahouse/localresults/explore-f2fs/trace.bad-2015-08-28-06-09-40-f2fs-dftl2-256-cmtsize-157280000000000")
-
-
-        # For meeting 07/10
-
-        # Sequential
-        # suite("~/datahouse/mapping.activity")
-
-        # Backwards
-        # suite("~/datahouse/backwards.impr.gc")
-
-        # Random
-        # suite("~/datahouse/random")
+        suite("~/datahouse/localresults/compare-ext4-f2fs-2/")
     }
 
     suite <- function(dirpath)
     {
+        analyze.dir.ftlsim.out.stats(dirpath)
+
         # analyze.dir.ftilsim.out(dirpath)
-        # analyze.dir.ftlsim.out.stats(dirpath)
         # analyze.dir.gc_cnt.log(dirpath) # ** USEFUL **
         # analyze.dir.mapping.activity(dirpath)
         # analyze.dir.ftlsim.out.count_table(dirpath)
         # analyze.dir.events.for.ftlsim2(dirpath)
-        analyze.dir.bad.block.mappings(dirpath)
+        # analyze.dir.bad.block.mappings(dirpath)
         # analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
     }
 
