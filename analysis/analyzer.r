@@ -1222,7 +1222,8 @@ explore.stack <- function()
 
     local_main <- function()
     {
-        suite("~/datahouse/localresults/compare-ext4-f2fs-2/small-cache-close-threshold-2015-08-28-08-37-05-f2fs-dftl2-256-cmtsize-15728")
+        suite("~/datahouse/localresults/compare-ext4-f2fs-2/")
+        # suite("~/datahouse/localresults/compare-ext4-f2fs-2/small-cache-wide-threshold-2015-08-28-21-48-20-f2fs-dftl2-256-cmtsize-15728")
     }
 
     suite <- function(dirpath)
@@ -1232,10 +1233,10 @@ explore.stack <- function()
         # analyze.dir.ftilsim.out(dirpath)
         # analyze.dir.gc_cnt.log(dirpath) # ** USEFUL **
         # analyze.dir.mapping.activity(dirpath)
-        # analyze.dir.ftlsim.out.count_table(dirpath)
+        analyze.dir.ftlsim.out.count_table(dirpath)
         # analyze.dir.events.for.ftlsim2(dirpath)
         # analyze.dir.bad.block.mappings(dirpath)
-        analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
+        # analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
     }
 
     local_main()
