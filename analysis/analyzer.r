@@ -109,6 +109,49 @@ get_fs_with_hash <-function(f)
     return(paste(conf[['filesystem']], hash, sep='.'))
 }
 
+
+load_file_from_cache <- function(fpath, reader.funcname)
+{
+    # This function creates a cache using memory
+    # if fpath is not in memory, it reads the file
+    # into a data frame and return it. 
+    # if fpath is in memory, it simply return it
+    
+    # reader.funcname is the name of the function used to 
+    # read fpath to a data frame, it takes fpath as the only
+    # parameter
+    # Example
+    # 
+    # myreader <- function(fpath)
+    # {
+    #     return(1000)   
+    # }
+    # 
+    # Note that the function is passed in as string
+    # load_file_from_cache('file03', 'myreader')
+    
+    if ( exists('filecache') == FALSE ) {
+        # print('filecache not exist')
+        filecache <<- list()
+    } else {
+        # print('filecache exist')
+    }
+    
+    if ( exists(fpath, where=filecache) == TRUE ) {
+        # print('in cache')
+        return(filecache[[fpath]])
+    } else {
+        # not in cache
+        # print('not in cache')
+        f = match.fun(reader.funcname)
+        d = f(fpath)
+        filecache[[fpath]] <<- d
+        return(d)
+    }
+    
+}
+
+
 # This function is for the case that when plotting with ggplot,
 # some bar is missing so other bars at the same location become
 # bigger.
@@ -1245,8 +1288,8 @@ explore.stack <- function()
         # analyze.dir.mapping.activity(dirpath)
         # analyze.dir.ftlsim.out.count_table(dirpath)
         # analyze.dir.events.for.ftlsim2(dirpath)
-        analyze.dir.bad.block.mappings(dirpath)
-        # analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
+        # analyze.dir.bad.block.mappings(dirpath)
+        analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
     }
 
     local_main()
