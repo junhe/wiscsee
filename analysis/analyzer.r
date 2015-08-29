@@ -109,6 +109,21 @@ get_fs_with_hash <-function(f)
     return(paste(conf[['filesystem']], hash, sep='.'))
 }
 
+# This function is for the case that when plotting with ggplot,
+# some bar is missing so other bars at the same location become
+# bigger.
+# See evernote title: "fill in missing values" for more details
+# id_cols, val_col are characters
+set_missing_to_default <- function(d, id_cols, val_col, default_val)
+{
+    level_list = lapply(as.list(d[, id_cols]), unique)
+    d.temp = expand.grid(level_list)
+    d.new = merge(d, d.temp, all=T)
+    d.new[, val_col] = ifelse(is.na(d.new[, val_col]), default_val, 
+                              d.new[, val_col])
+    return(d.new)
+}
+
 explore.FSJ386323 <- function()
 {
     transfer <- function()
