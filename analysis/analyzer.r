@@ -1222,7 +1222,7 @@ explore.stack <- function()
 
     local_main <- function()
     {
-        suite("~/datahouse/localresults/compare-ext4-f2fs-2/small-cache-close-threshold-2015-08-28-08-37-05-ext4-dftl2-256-cmtsize-15728")
+        suite("~/datahouse/localresults/compare-ext4-f2fs-2/small-cache-close-threshold-2015-08-28-08-37-05-f2fs-dftl2-256-cmtsize-15728")
     }
 
     suite <- function(dirpath)
