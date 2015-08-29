@@ -912,7 +912,8 @@ explore.stack <- function()
             return(d)
         }
 
-        func.f2fs <- function(d)
+        # Exam in-block lpn pattern
+        func.f2fs.in.block <- function(d)
         {
             d = subset(d, block_type == 'data_block')
 
@@ -921,10 +922,12 @@ explore.stack <- function()
             d = transform(d, seq = lpn.stride == offset)
 
 
+            # Are the write in block sequential?
             dd = ddply(d, .(block_num), function (x) { return( c("seq"=all(x$seq)) ) })
             # print("Writes are sequential in a block")
             # print(table(dd$seq))
 
+            # Do we have long LPN jumps in a flash block?
             dd2 = ddply(d, .(block_num), function (x) { 
                     return( c("long.jump"=any(x$lpn.stride > 4*2^20/4096)) ) })
             # print("Writes jump far in a block")
@@ -942,12 +945,45 @@ explore.stack <- function()
             print(table(dd3$state.sep))
 
             return()
+        }
 
+        func.f2fs <- function(d)
+        {
+            d = subset(d, block_type == 'data_block')
 
-            p = ggplot(d, aes(x = lpn, y = ppn, color = ppn_state)) +
-                # geom_jitter(alpha = 0.5) + 
+            d = ddply(d, .(block_num), function(d) {
+                return(c("longest.jump"=max(d$lpn) - min(d$lpn))) })
+            d = transform(d, longest.jump = longest.jump*4096/2^20)
+            p = qplot(longest.jump, data=d)
+            print(p)
+
+            return()
+                      
+
+            d = ddply(d, .(block_num), transform, offset = ppn - min(ppn), 
+                    lpn.stride = lpn - min(lpn))
+            d = transform(d, seq = lpn.stride == offset)
+
+            # Find out if LPNs clustered in different groups have different
+            # valid state
+            dd3 = transform(d, group = lpn.stride > 32*2, 
+                state.bool = ppn_state == 'VALID') 
+            dd3 = transform(dd3, sumxor = as.numeric(group + state.bool))
+            dd3 = ddply(dd3, .(block_num), 
+                transform, state.sep = all(sumxor == 1 & length(unique(group)) > 1))
+
+            dd3 = subset(dd3, state.sep == F)
+            n = nrow(dd3)
+            repblocks = n / 32
+            dd3 = transform(dd3, blockid = rep(1:repblocks, each = 32))
+            dd3 = transform(dd3, blockid = paste(block_num, blockid))
+            print(head(dd3, 100))
+            # dd3 = subset(dd3, blockid %in% head(unique(blockid), 10))
+
+            p = ggplot(dd3, aes(x = factor(lpn), y = factor(ppn), color = ppn_state)) +
+                geom_jitter(alpha = 0.5) + 
                 geom_point() +
-                facet_grid(block_num~., scale = 'free_y') +
+                facet_grid(blockid~., scale = 'free') +
                 xlab("Logical Page Number") +
                 ylab("Flash Block Number") +
                 ggtitle("Data block") +
@@ -955,8 +991,6 @@ explore.stack <- function()
 
             print(p)
         }
-
-
 
         func.ext4 <- function(d)
         {
