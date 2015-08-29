@@ -1237,15 +1237,12 @@ explore.stack <- function()
         # exam a specific range
         func.specific.range <- function(d)
         {
-            print(head(d))
-            
             d$seqid = seq_along(d$operation)
-            # d = within(d, {offset = offset / 2^20
-                           # size = size / 2^20})
+            d = transform(d, offset = offset / 2^20, size = size / 2^20)
             d = transform(d, end = offset + size)
 
-            limits = c(20642*4096, 20827*4096)
-            d = subset(d, offset >= limits[1] & end <= limits[2])
+            print(summary(d$size))
+            d = subset(d, seqid > 5000 & seqid < 5100)
 
             d = transform(d, seqid = factor(seqid))
             p = ggplot(d) + 
@@ -1253,8 +1250,7 @@ explore.stack <- function()
                                   y = offset, yend = offset + size,
                                   color = operation), size = 5)+
                 geom_point(aes(x = seqid, y = offset)) +
-                geom_text(aes(label = offset, x = seqid, y = offset),
-                          position = 'jitter')
+                geom_text(aes(label = paste(offset, size), x = seqid, y = offset))
                 # scale_y_continuous(limits = c(20642*4096, 20827*4096)/2^20)
             print(p)
         }
@@ -1263,8 +1259,8 @@ explore.stack <- function()
         {
             d = load.dir(dir.path)
             d = clean(d)
-            func(d)
-            # func.specific.range(d)
+            # func(d)
+            func.specific.range(d)
         }
 
         do_main(dir.path)
