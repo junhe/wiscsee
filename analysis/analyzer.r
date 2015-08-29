@@ -936,7 +936,7 @@ explore.stack <- function()
                 state.bool = ppn_state == 'VALID') 
             dd3 = transform(dd3, sumxor = as.numeric(group + state.bool))
             dd3 = ddply(dd3, .(block_num), function (x) { 
-                    return( c( 'state.sep' = all(x$sumxor == 1) ) ) })
+                    return( c( 'state.sep' = all(x$sumxor == 1 & length(unique(x$group)) > 1) ) ) })
 
             print("LPNs far apart has different valid state?")
             print(table(dd3$state.sep))
