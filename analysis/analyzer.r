@@ -714,7 +714,7 @@ explore.stack <- function()
 
             p = ggplot(d, aes(y=bytes, x=filesystem, fill=subexpname)) +
                 geom_bar(stat='identity', position='dodge') + 
-                geom_text(aes(label = round(bytes, 4)), size=4, 
+                geom_text(aes(label = round(bytes, 2)), size=4, 
                           angle=90, hjust=0, position = position_dodge(width=1)) +
                 facet_grid(~operation) +
                 scale_fill_manual(values=cbPalette, 
@@ -1324,14 +1324,14 @@ explore.stack <- function()
 
     local_main <- function()
     {
-        # suite("~/datahouse/localresults/compare-ext4-f2fs-2/")
+        suite("~/datahouse/localresults/compare-ext4-f2fs-2/")
         # suite("~/datahouse/localresults/compare-ext4-f2fs-2/small-cache-wide-threshold-2015-08-28-21-48-20-f2fs-dftl2-256-cmtsize-15728")
-        suite("~/datahouse/localresults/testtest")
+        # suite("~/datahouse/localresults/f2fs-3.16")
     }
 
     suite <- function(dirpath)
     {
-        # analyze.dir.ftlsim.out.stats(dirpath)
+        analyze.dir.ftlsim.out.stats(dirpath)
 
         # analyze.dir.ftilsim.out(dirpath)
         # analyze.dir.gc_cnt.log(dirpath) # ** USEFUL **
@@ -1339,7 +1339,7 @@ explore.stack <- function()
         # analyze.dir.ftlsim.out.count_table(dirpath)
         # analyze.dir.events.for.ftlsim2(dirpath)
         # analyze.dir.bad.block.mappings(dirpath)
-        analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
+        # analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
     }
 
     local_main()
