@@ -109,6 +109,64 @@ get_fs_with_hash <-function(f)
     return(paste(conf[['filesystem']], hash, sep='.'))
 }
 
+
+load_file_from_cache <- function(fpath, reader.funcname)
+{
+    # This function creates a cache using memory
+    # if fpath is not in memory, it reads the file
+    # into a data frame and return it. 
+    # if fpath is in memory, it simply return it
+    
+    # reader.funcname is the name of the function used to 
+    # read fpath to a data frame, it takes fpath as the only
+    # parameter
+    # Example
+    # 
+    # myreader <- function(fpath)
+    # {
+    #     return(1000)   
+    # }
+    # 
+    # Note that the function is passed in as string
+    # load_file_from_cache('file03', 'myreader')
+    
+    if ( exists('filecache') == FALSE ) {
+        # print('filecache not exist')
+        filecache <<- list()
+    } else {
+        # print('filecache exist')
+    }
+    
+    if ( exists(fpath, where=filecache) == TRUE ) {
+        # print('in cache')
+        return(filecache[[fpath]])
+    } else {
+        # not in cache
+        # print('not in cache')
+        f = match.fun(reader.funcname)
+        d = f(fpath)
+        filecache[[fpath]] <<- d
+        return(d)
+    }
+    
+}
+
+
+# This function is for the case that when plotting with ggplot,
+# some bar is missing so other bars at the same location become
+# bigger.
+# See evernote title: "fill in missing values" for more details
+# id_cols, val_col are characters
+set_missing_to_default <- function(d, id_cols, val_col, default_val)
+{
+    level_list = lapply(as.list(d[, id_cols]), unique)
+    d.temp = expand.grid(level_list)
+    d.new = merge(d, d.temp, all=T)
+    d.new[, val_col] = ifelse(is.na(d.new[, val_col]), default_val, 
+                              d.new[, val_col])
+    return(d.new)
+}
+
 explore.FSJ386323 <- function()
 {
     transfer <- function()
@@ -561,6 +619,7 @@ explore.stack <- function()
         do_main(dir.paths)
     }
 
+    #bookmark
     analyze.dir.ftlsim.out.stats <- function(expdirs)
     {
         # This function takes a vector of directories as input
@@ -571,10 +630,6 @@ explore.stack <- function()
                 files = list.files(expdir, recursive = T, 
                    pattern = "ftlsim.out.stats$", full.names = T)
                 for (f in files) {
-                    # if (! grepl('ext4', f)) {
-                        # next
-                    # }
-                    # conf = get_conf_by_datafile_path(f)
                     print(f)
                     d = read.csv(f, header=T, sep=';')
                     d = melt(d)
@@ -651,7 +706,6 @@ explore.stack <- function()
                "phy_block_erase.trans.clean"    = "TRANS:\nGC:\nblock erasures", 
                "physical_read.trans.clean"      = "TRANS:\nGC:\npage moves r",
                "physical_write.trans.clean"     = "TRANS:\nGC:\npage moves w"
-               
                )
             # reorder
             d$operation = factor(d$operation, levels=unlist(attributes(map)))
@@ -837,8 +891,9 @@ explore.stack <- function()
             for (expdir in expdirs) {
                 files = list.files(expdir, recursive = T, 
                    pattern = "bad.block.mappings$", full.names = T)
+                   # pattern = "lines$", full.names = T)
                 for (f in files) {
-                    print(f)
+                    # print(f)
                     d = read.table(f, header=T)
                     conf = get_conf_by_datafile_path(f)
                     d$filesystem = as.character(conf['filesystem'])
@@ -855,6 +910,86 @@ explore.stack <- function()
         clean <- function(d)
         {
             return(d)
+        }
+
+        # Exam in-block lpn pattern
+        func.f2fs.in.block <- function(d)
+        {
+            d = subset(d, block_type == 'data_block')
+
+            d = ddply(d, .(block_num), transform, offset = ppn - min(ppn), 
+                    lpn.stride = lpn - min(lpn))
+            d = transform(d, seq = lpn.stride == offset)
+
+
+            # Are the write in block sequential?
+            dd = ddply(d, .(block_num), function (x) { return( c("seq"=all(x$seq)) ) })
+            # print("Writes are sequential in a block")
+            # print(table(dd$seq))
+
+            # Do we have long LPN jumps in a flash block?
+            dd2 = ddply(d, .(block_num), function (x) { 
+                    return( c("long.jump"=any(x$lpn.stride > 4*2^20/4096)) ) })
+            # print("Writes jump far in a block")
+            # print(table(dd2$long.jump))
+
+            # Find out if LPNs clustered in different groups have different
+            # valid state
+            dd3 = transform(d, group = lpn.stride > 32*2, 
+                state.bool = ppn_state == 'VALID') 
+            dd3 = transform(dd3, sumxor = as.numeric(group + state.bool))
+            dd3 = ddply(dd3, .(block_num), function (x) { 
+                    return( c( 'state.sep' = all(x$sumxor == 1 & length(unique(x$group)) > 1) ) ) })
+
+            print("LPNs far apart has different valid state?")
+            print(table(dd3$state.sep))
+
+            return()
+        }
+
+        func.f2fs <- function(d)
+        {
+            d = subset(d, block_type == 'data_block')
+
+            d = ddply(d, .(block_num), function(d) {
+                return(c("longest.jump"=max(d$lpn) - min(d$lpn))) })
+            d = transform(d, longest.jump = longest.jump*4096/2^20)
+            p = qplot(longest.jump, data=d)
+            print(p)
+
+            return()
+                      
+
+            d = ddply(d, .(block_num), transform, offset = ppn - min(ppn), 
+                    lpn.stride = lpn - min(lpn))
+            d = transform(d, seq = lpn.stride == offset)
+
+            # Find out if LPNs clustered in different groups have different
+            # valid state
+            dd3 = transform(d, group = lpn.stride > 32*2, 
+                state.bool = ppn_state == 'VALID') 
+            dd3 = transform(dd3, sumxor = as.numeric(group + state.bool))
+            dd3 = ddply(dd3, .(block_num), 
+                transform, state.sep = all(sumxor == 1 & length(unique(group)) > 1))
+
+            dd3 = subset(dd3, state.sep == F)
+            n = nrow(dd3)
+            repblocks = n / 32
+            dd3 = transform(dd3, blockid = rep(1:repblocks, each = 32))
+            dd3 = transform(dd3, blockid = paste(block_num, blockid))
+            print(head(dd3, 100))
+            # dd3 = subset(dd3, blockid %in% head(unique(blockid), 10))
+
+            p = ggplot(dd3, aes(x = factor(lpn), y = factor(ppn), color = ppn_state)) +
+                geom_jitter(alpha = 0.5) + 
+                geom_point() +
+                facet_grid(blockid~., scale = 'free') +
+                xlab("Logical Page Number") +
+                ylab("Flash Block Number") +
+                ggtitle("Data block") +
+                theme(axis.text.x = element_text(angle=90))
+
+            print(p)
         }
 
         func.ext4 <- function(d)
@@ -1010,10 +1145,11 @@ explore.stack <- function()
         {
             d = load(expdirs)
             d = clean(d)
+            func.f2fs(d)
             # func.btrfs(d)
             # func.lpn.hist(d)
             # func.simple.print(d)
-            func.check.existence(d)
+            # func.check.existence(d)
         }
         do_main(expdirs)
     }
@@ -1092,99 +1228,118 @@ explore.stack <- function()
         do_main(dir.path)
     }
 
+    analyze.dir.blkparse.events.for.ftlsim.txt <- function(dir.path)
+    {
+        load.file <- function(filepath)
+        {
+            d = read.table(filepath, header=F, 
+               col.names = c('operation', 'offset', 'size'))
+            return(d)
+        }
+
+        get_file_list <- function(dir.path)
+        {
+            files = list.files(dir.path, recursive = T, 
+                pattern = "blkparse-events-for-ftlsim.txt$", full.names = T)
+            return(files)
+        }
+
+        load.dir <- function(dirpath)
+        {
+            d.all = data.frame()
+            files = get_file_list(dir.path)
+            for ( f in files ) {
+                print(f)
+                # d = load.file(f)
+                d = load_file_from_cache(f, "load.file")
+
+                conf = get_conf_by_datafile_path(f)
+                d$fs = conf[['filesystem']]
+                d$subexpname = conf[['subexpname']]
+
+                d.all = rbind(d.all, d)
+            }
+            return(d.all)
+        }
+
+        clean <- function(d)
+        {
+            return(d)
+        }
+
+        func <- function(d)
+        {
+            print(head(d))
+            
+            d$seqid = seq_along(d$operation)
+            d = within(d, {offset = offset / 2^20
+                           size = size / 2^20})
+
+            p = ggplot(d) + 
+                geom_segment( aes(x = seqid, xend = seqid,
+                                  y = offset, yend = offset + size,
+                                  color = operation), size = 5)+
+                geom_point(aes(x = seqid, y = offset), size=1) + 
+                facet_wrap(~subexpname)
+            print(p)
+        }
+        
+        # exam a specific range
+        func.specific.range <- function(d)
+        {
+            d$seqid = seq_along(d$operation)
+            d = transform(d, offset = offset / 2^20, size = size / 2^20)
+            d = transform(d, end = offset + size)
+
+            print(summary(d$size))
+            d = subset(d, seqid > 5000 & seqid < 5050)
+
+            d = transform(d, seqid = factor(seqid))
+            p = ggplot(d) + 
+                geom_segment( aes(x = seqid, xend = seqid,
+                                  y = offset, yend = offset + size,
+                                  color = operation), size = 5)+
+                geom_point(aes(x = seqid, y = offset)) +
+                geom_text(aes(label = paste(offset, size), x = seqid, y = offset),
+                          position = 'jitter') +
+                theme(axis.text.x = element_text(angle=90)) 
+
+                # scale_y_continuous(limits = c(20642*4096, 20827*4096)/2^20)
+            print(p)
+        }
+
+        do_main <- function(dir.path)
+        {
+            d = load.dir(dir.path)
+            d = clean(d)
+            func(d)
+            # func.specific.range(d)
+        }
+
+        do_main(dir.path)
+    }
+
+
+
+
     local_main <- function()
     {
-        # analyze.dir.ftilsim.out("~/datahouse/sequential14")
-        # analyze.dir.gc.log("~/datahouse/sequential14")
-        # analyze.dir.events.for.ftlsim("~/datahouse/sequential14")
-        # analyze.dir.stats(c("~/datahouse/sequential.btrfs.nocow",
-                            # "~/datahouse/sequential13"))
-        # analyze.dir.gc_cnt.log.put_and_count.stats(
-           # c("~/datahouse/backwards.blktrace.right"))
-        # analyze.dir.gc_cnt.log.put_and_count.stats(
-           # c("~/datahouse/sequential.blktrace.right"))
-        # analyze.dir.ftlsim.out.stats(c("~/datahouse/sequential.blktrace.right.btrfs", 
-                                       # "~/datahouse/sequential.blktrace.right"))
-        # analyze.dir.gc.log(c("~/datahouse/sequential.blktrace.right.btrfs"))
-        # analyze.dir.ftlsim.out.stats(c("~/datahouse/improved.gc2/", 
-                                       # "~/datahouse/sequential.blktrace.right"))
-
-        # analyze.dir.ftlsim.out.stats(c("~/datahouse/mapping.activity"))
-        # analyze.dir.mapping.activity("~/datahouse/mapping.activity")
-        # analyze.dir.gc_cnt.log(c("~/datahouse/mapping.activity")) # ** USEFUL **
-
-        # higher.mark
-        # dirpath = "~/datahouse/higher.mark"
-        # analyze.dir.ftlsim.out.stats(dirpath)
-
-        # analyze.dir.ftilsim.out("~/datahouse/backwards.impr.gc")
-        # analyze.dir.ftlsim.out.stats("~/datahouse/backwards.impr.gc")
-
-        # suite("~/datahouse/backwards.impr.gc")
-        # suite("~/datahouse/sequential.nojournal")
-        # suite("~/datahouse/backwards.nojournal")
-        # analyze.dir.ftlsim.out.stats(c("~/datahouse/backwards.impr.gc",
-                                       # "~/datahouse/backwards.nojournal"))
-
-        # analyze.dir.ftilsim.out("~/datahouse/dftl")
-        # analyze.dir.ftlsim.out.stats("~/datahouse/dftl")
-
-        # suite("~/datahouse/compare.caches/")
-        # suite("~/datahouse/fs.and.dftl/")
-        # suite("~/datahouse/localresults/bricks")
-        # suite("~/datahouse/localresults/bricks-large-chunk")
-        # suite("~/datahouse/localresults/bricks-10mb-chunk")
-        # suite("~/datahouse/localresults/bricks-newtags3/")
-        # suite("~/datahouse/localresults/bricks-2-iter/")
-        # suite("~/datahouse/localresults/bricks-0.8-highwatermark/")
-        # suite("~/datahouse/localresults/meeting-tmp")
-        # suite("~/datahouse/localresults/meeting-hotcold-betterbricks-optimal")
-        # suite("~/datahouse/localresults/meeting-hotcold-optimal-2iter")
-        # suite("~/datahouse/localresults/meeting-hotcold-2iter")
-        # suite("~/datahouse/localresults/meeting-hotcold-4mb-chunk")
-        # suite("~/datahouse/localresults/debugdftl2new")
-        # suite("~/datahouse/localresults/debugtpftl")
-        # suite("~/datahouse/localresults/tpftl-to-4.2")
-        # suite("~/datahouse/localresults/tpftl-compare-page-extent")
-        # suite("~/datahouse/localresults/tpftl-batch")
-        # suite("~/datahouse/localresults/tpftl-right-hotness")
-        # suite(c("~/datahouse/localresults/tpftl-almost", "~/datahouse/localresults/study-btrfs-20iter/btrfs-dftl2-256-cmtsize-15728-discard.no.gc..improved.decider.sepappend-2015-08-18-09-28-48"))
-        # suite("~/datahouse/localresults/investigate/")
-        # suite("~/datahouse/localresults/everyone-1gc/")
-
-        # suite("~/datahouse/localresults/study-btrfs-20iter/")
-        # suite("~/datahouse/localresults/study-btrfs-20iter/btrfs-dftl2-256-cmtsize-15728-recording-2015-08-17-02-24-22")
-        # suite("~/datahouse/localresults/study-btrfs-20iter/btrfs-dftl2-256-cmtsize-15728-deciderimproved-2015-08-17-22-02-12")
-        # suite("~/datahouse/localresults/study-btrfs-20iter/btrfs-dftl2-256-cmtsize-15728-sepappend.baddecider-2015-08-18-03-44-05")
-        # suite("~/datahouse/localresults/study-f2fs")
-        # suite("~/datahouse/localresults/study-ext4-v2")
-
-        # suite("~/datahouse/localresults/study-ext4-weird")
-        # suite("~/datahouse/localresults/study-ext4-tpftl")
-        suite("~/datahouse/localresults/compare-ext4-f2fs")
-
-
-        # For meeting 07/10
-
-        # Sequential
-        # suite("~/datahouse/mapping.activity")
-
-        # Backwards
-        # suite("~/datahouse/backwards.impr.gc")
-
-        # Random
-        # suite("~/datahouse/random")
+        suite("~/datahouse/localresults/compare-ext4-f2fs-2/")
+        # suite("~/datahouse/localresults/compare-ext4-f2fs-2/small-cache-wide-threshold-2015-08-28-21-48-20-f2fs-dftl2-256-cmtsize-15728")
+        # suite("~/datahouse/localresults/f2fs-3.16")
     }
 
     suite <- function(dirpath)
     {
-        # analyze.dir.ftilsim.out(dirpath)
         analyze.dir.ftlsim.out.stats(dirpath)
+
+        # analyze.dir.ftilsim.out(dirpath)
         # analyze.dir.gc_cnt.log(dirpath) # ** USEFUL **
         # analyze.dir.mapping.activity(dirpath)
         # analyze.dir.ftlsim.out.count_table(dirpath)
         # analyze.dir.events.for.ftlsim2(dirpath)
         # analyze.dir.bad.block.mappings(dirpath)
+        # analyze.dir.blkparse.events.for.ftlsim.txt(dirpath)
     }
 
     local_main()
