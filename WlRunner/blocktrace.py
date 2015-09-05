@@ -29,8 +29,23 @@ class BlockTraceManager(object):
 def start_blktrace_on_bg(dev, resultpath):
     utils.prepare_dir_for_path(resultpath)
     # cmd = "sudo blktrace -a write -a read -d {dev} -o - | blkparse -i - > "\
-    cmd = "sudo blktrace -a queue -d {dev} -o - | blkparse -i - > "\
-        "{resultpath}".format(dev = dev, resultpath = resultpath)
+    # cmd = "sudo blktrace -a queue -d {dev} -o - | blkparse -a queue -i - > "\
+
+    kernel_ver = utils.run_and_get_output('uname -r')[0].strip()
+    if kernel_ver.startswith('4.1.5'):
+        trace_filter = 'complete'
+    elif kernel_ver.startswith('3.1.6'):
+        trace_filter = 'queue'
+    else:
+        trace_filter = 'complete'
+        print "WARNING: using blktrace filter {} for kernel {}".format(
+            trace_filter, kernel_ver)
+        time.sleep(5)
+
+    cmd = "sudo blktrace -a {filtermask} -d {dev} -o - | "\
+            "blkparse -a {filtermask} -i - > "\
+        "{resultpath}".format(dev = dev, resultpath = resultpath,
+        filtermask = trace_filter)
     print cmd
     p = subprocess.Popen(cmd, shell=True)
     time.sleep(0.3) # wait to see if there's any immediate error.
