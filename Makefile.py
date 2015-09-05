@@ -1110,32 +1110,38 @@ def test_ftl():
         if subexpname.strip() != '':
             confdic['subexpname'] = subexpname
     else:
-        targetdir = '/tmp/' + str(random.random())
+        targetdir = '/tmp/resulttmp'
 
     exptime = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    for fs in filesystems:
-        devsize_mb = 256
-        conf = config.Config(confdic)
-        conf['filesystem'] = fs
-        conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+    # data_mapped_pool = [8 * 2**20]
+    data_mapped_pool = [None]
+    for data_mapped in data_mapped_pool:
+        for fs in filesystems:
+            devsize_mb = 1024 * 8
+            conf = config.Config(confdic)
+            conf['filesystem'] = fs
+            conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
 
-        # hold 3% flash pages' mapping entries
-        entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
-        conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) * 100000000 # 8 bytes (64bits) needed in mem
+            # hold 3% flash pages' mapping entries
+            entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
 
-        conf['result_dir'] = "{target}/{expname}/".format(
-                target = targetdir, expname = conf['expname']) + \
-            '-'.join([conf['subexpname'], exptime, fs, conf['ftl_type'], str(devsize_mb), 'cmtsize',
-            str(conf['dftl']['max_cmt_bytes'])])
-        conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
-        conf['loop_dev_size_mb'] = devsize_mb
+            # This is the amount of data we want cached mapping
+            # data_mapped = 16 * 2**20
+            # entries_need =  data_mapped / conf['flash_page_size']
+            conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
 
-        print conf['result_dir']
+            conf['result_dir'] = "{target}/{expname}/".format(
+                    target = targetdir, expname = conf['expname']) + \
+                '-'.join([conf['subexpname'], exptime, fs, conf['ftl_type'], str(devsize_mb), 'cmtsize',
+                str(conf['dftl']['max_cmt_bytes'])])
+            conf.set_flash_num_blocks_by_bytes(devsize_mb*2**20)
+            conf['loop_dev_size_mb'] = devsize_mb
 
-        # start_ftrace()
-        workflow(conf)
-        # stop_ftrace()
+            print conf['result_dir']
 
+            # start_ftrace()
+            workflow(conf)
+            # stop_ftrace()
 
 def main(cmd_args):
     if cmd_args.git == True:
