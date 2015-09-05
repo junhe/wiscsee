@@ -441,7 +441,8 @@ class CachedMappingTable(object):
         max_bytes = self.conf['dftl']['max_cmt_bytes']
         self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
             self.entry_bytes
-        print 'cache max entries', self.max_n_entries
+        print 'cache max entries', self.max_n_entries, \
+            self.max_n_entries * 4096 / 2**20, 'MB'
 
         # self.entries = {}
         # self.entries = lrulist.LruCache()
