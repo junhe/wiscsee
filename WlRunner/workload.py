@@ -247,6 +247,7 @@ class Synthetic(Workload):
                 wllist.add_call(name='write', pid=0, path=filepath,
                     offset=offset, count=size)
                 wllist.add_call(name='fsync', pid=0, path=filepath)
+                # wllist.add_call(name='sync', pid=0)
 
         wllist.add_call(name='close', pid=0, path=filepath)
         return wllist

@@ -998,9 +998,9 @@ def test_ftl():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "compare-ext4-f2fs",
+        "expname"               : "exp-random-8gb-explore",
         "time"                  : None,
-        "subexpname"            : "optimal",
+        "subexpname"            : "64mbfile-32kbchunk",
         # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl
         "ftl_type"              : "dftl2",
         "sector_size"           : 512,
@@ -1014,12 +1014,12 @@ def test_ftl():
         "dftl": {
             # number of bytes per entry in global_mapping_table
             "global_mapping_entry_bytes": 4, # 32 bits
-            "GC_threshold_ratio": 0.8,
-            "GC_low_threshold_ratio": 0.4,
+            "GC_threshold_ratio": 0.95,
+            "GC_low_threshold_ratio": 0.9,
             "max_cmt_bytes": None, # cmt: cached mapping table
             "tpftl": {
                 "entry_node_bytes": 6, # page 8, TPFTL paper
-                "page_node_bytes": 8,   # m_vpn, pointer to entrylist
+                "page_node_bytes": 8,  # m_vpn, pointer to entrylist
                 "selective_threshold": 3
             }
         },
@@ -1034,7 +1034,7 @@ def test_ftl():
         ############## recorder #############
         "verbose_level" : -1,
         "output_target" : "file",
-        "print_when_finished": True,
+        "print_when_finished": False,
         # "output_target" : "stdout",
         "record_bad_victim_block": True,
 
@@ -1061,14 +1061,14 @@ def test_ftl():
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
         "Synthetic" :{
-            "generating_func": "self.generate_hotcold_workload",
+            # "generating_func": "self.generate_hotcold_workload",
             # "generating_func": "self.generate_sequential_workload",
             # "generating_func": "self.generate_backward_workload",
-            # "generating_func": "self.generate_random_workload",
+            "generating_func": "self.generate_random_workload",
             # "chunk_count": 100*2**20/(8*1024),
-            "chunk_count": 5,
-            "chunk_size" : 4*1024*1024,
-            "iterations" : 50,
+            "chunk_count": 256*8,
+            "chunk_size" : 256*1024/8,
+            "iterations" : 500,
             "n_col"      : 5   # only for hotcold workload
         },
 
@@ -1091,11 +1091,11 @@ def test_ftl():
         "linux_version": linux_kernel_version()
     }
 
-    # TODO: USE LARGER DISK
     # filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('f2fs',)
     filesystems = ('ext4', 'f2fs')
+    # filesystems = ('ext4',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     # filesystems = ('xfs',)
     # filesystems = ('btrfs',)
