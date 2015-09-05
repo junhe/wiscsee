@@ -127,3 +127,9 @@ def debug_decor(function):
 
 def breakpoint():
     import pdb; pdb.set_trace()
+
+
+def linux_kernel_version():
+    kernel_ver = run_and_get_output('uname -r')[0].strip()
+    return kernel_ver
+

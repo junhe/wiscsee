@@ -1085,7 +1085,10 @@ def test_ftl():
                 'chunk_count': 4,
                 'n_col'      : 4
             }
-        }
+        },
+
+        ############# OS #####################
+        "linux_version": linux_kernel_version()
     }
 
     # TODO: USE LARGER DISK
