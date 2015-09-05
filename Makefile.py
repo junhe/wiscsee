@@ -1036,6 +1036,7 @@ def test_ftl():
         "output_target" : "file",
         "print_when_finished": True,
         # "output_target" : "stdout",
+        "record_bad_victim_block": True,
 
         ############## For WlRunner ########
         "loop_path"             : "/dev/loop0",

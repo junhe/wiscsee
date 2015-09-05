@@ -1178,8 +1178,8 @@ class GarbageCollector(object):
             self.recorder.count_me('block.info.bene_cost',
                 round(b_info.value))
 
-            # disabled
-            if False and b_info.valid_ratio > 0:
+            if self.conf['record_bad_victim_block'] == True and \
+                b_info.valid_ratio > 0:
                 self.recorder.write_file('bad_victim_blocks',
                     block_type = b_info.block_type,
                     block_num = b_info.block_num,
