@@ -102,9 +102,27 @@ class WorkloadRunner(object):
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
 
+            # ftr = ftrace.Ftrace()
+            # ftr.clean_trace()
+            # ftr.set_tracer('function_graph')
+            # ftr.set_tracer('function')
+            # ftr.write_file('options/func_stack_trace', '1')
+            # ftr.set_filter('*ext4*')
+            # ftr.set_filter('f2fs_trace_ios')
+            # ftr.add_filter('write_checkpoint')
+            # ftr.add_filter('do_checkpoint')
+            # ftr.set_filter(':mod:f2fs')
+            # ftr.start_tracing()
+            # time.sleep(2)
+            # ftr.write_marker('JUNJun marked this beginning.')
+
             self.workload.run()
 
             utils.shcmd('sync')
+
+            # ftr.write_marker('Jun marked this end.')
+            # ftr.stop_tracing()
+
         except Exception:
             raise
         else:

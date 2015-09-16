@@ -41,6 +41,16 @@ class Ftrace(object):
                 f.write(msg)
                 f.flush()
 
+    def append_file(self, filename, msg):
+        with utils.cd(self.rootdir):
+            with open(filename, 'a') as f:
+                print 'appending "{}" to {}'.format(msg, filename)
+                f.write(msg)
+                f.flush()
+
+    def set_tracer(self, tracer):
+        self.write_file('current_tracer', tracer)
+
     def start_tracing(self):
         self.write_file('tracing_on', '1')
 
@@ -55,6 +65,9 @@ class Ftrace(object):
 
     def set_filter(self, filter_str):
         self.write_file('set_ftrace_filter', filter_str)
+
+    def add_filter(self, filter_str):
+        self.append_file('set_ftrace_filter', filter_str)
 
     def copy_trace(self, target_path):
         with utils.cd(self.rootdir):
