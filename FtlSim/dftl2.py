@@ -943,7 +943,9 @@ class BlockInfo(object):
         self.value = value
 
     def __comp__(self, other):
-        return cmp(self.value, other.value)
+        "You can switch between benefit/cost and greedy"
+        return cmp(self.valid_ratio, other.valid_ratio)
+        # return cmp(self.value, other.value)
 
 
 class GarbageCollector(object):
