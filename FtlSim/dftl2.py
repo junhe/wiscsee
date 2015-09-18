@@ -925,7 +925,7 @@ class GcDecider(object):
         else:
             self.freeze_count += 1
 
-            if self.freeze_count > self.conf['flash_npage_per_block']:
+            if self.freeze_count > 2 * self.conf['flash_npage_per_block']:
                 ret = True
             else:
                 ret = False
