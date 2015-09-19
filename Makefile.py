@@ -985,6 +985,75 @@ def send_marker(msg):
     with cd("/sys/kernel/debug/tracing"):
         shcmd("echo {} > trace_marker".format(msg))
 
+
+def translate(factor, frac):
+    """
+    For example:
+        translate('ext4_flex_bg', 0.001) = 'flex_bg'
+    """
+    factor_table = {
+        ################ ext4 ##################
+        # mkfs options
+        'ext4_flex_bg'          : ['flex_bg', '^flex_bg'],
+        'ext4_big_alloc'        : ['big_alloc', '^big_alloc'],
+        'ext4_blocksize'        : [4096, 16*4096],
+        'ext4_journal_location' : ['start', 'end'], # start of disk, end of disk
+
+        # mount options
+        'ext4_journal_mode'     : ['journal', 'order', 'writeback'],
+        'ext4_delay_alloc' : ['delalloc', 'nodelalloc'],
+        'ext4_min_batch_time'   : [0, 30], # unit: ms
+        'ext4_journal_ioprio'   : [0, 3, 7], # larger -> higher priority, 3 is default
+
+        ################ fs common ##################
+        'discard'          : ['discard', 'nodiscard']
+    }
+
+    items = factor_table[factor]
+    n = len(items)
+    pick_index = int(n * frac)
+    return items[pick_index]
+
+def apply_to_conf(factor, value, conf):
+    """
+    For example, apply_to_conf('ext4_flex_bg', 'flex_bg', conf) will add to
+    conf['ext4']['make_opts'] 'flex_bg'
+
+    conf essentially is a dict
+    """
+    MOpt = WlRunner.filesystem.MountOption
+
+    # mkfs features
+    if factor in ['ext4_flex_bg', 'ext4_big_alloc']:
+        conf['ext4']['make_opts'].setdefault('-O', []).append(value)
+
+    if factor == 'ext4_blocksize':
+        conf['ext4']['make_opts']['-b'] = [value]
+
+    if factor == 'ext4_journal_location':
+        raise NotImplementedError()
+
+    if factor == 'ext4_journal_mode':
+        conf['mnt_opts']['ext4']['data'] = MOpt(opt_name = 'data',
+                                                value = value,
+                                                include_name = True)
+
+    if factor == 'ext4_delay_alloc':
+        conf['mnt_opts']['ext4']['delalloc'] = MOpt(opt_name = 'delalloc',
+                                                value = value,
+                                                include_name = False)
+
+    if factor == 'ext4_min_batch_time':
+        conf['mnt_opts']['ext4']['min_batch_time'] = MOpt(
+                                                opt_name = 'min_batch_time',
+                                                value = value,
+                                                include_name = True)
+    if factor == 'ext4_journal_ioprio':
+        conf['mnt_opts']['ext4']['journal_ioprio'] = MOpt(
+                                                opt_name = 'journal_ioprio',
+                                                value = value,
+                                                include_name = True)
+
 def test_ftl():
     """
     MEMO:
@@ -1073,7 +1142,7 @@ def test_ftl():
 
         ############## FS ##################
         "ext4" : {
-            "make_opts": {'-O':['has_journal', '^uninit_bg']} # TODO: make the value a list
+            "make_opts": {'-O':['has_journal', '^uninit_bg'], '-b':[4096]}
         },
 
         ############## workload.py on top of FS #########

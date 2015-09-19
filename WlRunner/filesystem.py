@@ -28,7 +28,7 @@ class MountOption(dict):
         else:
             prefix = ''
 
-        return prefix + self['value']
+        return prefix + str(self['value'])
 
 class LoopDevice(object):
     def __init__(self, dev_path, tmpfs_mount_point, size_mb, img_file=None):
@@ -113,7 +113,7 @@ class Ext4(FileSystemBase):
     def make(self, opt_dic=None):
         opt_str = opts_to_str(opt_dic)
 
-        ret = utils.shcmd('mkfs.ext4 -b 4096 {opt_str} {dev}'.format(
+        ret = utils.shcmd('mkfs.ext4 {opt_str} {dev}'.format(
             opt_str = opt_str, dev = self.dev), ignore_error = True)
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
