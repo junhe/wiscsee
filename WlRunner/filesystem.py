@@ -3,6 +3,33 @@ import abc
 import fshelper
 import utils
 
+class MountOption(dict):
+    """
+    This class abstract the option of file system mount command.
+    The initial motivation is to handle the difference, for example, between
+    data=ordered and delalloc. Note that one of them has format opt_name=value,
+    the other is just value.
+
+    It inherite dict class so json module can serialize it.
+    """
+    def __init__(self, opt_name, value, include_name):
+        """
+        opt_name: such as discard
+        value: such as discard, nodiscard
+        include_name: such as True, False
+        """
+        self['opt_name'] = opt_name
+        self['value'] = value
+        self['include_name'] = include_name
+
+    def __str__(self):
+        if self['include_name']:
+            prefix = self['opt_name'] + '='
+        else:
+            prefix = ''
+
+        return prefix + self['value']
+
 class LoopDevice(object):
     def __init__(self, dev_path, tmpfs_mount_point, size_mb, img_file=None):
         self.dev_path = dev_path
@@ -30,13 +57,11 @@ class FileSystemBase(object):
         raise NotImplementedError
 
     def mount(self, opt_list=None):
-        if opt_list == None or len(opt_list) == 0:
-            opt_str = ''
-        else:
-            opt_str = '-o ' + ','.join(opt_list)
+        opt_str = mountoption_to_str(opt_list)
 
         ret = utils.shcmd('mount {opt} {dev} {mp}'.format(
-            opt = opt_str, dev = self.dev, mp = self.mount_point), ignore_error = True)
+            opt = opt_str, dev = self.dev, mp = self.mount_point),
+            ignore_error = True)
         if ret != 0:
             raise RuntimeError("Failed to mount dev:{} to dir:{}".format(
                 self.dev, self.mount_point))
@@ -72,6 +97,18 @@ def opts_to_str(opt_dic):
 
     return opt_str
 
+def mountoption_to_str(options):
+    """
+    options is a list of MountOption instances
+    """
+    if options == None:
+        return ''
+
+    strs = [str(opt) for _,opt in options.items()]
+    opt_str = '-O ' + ','.join(strs)
+
+    return opt_str
+
 class Ext4(FileSystemBase):
     def make(self, opt_dic=None):
         opt_str = opts_to_str(opt_dic)
@@ -95,10 +132,7 @@ class F2fs(FileSystemBase):
         Overriding mount() in parent since you need to have '-t f2fs' to
         mount f2fs, somehow.
         """
-        if opt_list == None or len(opt_list) == 0:
-            opt_str = ''
-        else:
-            opt_str = '-o ' + ','.join(opt_list)
+        opt_str = mountoption_to_str(opt_list)
 
         ret = utils.shcmd('mount -t f2fs {opt} {dev} {mp}'.format(
             opt = opt_str, dev = self.dev, mp = self.mount_point), ignore_error = True)

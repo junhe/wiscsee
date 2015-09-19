@@ -993,6 +993,8 @@ def test_ftl():
     - also, set low watermark to as low as possible, so we get the most free
     pages out of each cleaning. So we don't need to trigger cleaning so often.
     """
+    MOpt = WlRunner.filesystem.MountOption
+
     confdic = {
         ############### Global #########
         "result_dir"            : None,
@@ -1044,10 +1046,27 @@ def test_ftl():
         "tmpfs_mount_point"     : "/mnt/tmpfs",
         "fs_mount_point"        : "/mnt/fsonloop",
         "mnt_opts" : {
-            "ext4":   ["discard"],
-            "btrfs":  ["discard", "ssd", "autodefrag"],
-            "xfs":    ['discard'],
-            "f2fs":   ['discard']
+            "ext4":   { 'discard': MOpt(opt_name = "discard",
+                                         value = "discard",
+                                         include_name = False),
+                        'data': MOpt(opt_name = "data",
+                                        value = "ordered",
+                                        include_name = True) },
+            "btrfs":  { "discard": MOpt(opt_name = "discard",
+                                         value = "discard",
+                                         include_name = False),
+                        "ssd": MOpt(opt_name = 'ssd',
+                                     value = 'ssd',
+                                     include_name = False),
+                        "autodefrag": MOpt(opt_name = 'autodefrag',
+                                            value = 'autodefrag',
+                                            include_name = False) },
+            "xfs":    {'discard': MOpt(opt_name = 'discard',
+                                        value = 'discard',
+                                        include_name = False)},
+            "f2fs":   {'discard': MOpt(opt_name = 'discard',
+                                        value = 'discard',
+                                        include_name = False)}
         },
         # "common_mnt_opts"       : ["discard", "nodatacow"],
         "filesystem"            : None,
