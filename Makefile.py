@@ -1054,7 +1054,7 @@ def test_ftl():
 
         ############## FS ##################
         "ext4" : {
-            "make_opts": {'-O':'has_journal'}
+            "make_opts": {'-O':['has_journal', '^uninit_bg']} # TODO: make the value a list
         },
 
         ############## workload.py on top of FS #########

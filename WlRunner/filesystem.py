@@ -49,13 +49,32 @@ class FileSystemBase(object):
     def sync(self):
         common.shcmd("sync")
 
+def opts_to_str(opt_dic):
+    """
+    This function translate opt_dic to a string complying command requirement
+
+    opt_dic is in the format of:
+    {'-O':['has_journal', '^uninit_bg'], '-X':['xx']}
+
+    We will turn it to string:
+    "-O has_journal,^uninit_bg -X xx"
+    """
+    if opt_dic == None or len(opt_dic) == 0:
+        return ''
+
+    opt_list = []
+    for opt, values in opt_dic.items():
+        value_str = ','.join(values)
+        tmp = ' '.join((opt, value_str))
+        opt_list.append(tmp)
+
+    opt_str = ' '.join(opt_list)
+
+    return opt_str
+
 class Ext4(FileSystemBase):
     def make(self, opt_dic=None):
-        if opt_dic == None:
-            opt_str = ''
-        else:
-            items = [ ' '.join([k,v]) for k,v in opt_dic.items() ]
-            opt_str = ' '.join(items)
+        opt_str = opts_to_str(opt_dic)
 
         ret = utils.shcmd('mkfs.ext4 -b 4096 {opt_str} {dev}'.format(
             opt_str = opt_str, dev = self.dev), ignore_error = True)
@@ -64,11 +83,7 @@ class Ext4(FileSystemBase):
 
 class F2fs(FileSystemBase):
     def make(self, opt_dic=None):
-        if opt_dic == None:
-            opt_str = ''
-        else:
-            items = [ ' '.join([k,v]) for k,v in opt_dic.items() ]
-            opt_str = ' '.join(items)
+        opt_str = opts_to_str(opt_dic)
 
         ret = utils.shcmd('mkfs.f2fs {opt} {dev}'.format(
             opt=opt_str, dev = self.dev), ignore_error = True)
@@ -91,15 +106,9 @@ class F2fs(FileSystemBase):
             raise RuntimeError("Failed to mount dev:{} to dir:{}".format(
                 self.dev, self.mount_point))
 
-
-
 class Btrfs(FileSystemBase):
     def make(self, opt_dic=None):
-        if opt_dic == None:
-            opt_str = ''
-        else:
-            items = [ ' '.join([k,v]) for k,v in opt_dic.items() ]
-            opt_str = ' '.join(items)
+        opt_str = opts_to_str(opt_dic)
 
         ret = utils.shcmd('mkfs.btrfs {opt} {dev}'.format(
             opt=opt_str, dev = self.dev), ignore_error = True)
