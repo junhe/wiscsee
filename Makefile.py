@@ -1055,14 +1055,44 @@ def apply_to_conf(factor, value, conf):
                                                 value = value,
                                                 include_name = True)
 
-def test_ftl():
+def get_design_table():
+    filepath = './design.txt'
+    table = []
+    colnames = ['ext4_flex_bg',         'ext4_big_alloc',
+                'ext4_blocksize',       'ext4_delay_alloc',
+                # 'ext4_journal_location',
+                'ext4_min_batch_time',  'ext4_journal_ioprio',
+                'ext4_journal_mode' ]
+    shown = False
+    with open(filepath, 'r') as f:
+        for line in f:
+            items = line.split()
+            if shown == False and len(colnames) != len(items):
+                print ''.join(['=']*80)
+                print "WARNING: number of factors does not match number of "\
+                        "columns in design file. Results may be misleading!"
+                print ''.join(['=']*80)
+                time.sleep(1)
+                shown = True
+            table.append(dict(zip(colnames, items))) # cut the longer list
+
+    return table
+
+def treatment_to_config(treatment):
     """
-    MEMO:
-    - you need to set the high watermark properly. Otherwise it will trigger
-    victim selection too often, which has high overhead.
-    - also, set low watermark to as low as possible, so we get the most free
-    pages out of each cleaning. So we don't need to trigger cleaning so often.
+    This function produces a config for a treatment.
+
+    treatment is list of factors and their values.
     """
+    confdic = get_default_config()
+    for factor, frac in treatment.items():
+        value = translate(factor, float(frac))
+        print factor, value
+        apply_to_conf(factor, value, confdic)
+
+    return confdic
+
+def get_default_config():
     MOpt = WlRunner.filesystem.MountOption
 
     confdic = {
@@ -1157,7 +1187,7 @@ def test_ftl():
             # "chunk_count": 100*2**20/(8*1024),
             "chunk_count": 256*8,
             "chunk_size" : 256*1024/8,
-            "iterations" : 500,
+            "iterations" : 5,
             "n_col"      : 5   # only for hotcold workload
         },
 
@@ -1179,12 +1209,48 @@ def test_ftl():
         ############# OS #####################
         "linux_version": linux_kernel_version()
     }
+    return confdic
+
+def test_experimental_design():
+    design_table = get_design_table()
+
+    for treatment in design_table[0:3]:
+        confdic = treatment_to_config(treatment)
+        conf = config.Config(confdic)
+
+        conf['expname'] = 'try_exp_design'
+        conf['subexpname'] = 'sub'
+        conf['filesystem'] = 'ext4'
+        conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+        conf['dftl']['max_cmt_bytes'] = int(2000 * 8) # 8 bytes (64bits) needed in mem
+        conf['result_dir'] = "/tmp/results/{}/".format(conf['expname'])
+        conf['loop_dev_size_mb'] = 256
+        conf.set_flash_num_blocks_by_bytes(256*2**20)
+
+        workflow(conf)
+
+def test_ftl():
+    """
+    MEMO:
+    - you need to set the high watermark properly. Otherwise it will trigger
+    victim selection too often, which has high overhead.
+    - also, set low watermark to as low as possible, so we get the most free
+    pages out of each cleaning. So we don't need to trigger cleaning so often.
+    """
+    confdic = get_default_config()
+    apply_to_conf('ext4_flex_bg', '^flex_bg', confdic)
+    apply_to_conf('ext4_big_alloc', 'bigalloc', confdic)
+    apply_to_conf('ext4_blocksize', 4096, confdic)
+    apply_to_conf('ext4_delay_alloc', 'delalloc', confdic)
+    apply_to_conf('ext4_min_batch_time', 50, confdic)
+    apply_to_conf('ext4_journal_ioprio', 4, confdic)
+
 
     # filesystems = ('ext4', 'f2fs', 'btrfs')
     # filesystems = ('f2fs', 'btrfs')
     # filesystems = ('f2fs',)
-    filesystems = ('ext4', 'f2fs')
-    # filesystems = ('ext4',)
+    # filesystems = ('ext4', 'f2fs')
+    filesystems = ('ext4',)
     # filesystems = ('ext4', 'btrfs', 'f2fs')
     # filesystems = ('xfs',)
     # filesystems = ('btrfs',)

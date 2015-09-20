@@ -89,6 +89,7 @@ def opts_to_str(opt_dic):
 
     opt_list = []
     for opt, values in opt_dic.items():
+        values = [str(s) for s in values]
         value_str = ','.join(values)
         tmp = ' '.join((opt, value_str))
         opt_list.append(tmp)
