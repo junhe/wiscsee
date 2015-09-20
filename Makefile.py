@@ -15,6 +15,7 @@ from time import localtime, strftime
 
 import config
 from config import WLRUNNER, LBAGENERATOR
+import experiment
 import FtlSim
 import WlRunner
 from utils import *
@@ -1088,13 +1089,12 @@ def translate_table_for_human(table):
 
     return table
 
-def treatment_to_config(treatment):
+def treatment_to_config(treatment, confdic):
     """
     This function produces a config for a treatment.
 
     treatment is list of factors and their values.
     """
-    confdic = get_default_config()
     for factor, value in treatment.items():
         apply_to_conf(factor, value, confdic)
 
@@ -1108,7 +1108,7 @@ def get_default_config():
         "result_dir"            : None,
         "workload_src"          : WLRUNNER,
         # "workload_src"          : LBAGENERATOR,
-        "expname"               : "exp-random-8gb-explore",
+        "expname"               : "default-expname",
         "time"                  : None,
         "subexpname"            : "64mbfile-32kbchunk",
         # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl
@@ -1193,9 +1193,9 @@ def get_default_config():
             # "generating_func": "self.generate_backward_workload",
             "generating_func": "self.generate_random_workload",
             # "chunk_count": 100*2**20/(8*1024),
-            "chunk_count": 256*8,
-            "chunk_size" : 256*1024/8,
-            "iterations" : 5,
+            "chunk_count": 4 * 2**20 / (512 * 1024),
+            "chunk_size" : 512 * 1024,
+            "iterations" : 50,
             "n_col"      : 5   # only for hotcold workload
         },
 
@@ -1223,20 +1223,78 @@ def test_experimental_design():
     design_table = get_design_table()
     design_table = translate_table_for_human(design_table)
 
-    for treatment in design_table[0:3]:
-        confdic = treatment_to_config(treatment)
+    default_conf = get_default_config()
+    metadata_dic = choose_exp_metadata(default_conf)
+    for treatment in design_table[0:2]:
+        confdic = get_default_config()
+        treatment_to_config(treatment, confdic)
+
         conf = config.Config(confdic)
 
-        conf['expname'] = 'try_exp_design'
-        conf['subexpname'] = 'sub'
+        conf['treatment'] = treatment  # Put treatment in conf for record
         conf['filesystem'] = 'ext4'
-        conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
         conf['dftl']['max_cmt_bytes'] = int(2000 * 8) # 8 bytes (64bits) needed in mem
-        conf['result_dir'] = "/tmp/results/{}/".format(conf['expname'])
         conf['loop_dev_size_mb'] = 256
         conf.set_flash_num_blocks_by_bytes(256*2**20)
 
+        # update expname and subexpname
+        conf.update(metadata_dic)
+
+        runtime_update(conf)
+
         workflow(conf)
+
+    exp_dir = os.path.join(metadata_dic['targetdir'], metadata_dic['expname'])
+    experiment.create_result_table(exp_dir)
+    print 'result table created'
+
+def choose_exp_metadata(default_conf):
+    """
+    This function will return a dictionary containing a few things relating
+    to result dir. You can update the experiment configuration by
+    confdic.update(return of this function)
+
+    default_conf is readonly in this function.
+
+    Usage: Call this function for once to get a dictionary with things needing
+    to be updated. Use the returned dictionary multiple times to update
+    experimental config. Note that conf['result_dir'] still needs to be updated
+    later for each experiment.
+    """
+    conf = {}
+    toresult = raw_input('Save this experiments to /tmp/results? (y/n)')
+    if toresult.lower() == 'y':
+        targetdir = '/tmp/results'
+        expname = raw_input('Enter expname ({}):'.format(default_conf['expname']))
+        if expname.strip() != '':
+            conf['expname'] = expname
+        else:
+            conf['expname'] = default_conf['expname']
+
+        subexpname = raw_input('Enter subexpname ({}):'.format(
+            default_conf['subexpname']))
+        if subexpname.strip() != '':
+            conf['subexpname'] = subexpname
+        else:
+            conf['subexpname'] = default_conf['subexpname']
+    else:
+        targetdir = '/tmp/resulttmp'
+        conf['expname'] = default_conf['expname']
+        conf['subexpname'] = default_conf['subexpname']
+
+    conf['targetdir'] = targetdir
+    return conf
+
+def runtime_update(conf):
+    """
+    This function has to be called before running each treatment.
+    """
+    conf['time'] = time.strftime("%m-%d-%H-%M-%S", time.localtime())
+    conf['hash'] = hash(str(conf))
+    conf['result_dir'] = "{targetdir}/{expname}/{subexpname}-{unique}".format(
+        targetdir = conf['targetdir'], expname = conf['expname'],
+        subexpname = conf['subexpname'],
+        unique = '-'.join((conf['filesystem'], conf['time'], str(conf['hash']))))
 
 def test_ftl():
     """
@@ -1284,7 +1342,7 @@ def test_ftl():
     data_mapped_pool = [None]
     for data_mapped in data_mapped_pool:
         for fs in filesystems:
-            devsize_mb = 1024 * 8
+            devsize_mb = 256
             conf = config.Config(confdic)
             conf['filesystem'] = fs
             conf['time'] = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
