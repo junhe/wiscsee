@@ -1078,6 +1078,16 @@ def get_design_table():
 
     return table
 
+def translate_table_for_human(table):
+    """
+    Translate 0.xxx to human readable configure
+    """
+    for row in table:
+        for factor, frac in row.items():
+            row[factor] = translate(factor, float(frac))
+
+    return table
+
 def treatment_to_config(treatment):
     """
     This function produces a config for a treatment.
@@ -1085,9 +1095,7 @@ def treatment_to_config(treatment):
     treatment is list of factors and their values.
     """
     confdic = get_default_config()
-    for factor, frac in treatment.items():
-        value = translate(factor, float(frac))
-        print factor, value
+    for factor, value in treatment.items():
         apply_to_conf(factor, value, confdic)
 
     return confdic
@@ -1213,6 +1221,7 @@ def get_default_config():
 
 def test_experimental_design():
     design_table = get_design_table()
+    design_table = translate_table_for_human(design_table)
 
     for treatment in design_table[0:3]:
         confdic = treatment_to_config(treatment)
