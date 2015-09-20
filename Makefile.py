@@ -10,6 +10,7 @@ import sys
 import shlex
 import time
 import glob
+import pprint
 from time import localtime, strftime
 
 import config
@@ -995,8 +996,8 @@ def translate(factor, frac):
         ################ ext4 ##################
         # mkfs options
         'ext4_flex_bg'          : ['flex_bg', '^flex_bg'],
-        'ext4_big_alloc'        : ['big_alloc', '^big_alloc'],
-        'ext4_blocksize'        : [4096, 16*4096],
+        'ext4_big_alloc'        : ['bigalloc', '^bigalloc'],
+        'ext4_blocksize'        : [4096],
         'ext4_journal_location' : ['start', 'end'], # start of disk, end of disk
 
         # mount options
