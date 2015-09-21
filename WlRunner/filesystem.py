@@ -105,7 +105,7 @@ def mountoption_to_str(options):
     if options == None:
         return ''
 
-    strs = [str(opt) for _,opt in options.items()]
+    strs = [str(opt) for _,opt in options.items() if opt['value'] != None]
     opt_str = '-O ' + ','.join(strs)
 
     return opt_str

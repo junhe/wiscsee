@@ -988,10 +988,10 @@ def send_marker(msg):
         shcmd("echo {} > trace_marker".format(msg))
 
 
-def translate(factor, frac):
+def translate_by_factor_space(factor, frac):
     """
     For example:
-        translate('ext4_flex_bg', 0.001) = 'flex_bg'
+        translate_by_factor_space('ext4_flex_bg', 0.001) = 'flex_bg'
     """
     factor_table = {
         ################ ext4 ##################
@@ -1003,9 +1003,33 @@ def translate(factor, frac):
 
         # mount options
         'ext4_journal_mode'     : ['journal', 'order', 'writeback'],
-        'ext4_delay_alloc' : ['delalloc', 'nodelalloc'],
+        'ext4_delay_alloc'      : ['delalloc', 'nodelalloc'],
         'ext4_min_batch_time'   : [0, 30], # unit: ms
         'ext4_journal_ioprio'   : [0, 3, 7], # larger -> higher priority, 3 is default
+
+        ################ f2fs ##################
+        # mount options
+        'f2fs_background_gc'       : ['on', 'off'],
+        'f2fs_disable_roll_forward': ['disable_roll_forward', None],
+        'f2fs_no_heap'             : ['no_heap', None],
+        'f2fs_active_logs'         : [2, 6],
+        'f2fs_flush_merge'         : ['flush_merge', None],
+        'f2fs_nobarrier'           : ['nobarrier', None],
+        'f2fs_extent_cache'        : ['extent_cache', None],
+        'f2fs_noinline_data'       : ['noinline_data', None],
+
+        # mkfs options
+        # -a [0 or 1]  : Split start location of each area for heap-based allocation.
+        #   1 is set by default, which performs this.
+        'f2fs_split'               : [0, 1],
+
+        'f2fs_n_seg_per_sec'       : [1, 2],
+        'f2fs_n_sec_per_zone'      : [1, 2],
+
+        # /sys/fs/f2fs/<devname>
+        'f2fs_ipu_policy'          : [0, 1, 2, 4, 8, 16], # You should also test different combination of them
+        'f2fs_min_fsync_blocks'    : [8, 128],
+        'f2fs_min_ipu_util'        : [20, 80],
 
         ################ fs common ##################
         'discard'          : ['discard', 'nodiscard']
@@ -1025,12 +1049,14 @@ def apply_to_conf(factor, value, conf):
     """
     MOpt = WlRunner.filesystem.MountOption
 
-    # mkfs features
+    # Ext4
     if factor in ['ext4_flex_bg', 'ext4_big_alloc']:
         conf['ext4']['make_opts'].setdefault('-O', []).append(value)
+        return conf
 
     if factor == 'ext4_blocksize':
         conf['ext4']['make_opts']['-b'] = [value]
+        return conf
 
     if factor == 'ext4_journal_location':
         raise NotImplementedError()
@@ -1039,22 +1065,79 @@ def apply_to_conf(factor, value, conf):
         conf['mnt_opts']['ext4']['data'] = MOpt(opt_name = 'data',
                                                 value = value,
                                                 include_name = True)
+        return conf
 
     if factor == 'ext4_delay_alloc':
         conf['mnt_opts']['ext4']['delalloc'] = MOpt(opt_name = 'delalloc',
                                                 value = value,
                                                 include_name = False)
+        return conf
 
     if factor == 'ext4_min_batch_time':
         conf['mnt_opts']['ext4']['min_batch_time'] = MOpt(
                                                 opt_name = 'min_batch_time',
                                                 value = value,
                                                 include_name = True)
+        return conf
+
     if factor == 'ext4_journal_ioprio':
         conf['mnt_opts']['ext4']['journal_ioprio'] = MOpt(
                                                 opt_name = 'journal_ioprio',
                                                 value = value,
                                                 include_name = True)
+        return conf
+
+    # common
+    if factor == 'discard':
+        # set all filesystem to discard
+        for fs, opts in conf['mnt_opts'].items():
+            opts['discard'] = MOpt( opt_name = 'discard',
+                                    value = value,
+                                    include_name = False)
+        return conf
+
+
+    # F2FS
+    # mount options
+    if factor in ('f2fs_background_gc', 'f2fs_active_logs'):
+        opt_name = factor[5:]
+        conf['mnt_opts']['f2fs'][opt_name] = MOpt(
+                                                opt_name = opt_name,
+                                                value = value,
+                                                include_name = True)
+        return conf
+
+    if factor in ('f2fs_disable_roll_forward',
+                  'f2fs_no_heap',
+                  'f2fs_flush_merge',
+                  'f2fs_nobarrier',
+                  'f2fs_extent_cache',
+                  'f2fs_noinline_data'):
+        opt_name = factor[5:]
+        conf['mnt_opts']['f2fs'][opt_name] = MOpt(
+                                            opt_name = opt_name,
+                                            value = value,
+                                            include_name = False)
+        return conf
+
+    # mkfs options
+    if factor == 'f2fs_split':
+        conf['f2fs']['make_opts']['-a'] = [value]
+        return conf
+
+    if factor == 'f2fs_n_seg_per_sec':
+        conf['f2fs']['make_opts']['-s'] = [value]
+        return conf
+
+    if factor == 'f2fs_n_sec_per_zone':
+        conf['f2fs']['make_opts']['-z'] = [value]
+        return conf
+
+    if factor in ('f2fs_ipu_policy', 'f2fs_min_fsync_blocks',
+            'f2fs_min_ipu_util'):
+        opt_name = factor[5:]
+        conf['f2fs'].setdefault('sysfs', {})[opt_name] = value
+        return conf
 
 def get_design_table():
     filepath = './design.txt'
@@ -1064,6 +1147,23 @@ def get_design_table():
                 # 'ext4_journal_location',
                 'ext4_min_batch_time',  'ext4_journal_ioprio',
                 'ext4_journal_mode' ]
+
+    colnames = ['f2fs_background_gc',
+                'f2fs_disable_roll_forward',
+                'f2fs_no_heap',
+                'f2fs_active_logs',
+                'f2fs_flush_merge',
+                'f2fs_nobarrier',
+                'f2fs_extent_cache',
+                'f2fs_noinline_data',
+                'f2fs_split',
+                'f2fs_n_seg_per_sec',
+                'f2fs_n_sec_per_zone'
+                # 'f2fs_ipu_policy',
+                # 'f2fs_min_fsync_blocks',
+                # 'f2fs_min_ipu_util'
+                ]
+
     shown = False
     with open(filepath, 'r') as f:
         for line in f:
@@ -1085,7 +1185,7 @@ def translate_table_for_human(table):
     """
     for row in table:
         for factor, frac in row.items():
-            row[factor] = translate(factor, float(frac))
+            row[factor] = translate_by_factor_space(factor, float(frac))
 
     return table
 
@@ -1183,6 +1283,8 @@ def get_default_config():
         "ext4" : {
             "make_opts": {'-O':['has_journal', '^uninit_bg'], '-b':[4096]}
         },
+        "f2fs"  : {"make_opts": {}},
+        "btrfs"  : {"make_opts": {}},
 
         ############## workload.py on top of FS #########
         # "workload_class"        : "Simple",
@@ -1225,14 +1327,15 @@ def test_experimental_design():
 
     default_conf = get_default_config()
     metadata_dic = choose_exp_metadata(default_conf)
-    for treatment in design_table[0:2]:
+    for treatment in design_table[0:]:
         confdic = get_default_config()
         treatment_to_config(treatment, confdic)
 
         conf = config.Config(confdic)
 
         conf['treatment'] = treatment  # Put treatment in conf for record
-        conf['filesystem'] = 'ext4'
+        # conf['filesystem'] = 'ext4'
+        conf['filesystem'] = 'f2fs'
         conf['dftl']['max_cmt_bytes'] = int(2000 * 8) # 8 bytes (64bits) needed in mem
         conf['loop_dev_size_mb'] = 256
         conf.set_flash_num_blocks_by_bytes(256*2**20)
