@@ -72,11 +72,23 @@ def create_result_table(exp_dir):
             if os.path.isdir(os.path.join(exp_dir, d))]
     sub_exp_dirs = [os.path.join(exp_dir, d) for d in sub_exp_dirs]
 
+    colnames = set()
     table = []
     for sub_exp_dir in sub_exp_dirs:
         row = create_result_row(sub_exp_dir)
         table.append(row)
+        colnames.update(row.keys())
 
+    # some row may miss some columns, we need to make sure every row
+    # has the same columns so it can be output to a table
+    colnames = list(colnames)
+    print colnames
+    for row in table:
+        for col in colnames:
+            if not col in row.keys():
+                row[col] = 'NA'
+
+    print table
     utils.table_to_file(table, os.path.join(exp_dir, 'result-table.txt'))
 
 if __name__ == '__main__':
