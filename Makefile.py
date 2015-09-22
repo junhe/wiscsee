@@ -1023,8 +1023,10 @@ def translate_by_factor_space(factor, frac):
         #   1 is set by default, which performs this.
         'f2fs_split'               : [0, 1],
 
-        'f2fs_n_seg_per_sec'       : [1, 2],
-        'f2fs_n_sec_per_zone'      : [1, 2],
+        # 'f2fs_n_seg_per_sec'       : [1, 2],
+        'f2fs_n_seg_per_sec'       : [1],
+        # 'f2fs_n_sec_per_zone'      : [1, 2],
+        'f2fs_n_sec_per_zone'      : [1],
 
         # /sys/fs/f2fs/<devname>
         'f2fs_ipu_policy'          : [0, 1, 2, 4, 8, 16], # You should also test different combination of them
@@ -1158,10 +1160,10 @@ def get_design_table():
                 'f2fs_noinline_data',
                 'f2fs_split',
                 'f2fs_n_seg_per_sec',
-                'f2fs_n_sec_per_zone'
-                # 'f2fs_ipu_policy',
-                # 'f2fs_min_fsync_blocks',
-                # 'f2fs_min_ipu_util'
+                'f2fs_n_sec_per_zone',
+                'f2fs_ipu_policy',
+                'f2fs_min_fsync_blocks',
+                'f2fs_min_ipu_util'
                 ]
 
     shown = False
@@ -1283,7 +1285,7 @@ def get_default_config():
         "ext4" : {
             "make_opts": {'-O':['has_journal', '^uninit_bg'], '-b':[4096]}
         },
-        "f2fs"  : {"make_opts": {}},
+        "f2fs"  : {"make_opts": {}, 'sysfs':{}},
         "btrfs"  : {"make_opts": {}},
 
         ############## workload.py on top of FS #########

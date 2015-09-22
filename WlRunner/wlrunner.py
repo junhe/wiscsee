@@ -91,6 +91,12 @@ class WorkloadRunner(object):
                 self.conf['mnt_opts'][ self.conf['filesystem'] ])
             utils.shcmd('sync')
 
+            # F2FS specific
+            if self.conf['filesystem'] == 'f2fs':
+                for opt_name, value in \
+                    self.conf['f2fs'].get('sysfs', {}).items():
+                    self.fs.sysfs_setup(opt_name, value)
+
             time.sleep(1)
             self.blktracer_mkfs.stop_tracing_and_collecting()
             time.sleep(1)

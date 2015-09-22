@@ -1,4 +1,5 @@
 import abc
+import os
 
 import fshelper
 import utils
@@ -140,6 +141,16 @@ class F2fs(FileSystemBase):
         if ret != 0:
             raise RuntimeError("Failed to mount dev:{} to dir:{}".format(
                 self.dev, self.mount_point))
+    def sysfs_setup(self, option, value):
+        """
+        This function sets up the parameters in sysfs.
+        Option is the file name in sysfs.
+        """
+        devname = os.path.basename(self.dev)
+        folder = '/sys/fs/f2fs/{dev}'.format(dev = devname)
+        path = os.path.join(folder, option)
+        with open(path, 'w') as f:
+            f.write(str(value))
 
 class Btrfs(FileSystemBase):
     def make(self, opt_dic=None):
