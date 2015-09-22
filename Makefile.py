@@ -1340,7 +1340,7 @@ def test_experimental_design():
         conf['filesystem'] = 'f2fs'
         conf['dftl']['max_cmt_bytes'] = int(2000 * 8) # 8 bytes (64bits) needed in mem
         conf['loop_dev_size_mb'] = 256
-        conf.set_flash_num_blocks_by_bytes(256*2**20)
+        conf.set_flash_num_blocks_by_bytes( conf['loop_dev_size_mb'] * 2**20 )
 
         # update expname and subexpname
         conf.update(metadata_dic)
