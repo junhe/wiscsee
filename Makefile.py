@@ -1210,7 +1210,7 @@ def get_default_config():
         # "workload_src"          : LBAGENERATOR,
         "expname"               : "default-expname",
         "time"                  : None,
-        "subexpname"            : "64mbfile-32kbchunk",
+        "subexpname"            : "default-subexp",
         # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl
         "ftl_type"              : "dftl2",
         "sector_size"           : 512,
@@ -1263,8 +1263,8 @@ def get_default_config():
             "btrfs":  { "discard": MOpt(opt_name = "discard",
                                          value = "discard",
                                          include_name = False),
-                        "ssd": MOpt(opt_name = 'ssd',
-                                     value = 'ssd',
+                                         "ssd": MOpt(opt_name = 'ssd',
+                                             value = 'ssd',
                                      include_name = False),
                         "autodefrag": MOpt(opt_name = 'autodefrag',
                                             value = 'autodefrag',
@@ -1297,7 +1297,7 @@ def get_default_config():
             # "chunk_count": 100*2**20/(8*1024),
             "chunk_count": 4 * 2**20 / (512 * 1024),
             "chunk_size" : 512 * 1024,
-            "iterations" : 50,
+            "iterations" : 1,
             "n_col"      : 5   # only for hotcold workload
         },
 

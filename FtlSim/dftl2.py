@@ -802,7 +802,7 @@ class MappingManager(object):
         else:
             self.recorder.count_me('cache', 'saved.1.read')
 
-        pass # modify in memory
+        pass # modify in memory. Since we are a simulator, we don't do anything
         new_m_ppn = self.block_pool.next_translation_page_to_program()
 
         # update flash
@@ -989,12 +989,29 @@ class GarbageCollector(object):
                 self.clean_data_block(victim_block)
             elif victim_type == TRANS_BLOCK:
                 self.clean_trans_block(victim_block)
+            blk_cnt += 1
 
         if triggered:
-            print 'GC is finished', self.block_pool.used_ratio()
+            print 'GC is finished', self.block_pool.used_ratio(), \
+                blk_cnt, 'collected', \
+                'freeblocks:', len(self.block_pool.freeblocks)
+            # raise RuntimeError("intentional exit")
 
     def clean_data_block(self, flash_block):
-        self.move_valid_pages(flash_block, self.move_data_page_to_new_location)
+        # old stuff
+        # self.move_valid_pages(flash_block, self.move_data_page_to_new_location)
+
+        start, end = self.conf.block_to_page_range(flash_block)
+
+        changes = []
+        for ppn in range(start, end):
+            if self.oob.states.is_page_valid(ppn):
+                change = self.move_data_page_to_new_location_2(ppn)
+                changes.append(change)
+
+        # change the mappings
+        self.update_mapping_in_batch(changes)
+
         # mark block as free
         self.block_pool.move_used_data_block_to_free(flash_block)
         # it handles oob and flash
@@ -1009,6 +1026,18 @@ class GarbageCollector(object):
         self.erase_block(flash_block, TRANS_CLEAN)
 
     def move_valid_pages(self, flash_block, mover_func):
+        start, end = self.conf.block_to_page_range(flash_block)
+
+        for ppn in range(start, end):
+            if self.oob.states.is_page_valid(ppn):
+                mover_func(ppn)
+
+    def move_valid_data_pages(self, flash_block, mover_func):
+        """
+        With batch update:
+        1. Move all valid pages to new location.
+        2. Aggregate mappings in the same translation page and update together
+        """
         start, end = self.conf.block_to_page_range(flash_block)
 
         for ppn in range(start, end):
@@ -1051,6 +1080,91 @@ class GarbageCollector(object):
             # This is a design from the original Dftl paper
             self.mapping_manager.cached_mapping_table.overwrite_entry(lpn = lpn,
                 ppn = new_ppn, dirty = True)
+
+    def move_data_page_to_new_location_2(self, ppn):
+        """
+        This function only moves data pages, but it does not update mappings.
+        It will return the mappings changes to so another function can update
+        the mapping.
+        """
+        # for my damaged brain
+        old_ppn = ppn
+
+        # read the the data page
+        self.flash.page_read(old_ppn, DATA_CLEANING)
+
+        # find the mapping
+        lpn = self.oob.translate_ppn_to_lpn(old_ppn)
+
+        # write to new page
+        new_ppn = self.block_pool.next_gc_data_page_to_program()
+        self.flash.page_write(new_ppn, DATA_CLEANING)
+
+        # update new page and old page's OOB
+        self.oob.new_write(lpn, old_ppn, new_ppn)
+
+        return {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn}
+
+    def update_mapping_in_batch(self, changes):
+        """
+        changes is a table in the form of:
+        [
+          {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
+          {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
+          ...
+        ]
+
+        This function groups the LPNs that in the same MVPN and updates them
+        together.
+
+        If a MVPN has some entries in cache and some not, we need to update
+        both cache (for the ones in cache) and the on-flash translation page.
+        If a MVPN has only entries in cache, we will only update cache.
+        If a MVPN has only entries on flash, we will only update flash.
+        """
+        # groups =
+        # {
+        #   m_vpn:[
+        #      {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
+        #      {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
+        #      ... ],
+        #   m_vpn:[
+        #      {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
+        #      {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
+        #      ... ],
+        # }
+        groups = {}
+        for change in changes:
+            m_vpn = self.mapping_manager.directory.m_vpn_of_lpn(change['lpn'])
+            group = groups.setdefault(m_vpn, [])
+            group.append(change)
+
+        for lpn, changes_list in groups.items():
+            some_not_cache = False
+            for change in changes_list:
+                lpn = change['lpn']
+                old_ppn = change['old_ppn']
+                new_ppn = change['new_ppn']
+
+                cached_ppn = self.mapping_manager\
+                    .cached_mapping_table.lpn_to_ppn(lpn)
+                if cached_ppn != MISS:
+                    # lpn is in cache
+                    # We set dirty to False here because we also write the
+                    # entry to flash here.
+                    self.mapping_manager.cached_mapping_table.overwrite_entry(
+                        lpn = lpn, ppn = new_ppn, dirty = False)
+                else:
+                    # lpn is not in cache, mark it and update later in batch
+                    some_not_cache = True
+
+            if some_not_cache == True:
+                # update translation page on flash
+                new_mappings = {change['lpn']:change['new_ppn']
+                        for change in changes_list}
+                self.mapping_manager.update_translation_page_on_flash(
+                        m_vpn, new_mappings, TRANS_CLEAN)
+
 
     def move_trans_page_to_new_location(self, m_ppn):
         """
