@@ -1141,16 +1141,14 @@ def apply_to_conf(factor, value, conf):
         conf['f2fs'].setdefault('sysfs', {})[opt_name] = value
         return conf
 
-def get_design_table():
-    filepath = './design.txt'
-    table = []
-    colnames = ['ext4_flex_bg',         'ext4_big_alloc',
+def get_design_table(fs):
+    ext4_colnames = ['ext4_flex_bg',         'ext4_big_alloc',
                 'ext4_blocksize',       'ext4_delay_alloc',
                 # 'ext4_journal_location',
                 'ext4_min_batch_time',  'ext4_journal_ioprio',
                 'ext4_journal_mode' ]
 
-    colnames = ['f2fs_background_gc',
+    f2fs_colnames = ['f2fs_background_gc',
                 'f2fs_disable_roll_forward',
                 'f2fs_no_heap',
                 'f2fs_active_logs',
@@ -1166,7 +1164,15 @@ def get_design_table():
                 'f2fs_min_ipu_util'
                 ]
 
+    if fs == 'ext4':
+        colnames = ext4_colnames
+    elif fs == 'f2fs':
+        colnames = f2fs_colnames
+
+    ncols = len(colnames)
+    filepath = './designs/64.rows.{ncols}.cols.txt'.format(ncols = ncols)
     shown = False
+    table = []
     with open(filepath, 'r') as f:
         for line in f:
             items = line.split()
@@ -1324,34 +1330,45 @@ def get_default_config():
     return confdic
 
 def test_experimental_design():
-    design_table = get_design_table()
-    design_table = translate_table_for_human(design_table)
 
     default_conf = get_default_config()
     metadata_dic = choose_exp_metadata(default_conf)
-    for treatment in design_table[0:]:
-        confdic = get_default_config()
-        treatment_to_config(treatment, confdic)
+    for fs in ('ext4', 'f2fs'):
+        design_table = get_design_table(fs)
+        design_table = translate_table_for_human(design_table)
 
-        conf = config.Config(confdic)
+        for treatment in design_table[0:2]:
+            # create conf object
+            confdic = get_default_config()
+            conf = config.Config(confdic)
 
-        conf['treatment'] = treatment  # Put treatment in conf for record
-        # conf['filesystem'] = 'ext4'
-        conf['filesystem'] = 'f2fs'
-        conf['dftl']['max_cmt_bytes'] = int(2000 * 8) # 8 bytes (64bits) needed in mem
-        conf['loop_dev_size_mb'] = 256
-        conf.set_flash_num_blocks_by_bytes( conf['loop_dev_size_mb'] * 2**20 )
+            # apply treatment to confdic
+            treatment_to_config(treatment, confdic)
 
-        # update expname and subexpname
-        conf.update(metadata_dic)
+            # Put treatment in conf for record
+            conf['treatment'] = treatment
 
-        runtime_update(conf)
+            # Setup general parameters, such as disk size, ftl cache size
+            conf['filesystem'] = fs
+            conf['loop_dev_size_mb'] = 256
+            conf.set_flash_num_blocks_by_bytes(
+                conf['loop_dev_size_mb'] * 2**20 )
+            entries_need = int( conf['loop_dev_size_mb'] * 2**20 * 0.03 \
+                / conf['flash_page_size'])
+            conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
 
-        workflow(conf)
+            # update expname and subexpname
+            conf.update(metadata_dic)
 
-    exp_dir = os.path.join(metadata_dic['targetdir'], metadata_dic['expname'])
-    experiment.create_result_table(exp_dir)
-    print 'result table created'
+            # create hash, result dir path, get time
+            runtime_update(conf)
+
+            workflow(conf)
+
+        # Aggregate results
+        exp_dir = os.path.join(metadata_dic['targetdir'], metadata_dic['expname'])
+        experiment.create_result_table(exp_dir)
+        print 'result table created'
 
 def choose_exp_metadata(default_conf):
     """
@@ -1494,7 +1511,8 @@ def main(cmd_args):
     # tpcc_on_filesystems()
     # sqlbench_on_filesystems()
     # synthetic_on_filesystems()
-    test_ftl()
+    # test_ftl()
+    test_experimental_design()
 
 def _main():
     parser = argparse.ArgumentParser(
