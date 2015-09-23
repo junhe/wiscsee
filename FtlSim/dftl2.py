@@ -969,8 +969,10 @@ class GarbageCollector(object):
             if self.decider.call_index == 0:
                 triggered = True
                 self.recorder.count_me("GC", "invoked")
-                print 'GC is triggerred', self.block_pool.used_ratio()
+                print 'GC is triggerred', self.block_pool.used_ratio(), \
+                    'freeblocks:', len(self.block_pool.freeblocks)
                 block_iter = self.victim_blocks_iter()
+                blk_cnt = 0
             # victim_type, victim_block, valid_ratio = self.next_victim_block()
             # victim_type, victim_block, valid_ratio = \
                 # self.next_victim_block_benefit_cost()
