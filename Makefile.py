@@ -1254,7 +1254,7 @@ def get_default_config():
         "output_target" : "file",
         "print_when_finished": False,
         # "output_target" : "stdout",
-        "record_bad_victim_block": True,
+        "record_bad_victim_block": False,
 
         ############## For WlRunner ########
         "loop_path"             : "/dev/loop0",
