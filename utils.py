@@ -101,6 +101,11 @@ def prepare_dir_for_path(path):
     if not os.path.exists(dirpath):
         os.makedirs(dirpath)
 
+def prepare_dir(dirpath):
+    "create parent dirs for path if necessary"
+    if not os.path.exists(dirpath):
+        os.makedirs(dirpath)
+
 def ParameterCombinations(parameter_dict):
     """
     Get all the cominbation of the values from each key

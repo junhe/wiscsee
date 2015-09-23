@@ -60,6 +60,7 @@ class FileSystemBase(object):
     def mount(self, opt_list=None):
         opt_str = mountoption_to_str(opt_list)
 
+        utils.prepare_dir(self.mount_point)
         ret = utils.shcmd('mount {opt} {dev} {mp}'.format(
             opt = opt_str, dev = self.dev, mp = self.mount_point),
             ignore_error = True)
