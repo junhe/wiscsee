@@ -1,5 +1,6 @@
 import csv
 import os
+import pprint
 
 import config
 import utils
@@ -29,6 +30,23 @@ def get_general_stats(sub_exp_dir):
 
     return stats
 
+def get_count_table(sub_exp_dir):
+    """
+    This is a the stats from ftlsim.out.stats.
+    """
+    table_path = os.path.join(sub_exp_dir, 'ftlsim.out.count_table')
+    table = csv_to_table(table_path)
+
+    return table
+
+def get_cache_counter(count_table):
+    d = {}
+    for row in count_table:
+        if row['counter.name'] == 'cache':
+            d[row['item.name']] = int(row['count'])
+
+    return d
+
 def get_conf(sub_exp_dir):
     conf = config.Config()
     jsonpath = os.path.join(sub_exp_dir, 'config.json')
@@ -41,9 +59,15 @@ def create_result_row(sub_exp_dir):
     stats = get_general_stats(sub_exp_dir)
     convert_unit_to_byte(conf, stats)
 
+    # calculate hit ratio
+    count_table = get_count_table(sub_exp_dir)
+    cache_info = get_cache_counter(count_table)
+
     row = conf['treatment']
     row.update(stats)
     row['hash'] = 'HASH' + str(conf['hash'])
+    row['cache_hit_ratio'] = float(cache_info['hit']) / \
+        (cache_info['hit'] + cache_info['miss'])
 
     return row
 
@@ -62,7 +86,6 @@ def convert_unit_to_byte(conf, stats):
         else:
             # This a page operation
             stats[key] = value * flash_page_size
-
 
 def create_result_table(exp_dir):
     """
@@ -88,10 +111,14 @@ def create_result_table(exp_dir):
             if not col in row.keys():
                 row[col] = 'NA'
 
-    print table
+    pprint.pprint( table )
     utils.table_to_file(table, os.path.join(exp_dir, 'result-table.txt'))
 
 if __name__ == '__main__':
-    # print create_result_row('/tmp/results/newnew/newsub-09-20-11-02-12-ext4--1297045593926475638/')
     create_result_table('/tmp/results/newnew/')
+
+    # get cache info
+    # table = get_count_table('/tmp/results/reallyreally/default-subexp-f2fs-09-21-21-54-02-2663993657917388495/')
+    # print get_cache_counter(table)
+
 
