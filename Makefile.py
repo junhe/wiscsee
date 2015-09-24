@@ -1383,10 +1383,10 @@ def test_experimental_design():
             print '------------just finished', progress, '-----------------'
             progress += 1
 
-        # Aggregate results
-        exp_dir = os.path.join(metadata_dic['targetdir'], metadata_dic['expname'])
-        experiment.create_result_table(exp_dir)
-        print 'result table created'
+    # Aggregate results
+    exp_dir = os.path.join(metadata_dic['targetdir'], metadata_dic['expname'])
+    experiment.create_result_table(exp_dir)
+    print 'result table created'
 
 def choose_exp_metadata(default_conf):
     """
