@@ -83,13 +83,13 @@ def create_result_table(exp_dir):
     # some row may miss some columns, we need to make sure every row
     # has the same columns so it can be output to a table
     colnames = list(colnames)
-    print colnames
+    # print colnames
     for row in table:
         for col in colnames:
             if not col in row.keys():
                 row[col] = 'NA'
 
-    print table
+    # print table
     utils.table_to_file(table, os.path.join(exp_dir, 'result-table.txt'))
 
 if __name__ == '__main__':
