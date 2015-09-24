@@ -44,6 +44,7 @@ def create_result_row(sub_exp_dir):
     row = conf['treatment']
     row.update(stats)
     row['hash'] = 'HASH' + str(conf['hash'])
+    row['filesystem'] = conf['filesystem']
 
     return row
 
