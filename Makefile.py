@@ -1334,10 +1334,10 @@ def test_experimental_design():
     TODO: The configuration is messy..
     """
 
-    progress = 0
+    progress = 1
     default_conf = get_default_config()
     metadata_dic = choose_exp_metadata(default_conf)
-    for fs in ('ext4',):
+    for fs in ('ext4','f2fs'):
         design_table = get_design_table(fs)
         design_table = translate_table_for_human(design_table)
 
@@ -1367,8 +1367,8 @@ def test_experimental_design():
                     # "generating_func": "self.generate_sequential_workload",
                     # "generating_func": "self.generate_backward_workload",
                     "generating_func": "self.generate_random_workload",
-                    "chunk_count": 64 * 2**20 / (512 * 1024),
-                    "chunk_size" : 512 * 1024,
+                    "chunk_count": 64 * 2**20 / (32 * 1024),
+                    "chunk_size" : 32 * 1024,
                     "iterations" : 50,
                     "n_col"      : 5   # only for hotcold workload
                 }
