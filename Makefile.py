@@ -1330,14 +1330,18 @@ def get_default_config():
     return confdic
 
 def test_experimental_design():
+    """
+    TODO: The configuration is messy..
+    """
 
+    progress = 0
     default_conf = get_default_config()
     metadata_dic = choose_exp_metadata(default_conf)
-    for fs in ('ext4', 'f2fs'):
+    for fs in ('ext4',):
         design_table = get_design_table(fs)
         design_table = translate_table_for_human(design_table)
 
-        for treatment in design_table[0:2]:
+        for treatment in design_table[0:]:
             # create conf object
             confdic = get_default_config()
             conf = config.Config(confdic)
@@ -1350,12 +1354,24 @@ def test_experimental_design():
 
             # Setup general parameters, such as disk size, ftl cache size
             conf['filesystem'] = fs
-            conf['loop_dev_size_mb'] = 256
+            conf['loop_dev_size_mb'] = 1024
             conf.set_flash_num_blocks_by_bytes(
-                conf['loop_dev_size_mb'] * 2**20 )
+                int(conf['loop_dev_size_mb'] * 2**20 * 1.5) )
             entries_need = int( conf['loop_dev_size_mb'] * 2**20 * 0.03 \
                 / conf['flash_page_size'])
             conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+
+            # setup workload
+            conf["Synthetic"] = {
+                    # "generating_func": "self.generate_hotcold_workload",
+                    # "generating_func": "self.generate_sequential_workload",
+                    # "generating_func": "self.generate_backward_workload",
+                    "generating_func": "self.generate_random_workload",
+                    "chunk_count": 64 * 2**20 / (512 * 1024),
+                    "chunk_size" : 512 * 1024,
+                    "iterations" : 50,
+                    "n_col"      : 5   # only for hotcold workload
+                }
 
             # update expname and subexpname
             conf.update(metadata_dic)
@@ -1364,6 +1380,8 @@ def test_experimental_design():
             runtime_update(conf)
 
             workflow(conf)
+            print '------------just finished', progress, '-----------------'
+            progress += 1
 
         # Aggregate results
         exp_dir = os.path.join(metadata_dic['targetdir'], metadata_dic['expname'])
