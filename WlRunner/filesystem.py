@@ -102,12 +102,29 @@ def opts_to_str(opt_dic):
 
 def mountoption_to_str(options):
     """
-    options is a list of MountOption instances
+    options is a list of dictionaries:
+    for example:
+        { 'data':     {'opt_name':'data',
+           'value': 'data',
+           'include_name': True},
+          'delalloc': {'opt_name':'dealloc',
+           'value': 'dealloc',
+           'include_name': False},
+         ...
+        }
     """
     if options == None:
         return ''
 
-    strs = [str(opt) for _,opt in options.items() if opt['value'] != None]
+    strs = []
+    for _, opt in options.items():
+        if opt['value'] != None:
+            if opt['include_name'] == True:
+                itemstr = opt['opt_name'] + '=' + str(opt['value'])
+            else:
+                itemstr = str(opt['value'])
+            strs.append(itemstr)
+
     opt_str = '-O ' + ','.join(strs)
 
     return opt_str

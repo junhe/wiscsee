@@ -1388,6 +1388,15 @@ def test_experimental_design():
     experiment.create_result_table(exp_dir)
     print 'result table created'
 
+def reproduce():
+    conf = config.Config()
+    conf.load_from_json_file('/tmp/results/ext4-f2fs-1.5provisioning-32kbchunk/sub-ext4-09-23-21-32-40-4049153982182279356/config.json')
+    metadata_dic = choose_exp_metadata(conf)
+    conf.update(metadata_dic)
+    runtime_update(conf)
+    pprint.pprint(conf)
+    workflow(conf)
+
 def choose_exp_metadata(default_conf):
     """
     This function will return a dictionary containing a few things relating
