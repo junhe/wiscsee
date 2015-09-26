@@ -1048,6 +1048,8 @@ class GarbageCollector(object):
 
     def move_data_page_to_new_location(self, ppn):
         """
+        ****** Currently This Function is not in Use ******
+
         Page ppn must be valid.
         This function is for garbage collection. The difference between this
         one and the lba_write is that the input of this function is ppn, while
@@ -1076,7 +1078,7 @@ class GarbageCollector(object):
         if cached_ppn == MISS:
             # This will not add mapping to cache
             self.mapping_manager.update_entry(lpn = lpn, new_ppn = new_ppn,
-                tag = TRANS_CLEAN)
+                tag = TRANS_UPDATE_FOR_DATA_GC)
         else:
             # lpn is in cache, update it
             # This is a design from the original Dftl paper
@@ -1165,8 +1167,7 @@ class GarbageCollector(object):
                 new_mappings = {change['lpn']:change['new_ppn']
                         for change in changes_list}
                 self.mapping_manager.update_translation_page_on_flash(
-                        m_vpn, new_mappings, TRANS_CLEAN)
-
+                        m_vpn, new_mappings, TRANS_UPDATE_FOR_DATA_GC)
 
     def move_trans_page_to_new_location(self, m_ppn):
         """
@@ -1350,9 +1351,27 @@ def dec_debug(function):
 # Tag format
 # pagetype.
 # Example tags:
-TRANS_CACHE = "trans.cache" #read is due to miss, write is due to eviction
-TRANS_CLEAN = "trans.clean" #read/write are for moving pages
+
+# trans cache read is due to cache misses, the read fetches translation page
+# to cache.
+# write is due to eviction. Note that entry eviction may incure both page read
+# and write.
+TRANS_CACHE = "trans.cache"
+
+# trans clean include:
+#  erasing translation block
+#  move translation page during gc (including read and write)
+TRANS_CLEAN = "trans.clean"  #read/write are for moving pages
+
+#  clean_data_block()
+#   update_mapping_in_batch()
+#    update_translation_page_on_flash() this is the same as cache eviction
+TRANS_UPDATE_FOR_DATA_GC = "trans.update.for.data.gc"
+
 DATA_USER = "data.user"
+
+# erase data block in clean_data_block()
+# move data page during gc (including read and write)
 DATA_CLEANING = "data.cleaning"
 
 class Dftl(ftlbuilder.FtlBuilder):
