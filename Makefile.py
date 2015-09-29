@@ -1335,10 +1335,10 @@ def test_experimental_design():
     TODO: The configuration is messy..
     """
 
-    progress = 0
+    progress = 1
     default_conf = get_default_config()
     metadata_dic = choose_exp_metadata(default_conf)
-    for fs in ('ext4',):
+    for fs in ('ext4','f2fs'):
         design_table = get_design_table(fs)
         design_table = translate_table_for_human(design_table)
 
@@ -1368,8 +1368,8 @@ def test_experimental_design():
                     # "generating_func": "self.generate_sequential_workload",
                     # "generating_func": "self.generate_backward_workload",
                     "generating_func": "self.generate_random_workload",
-                    "chunk_count": 64 * 2**20 / (512 * 1024),
-                    "chunk_size" : 512 * 1024,
+                    "chunk_count": 64 * 2**20 / (32 * 1024),
+                    "chunk_size" : 32 * 1024,
                     "iterations" : 50,
                     "n_col"      : 5   # only for hotcold workload
                 }
@@ -1384,10 +1384,19 @@ def test_experimental_design():
             print '------------just finished', progress, '-----------------'
             progress += 1
 
-        # Aggregate results
-        exp_dir = os.path.join(metadata_dic['targetdir'], metadata_dic['expname'])
-        experiment.create_result_table(exp_dir)
-        print 'result table created'
+    # Aggregate results
+    exp_dir = os.path.join(metadata_dic['targetdir'], metadata_dic['expname'])
+    experiment.create_result_table(exp_dir)
+    print 'result table created'
+
+def reproduce():
+    conf = config.Config()
+    conf.load_from_json_file('/tmp/results/ext4-f2fs-1.5provisioning-32kbchunk/sub-ext4-09-23-21-32-40-4049153982182279356/config.json')
+    metadata_dic = choose_exp_metadata(conf)
+    conf.update(metadata_dic)
+    runtime_update(conf)
+    pprint.pprint(conf)
+    workflow(conf)
 
 def choose_exp_metadata(default_conf):
     """
