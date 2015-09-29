@@ -1000,6 +1000,7 @@ def translate_by_factor_space(factor, frac):
         'ext4_big_alloc'        : ['bigalloc', '^bigalloc'],
         'ext4_blocksize'        : [4096],
         'ext4_journal_location' : ['start', 'end'], # start of disk, end of disk
+        'ext4_has_journal'      : ['has_journal', '^has_journal'],
 
         # mount options
         'ext4_journal_mode'     : ['journal', 'order', 'writeback'],
@@ -1052,7 +1053,7 @@ def apply_to_conf(factor, value, conf):
     MOpt = WlRunner.filesystem.MountOption
 
     # Ext4
-    if factor in ['ext4_flex_bg', 'ext4_big_alloc']:
+    if factor in ['ext4_flex_bg', 'ext4_big_alloc', 'ext4_has_journal']:
         conf['ext4']['make_opts'].setdefault('-O', []).append(value)
         return conf
 
@@ -1146,7 +1147,7 @@ def get_design_table(fs):
                 'ext4_blocksize',       'ext4_delay_alloc',
                 # 'ext4_journal_location',
                 'ext4_min_batch_time',  'ext4_journal_ioprio',
-                'ext4_journal_mode' ]
+                'ext4_journal_mode',    'ext4_has_journal' ]
 
     f2fs_colnames = ['f2fs_background_gc',
                 'f2fs_disable_roll_forward',
@@ -1289,7 +1290,7 @@ def get_default_config():
 
         ############## FS ##################
         "ext4" : {
-            "make_opts": {'-O':['has_journal', '^uninit_bg'], '-b':[4096]}
+            "make_opts": {'-O':['^uninit_bg'], '-b':[4096]}
         },
         "f2fs"  : {"make_opts": {}, 'sysfs':{}},
         "btrfs"  : {"make_opts": {}},
