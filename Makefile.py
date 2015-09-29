@@ -1379,6 +1379,7 @@ def test_experimental_design():
 
             # create hash, result dir path, get time
             runtime_update(conf)
+            resolve_conflicts(conf)
 
             workflow(conf)
             print '------------just finished', progress, '-----------------'
@@ -1445,6 +1446,13 @@ def runtime_update(conf):
         targetdir = conf['targetdir'], expname = conf['expname'],
         subexpname = conf['subexpname'],
         unique = '-'.join((conf['filesystem'], conf['time'], str(conf['hash']))))
+
+def resolve_conflicts(conf):
+    try:
+        if '^has_journal' in conf['ext4']['make_opts']['-O']:
+            del conf['mnt_opts']['ext4']['data']
+    except KeyError:
+        raise RuntimeError("key error")
 
 def test_ftl():
     """
