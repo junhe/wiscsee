@@ -125,7 +125,7 @@ def mountoption_to_str(options):
                 itemstr = str(opt['value'])
             strs.append(itemstr)
 
-    opt_str = '-O ' + ','.join(strs)
+    opt_str = '-o ' + ','.join(strs)
 
     return opt_str
 
