@@ -1379,7 +1379,13 @@ def test_experimental_design():
 
             # create hash, result dir path, get time
             runtime_update(conf)
-            resolve_conflicts(conf)
+            if has_conflicts(conf):
+                prepare_dir(conf['result_dir'])
+                with open(os.path.join(conf['targetdir'], conf['expname'],
+                    'conflicts.txt'), 'a') as f:
+                    f.write(str(conf['treatment']) + '\n')
+                print 'skip', conf['treatment']
+                continue
 
             workflow(conf)
             print '------------just finished', progress, '-----------------'
@@ -1447,12 +1453,18 @@ def runtime_update(conf):
         subexpname = conf['subexpname'],
         unique = '-'.join((conf['filesystem'], conf['time'], str(conf['hash']))))
 
-def resolve_conflicts(conf):
+def has_conflicts(conf):
+    if '^has_journal' in conf['ext4']['make_opts']['-O'] and \
+        conf['mnt_opts']['ext4'].has_key('data'):
+        return True
+
     try:
-        if '^has_journal' in conf['ext4']['make_opts']['-O']:
-            del conf['mnt_opts']['ext4']['data']
+        if conf['mnt_opts']['ext4']['delalloc']['value'] == 'delalloc' and \
+            conf['mnt_opts']['ext4']['data']['value'] == 'journal':
+            return True
     except KeyError:
-        raise RuntimeError("key error")
+        # configuration not defined, so no way to be conflicted
+        return False
 
 def test_ftl():
     """
