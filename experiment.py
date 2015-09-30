@@ -50,12 +50,19 @@ def get_cache_counter(count_table):
 def get_conf(sub_exp_dir):
     conf = config.Config()
     jsonpath = os.path.join(sub_exp_dir, 'config.json')
+
+    if not os.path.exists(jsonpath):
+        return None
+
     conf.load_from_json_file(jsonpath)
 
     return conf
 
 def create_result_row(sub_exp_dir):
     conf = get_conf(sub_exp_dir)
+    if conf == None:
+        return None
+
     stats = get_general_stats(sub_exp_dir)
     convert_unit_to_byte(conf, stats)
 
@@ -100,6 +107,8 @@ def create_result_table(exp_dir):
     table = []
     for sub_exp_dir in sub_exp_dirs:
         row = create_result_row(sub_exp_dir)
+        if row == None:
+            continue
         table.append(row)
         colnames.update(row.keys())
 
