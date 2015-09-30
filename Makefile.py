@@ -1003,7 +1003,7 @@ def translate_by_factor_space(factor, frac):
         'ext4_has_journal'      : ['has_journal', '^has_journal'],
 
         # mount options
-        'ext4_journal_mode'     : ['journal', 'order', 'writeback'],
+        'ext4_journal_mode'     : ['journal', 'ordered', 'writeback'],
         'ext4_delay_alloc'      : ['delalloc', 'nodelalloc'],
         'ext4_min_batch_time'   : [0, 30], # unit: ms
         'ext4_journal_ioprio'   : [0, 3, 7], # larger -> higher priority, 3 is default
