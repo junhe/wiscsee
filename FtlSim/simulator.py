@@ -50,6 +50,8 @@ class Simulator(object):
             ftl_class = dftl2.Dftl
         elif self.conf['ftl_type'] == 'tpftl':
             ftl_class = tpftl.Tpftl
+        elif self.conf['ftl_type'] == 'nkftl':
+            ftl_class = nkftl.Nkftl
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))
