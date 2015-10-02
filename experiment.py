@@ -87,6 +87,7 @@ def convert_unit_to_byte(conf, stats):
     flash_page_size = conf['flash_page_size']
     flash_npage_per_block = conf['flash_npage_per_block']
 
+    # TODO: Use column names here to be more specific
     for key, value in stats.items():
         if 'phy_block_erase' in key:
             # This is a block operation
