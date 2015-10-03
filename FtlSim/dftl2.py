@@ -171,6 +171,19 @@ When evicting one mapping, do the following
 - mark all dirty mappings as clean
 - delete the one mapping
 
+
+*************** Trace back bad writes ******
+This is to trace back where a LPN has been.
+
+1. Number each write by the order that they enter the FTL, save this number to
+    for use later. We call this number timestamp. We can keep a table of
+    ppn->timestamp. Using ppn to find timestamp is because we want to find the
+    original write that goes to a PPN, even when the LPN has been overwritten
+    or discarded.
+2. During GC, recorder the following information of the victim block:
+    victim block number | PPN | LPN | timestamp | Validity during GC |.
+
+    Timestamp can be easilty obtained from TimestampTble.
 """
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')
@@ -199,12 +212,41 @@ class OutOfBandAreas(object):
 
         # Key data structures
         self.states = ftlbuilder.FlashBitmap2(confobj)
-        # ppn->lpn mapping stored in OOB
+        # ppn->lpn mapping stored in OOB, Note that for translation pages, this
+        # mapping is ppn -> m_vpn
         self.ppn_to_lpn = {}
+        # Timestamp table PPN -> timestamp
+        # Here are the rules:
+        # 1. only programming a PPN updates the timestamp of PPN
+        #    if the content is new from FS, timestamp is the timestamp of the
+        #    LPN
+        #    if the content is copied from other flash block, timestamp is the
+        #    same as the previous ppn
+        # 2. discarding, and reading a ppn does not change it.
+        # 3. erasing a block will remove all the timestamps of the block
+        # 4. so cur_timestamp can only be advanced by LBA operations
+        self.timestamp_table = {}
+        self.cur_timestamp = 0
 
         # flash block -> last invalidation time
         # int -> timedate.timedate
         self.last_inv_time_of_block = {}
+
+    ############# Time stamp related ############
+    def timestamp(self):
+        """
+        This function will advance timestamp
+        """
+        t = self.cur_timestamp
+        self.cur_timestamp += 1
+        return t
+
+    def timestamp_set_ppn(self, ppn):
+        self.timestamp_table[ppn] = self.timestamp()
+        self.cur_timestamp += 1
+
+    def timestamp_copy(self, src_ppn, dst_ppn):
+        self.timestamp_table[new_ppn] = self.timestamp_table[src_ppn]
 
     def translate_ppn_to_lpn(self, ppn):
         return self.ppn_to_lpn[ppn]
@@ -229,6 +271,9 @@ class OutOfBandAreas(object):
         for ppn in range(start, end):
             try:
                 del self.ppn_to_lpn[ppn]
+                # if you try to erase translation block here, it may fail,
+                # but it is expected.
+                del timestamp_table[ppn]
             except KeyError:
                 pass
 
@@ -238,7 +283,7 @@ class OutOfBandAreas(object):
         """
         mark the new_ppn as valid
         update the LPN in new page's OOB to lpn
-        invalidate the old_ppn, go cleaner can GC it
+        invalidate the old_ppn, so cleaner can GC it
         """
         self.states.validate_page(new_ppn)
         self.ppn_to_lpn[new_ppn] = lpn
@@ -246,6 +291,19 @@ class OutOfBandAreas(object):
         if old_ppn != UNINITIATED:
             # the lpn has mapping before this write
             self.wipe_ppn(old_ppn)
+
+    def new_lba_write(self, lpn, old_ppn, new_ppn):
+        """
+        This is exclusively for lba_write(), so far
+        """
+        self.timestamp_set_ppn(new_ppn)
+        self.new_write(lpn, old_ppn, new_ppn)
+
+    def data_page_move(self, lpn, old_ppn, new_ppn):
+        # move data page does not change the content's timestamp, so
+        # we copy
+        self.timestamp_copy(src_ppn = old_ppn, dst_ppn = new_ppn)
+        self.new_write(lpn, old_ppn, new_ppn)
 
     def lpns_of_block(self, flash_block):
         s, e = self.conf.block_to_page_range(flash_block)
@@ -1105,7 +1163,7 @@ class GarbageCollector(object):
         self.flash.page_write(new_ppn, DATA_CLEANING)
 
         # update new page and old page's OOB
-        self.oob.new_write(lpn, old_ppn, new_ppn)
+        self.oob.data_page_move(lpn, old_ppn, new_ppn)
 
         return {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn}
 
@@ -1422,6 +1480,12 @@ class Dftl(ftlbuilder.FtlBuilder):
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
         self.flash.page_read(ppn, DATA_USER)
 
+        self.recorder.write_file('lba.trace.txt',
+            timestamp = self.oob.timestamp(),
+            operation = 'read',
+            lpn =  lpn
+        )
+
         self.garbage_collector.try_gc()
 
     def lba_write(self, lpn):
@@ -1462,8 +1526,15 @@ class Dftl(ftlbuilder.FtlBuilder):
             lpn = lpn, ppn = new_ppn, dirty = True)
 
         # OOB
-        self.oob.new_write(lpn = lpn, old_ppn = old_ppn,
+        self.oob.new_lba_write(lpn = lpn, old_ppn = old_ppn,
             new_ppn = new_ppn)
+
+        # The LBA trace to file
+        self.recorder.write_file('lba.trace.txt',
+            timestamp = self.oob.timestamp_table[new_ppn],
+            operation = 'write',
+            lpn =  lpn
+        )
 
         # Flash
         self.flash.page_write(new_ppn, DATA_USER)
@@ -1492,6 +1563,12 @@ class Dftl(ftlbuilder.FtlBuilder):
         """
         self.recorder.put('logical_discard', lpn, 'user')
 
+        self.recorder.write_file('lba.trace.txt',
+            timestamp = self.oob.timestamp(),
+            operation = 'discard',
+            lpn =  lpn
+        )
+
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
         if ppn == UNINITIATED:
             return
@@ -1505,7 +1582,6 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         # garbage collection checking and possibly doing
         # self.garbage_collector.try_gc()
-
 
 def main():
     pass
