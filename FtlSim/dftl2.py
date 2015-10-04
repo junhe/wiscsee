@@ -243,7 +243,6 @@ class OutOfBandAreas(object):
 
     def timestamp_set_ppn(self, ppn):
         self.timestamp_table[ppn] = self.timestamp()
-        self.cur_timestamp += 1
 
     def timestamp_copy(self, src_ppn, dst_ppn):
         self.timestamp_table[dst_ppn] = self.timestamp_table[src_ppn]
