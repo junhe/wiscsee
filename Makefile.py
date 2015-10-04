@@ -1354,6 +1354,7 @@ def test_experimental_design():
             conf['treatment'] = treatment
 
             # Setup general parameters, such as disk size, ftl cache size
+            conf['record_bad_victim_block'] = True
             conf['filesystem'] = fs
             conf['loop_dev_size_mb'] = 1024
             conf.set_flash_num_blocks_by_bytes(

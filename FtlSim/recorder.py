@@ -126,7 +126,7 @@ class Recorder(object):
         You must provide kwargs with exactly the same keys. And you must
         provide keys in the parameter as they become columns in the file.
         """
-        width = 0
+        width = 20
         if not self.file_pool.has_key(filename):
             fd = open( os.path.join(
                 os.path.dirname(self.path), filename ), 'wr+')

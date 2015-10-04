@@ -246,7 +246,7 @@ class OutOfBandAreas(object):
         self.cur_timestamp += 1
 
     def timestamp_copy(self, src_ppn, dst_ppn):
-        self.timestamp_table[new_ppn] = self.timestamp_table[src_ppn]
+        self.timestamp_table[dst_ppn] = self.timestamp_table[src_ppn]
 
     def translate_ppn_to_lpn(self, ppn):
         return self.ppn_to_lpn[ppn]
@@ -273,7 +273,7 @@ class OutOfBandAreas(object):
                 del self.ppn_to_lpn[ppn]
                 # if you try to erase translation block here, it may fail,
                 # but it is expected.
-                del timestamp_table[ppn]
+                del self.timestamp_table[ppn]
             except KeyError:
                 pass
 
@@ -1019,6 +1019,8 @@ class GarbageCollector(object):
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
+        self.victim_block_seqid = 0
+
     def try_gc(self):
         triggered = False
 
@@ -1365,14 +1367,23 @@ class GarbageCollector(object):
 
                 # lpn ppn ppn_states blocknum
                 for ppn, lpn, ppn_state in b_info.mappings:
+                    if b_info.block_type == DATA_BLOCK:
+                        lpn_timestamp = self.oob.timestamp_table[ppn]
+                    else:
+                        lpn_timestamp = -1
+
                     self.recorder.write_file('bad.block.mappings',
                         ppn = ppn,
                         lpn = lpn,
                         ppn_state = ppn_state,
                         block_num = b_info.block_num,
                         valid_ratio = b_info.valid_ratio,
-                        block_type = b_info.block_type
+                        block_type = b_info.block_type,
+                        victim_block_seqid = self.victim_block_seqid,
+                        lpn_timestamp = lpn_timestamp
                         )
+
+            self.victim_block_seqid += 1
 
             yield b_info
 
