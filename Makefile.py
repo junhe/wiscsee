@@ -1243,6 +1243,12 @@ def get_default_config():
             }
         },
 
+        ############## NKFTL (SAST) ############
+        "nkftl": {
+            'n_blocks_in_data_group': 4, # number of blocks in a data block group
+            'max_blocks_in_log_group': 2, # max number of blocks in a log block group
+        },
+
         ############## hybridmap ############
         "high_log_block_ratio"       : 0.4,
         "high_data_block_ratio"      : 0.4,

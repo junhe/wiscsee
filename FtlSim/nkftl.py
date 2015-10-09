@@ -4,6 +4,20 @@ import config
 import ftlbuilder
 import recorder
 
+"""
+############## Checklist ###############
+When you conduct an operation, consider how it affects the following data
+structure:
+1. OOB
+2. Flash
+3. Block Pool
+4. DataBlockMappingTable
+5. LogBlockMappingTable
+6. LogPageMappingTable
+7. Garbage Collector
+8. Appending points
+"""
+
 class OutOfBandAreas(object):
     """
     It is used to hold page state and logical page number of a page.
@@ -22,15 +36,43 @@ class OutOfBandAreas(object):
 
         # Key data structures
         self.states = ftlbuilder.FlashBitmap2(confobj)
-        # ppn->lpn mapping stored in OOB
-        self.ppn_to_lpn = {}
+        # ppn->lpn mapping stored in OOB, Note that for translation pages, this
+        # mapping is ppn -> m_vpn
+        self.ppn_to_lpn_mvpn = {}
+        # Timestamp table PPN -> timestamp
+        # Here are the rules:
+        # 1. only programming a PPN updates the timestamp of PPN
+        #    if the content is new from FS, timestamp is the timestamp of the
+        #    LPN
+        #    if the content is copied from other flash block, timestamp is the
+        #    same as the previous ppn
+        # 2. discarding, and reading a ppn does not change it.
+        # 3. erasing a block will remove all the timestamps of the block
+        # 4. so cur_timestamp can only be advanced by LBA operations
+        self.timestamp_table = {}
+        self.cur_timestamp = 0
 
         # flash block -> last invalidation time
         # int -> timedate.timedate
         self.last_inv_time_of_block = {}
 
+    ############# Time stamp related ############
+    def timestamp(self):
+        """
+        This function will advance timestamp
+        """
+        t = self.cur_timestamp
+        self.cur_timestamp += 1
+        return t
+
+    def timestamp_set_ppn(self, ppn):
+        self.timestamp_table[ppn] = self.timestamp()
+
+    def timestamp_copy(self, src_ppn, dst_ppn):
+        self.timestamp_table[dst_ppn] = self.timestamp_table[src_ppn]
+
     def translate_ppn_to_lpn(self, ppn):
-        return self.ppn_to_lpn[ppn]
+        return self.ppn_to_lpn_mvpn[ppn]
 
     def wipe_ppn(self, ppn):
         self.states.invalidate_page(ppn)
@@ -39,7 +81,7 @@ class OutOfBandAreas(object):
 
         # It is OK to delay it until we erase the block
         # try:
-            # del self.ppn_to_lpn[ppn]
+            # del self.ppn_to_lpn_mvpn[ppn]
         # except KeyError:
             # # it is OK that the key does not exist, for example,
             # # when discarding without writing to it
@@ -51,7 +93,10 @@ class OutOfBandAreas(object):
         start, end = self.conf.block_to_page_range(flash_block)
         for ppn in range(start, end):
             try:
-                del self.ppn_to_lpn[ppn]
+                del self.ppn_to_lpn_mvpn[ppn]
+                # if you try to erase translation block here, it may fail,
+                # but it is expected.
+                del self.timestamp_table[ppn]
             except KeyError:
                 pass
 
@@ -61,24 +106,35 @@ class OutOfBandAreas(object):
         """
         mark the new_ppn as valid
         update the LPN in new page's OOB to lpn
-        invalidate the old_ppn, go cleaner can GC it
+        invalidate the old_ppn, so cleaner can GC it
         """
         self.states.validate_page(new_ppn)
-        self.ppn_to_lpn[new_ppn] = lpn
+        self.ppn_to_lpn_mvpn[new_ppn] = lpn
 
         if old_ppn != UNINITIATED:
             # the lpn has mapping before this write
             self.wipe_ppn(old_ppn)
 
+    def new_lba_write(self, lpn, old_ppn, new_ppn):
+        """
+        This is exclusively for lba_write(), so far
+        """
+        self.timestamp_set_ppn(new_ppn)
+        self.new_write(lpn, old_ppn, new_ppn)
+
+    def data_page_move(self, lpn, old_ppn, new_ppn):
+        # move data page does not change the content's timestamp, so
+        # we copy
+        self.timestamp_copy(src_ppn = old_ppn, dst_ppn = new_ppn)
+        self.new_write(lpn, old_ppn, new_ppn)
+
     def lpns_of_block(self, flash_block):
         s, e = self.conf.block_to_page_range(flash_block)
         lpns = []
         for ppn in range(s, e):
-            lpns.append(self.ppn_to_lpn.get(ppn, 'NA'))
+            lpns.append(self.ppn_to_lpn_mvpn.get(ppn, 'NA'))
 
         return lpns
-
-
 
 
 class BlockPool(object):
@@ -142,17 +198,57 @@ class BlockPool(object):
         return (len(self.log_usedblocks) + len(self.data_usedblocks))\
             / float(self.conf['flash_num_blocks'])
 
-class MappingManager(object):
-    pass
+class MappingBase(object):
+    """
+    This class defines a __init__() that passes in necessary objects to the
+    mapping object.
+    """
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
+        self.flash = flashobj
+        self.oob = oobobj
+        self.block_pool = block_pool
+        self.recorder = recorderobj
 
-class DataBlockMappingTable(object):
-    pass
+class MappingManager(MappingBase):
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
+        super(MappingManager, self).__init__(confobj, block_pool, flashobj,
+                oobobj, recorderobj)
+        self.data_block_mapping_table = DataBlockMappingTable(confobj,
+                block_pool, flashobj, oobobj, recorderobj)
+        self.log_block_mapping_table = LogBlockMappingTable(confobj,
+                block_pool, flashobj, oobobj, recorderobj)
+        self.log_page_mapping_table = LogPageMappingTable(confobj,
+                block_pool, flashobj, oobobj, recorderobj)
 
-class LogBlockMappingTable(object):
-    pass
+class DataBlockMappingTable(MappingBase):
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
+        super(MappingManager, self).__init__(confobj, block_pool, flashobj,
+                oobobj, recorderobj)
+        self.dgn_to_pbns = {} # dgn->[pbn1, pbn2, ..]
 
-class LogPageMappingTable(object):
-    pass
+    def add_pbn(self, dgn, pbn):
+        """
+        Add pbn to dgn
+        You need to make sure the number of blocks in this data group will
+        not exceed n_blocks_in_data_group before calling.
+        """
+        self.dgn_to_pbns.setdefault(dgn, []).append(pbn)
+        assert len( self.dgn_to_pbns[dgn] ) <= self.conf['n_blocks_in_data_group')
+
+    def is_max(self, dgn):
+        """
+        Return if dgn has the maximum number of physical blocks in it.
+        """
+
+class LogBlockMappingTable(MappingBase):
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
+        super(MappingManager, self).__init__(confobj, block_pool, flashobj,
+                oobobj, recorderobj)
+
+class LogPageMappingTable(MappingBase):
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
+        super(MappingManager, self).__init__(confobj, block_pool, flashobj,
+                oobobj, recorderobj)
 
 class GarbageCollector(object):
     pass
@@ -171,7 +267,20 @@ class Nkftl(ftlbuilder.FtlBuilder):
         pass
 
     def lba_write(self, lpn):
-        pass
+        """
+        1. get data group number of lpn
+        2. check if it has a writable log block by LGMT
+        3. it does not have writable log block, and the number of log blocks
+        have not reached max, get one block from free block pool and add to
+        LGMT as a log block.
+        4. if it does not have writable log block and the number of log blocks
+        have reached max, merge the log blocks first and then get a free
+        block as log block
+        5. Add the mapping of LPN to PPN to LPMT
+        6. if we are out of free blocks, start garbage collection.
+        """
+        data_group_no = self.nkftl_data_group_number_of_lpn(lpn)
+
 
     def lba_discard(self, lpn):
         pass

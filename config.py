@@ -114,3 +114,8 @@ class Config(dict):
         n_entries_per_page = self.dftl_n_mapping_entries_per_page()
         return lpn / n_entries_per_page
 
+    def nkftl_data_group_number_of_lpn(lpn):
+        dgn = (lpn / self['flash_npage_per_block']) / \
+            self['n_blocks_in_data_group']
+        return dgn
+
