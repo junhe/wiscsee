@@ -214,7 +214,7 @@ class OutOfBandAreas(object):
         self.states = ftlbuilder.FlashBitmap2(confobj)
         # ppn->lpn mapping stored in OOB, Note that for translation pages, this
         # mapping is ppn -> m_vpn
-        self.ppn_to_lpn = {}
+        self.ppn_to_lpn_mvpn = {}
         # Timestamp table PPN -> timestamp
         # Here are the rules:
         # 1. only programming a PPN updates the timestamp of PPN
@@ -248,7 +248,7 @@ class OutOfBandAreas(object):
         self.timestamp_table[dst_ppn] = self.timestamp_table[src_ppn]
 
     def translate_ppn_to_lpn(self, ppn):
-        return self.ppn_to_lpn[ppn]
+        return self.ppn_to_lpn_mvpn[ppn]
 
     def wipe_ppn(self, ppn):
         self.states.invalidate_page(ppn)
@@ -257,7 +257,7 @@ class OutOfBandAreas(object):
 
         # It is OK to delay it until we erase the block
         # try:
-            # del self.ppn_to_lpn[ppn]
+            # del self.ppn_to_lpn_mvpn[ppn]
         # except KeyError:
             # # it is OK that the key does not exist, for example,
             # # when discarding without writing to it
@@ -269,7 +269,7 @@ class OutOfBandAreas(object):
         start, end = self.conf.block_to_page_range(flash_block)
         for ppn in range(start, end):
             try:
-                del self.ppn_to_lpn[ppn]
+                del self.ppn_to_lpn_mvpn[ppn]
                 # if you try to erase translation block here, it may fail,
                 # but it is expected.
                 del self.timestamp_table[ppn]
@@ -285,7 +285,7 @@ class OutOfBandAreas(object):
         invalidate the old_ppn, so cleaner can GC it
         """
         self.states.validate_page(new_ppn)
-        self.ppn_to_lpn[new_ppn] = lpn
+        self.ppn_to_lpn_mvpn[new_ppn] = lpn
 
         if old_ppn != UNINITIATED:
             # the lpn has mapping before this write
@@ -308,7 +308,7 @@ class OutOfBandAreas(object):
         s, e = self.conf.block_to_page_range(flash_block)
         lpns = []
         for ppn in range(s, e):
-            lpns.append(self.ppn_to_lpn.get(ppn, 'NA'))
+            lpns.append(self.ppn_to_lpn_mvpn.get(ppn, 'NA'))
 
         return lpns
 
