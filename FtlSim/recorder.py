@@ -39,7 +39,6 @@ class Recorder(object):
         self.file_pool = {} # {filename:descriptor}
         self.file_colnames = {} # {filename:[colname1, 2, ...]
 
-        # enabled by default
         self.enabled = None
 
         if self.output_target == FILE_TARGET:

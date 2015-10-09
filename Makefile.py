@@ -1354,6 +1354,7 @@ def test_experimental_design():
             conf['treatment'] = treatment
 
             # Setup general parameters, such as disk size, ftl cache size
+            conf['record_bad_victim_block'] = True
             conf['filesystem'] = fs
             conf['loop_dev_size_mb'] = 1024
             conf.set_flash_num_blocks_by_bytes(
@@ -1454,13 +1455,25 @@ def runtime_update(conf):
         unique = '-'.join((conf['filesystem'], conf['time'], str(conf['hash']))))
 
 def has_conflicts(conf):
-    if '^has_journal' in conf['ext4']['make_opts']['-O'] and \
-        conf['mnt_opts']['ext4'].has_key('data'):
+    """
+    It handles by resetting conf, or it returns True if the conflicts is
+    unresolvable.
+    """
+    try:
+        if '^has_journal' in conf['ext4']['make_opts']['-O']:
+            # You can think of this resetting as when ^has_journal, setting
+            # data=xxx is not effective.
+            conf['mnt_opts']['ext4']['data']['value'] = None
+            print 'CONFLICT: has no journal but try to set journal mode', \
+                    'handled by removing data=xxx'
+            return False
+    except KeyError:
         return True
 
     try:
         if conf['mnt_opts']['ext4']['delalloc']['value'] == 'delalloc' and \
             conf['mnt_opts']['ext4']['data']['value'] == 'journal':
+            print 'CONFLICT: delalloc with data=journal not supported'
             return True
     except KeyError:
         # configuration not defined, so no way to be conflicted
