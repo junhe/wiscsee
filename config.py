@@ -114,8 +114,20 @@ class Config(dict):
         n_entries_per_page = self.dftl_n_mapping_entries_per_page()
         return lpn / n_entries_per_page
 
-    def nkftl_data_group_number_of_lpn(lpn):
+    def nkftl_data_group_number_of_lpn(self, lpn):
+        """
+        Given lpn, return its data group number
+        """
         dgn = (lpn / self['flash_npage_per_block']) / \
-            self['n_blocks_in_data_group']
+            self['nkftl']['n_blocks_in_data_group']
         return dgn
+
+    def nkftl_max_n_log_pages_in_data_group(self):
+        """
+        This is the max number of log pages in data group:
+            max number of log blocks * number of pages in block
+        """
+        return self['nkftl']['max_blocks_in_log_group'] * \
+            self['flash_npage_per_block']
+
 

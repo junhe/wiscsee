@@ -1215,13 +1215,13 @@ def get_default_config():
     confdic = {
         ############### Global #########
         "result_dir"            : None,
-        "workload_src"          : WLRUNNER,
-        # "workload_src"          : LBAGENERATOR,
+        # "workload_src"          : WLRUNNER,
+        "workload_src"          : LBAGENERATOR,
         "expname"               : "default-expname",
         "time"                  : None,
         "subexpname"            : "default-subexp",
-        # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl
-        "ftl_type"              : "dftl2",
+        # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl, nkftl
+        "ftl_type"              : "nkftl",
         "sector_size"           : 512,
 
         ############## For FtlSim ######
@@ -1319,7 +1319,8 @@ def get_default_config():
         ############## LBAGENERATOR  #########
         # if you choose LBAGENERATOR for workload_src, the following will
         # be used
-        "lba_workload_class"    : "HotCold",
+        "lba_workload_class"    : "Sequential",
+        # "lba_workload_class"    : "HotCold",
         # "lba_workload_class"    : "Random",
         "LBA" : {
             "lba_to_flash_size_ratio": 0.05,
