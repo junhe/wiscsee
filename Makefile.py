@@ -1406,12 +1406,26 @@ def test_experimental_design():
 
 def reproduce():
     conf = config.Config()
-    conf.load_from_json_file('/tmp/results/ext4-f2fs-1.5provisioning-32kbchunk/sub-ext4-09-23-21-32-40-4049153982182279356/config.json')
+    conf.load_from_json_file('./5732845.json')
     metadata_dic = choose_exp_metadata(conf)
     conf.update(metadata_dic)
     runtime_update(conf)
     pprint.pprint(conf)
     workflow(conf)
+
+def simple_lba_test():
+    confdic = get_default_config()
+    conf = config.Config(confdic)
+    metadata_dic = {}
+    metadata_dic['targetdir'] = '/tmp/results'
+    metadata_dic['filesystem'] = 'none'
+    metadata_dic['loop_dev_size_mb'] = 16
+    conf.update(metadata_dic)
+
+    conf.set_flash_num_blocks_by_bytes(16*2**20)
+    runtime_update(conf)
+    workflow(conf)
+
 
 def choose_exp_metadata(default_conf):
     """
@@ -1605,3 +1619,4 @@ def _main():
 
 if __name__ == '__main__':
     _main()
+

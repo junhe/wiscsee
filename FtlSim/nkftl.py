@@ -1,3 +1,4 @@
+import copy
 from collections import deque
 
 import config
@@ -231,10 +232,13 @@ class MappingManager(MappingBase):
 
     def __str__(self):
         ret = []
+        ret.append('-------------------------- MAPPING MANAGER --------------------------')
         ret.append('--------- data block mapping table ------------')
         ret.append(str(self.data_block_mapping_table))
         ret.append('--------- log mapping table -------------------')
         ret.append(str(self.log_mapping_table))
+        ret.append('=====================================================================')
+
         return '\n'.join(ret)
 
     def lpn_to_ppn(self, lpn):
@@ -337,6 +341,7 @@ class DataGroupInfo(object):
             1. the current log block has no free pages
             2. the number of log blocks have reached its max
 
+        return Found, ppn/states
         ************************************************************
         Note that this function may increment last_programmed_offset
         ************************************************************
@@ -344,7 +349,7 @@ class DataGroupInfo(object):
         print self.last_programmed_offset, self.max_log_pages
         print 'log blocks:', len(self.log_blocks)
         if self.last_programmed_offset == self.max_log_pages - 1:
-            return ERR_NEED_MERGING
+            return False, ERR_NEED_MERGING
 
         npages_per_block = self.conf['flash_npage_per_block']
         next_offset = self.last_programmed_offset + 1
@@ -356,11 +361,11 @@ class DataGroupInfo(object):
             # block index >= number of blocks
             # the next page is out of the current available blocks
             print 'ERR_NEED_NEW_BLOCK'
-            return ERR_NEED_NEW_BLOCK
+            return False, ERR_NEED_NEW_BLOCK
 
 
         self.last_programmed_offset += 1
-        return self.offset_to_ppn(next_offset)
+        return True, self.offset_to_ppn(next_offset)
 
     def lpn_to_ppn(self, lpn):
         return self.page_map.get(lpn, PPN_NOT_EXIST)
@@ -387,8 +392,14 @@ class LogMappingTable(MappingBase):
             ret.append(str(v))
         return '\n'.join(ret)
 
-    def append_lpn(self, dgn, lpn):
-        dg = self.dgn_to_data_group_info.setdefault(dgn, DataGroupInfo(self.conf))
+    def add_log_mapping(self, lpn, ppn):
+        """
+        ppn must belong to to log block of this data group
+        """
+        dgn = self.conf.nkftl_data_group_number_of_lpn(lpn)
+        data_group_info = self.dgn_to_data_group_info.setdefault(dgn,
+            DataGroupInfo(self.conf))
+        data_group_info.page_map[lpn] = ppn
 
     def add_log_block(self, dgn, block_num):
         """
@@ -417,9 +428,10 @@ class LogMappingTable(MappingBase):
             # all mappings should exist
             del data_group_info.page_map[lpn]
 
-        assert self.last_programmed_offset % \
-                self.conf['flash_npage_per_block'] == 0
-        self.last_programmed_offset -= self.conf['flash_npage_per_block']
+        assert (data_group_info.last_programmed_offset + 1) % \
+                self.conf['flash_npage_per_block'] == 0, \
+                "last_programmed_offset + 1:{}".format(data_group_info.last_programmed_offset + 1)
+        data_group_info.last_programmed_offset -= self.conf['flash_npage_per_block']
 
     def remove_lpn(self, lpn):
         """
@@ -450,6 +462,7 @@ class GarbageCollector(object):
         3. Try full merge
         """
         is_mergable, logical_block = self.is_switch_mergable(log_block_num)
+        print 'switch merge  is_mergable:', is_mergable, 'logical_block:', logical_block
         if is_mergable == True:
             self.switch_merge(log_block_num = log_block_num,
                     logical_block = logical_block)
@@ -457,10 +470,12 @@ class GarbageCollector(object):
 
         is_mergable, logical_block, offset = self.is_partial_mergable(
             log_block_num)
+        print 'partial merge  is_mergable:', is_mergable, 'logical_block:', logical_block
         if is_mergable == True:
             partial_merge(log_block_num = log_block_num,
                 logical_block_num = logical_block,
                 first_free_offset = offset)
+            return
 
         full_merge(log_block_num)
 
@@ -470,11 +485,19 @@ class GarbageCollector(object):
         with data_group_no into data blocks. After calling this function,
         there should be no log blocks remaining for this data group.
         """
+        print '======= collect_garbage_for_data_group()'
         print str(self.mapping_manager)
 
-        for log_block in self.mapping_manager.log_mapping_table\
-                .dgn_to_data_group_info[data_group_no].log_blocks:
+        # We make local copy since we may need to modify the original data
+        # in the loop
+        log_block_list = copy.copy(self.mapping_manager.log_mapping_table\
+                .dgn_to_data_group_info[data_group_no].log_blocks)
+        for log_block in log_block_list:
+            print 'merging log block ------>', log_block
             self.merge_log_block(log_block)
+
+        print '=========== after garbage collection ========'
+        print str(self.mapping_manager)
 
     def full_merge(self, log_block_num):
         """
@@ -657,10 +680,10 @@ class GarbageCollector(object):
         3. Update the mapping logical block -> log_block_num
         4. Remove log_block_num from log mapping table
         """
-
         # erase
         old_physical_block = self.mapping_manager.data_block_mapping_table\
             .lbn_to_pbn(logical_block)
+        print 'old_physical_block', old_physical_block
         if old_physical_block != PHYSICAL_BLK_NOT_EXIST:
             # clean up old_physical_block
             self.oob.erase_block(old_physical_block)
@@ -741,26 +764,36 @@ class Nkftl(ftlbuilder.FtlBuilder):
         if hasit == False:
             old_ppn = None
 
-        new_ppn = self.mapping_manager.log_mapping_table.next_ppn_to_program(
-            data_group_no)
-
-        if new_ppn == ERR_NEED_NEW_BLOCK:
-            new_block = self.block_pool.pop_a_free_block_to_log_blocks()
-            # The add_log_block() function conveniently returns the ppn of
-            # the first page in the new block
-            self.mapping_manager.log_mapping_table.add_log_block(
-                data_group_no, new_block)
-            new_ppn = self.mapping_manager.log_mapping_table\
+        found, new_ppn = self.mapping_manager.log_mapping_table\
                 .next_ppn_to_program(data_group_no)
-        elif new_ppn == ERR_NEED_MERGING:
-            self.garbage_collector.collect_garbage_for_data_group(
-                data_group_no)
+
+        # loop until we find a new ppn to program
+        while found == False:
+            print 'new_ppn', new_ppn
+            if new_ppn == ERR_NEED_NEW_BLOCK:
+                new_block = self.block_pool.pop_a_free_block_to_log_blocks()
+                # The add_log_block() function conveniently returns the ppn of
+                # the first page in the new block
+                self.mapping_manager.log_mapping_table.add_log_block(
+                    data_group_no, new_block)
+            elif new_ppn == ERR_NEED_MERGING:
+                print 'THIS IS NEEED MERGING'
+                self.garbage_collector.collect_garbage_for_data_group(
+                    data_group_no)
+                print 'new_ppn after merging', new_ppn
+
+            found, new_ppn = self.mapping_manager.log_mapping_table\
+                .next_ppn_to_program(data_group_no)
 
         # OOB
+        print lpn, old_ppn, new_ppn
         self.oob.new_lba_write(lpn = lpn, old_ppn = old_ppn,
             new_ppn = new_ppn)
 
         self.flash.page_write(new_ppn, DATA_USER)
+
+        # this may just update the current mapping, instead of 'add'ing.
+        self.mapping_manager.log_mapping_table.add_log_mapping(lpn, new_ppn)
 
         print str(self.mapping_manager)
 
