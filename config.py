@@ -122,6 +122,10 @@ class Config(dict):
             self['nkftl']['n_blocks_in_data_group']
         return dgn
 
+    def nkftl_data_group_number_of_logical_block(self, logical_block_num):
+        dgn = logical_block_num / self['nkftl']['n_blocks_in_data_group']
+        return dgn
+
     def nkftl_max_n_log_pages_in_data_group(self):
         """
         This is the max number of log pages in data group:
