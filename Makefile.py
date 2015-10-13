@@ -1226,7 +1226,7 @@ def get_default_config():
 
         ############## For FtlSim ######
         "flash_page_size"       : 4096,
-        "flash_npage_per_block" : 32,
+        "flash_npage_per_block" : 4,
         "flash_num_blocks"      : None,
 
         ############## Dftl ############
@@ -1319,9 +1319,9 @@ def get_default_config():
         ############## LBAGENERATOR  #########
         # if you choose LBAGENERATOR for workload_src, the following will
         # be used
-        "lba_workload_class"    : "Sequential",
+        # "lba_workload_class"    : "Sequential",
         # "lba_workload_class"    : "HotCold",
-        # "lba_workload_class"    : "Random",
+        "lba_workload_class"    : "Random",
         "LBA" : {
             "lba_to_flash_size_ratio": 0.05,
             "write_to_lba_ratio"     : 1,    #how many writes you want to have

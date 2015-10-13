@@ -1,5 +1,6 @@
 import copy
 from collections import deque
+import datetime
 
 import config
 import ftlbuilder
@@ -283,7 +284,7 @@ class DataBlockMappingTable(MappingBase):
 
         # Now we know the physical block exist, but we still need to check if
         # the corresponding page is valid or not
-        ppn = block_off_to_page(physical_block, off)
+        ppn = self.conf.block_off_to_page(physical_block, off)
         return ppn
 
     def add_mapping(self, lbn, pbn):
@@ -309,6 +310,14 @@ class DataGroupInfo(object):
         # offset within the data group
         self.last_programmed_offset = -1
         self.max_log_pages = self.conf.nkftl_max_n_log_pages_in_data_group()
+
+    def clear(self):
+        """
+        Reset it to original status
+        """
+        self.page_map.clear()
+        del self.log_blocks[:]
+        self.last_programmed_offset = -1
 
     def add_mapping(self, lpn, ppn):
         """
@@ -391,6 +400,9 @@ class LogMappingTable(MappingBase):
             ret.append('-- data group no.' + str(k))
             ret.append(str(v))
         return '\n'.join(ret)
+
+    def clear_data_group_info(self, dgn):
+        self.dgn_to_data_group_info[dgn].clear()
 
     def add_log_mapping(self, lpn, ppn):
         """
@@ -477,7 +489,7 @@ class GarbageCollector(object):
                 first_free_offset = offset)
             return
 
-        full_merge(log_block_num)
+        self.full_merge(log_block_num)
 
     def collect_garbage_for_data_group(self, data_group_no):
         """
@@ -496,6 +508,8 @@ class GarbageCollector(object):
             print 'merging log block ------>', log_block
             self.merge_log_block(log_block)
 
+        self.mapping_manager.log_mapping_table.clear_data_group_info(
+            data_group_no)
         print '=========== after garbage collection ========'
         print str(self.mapping_manager)
 
@@ -509,12 +523,12 @@ class GarbageCollector(object):
         logical_blocks = set()
         for ppn in range(ppn_start, ppn_end):
             is_valid = self.oob.states.is_page_valid(ppn)
-            lpn = self.oob.ppn_to_lpn_mvpn(ppn)
+            lpn = self.oob.ppn_to_lpn_mvpn[ppn]
             logical_block, _ = self.conf.page_to_block_off(lpn)
             logical_blocks.add(logical_block)
 
         for logical_block in logical_blocks:
-            aggregate_logical_block(logical_block)
+            self.aggregate_logical_block(logical_block, 'full_merge')
 
     def aggregate_logical_block(self, logical_block_num, tag):
         """
@@ -524,7 +538,7 @@ class GarbageCollector(object):
         The input logical block should have at least one valid page.
         Otherwise we will create a block with no valid pages.
         """
-        dst_phy_block_num == self.block_pool.pop_a_free_block_to_data_blocks()
+        dst_phy_block_num = self.block_pool.pop_a_free_block_to_data_blocks()
 
         lpn_start, lpn_end = self.conf.block_to_page_range(logical_block_num)
         for lpn in range(lpn_start, lpn_end):
@@ -548,7 +562,7 @@ class GarbageCollector(object):
                 # destination page. We have to do this because we can only
                 # program flash sequentially.
                 self.flash.page_write(dst_ppn, tag)
-                self.oob.states.invalidate_page(src_ppn)
+                self.oob.states.invalidate_page(dst_ppn)
 
         # Now we have all the pages in new block, we make the new block
         # the data block for logical_block_num
@@ -576,7 +590,7 @@ class GarbageCollector(object):
                 # For the first x pages, check if they are valid
                 if self.oob.states.is_page_valid(ppn):
                     # valid, check if it is aligned
-                    lpn = self.oob.ppn_to_lpn_mvpn(ppn)
+                    lpn = self.oob.ppn_to_lpn_mvpn[ppn]
                     if lpn_start == None:
                         logical_block, logical_off = self.conf.page_to_block_off(lpn)
                         if logical_off != 0:
@@ -742,7 +756,6 @@ class Nkftl(ftlbuilder.FtlBuilder):
         """
         pass
 
-    @utils.debug_decor
     def lba_write(self, lpn):
         """
         1. get data group number of lpn
@@ -756,6 +769,11 @@ class Nkftl(ftlbuilder.FtlBuilder):
         5. Add the mapping of LPN to PPN to LPMT
         6. if we are out of free blocks, start garbage collection.
         """
+        print 'lba_write', lpn
+        self.recorder.write_file('tmp.lba.trace.txt', operation = 'write',
+            page = lpn)
+
+
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
         # find old ppn, we have to invalidate it
