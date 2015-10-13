@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import random
 import sys
 
 import bmftl
@@ -65,9 +66,9 @@ class Simulator(object):
         else:
             self.interface_level = 'page'
 
-
         if self.conf['enable_e2e_test'] == True:
             self.event_processor = self.process_event_e2e_test
+            self.lpn_to_data = {}
         else:
             self.event_processor = self.process_event
 
@@ -77,14 +78,21 @@ class Simulator(object):
             pages = self.conf.off_size_to_page_list(event['offset'],
                 event['size'], force_alignment = False)
             for page in pages:
-                self.ftl.lba_read(page)
+                data = self.ftl.lba_read(page)
+                assert self.lpn_to_data.get(page, None) == data, \
+                    "Correct: {}, Got: {}".format(
+                    self.lpn_to_data.get(page, None), data)
 
         elif event['operation'] == 'write':
             assert self.interface_level == 'page'
             pages = self.conf.off_size_to_page_list(event['offset'],
                 event['size'])
             for page in pages:
-                self.ftl.lba_write(page)
+                # generate random content
+                content = random.randint(0, 10000)
+                self.ftl.lba_write(page, data = content)
+                self.lpn_to_data[page] = content
+
         elif event['operation'] == 'discard':
             assert self.interface_level == 'page'
             pages = self.conf.off_size_to_page_list(event['offset'],
