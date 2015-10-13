@@ -79,9 +79,11 @@ class Simulator(object):
                 event['size'], force_alignment = False)
             for page in pages:
                 data = self.ftl.lba_read(page)
-                assert self.lpn_to_data.get(page, None) == data, \
-                    "Correct: {}, Got: {}".format(
+                correct = self.lpn_to_data.get(page, None)
+                if data != correct:
+                    print "!!!!!!!!!! Correct: {}, Got: {}".format(
                     self.lpn_to_data.get(page, None), data)
+                    raise RuntimeError()
 
         elif event['operation'] == 'write':
             assert self.interface_level == 'page'
@@ -90,6 +92,7 @@ class Simulator(object):
             for page in pages:
                 # generate random content
                 content = random.randint(0, 10000)
+                content = "{}.{}".format(page, content)
                 self.ftl.lba_write(page, data = content)
                 self.lpn_to_data[page] = content
 

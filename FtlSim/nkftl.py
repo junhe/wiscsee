@@ -261,7 +261,7 @@ class MappingManager(MappingBase):
         elif self.oob.states.is_page_valid(ppn):
             return True, ppn, IN_DATA_BLOCK
         else:
-            return False, None, PPN_NOT_VALID
+            return False, ppn, PPN_NOT_VALID # in data block but not exist
 
 class DataBlockMappingTable(MappingBase):
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
@@ -447,14 +447,13 @@ class LogMappingTable(MappingBase):
 
     def remove_lpn(self, lpn):
         """
-        Remove lpn->ppn, and invalidate ppn. It does not affect the log_blocks
+        Remove lpn->ppn
         """
         dgn = self.conf.nkftl_data_group_number_of_lpn(lpn)
         ppn = self.lpn_to_ppn(lpn)
         if ppn == PPN_NOT_EXIST:
             return
 
-        self.oob.states.invalidate_page(ppn)
         del self.dgn_to_data_group_info[dgn].page_map[lpn]
 
 class GarbageCollector(object):
@@ -502,6 +501,10 @@ class GarbageCollector(object):
 
         # We make local copy since we may need to modify the original data
         # in the loop
+        # TODO: You need to GC the log blocks in a better order. This matters
+        # because for example the first block may require full merge and the
+        # second can be partial merged. Doing the full merge first may change
+        # the states of the second log block and makes full merge impossible.
         log_block_list = copy.copy(self.mapping_manager.log_mapping_table\
                 .dgn_to_data_group_info[data_group_no].log_blocks)
         for log_block in log_block_list:
@@ -523,9 +526,10 @@ class GarbageCollector(object):
         logical_blocks = set()
         for ppn in range(ppn_start, ppn_end):
             is_valid = self.oob.states.is_page_valid(ppn)
-            lpn = self.oob.ppn_to_lpn_mvpn[ppn]
-            logical_block, _ = self.conf.page_to_block_off(lpn)
-            logical_blocks.add(logical_block)
+            if is_valid == True:
+                lpn = self.oob.ppn_to_lpn_mvpn[ppn]
+                logical_block, _ = self.conf.page_to_block_off(lpn)
+                logical_blocks.add(logical_block)
 
         for logical_block in logical_blocks:
             self.aggregate_logical_block(logical_block, 'full_merge')
@@ -547,21 +551,21 @@ class GarbageCollector(object):
             dst_ppn = self.conf.block_off_to_page(dst_phy_block_num,
                 in_block_page_off)
             if found == True:
-                self.flash.page_read(src_ppn, tag)
-                self.flash.page_write(dst_ppn, tag)
+                data = self.flash.page_read(src_ppn, tag)
+                self.flash.page_write(dst_ppn, tag, data = data)
+
+                print 'Moved lpn:{} (data:{}, src_ppn:{}) to dst_ppn:{}'.format(
+                    lpn, data, src_ppn, dst_ppn)
 
                 if loc == IN_LOG_BLOCK:
                     self.mapping_manager.log_mapping_table.remove_lpn(lpn)
-                elif loc == IN_DATA_BLOCK:
-                    self.oob.states.invalidate_page(src_ppn)
-                else:
-                    raise RuntimeError("Why did you come here? A ppn can only"
-                            "be in data blocks or in log blocks.")
+                self.oob.new_write(lpn = lpn, old_ppn = src_ppn,
+                    new_ppn = dst_ppn)
             else:
                 # This lpn does not exist, so we just invalidate the
                 # destination page. We have to do this because we can only
                 # program flash sequentially.
-                self.flash.page_write(dst_ppn, tag)
+                # self.flash.page_write(dst_ppn, tag, data = -1)
                 self.oob.states.invalidate_page(dst_ppn)
 
         # Now we have all the pages in new block, we make the new block
@@ -639,8 +643,8 @@ class GarbageCollector(object):
 
             dst_ppn = self.conf.block_off_to_page(log_block_num, offset)
 
-            self.flash.page_read(src_ppn, 'partial_merge')
-            self.flash.page_write(dst_ppn, 'partial_merge')
+            data = self.flash.page_read(src_ppn, 'partial_merge')
+            self.flash.page_write(dst_ppn, 'partial_merge', data = data)
 
             # src_ppn could be in data block or in log block
             # if it is in data block, we only need to invalidate it
@@ -754,9 +758,20 @@ class Nkftl(ftlbuilder.FtlBuilder):
         Look for log blocks first since they have the latest data
         Then go to data blocks
         """
-        pass
 
-    def lba_write(self, lpn):
+        hasit, ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
+        print hasit, ppn, loc
+        print self.flash.data
+        if hasit == True:
+            content = self.flash.page_read(ppn, 'user.read')
+        else:
+            content = None
+
+        print 'lba_read', lpn, 'ppn', ppn, 'got', content
+        return content
+
+
+    def lba_write(self, lpn, data = None):
         """
         1. get data group number of lpn
         2. check if it has a writable log block by LBMT
@@ -769,10 +784,9 @@ class Nkftl(ftlbuilder.FtlBuilder):
         5. Add the mapping of LPN to PPN to LPMT
         6. if we are out of free blocks, start garbage collection.
         """
-        print 'lba_write', lpn
+        print 'lba_write', lpn, 'data=', data
         self.recorder.write_file('tmp.lba.trace.txt', operation = 'write',
             page = lpn)
-
 
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
@@ -808,7 +822,7 @@ class Nkftl(ftlbuilder.FtlBuilder):
         self.oob.new_lba_write(lpn = lpn, old_ppn = old_ppn,
             new_ppn = new_ppn)
 
-        self.flash.page_write(new_ppn, DATA_USER)
+        self.flash.page_write(new_ppn, DATA_USER, data = data)
 
         # this may just update the current mapping, instead of 'add'ing.
         self.mapping_manager.log_mapping_table.add_log_mapping(lpn, new_ppn)

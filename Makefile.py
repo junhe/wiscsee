@@ -1320,9 +1320,10 @@ def get_default_config():
         ############## LBAGENERATOR  #########
         # if you choose LBAGENERATOR for workload_src, the following will
         # be used
-        # "lba_workload_class"    : "Sequential",
+        "lba_workload_class"    : "Sequential",
         # "lba_workload_class"    : "HotCold",
-        "lba_workload_class"    : "Random",
+        # "lba_workload_class"    : "Random",
+        # "lba_workload_class"    : "Manual",
         "LBA" : {
             "lba_to_flash_size_ratio": 0.05,
             "write_to_lba_ratio"     : 1,    #how many writes you want to have
