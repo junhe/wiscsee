@@ -65,6 +65,41 @@ class Simulator(object):
         else:
             self.interface_level = 'page'
 
+
+        if self.conf['enable_e2e_test'] == True:
+            self.event_processor = self.process_event_e2e_test
+        else:
+            self.event_processor = self.process_event
+
+    def process_event_e2e_test(self, event):
+        if event['operation'] == 'read':
+            assert self.interface_level == 'page'
+            pages = self.conf.off_size_to_page_list(event['offset'],
+                event['size'], force_alignment = False)
+            for page in pages:
+                self.ftl.lba_read(page)
+
+        elif event['operation'] == 'write':
+            assert self.interface_level == 'page'
+            pages = self.conf.off_size_to_page_list(event['offset'],
+                event['size'])
+            for page in pages:
+                self.ftl.lba_write(page)
+        elif event['operation'] == 'discard':
+            assert self.interface_level == 'page'
+            pages = self.conf.off_size_to_page_list(event['offset'],
+                event['size'])
+            for page in pages:
+                self.ftl.lba_discard(page)
+
+        elif event['operation'] == 'enable_recorder':
+            self.ftl.enable_recording()
+        elif event['operation'] == 'disable_recorder':
+            self.ftl.disable_recording()
+        else:
+            raise RuntimeError("operation '{}' is not supported".format(
+                event['operation']))
+
     def process_event(self, event):
         if event['operation'] == 'read':
             if self.interface_level == 'page':
@@ -120,7 +155,7 @@ class Simulator(object):
         cnt = 0
         for event_line in event_line_iter:
             event = event_line_to_dic(event_line)
-            self.process_event(event)
+            self.event_processor(event)
             cnt += 1
             if cnt % 100 == 0:
                 print '|',
