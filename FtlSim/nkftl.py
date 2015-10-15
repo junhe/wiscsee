@@ -188,6 +188,7 @@ class BlockPool(object):
             blocknum = self.freeblocks.popleft()
         else:
             # nobody has free block
+            utils.breakpoint()
             raise RuntimeError('No free blocks in device!!!!')
 
         return blocknum
@@ -486,7 +487,10 @@ class LogMappingTable(MappingBase):
         lpn_start, lpn_end = self.conf.block_to_page_range(logical_block_num)
         for lpn in range(lpn_start, lpn_end):
             # all mappings should exist
-            del data_group_info.page_map[lpn]
+            try:
+                del data_group_info.page_map[lpn]
+            except KeyError:
+                pass
 
         assert (data_group_info.last_programmed_offset + 1) % \
                 self.conf['flash_npage_per_block'] == 0, \
@@ -752,6 +756,25 @@ class GarbageCollector(object):
 
                 self.oob.new_write(lpn = lpn, old_ppn = src_ppn,
                     new_ppn = dst_ppn)
+
+                # After moving, you need to check if the source block of src_ppn
+                # is totally free. If it is, we have to erase it and put it to
+                # free block pool
+                # We know src_ppn, lpn, log_block_num, logical block number,
+                # data group number
+                log_block_num, _ = self.conf.page_to_block_off(src_ppn)
+                if not self.oob.is_any_page_valid(log_block_num):
+                    logical_block_num, _ = self.conf.page_to_block_off(lpn)
+                    data_group_no = self.conf.nkftl_data_group_number_of_logical_block(
+                            logical_block_num)
+                    self.mapping_manager.log_mapping_table.remove_log_block(
+                            data_group_no = data_group_no,
+                            log_block_num = log_block_num,
+                            logical_block_num = logical_block_num)
+                    self.block_pool.move_used_log_block_to_free(log_block_num)
+                    self.oob.erase_block(log_block_num)
+                    print log_block_num
+                    self.flash.block_erase(log_block_num, 'full.merge')
             else:
                 # This lpn does not exist, so we just invalidate the
                 # destination page. We have to do this because we can only
@@ -855,7 +878,7 @@ class GarbageCollector(object):
         found, phy_block_num = self.mapping_manager.data_block_mapping_table\
                 .lbn_to_pbn(logical_block_num)
         self.oob.erase_block(phy_block_num)
-        self.flash.block_erase(phy_block_num)
+        self.flash.block_erase(phy_block_num, 'partial.merge')
         self.block_poo.move_used_data_block_to_free(phy_block_num)
 
         self.mapping_manager.data_block_mapping_table\

@@ -59,7 +59,7 @@ class Simulator(object):
                 .format(self.conf['ftl_type']))
 
         self.ftl = ftl_class(self.conf, self.rec,
-            flash.Flash(recorder = self.rec))
+            flash.Flash(recorder = self.rec, confobj = self.conf))
 
         if self.conf['ftl_type'] == 'tpftl':
             self.interface_level = 'range'
