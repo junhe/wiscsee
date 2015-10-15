@@ -19,6 +19,11 @@ structure:
 6. LogPageMappingTable
 7. Garbage Collector
 8. Appending points
+
+
+############## TODO: ####################
+1. Test partial merge
+
 """
 
 
@@ -29,6 +34,19 @@ PHYSICAL_BLK_NOT_EXIST = "PHYSICAL_BLK_NOT_EXIST"
 ERR_NEED_NEW_BLOCK, ERR_NEED_MERGING = ('ERR_NEED_NEW_BLOCK', 'ERR_NEED_MERGING')
 IN_LOG_BLOCK = "IN_LOG_BLOCK"
 IN_DATA_BLOCK = "IN_DATA_BLOCK"
+
+
+class GlobalHelper(object):
+    """
+    In case you need some global variables
+    """
+    def __init__(self, confobj):
+        # Sort of a counter incremented by lba operations
+        self.cur_lba_op_timestamp = 0
+
+    def incr_lba_op_timestamp(self):
+        self.cur_lba_op_timestamp += 1
+
 
 class OutOfBandAreas(object):
     """
@@ -148,6 +166,12 @@ class OutOfBandAreas(object):
 
         return lpns
 
+    def is_any_page_valid(self, block):
+        ppn_start, ppn_end = self.conf.block_to_page_range(block)
+        for ppn in range(ppn_start, ppn_end):
+            if self.states.is_page_valid(ppn):
+                return True
+        return False
 
 class BlockPool(object):
     def __init__(self, confobj):
@@ -215,21 +239,25 @@ class MappingBase(object):
     This class defines a __init__() that passes in necessary objects to the
     mapping object.
     """
-    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
+            global_helper_obj
+            ):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
         self.block_pool = block_pool
         self.recorder = recorderobj
+        self.global_helper = global_helper_obj
 
 class MappingManager(MappingBase):
-    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
+            global_helper_obj):
         super(MappingManager, self).__init__(confobj, block_pool, flashobj,
-                oobobj, recorderobj)
+                oobobj, recorderobj, global_helper_obj)
         self.data_block_mapping_table = DataBlockMappingTable(confobj,
-                block_pool, flashobj, oobobj, recorderobj)
+                block_pool, flashobj, oobobj, recorderobj, global_helper_obj)
         self.log_mapping_table = LogMappingTable(confobj,
-                block_pool, flashobj, oobobj, recorderobj)
+                block_pool, flashobj, oobobj, recorderobj, global_helper_obj)
 
     def __str__(self):
         ret = []
@@ -264,27 +292,35 @@ class MappingManager(MappingBase):
             return False, ppn, PPN_NOT_VALID # in data block but not exist
 
 class DataBlockMappingTable(MappingBase):
-    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
+            global_helper_obj):
         super(DataBlockMappingTable, self).__init__(confobj, block_pool, flashobj,
-                oobobj, recorderobj)
+                oobobj, recorderobj, global_helper_obj)
 
         self.logical_to_physical_block = {}
 
     def lbn_to_pbn(self, lbn):
-        return self.logical_to_physical_block.get(lbn, PHYSICAL_BLK_NOT_EXIST)
+        """
+        Return Found, ppn
+        """
+        pbn = self.logical_to_physical_block.get(lbn, PHYSICAL_BLK_NOT_EXIST)
+        if pbn == PHYSICAL_BLK_NOT_EXIST:
+            return False, None
+        else:
+            return True, pbn
 
     def lpn_to_ppn(self, lpn):
         """
         Note that the return ppn may not be valid. The caller needs to check.
         """
         logical_block, off = self.conf.page_to_block_off(lpn)
-        physical_block = self.lbn_to_pbn(logical_block)
-        if physical_block == PHYSICAL_BLK_NOT_EXIST:
+        found, pbn = self.lbn_to_pbn(logical_block)
+        if not found:
             return PHYSICAL_BLK_NOT_EXIST
 
         # Now we know the physical block exist, but we still need to check if
         # the corresponding page is valid or not
-        ppn = self.conf.block_off_to_page(physical_block, off)
+        ppn = self.conf.block_off_to_page(pbn, off)
         return ppn
 
     def add_mapping(self, lbn, pbn):
@@ -303,13 +339,16 @@ class DataGroupInfo(object):
     log page mapping table. The problem is you need to do bookkeeping
     for info like: the current/next page to program.
     """
-    def __init__(self, confobj):
+    def __init__(self, confobj, global_helper_obj):
         self.conf = confobj
+        self.global_helper = global_helper_obj
+
         self.page_map = {} # lpn->ppn
         self.log_blocks = []
         # offset within the data group
         self.last_programmed_offset = -1
         self.max_log_pages = self.conf.nkftl_max_n_log_pages_in_data_group()
+        self.block_use_time = {} # log physical block num -> time of lba write
 
     def clear(self):
         """
@@ -318,6 +357,7 @@ class DataGroupInfo(object):
         self.page_map.clear()
         del self.log_blocks[:]
         self.last_programmed_offset = -1
+        self.block_use_time.clear()
 
     def add_mapping(self, lpn, ppn):
         """
@@ -325,6 +365,13 @@ class DataGroupInfo(object):
         need keeping everything, add one data structure.
         """
         self.page_map[lpn] = ppn
+
+    def update_block_use_time(self, blocknum):
+        """
+        blocknum is a log block.
+        The time will be used when garbage collecting
+        """
+        self.block_use_time[blocknum] = self.global_helper.cur_lba_op_timestamp
 
     def add_log_block(self, block_num):
         """
@@ -388,9 +435,10 @@ class DataGroupInfo(object):
         return '\n'.join(ret)
 
 class LogMappingTable(MappingBase):
-    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
+            global_helper_obj):
         super(LogMappingTable, self).__init__(confobj, block_pool, flashobj,
-                oobobj, recorderobj)
+                oobobj, recorderobj, global_helper_obj)
 
         self.dgn_to_data_group_info = {} # dgn -> data group info
 
@@ -410,7 +458,7 @@ class LogMappingTable(MappingBase):
         """
         dgn = self.conf.nkftl_data_group_number_of_lpn(lpn)
         data_group_info = self.dgn_to_data_group_info.setdefault(dgn,
-            DataGroupInfo(self.conf))
+            DataGroupInfo(self.conf, self.global_helper))
         data_group_info.page_map[lpn] = ppn
 
     def add_log_block(self, dgn, block_num):
@@ -421,7 +469,7 @@ class LogMappingTable(MappingBase):
 
     def next_ppn_to_program(self, dgn):
         page_map = self.dgn_to_data_group_info.setdefault(dgn,
-            DataGroupInfo(self.conf))
+            DataGroupInfo(self.conf, self.global_helper))
         return page_map.next_ppn_to_program()
 
     def lpn_to_ppn(self, lpn):
@@ -444,6 +492,7 @@ class LogMappingTable(MappingBase):
                 self.conf['flash_npage_per_block'] == 0, \
                 "last_programmed_offset + 1:{}".format(data_group_info.last_programmed_offset + 1)
         data_group_info.last_programmed_offset -= self.conf['flash_npage_per_block']
+        del data_group_info.block_use_time[log_block_num]
 
     def remove_lpn(self, lpn):
         """
@@ -456,6 +505,89 @@ class LogMappingTable(MappingBase):
 
         del self.dgn_to_data_group_info[dgn].page_map[lpn]
 
+class GcDecider(object):
+    def __init__(self, confobj, block_pool, recorderobj):
+        self.conf = confobj
+        self.block_pool = block_pool
+        self.recorder = recorderobj
+
+        self.high_watermark = self.conf['nkftl']['GC_threshold_ratio'] * \
+            self.conf['flash_num_blocks']
+        self.low_watermark = self.conf['nkftl']['GC_low_threshold_ratio'] * \
+            self.conf['flash_num_blocks']
+
+        self.call_index = -1
+
+    def refresh(self):
+        """
+        TODO: this class needs refactoring.
+        """
+        self.call_index = -1
+        self.last_used_blocks = None
+        self.freeze_count = 0
+
+    def need_cleaning(self):
+        "The logic is a little complicated"
+        self.call_index += 1
+
+        n_used_blocks = self.block_pool.total_used_blocks()
+
+        if self.call_index == 0:
+            # clean when above high_watermark
+            ret = n_used_blocks > self.high_watermark
+        else:
+            if self.freezed_too_long(n_used_blocks):
+                ret = False
+                print 'freezed too long, stop GC'
+            else:
+                # Is it higher than low watermark?
+                ret = n_used_blocks > self.low_watermark
+        return ret
+
+    def improved(self, cur_n_used_blocks):
+        """
+        wether we get some free blocks since last call of this function
+        """
+        if self.last_used_blocks == None:
+            ret = True
+        else:
+            # common case
+            ret = cur_n_used_blocks < self.last_used_blocks
+
+        self.last_used_blocks = cur_n_used_blocks
+        return ret
+
+    def freezed_too_long(self, cur_n_used_blocks):
+        if self.improved(cur_n_used_blocks):
+            self.freeze_count = 0
+            ret = False
+        else:
+            self.freeze_count += 1
+
+            if self.freeze_count > 2 * self.conf['flash_npage_per_block']:
+                ret = True
+            else:
+                ret = False
+
+        return ret
+
+
+class BlockInfo(object):
+    """
+    This is for sorting blocks to clean the victim.
+    """
+    def __init__(self, data_group_no, log_block_num, last_used_time):
+        self.data_group_no = data_group_no
+        self.log_block_num = log_block_num
+        self.last_used_time = last_used_time
+
+    def __comp__(self, other):
+        """
+        Low number will be retrieved first in priority queue
+        """
+        return cmp(self.last_used_time, other.last_used_time)
+
+
 class GarbageCollector(object):
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
             mappingmanagerobj):
@@ -465,6 +597,63 @@ class GarbageCollector(object):
         self.block_pool = block_pool
         self.recorder = recorderobj
         self.mapping_manager = mappingmanagerobj
+
+        self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
+
+    def try_gc(self):
+        triggered = False
+
+        self.decider.refresh()
+        while self.decider.need_cleaning():
+            if self.decider.call_index == 0:
+                triggered = True
+                self.recorder.count_me("GC", "invoked")
+                print 'GC is triggerred', self.block_pool.used_ratio(), \
+                    'freeblocks:', len(self.block_pool.freeblocks)
+                block_iter = self.victim_blocks_iter()
+                blk_cnt = 0
+            # victim_type, victim_block, valid_ratio = self.next_victim_block()
+            # victim_type, victim_block, valid_ratio = \
+                # self.next_victim_block_benefit_cost()
+            try:
+                blockinfo = block_iter.next()
+            except StopIteration:
+                print 'GC stoped from StopIteration exception'
+                self.recorder.count_me("GC", "StopIteration")
+                # high utilization, raise watermarkt to reduce GC attempts
+                self.decider.raise_high_watermark()
+                # nothing to be cleaned
+                break
+
+            self.merge_log_block(blockinfo.log_block_num)
+
+            blk_cnt += 1
+
+        if triggered:
+            print 'GC is finished', self.block_pool.used_ratio(), \
+                blk_cnt, 'collected', \
+                'freeblocks:', len(self.block_pool.freeblocks)
+            # raise RuntimeError("intentional exit")
+
+
+    def victim_blocks_iter(self):
+        """
+        It goes through all log blocks and sort them. It yields the
+        least recently used block first.
+        """
+        priority_q = Queue.PriorityQueue()
+
+        for data_group_no, data_group_info in self.mapping_manager\
+            .log_mapping_table.items():
+            for log_block_num in data_group_info.log_blocks:
+                blk_info = BlockInfo(data_group_no = data_group_no,
+                    log_block_num = log_block_num,
+                    last_used_time = data_group_info.block_use_time[log_block_num])
+                priority_q.put(blk_info)
+
+        while not priority_q.empty():
+            b_info =  priority_q.get()
+            yield b_info
 
     def merge_log_block(self, log_block_num):
         """
@@ -497,7 +686,7 @@ class GarbageCollector(object):
         there should be no log blocks remaining for this data group.
         """
         print '======= collect_garbage_for_data_group()'
-        print str(self.mapping_manager)
+        # print str(self.mapping_manager)
 
         # We make local copy since we may need to modify the original data
         # in the loop
@@ -514,7 +703,7 @@ class GarbageCollector(object):
         self.mapping_manager.log_mapping_table.clear_data_group_info(
             data_group_no)
         print '=========== after garbage collection ========'
-        print str(self.mapping_manager)
+        # print str(self.mapping_manager)
 
     def full_merge(self, log_block_num):
         """
@@ -522,6 +711,8 @@ class GarbageCollector(object):
         logical blocks. For each logical block we find in this log block, we
         iterate all LPNs to and copy their data to a new free block.
         """
+
+        # Find all the logical blocks
         ppn_start, ppn_end = self.conf.block_to_page_range(log_block_num)
         logical_blocks = set()
         for ppn in range(ppn_start, ppn_end):
@@ -531,6 +722,7 @@ class GarbageCollector(object):
                 logical_block, _ = self.conf.page_to_block_off(lpn)
                 logical_blocks.add(logical_block)
 
+        # Move all the pages of a logical block to new block
         for logical_block in logical_blocks:
             self.aggregate_logical_block(logical_block, 'full_merge')
 
@@ -546,10 +738,11 @@ class GarbageCollector(object):
 
         lpn_start, lpn_end = self.conf.block_to_page_range(logical_block_num)
         for lpn in range(lpn_start, lpn_end):
-            found, src_ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
             in_block_page_off = lpn - lpn_start
             dst_ppn = self.conf.block_off_to_page(dst_phy_block_num,
                 in_block_page_off)
+
+            found, src_ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
             if found == True:
                 data = self.flash.page_read(src_ppn, tag)
                 self.flash.page_write(dst_ppn, tag, data = data)
@@ -557,8 +750,6 @@ class GarbageCollector(object):
                 print 'Moved lpn:{} (data:{}, src_ppn:{}) to dst_ppn:{}'.format(
                     lpn, data, src_ppn, dst_ppn)
 
-                if loc == IN_LOG_BLOCK:
-                    self.mapping_manager.log_mapping_table.remove_lpn(lpn)
                 self.oob.new_write(lpn = lpn, old_ppn = src_ppn,
                     new_ppn = dst_ppn)
             else:
@@ -634,11 +825,15 @@ class GarbageCollector(object):
         """
         Copy logical pages to log_block_num, then invalidate the previous
         """
+
+        data_group_no = self.conf.nkftl_data_group_number_of_logical_block(
+            logical_block_num)
+        # Copy
         for offset in range(first_free_offset,
                 self.conf['flash_npage_per_block']):
             lpn = self.conf.block_off_to_page(logical_block_num, offset)
-            has_it, src_ppn, location = self.mapping_manager.lpn_to_ppn(lpn)
-            assert has_it
+            found, src_ppn, location = self.mapping_manager.lpn_to_ppn(lpn)
+            assert found
             assert location == IN_DATA_BLOCK
 
             dst_ppn = self.conf.block_off_to_page(log_block_num, offset)
@@ -646,17 +841,33 @@ class GarbageCollector(object):
             data = self.flash.page_read(src_ppn, 'partial_merge')
             self.flash.page_write(dst_ppn, 'partial_merge', data = data)
 
-            # src_ppn could be in data block or in log block
-            # if it is in data block, we only need to invalidate it
-            self.oob.states.invalidate_page(src_ppn)
+            self.mapping_manager.log_mapping_table\
+                .dgn_to_data_group_info[data_group_no].add_mapping(
+                lpn = lpn, ppn = dst_ppn)
+            self.mapping_manager.log_mapping_table\
+                .dgn_to_data_group_info[data_group_no]\
+                .last_programmed_offset += 1
+            self.oob.new_write(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
 
+        # Handling the old data block, and data block mapping
         # Now all pages belong to logical_block_num is in log_block_num
         # We can erase the old data block
-        phy_block_num = self.mapping_manager.data_block_mapping_table\
-                .lbn_to_pbn[logical_block_num]
+        found, phy_block_num = self.mapping_manager.data_block_mapping_table\
+                .lbn_to_pbn(logical_block_num)
+        self.oob.erase_block(phy_block_num)
         self.flash.block_erase(phy_block_num)
-        del self.mapping_manager.data_block_mapping_table\
-                .lbn_to_pbn[logical_block_num]
+        self.block_poo.move_used_data_block_to_free(phy_block_num)
+
+        self.mapping_manager.data_block_mapping_table\
+                .add_mapping(lbn = logical_block_num,
+                pbn = log_block_num)
+
+        # Handle log mapping
+        # log_block_num must be the last log block in log_blocks[]
+        self.mapping_manager.log_mapping_table.remove_log_block(
+                data_group_no = data_group_no,
+                log_block_num = log_block_num,
+                logical_block_num = logical_block)
 
     def is_switch_mergable(self, log_block_num):
         """
@@ -695,18 +906,24 @@ class GarbageCollector(object):
         mergable
         2. Find and erase the old physical block corresponding to the logical
         block in Data Block Mapping Table, put it to free block pool
-        3. Update the mapping logical block -> log_block_num
-        4. Remove log_block_num from log mapping table
+        Update the mapping logical block -> log_block_num
+        5. Update data group info:
+             update last_programmed_offset -= flash_npage_per_block
+             remove log_block_num from log_blocks
+             remove all page mappings in page_map
+             remove block_use_time[log_block_num]
         """
-        # erase
-        old_physical_block = self.mapping_manager.data_block_mapping_table\
+        # erase old data block
+        found, old_physical_block = self.mapping_manager.data_block_mapping_table\
             .lbn_to_pbn(logical_block)
-        print 'old_physical_block', old_physical_block
-        if old_physical_block != PHYSICAL_BLK_NOT_EXIST:
+
+        if found:
             # clean up old_physical_block
             self.oob.erase_block(old_physical_block)
             self.flash.block_erase(old_physical_block, 'switch.merge')
             self.block_pool.move_used_log_block_to_free(old_physical_block)
+            # self.mapping_manager.data_block_mapping_table.remove_mapping(
+                # logical_block)
 
         # update data block mapping table
         # This will override the old mapping if there is one
@@ -734,6 +951,7 @@ class Nkftl(ftlbuilder.FtlBuilder):
 
         self.block_pool = BlockPool(confobj)
         self.oob = OutOfBandAreas(confobj)
+        self.global_helper = GlobalHelper(confobj)
 
         ###### the managers ######
         self.mapping_manager = MappingManager(
@@ -741,7 +959,8 @@ class Nkftl(ftlbuilder.FtlBuilder):
             block_pool = self.block_pool,
             flashobj = flashobj,
             oobobj=self.oob,
-            recorderobj = recorderobj
+            recorderobj = recorderobj,
+            global_helper_obj = self.global_helper
             )
 
         self.garbage_collector = GarbageCollector(
@@ -758,12 +977,19 @@ class Nkftl(ftlbuilder.FtlBuilder):
         Look for log blocks first since they have the latest data
         Then go to data blocks
         """
+        self.global_helper.incr_lba_op_timestamp()
 
         hasit, ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
         print hasit, ppn, loc
         print self.flash.data
         if hasit == True:
             content = self.flash.page_read(ppn, 'user.read')
+            if loc == IN_LOG_BLOCK:
+                phy_block_num, _ = self.conf.page_to_block_off(ppn)
+                data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
+                self.mapping_manager.log_mapping_table\
+                    .dgn_to_data_group_info[data_group_no]\
+                    .update_block_use_time(phy_block_num)
         else:
             content = None
 
@@ -784,17 +1010,16 @@ class Nkftl(ftlbuilder.FtlBuilder):
         5. Add the mapping of LPN to PPN to LPMT
         6. if we are out of free blocks, start garbage collection.
         """
+        self.global_helper.incr_lba_op_timestamp()
+
+        # if lpn == 1410:
+            # utils.breakpoint()
+
         print 'lba_write', lpn, 'data=', data
         self.recorder.write_file('tmp.lba.trace.txt', operation = 'write',
             page = lpn)
 
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
-
-        # find old ppn, we have to invalidate it
-        # Try log block first, then data block, it may not exist
-        hasit, old_ppn, _ = self.mapping_manager.lpn_to_ppn(lpn)
-        if hasit == False:
-            old_ppn = None
 
         found, new_ppn = self.mapping_manager.log_mapping_table\
                 .next_ppn_to_program(data_group_no)
@@ -817,6 +1042,15 @@ class Nkftl(ftlbuilder.FtlBuilder):
             found, new_ppn = self.mapping_manager.log_mapping_table\
                 .next_ppn_to_program(data_group_no)
 
+        # find old ppn, we have to invalidate it
+        # Try log block first, then data block, it may not exist
+        # We have to find the old_ppn right before writing the new one.
+        # We cannot do it before the loop above because merging may change
+        # the location of the old ppn
+        found, old_ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
+        if found == False:
+            old_ppn = None
+
         # OOB
         print lpn, old_ppn, new_ppn
         self.oob.new_lba_write(lpn = lpn, old_ppn = old_ppn,
@@ -824,13 +1058,27 @@ class Nkftl(ftlbuilder.FtlBuilder):
 
         self.flash.page_write(new_ppn, DATA_USER, data = data)
 
+        phy_block, _ = self.conf.page_to_block_off(new_ppn)
+        self.mapping_manager.log_mapping_table\
+            .dgn_to_data_group_info[data_group_no]\
+            .update_block_use_time(phy_block)
+
         # this may just update the current mapping, instead of 'add'ing.
         self.mapping_manager.log_mapping_table.add_log_mapping(lpn, new_ppn)
 
-        print str(self.mapping_manager)
-
     def lba_discard(self, lpn):
-        pass
+        self.global_helper.incr_lba_op_timestamp()
+
+        print 'lba_discard', lpn
+        data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
+
+        found, ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
+        print found, ppn, loc
+        if found == True:
+            if loc == IN_LOG_BLOCK:
+                self.mapping_manager.log_mapping_table.remove_lpn(lpn)
+            self.oob.wipe_ppn(ppn)
+
 
 if __name__ == '__main__':
     pass

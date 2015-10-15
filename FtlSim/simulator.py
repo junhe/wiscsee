@@ -102,6 +102,10 @@ class Simulator(object):
                 event['size'])
             for page in pages:
                 self.ftl.lba_discard(page)
+                try:
+                    del self.lpn_to_data[page]
+                except KeyError:
+                    pass
 
         elif event['operation'] == 'enable_recorder':
             self.ftl.enable_recording()

@@ -114,12 +114,62 @@ class Manual(LBAWorkloadGenerator):
 
         return events
 
+    def test4(self):
+        w = 'write'
+        r = 'read'
+        d = 'discard'
+        events = [
+                (w, 1),
+                (d, 1),
+                (r, 1),
+                (d, 2),
+                (w, 2),
+                (r, 2)
+                ]
 
+        return events
+
+    def test1410(self):
+        w = 'write'
+        r = 'read'
+        d = 'discard'
+        events = [
+                (w, 1),
+                (r, 1),
+                (w, 1),
+                (r, 1),
+                (d, 1),
+                (r, 1)
+                ]
+
+        return events
+
+
+    def test_random(self):
+        w = 'write'
+        r = 'read'
+        d = 'discard'
+        ops = [w, r, d]
+
+        events = []
+        maxpage = 0
+        for i in range(10000):
+            op = random.choice(ops)
+            page = int(random.random() * self.conf.total_num_pages() * 0.2)
+            if maxpage < page:
+                maxpage = page
+            events.append( (op, page) )
+
+        for page in range(maxpage):
+            events.append( (r, page) )
+
+        return events
 
     def __iter__(self):
         yield "enable_recorder 0 0"
 
-        events = self.test3()
+        # events = self.test1410()
+        events = self.test_random()
 
         for op, lpn in events:
             offset = lpn * self.conf['flash_page_size']

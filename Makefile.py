@@ -1248,6 +1248,9 @@ def get_default_config():
         "nkftl": {
             'n_blocks_in_data_group': 4, # number of blocks in a data block group
             'max_blocks_in_log_group': 2, # max number of blocks in a log block group
+
+            "GC_threshold_ratio": 0.95,
+            "GC_low_threshold_ratio": 0.9,
         },
 
         ############## hybridmap ############
@@ -1320,10 +1323,10 @@ def get_default_config():
         ############## LBAGENERATOR  #########
         # if you choose LBAGENERATOR for workload_src, the following will
         # be used
-        "lba_workload_class"    : "Sequential",
+        # "lba_workload_class"    : "Sequential",
         # "lba_workload_class"    : "HotCold",
         # "lba_workload_class"    : "Random",
-        # "lba_workload_class"    : "Manual",
+        "lba_workload_class"    : "Manual",
         "LBA" : {
             "lba_to_flash_size_ratio": 0.05,
             "write_to_lba_ratio"     : 1,    #how many writes you want to have
@@ -1421,7 +1424,7 @@ def simple_lba_test():
     metadata_dic = {}
     metadata_dic['targetdir'] = '/tmp/results'
     metadata_dic['filesystem'] = 'none'
-    metadata_dic['loop_dev_size_mb'] = 16
+    metadata_dic['loop_dev_size_mb'] = 1
     conf.update(metadata_dic)
 
     conf.set_flash_num_blocks_by_bytes(16*2**20)
