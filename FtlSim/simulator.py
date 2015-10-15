@@ -11,6 +11,7 @@ import dmftl
 import flash
 import hmftl
 import nkftl
+import nkftl2
 import pmftl
 import recorder
 import tpftl
@@ -54,6 +55,8 @@ class Simulator(object):
             ftl_class = tpftl.Tpftl
         elif self.conf['ftl_type'] == 'nkftl':
             ftl_class = nkftl.Nkftl
+        elif self.conf['ftl_type'] == 'nkftl2':
+            ftl_class = nkftl2.Nkftl
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))

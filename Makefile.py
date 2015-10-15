@@ -1221,7 +1221,7 @@ def get_default_config():
         "time"                  : None,
         "subexpname"            : "default-subexp",
         # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl, nkftl
-        "ftl_type"              : "nkftl",
+        "ftl_type"              : "nkftl2",
         "sector_size"           : 512,
 
         ############## For FtlSim ######

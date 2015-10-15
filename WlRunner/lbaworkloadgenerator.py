@@ -169,7 +169,8 @@ class Manual(LBAWorkloadGenerator):
         yield "enable_recorder 0 0"
 
         # events = self.test1410()
-        events = self.test_random()
+        # events = self.test_random()
+        events = self.test1()
 
         for op, lpn in events:
             offset = lpn * self.conf['flash_page_size']
