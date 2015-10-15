@@ -90,7 +90,7 @@ class Manual(LBAWorkloadGenerator):
 
         return events
 
-    def test3(self):
+    def test33(self):
         """
         To trigger partial merge
         """
@@ -170,7 +170,7 @@ class Manual(LBAWorkloadGenerator):
 
         # events = self.test1410()
         # events = self.test_random()
-        events = self.test1()
+        events = self.test2()
 
         for op, lpn in events:
             offset = lpn * self.conf['flash_page_size']
