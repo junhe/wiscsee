@@ -2,6 +2,7 @@ import bidict
 import copy
 from collections import deque
 import datetime
+import Queue
 
 import config
 import ftlbuilder
@@ -257,6 +258,7 @@ class SingleLogBlockInfo(object):
 
     def __str__(self):
         ret = []
+        ret.append('---------- SingleLogBlockInfo')
         ret.append('flash_block_num:{}'.format(self.flash_block_num))
         ret.append('last_used_time :{}'.format(self.last_used_time))
         ret.append('last_programmed_offset:{}'.format(
@@ -276,7 +278,7 @@ class SingleLogBlockInfo(object):
         if self.last_programmed_offset + 1 < self.conf['flash_npage_per_block']:
             self.last_programmed_offset += 1
             return True, self.conf.block_off_to_page(self.flash_block_num,
-                    self.last_programmed_offset + 1)
+                    self.last_programmed_offset)
         else:
             return False, None
 
@@ -404,9 +406,10 @@ class LogGroupInfo(object):
 
     def __str__(self):
         ret = []
+        ret.append("------- LogGroupInfo")
         ret.append("__page_map:" + str(self.__page_map))
         for logblock, info in self.__log_blocks.items():
-            ret.append("{}{}".format(logblock, str(info)))
+            ret.append("Logblock {}{}".format(logblock, str(info)))
         ret.append("cur_log_block:{}".format(self.__cur_log_block))
         return '\n'.join(ret)
 
@@ -421,10 +424,10 @@ class MappingManager(MappingBase):
 
     def __str__(self):
         ret = []
-        ret.append('-------------------------- MAPPING MANAGER --------------------------')
-        ret.append('--------- data block mapping table ------------')
+        ret.append('========================= MAPPING MANAGER ===========================')
+        ret.append('------------------------ Data Block Mapping Table -------------------')
         ret.append(str(self.data_block_mapping_table))
-        ret.append('--------- log mapping table -------------------')
+        ret.append('------------------------ Log Block Mapping Table --------------------')
         ret.append(str(self.log_mapping_table))
         ret.append('=====================================================================')
 
@@ -650,7 +653,7 @@ class GarbageCollector(object):
         priority_q = Queue.PriorityQueue()
 
         for data_group_no, log_group_info in self.mapping_manager\
-            .log_mapping_table.items():
+            .log_mapping_table.log_group_info.items():
             for log_pbn, single_log_block_info in \
                     log_group_info.log_blocks().items():
                 blk_info = BlockInfo(data_group_no = data_group_no,
@@ -962,7 +965,7 @@ class GarbageCollector(object):
 
         # update data block mapping table
         # This will override the old mapping if there is one
-        self.mapping_manager.data_block_mapping_table.add_mapping(
+        self.mapping_manager.data_block_mapping_table.add_data_block_mapping(
             logical_block, log_pbn)
 
         # Update log mapping table
@@ -1015,9 +1018,7 @@ class Nkftl(ftlbuilder.FtlBuilder):
         """
         self.global_helper.incr_lba_op_timestamp()
 
-        hasit, ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
-        print hasit, ppn, loc
-        print self.flash.data
+        hasit, ppn, loc = self.lpn_to_ppn(lpn)
         if hasit == True:
             content = self.flash.page_read(ppn, 'user.read')
             if loc == IN_LOG_BLOCK:
@@ -1057,18 +1058,12 @@ class Nkftl(ftlbuilder.FtlBuilder):
                 .next_ppn_to_program(data_group_no)
 
         # loop until we find a new ppn to program
-        cnt = 0
         while found == False:
-            cnt += 1
-            if cnt == 5:
-                utils.breakpoint()
-            print 'new_ppn', new_ppn
             if new_ppn == ERR_NEED_NEW_BLOCK:
                 new_block = self.block_pool.pop_a_free_block_to_log_blocks()
                 self.mapping_manager.log_mapping_table.add_log_block(
                     data_group_no, new_block)
             elif new_ppn == ERR_NEED_MERGING:
-                print 'THIS IS NEEED MERGING'
                 self.garbage_collector.collect_garbage_for_data_group(
                     data_group_no)
 
@@ -1085,7 +1080,7 @@ class Nkftl(ftlbuilder.FtlBuilder):
             old_ppn = None
 
         # OOB
-        print lpn, old_ppn, new_ppn
+        # print "lpn{}, old_ppn{}, new_ppn{}".format(lpn, old_ppn, new_ppn)
         self.oob.remap(lpn = lpn, old_ppn = old_ppn, new_ppn = new_ppn)
 
         self.flash.page_write(new_ppn, DATA_USER, data = data)
@@ -1101,6 +1096,7 @@ class Nkftl(ftlbuilder.FtlBuilder):
 
         self.garbage_collector.try_gc()
 
+
     def lba_discard(self, lpn):
         self.global_helper.incr_lba_op_timestamp()
 
@@ -1108,7 +1104,6 @@ class Nkftl(ftlbuilder.FtlBuilder):
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
         found, ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
-        print found, ppn, loc
         if found == True:
             if loc == IN_LOG_BLOCK:
                 self.mapping_manager.log_mapping_table.remove_lpn(

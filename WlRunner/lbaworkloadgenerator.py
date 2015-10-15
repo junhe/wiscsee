@@ -170,7 +170,7 @@ class Manual(LBAWorkloadGenerator):
 
         # events = self.test1410()
         # events = self.test_random()
-        events = self.test2()
+        events = self.test3()
 
         for op, lpn in events:
             offset = lpn * self.conf['flash_page_size']
