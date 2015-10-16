@@ -829,6 +829,17 @@ class GarbageCollector(object):
         for logical_block in logical_blocks:
             self.aggregate_logical_block(logical_block, 'full_merge')
 
+    def debug(self):
+        print self.block_pool.visual()
+        print 'block_pool.freeblocks', self.block_pool.freeblocks
+        print 'block_pool.log_usedblocks', self.block_pool.log_usedblocks
+        print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
+        print 'oob.states', self.oob.display_bitmap_by_block()
+        print 'oob.ppn_to_lpn', self.oob.ppn_to_lpn
+        print str(self.mapping_manager)
+
+
+
     def aggregate_logical_block(self, lbn, tag):
         """
         This function gathers all the logical pages in lbn
