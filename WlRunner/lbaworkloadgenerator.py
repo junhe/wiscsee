@@ -153,9 +153,9 @@ class Manual(LBAWorkloadGenerator):
 
         events = []
         maxpage = 0
-        for i in range(10240):
+        for i in range(100000):
             op = random.choice(ops)
-            page = int(random.random() * 16)
+            page = int(random.random() * 32)
             if maxpage < page:
                 maxpage = page
             events.append( (op, page) )
