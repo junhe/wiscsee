@@ -685,7 +685,7 @@ class GarbageCollector(object):
                 blk_info = BlockInfo(
                     block_type = TYPE_DATA_BLOCK,
                     block_num = data_block,
-                    last_used_timeo = -1)  # high priority
+                    last_used_time = -1)  # high priority
                 priority_q.put(blk_info)
 
         for data_group_no, log_group_info in self.mapping_manager\
@@ -767,7 +767,7 @@ class GarbageCollector(object):
             log_pbn)
         # print 'partial merge  is_mergable:', is_mergable, 'logical_block:', logical_block
         if is_mergable == True:
-            partial_merge(log_pbn = log_pbn,
+            self.partial_merge(log_pbn = log_pbn,
                 lbn = logical_block,
                 first_free_offset = offset)
             return
@@ -1025,7 +1025,7 @@ class GarbageCollector(object):
             .add_data_block_mapping(lbn = lbn, pbn = log_pbn)
 
         # Remove log_pbn from log group
-        self.mapping_manager.log_mapping_table.log_group_info.remove_log_block(
+        self.mapping_manager.log_mapping_table.remove_log_block(
             data_group_no = data_group_no, log_pbn = log_pbn)
 
     def is_switch_mergable(self, log_pbn):
