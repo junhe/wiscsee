@@ -168,6 +168,14 @@ class BlockPool(object):
         self.log_usedblocks.append(blocknum)
         return blocknum
 
+    def move_used_log_to_data_block(self, blocknum):
+        self.log_usedblocks.remove(blocknum)
+        self.data_usedblocks.append(blocknum)
+
+    def move_used_data_to_log_block(self, blocknum):
+        self.data_usedblocks.remove(blocknum)
+        self.log_usedblocks.append(blocknum)
+
     def pop_a_free_block_to_data_blocks(self):
         "take one block from freelist and add it to data block list"
         blocknum = self.pop_a_free_block()
@@ -1088,6 +1096,8 @@ class GarbageCollector(object):
         self.mapping_manager.log_mapping_table.remove_log_block(
                 data_group_no = data_group_no,
                 log_pbn = log_pbn)
+        # Need to mark the log block as used data block now
+        self.block_pool.move_used_log_to_data_block(log_pbn)
 
 class Nkftl(ftlbuilder.FtlBuilder):
     """
