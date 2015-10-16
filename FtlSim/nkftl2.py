@@ -1073,7 +1073,7 @@ class GarbageCollector(object):
             # clean up old_physical_block
             self.oob.erase_block(old_physical_block)
             self.flash.block_erase(old_physical_block, 'switch.merge')
-            self.block_pool.free_used_log_block(old_physical_block)
+            self.block_pool.free_used_data_block(old_physical_block)
             # self.mapping_manager.data_block_mapping_table.remove_mapping(
                 # logical_block)
 
