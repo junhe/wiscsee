@@ -9,9 +9,6 @@ import ftlbuilder
 import recorder
 import utils
 
-
-
-
 """
 ############## Checklist ###############
 When you conduct an operation, consider how it affects the following data
@@ -46,6 +43,7 @@ ERR_NEED_NEW_BLOCK, ERR_NEED_MERGING = ('ERR_NEED_NEW_BLOCK', 'ERR_NEED_MERGING'
 DATA_USER = "data.user"
 IN_LOG_BLOCK = "IN_LOG_BLOCK"
 IN_DATA_BLOCK = "IN_DATA_BLOCK"
+TYPE_LOG_BLOCK, TYPE_DATA_BLOCK = ('TYPE_LOG_BLOCK', 'TYPE_DATA_BLOCK')
 
 class GlobalHelper(object):
     """
@@ -73,6 +71,20 @@ class OutOfBandAreas(object):
         # ppn->lpn mapping stored in OOB, Note that for translation pages, this
         # mapping is ppn -> m_vpn
         self.ppn_to_lpn = {}
+
+    def display_bitmap_by_block(self):
+        npages_per_block = self.conf['flash_npage_per_block']
+        nblocks = self.conf['flash_num_blocks']
+        totalpages =  nblocks * npages_per_block
+        line = ''
+        for i in range(totalpages):
+            block_index = i / npages_per_block
+            rem = i % npages_per_block
+            if rem == 0:
+                line += ' ' + str(block_index) + ':'
+            line += str(self.states.page_state_human(i)) + '|'
+
+        return line
 
     def translate_ppn_to_lpn(self, ppn):
         return self.ppn_to_lpn[ppn]
@@ -145,7 +157,7 @@ class BlockPool(object):
             blocknum = self.freeblocks.popleft()
         else:
             # nobody has free block
-            utils.breakpoint()
+            # utils.breakpoint()
             raise RuntimeError('No free blocks in device!!!!')
 
         return blocknum
@@ -208,7 +220,7 @@ class DataBlockMappingTable(MappingBase):
         super(DataBlockMappingTable, self).__init__(confobj, recorderobj,
             global_helper_obj)
 
-        self.logical_to_physical_block = {}
+        self.logical_to_physical_block = bidict.bidict()
 
     def lbn_to_pbn(self, lbn):
         """
@@ -244,6 +256,9 @@ class DataBlockMappingTable(MappingBase):
 
     def remove_data_block_mapping(self, lbn):
         del self.logical_to_physical_block[lbn]
+
+    def remove_data_block_mapping_by_pbn(self, pbn):
+        del self.logical_to_physical_block[:pbn]
 
     def __str__(self):
         return str(self.logical_to_physical_block)
@@ -586,10 +601,12 @@ class BlockInfo(object):
     """
     This is for sorting blocks to clean the victim.
     """
-    def __init__(self, data_group_no, log_pbn, last_used_time):
-        self.data_group_no = data_group_no
-        self.log_pbn = log_pbn
+    def __init__(self, block_type, block_num, last_used_time,
+            data_group_no = None):
+        self.block_type = block_type
+        self.block_num = block_num
         self.last_used_time = last_used_time
+        self.data_group_no = data_group_no
 
     def __comp__(self, other):
         """
@@ -634,7 +651,7 @@ class GarbageCollector(object):
                 # nothing to be cleaned
                 break
 
-            self.merge_log_block(blockinfo.log_pbn)
+            self.clean_block(blockinfo)
 
             blk_cnt += 1
 
@@ -649,28 +666,75 @@ class GarbageCollector(object):
         """
         It goes through all log blocks and sort them. It yields the
         least recently used block first.
+
+        TODO: You need to also consider data blocks!!!
         """
         priority_q = Queue.PriorityQueue()
+
+        for data_block in self.block_pool.log_usedblocks:
+            if not self.oob.is_any_page_valid(data_block):
+                # no page is valid
+                blk_info = BlockInfo(
+                    block_type = TYPE_DATA_BLOCK,
+                    block_num = data_block,
+                    last_used_timeo = -1)  # high priority
+                priority_q.put(blk_info)
 
         for data_group_no, log_group_info in self.mapping_manager\
             .log_mapping_table.log_group_info.items():
             for log_pbn, single_log_block_info in \
                     log_group_info.log_blocks().items():
-                blk_info = BlockInfo(data_group_no = data_group_no,
-                    log_pbn = log_pbn,
-                    last_used_time = single_log_block_info.last_used_time)
+                blk_info = BlockInfo(
+                    block_type = TYPE_LOG_BLOCK,
+                    block_num = log_pbn,
+                    last_used_time = single_log_block_info.last_used_time,
+                    data_group_no = data_group_no)
                 priority_q.put(blk_info)
 
         while not priority_q.empty():
             b_info =  priority_q.get()
             yield b_info
 
-    def merge_log_block(self, log_pbn):
+    def clean_data_block(self, data_block):
+        if data_block in self.block_pool.data_usedblocks and \
+            not self.oob.is_any_page_valid(data_block):
+            self.oob.erase_block(data_block)
+            self.flash.block_erase(data_block, 'gc')
+            # need to remove data block mapping
+            self.mapping_manager.data_block_mapping_table\
+                .remove_data_block_mapping_by_pbn(data_block)
+            self.block_pool.free_used_data_block(data_block)
+
+    def clean_block(self, blk_info):
+        if blk_info.block_type == TYPE_DATA_BLOCK:
+            self.clean_data_block(blk_info.block_num)
+        elif blk_info.block_type == TYPE_LOG_BLOCK:
+            self.merge_log_block(blk_info)
+
+    def merge_log_block(self, blk_info):
         """
+        0. If not valid page in log_pbn, simply erase and free it
         1. Try switch merge
         2. Try copy merge
         3. Try full merge
         """
+        log_pbn = blk_info.block_num
+
+        if not log_pbn in self.block_pool.log_usedblocks:
+            # it is quite dynamic, this log block may have been
+            # GCed with previous blocks
+            return
+
+        if not self.oob.is_any_page_valid(log_pbn):
+            self.oob.erase_block(log_pbn)
+            self.flash.block_erase(log_pbn, 'gc')
+            self.block_pool.free_used_log_block(log_pbn)
+            self.mapping_manager.log_mapping_table\
+                .remove_log_block(data_group_no = blk_info.data_group_no,
+                log_pbn = log_pbn)
+            print 'No valid page in block', log_pbn, 'freed'
+            return
+
         is_mergable, logical_block = self.is_switch_mergable(log_pbn)
         print 'switch merge  is_mergable:', is_mergable, 'logical_block:', logical_block
         if is_mergable == True:
@@ -708,8 +772,13 @@ class GarbageCollector(object):
                 .log_group_info[data_group_no].log_blocks().keys())
         for log_block in log_block_list:
             print 'merging log block ------>', log_block
-            self.merge_log_block(log_block)
-
+            print 'before merge', self.block_pool.visual()
+            self.merge_log_block(BlockInfo(
+                        block_type = TYPE_LOG_BLOCK,
+                        block_num = log_block,
+                        last_used_time = None,
+                        data_group_no = data_group_no))
+            print 'after  merge', self.block_pool.visual()
 
     def full_merge(self, log_pbn):
         """
@@ -718,20 +787,21 @@ class GarbageCollector(object):
         find in this log block, we iterate all LPNs to and copy their
         data to a new free block.
         """
-        print '------------------- full merge ------------------'
+        print '------------------- full merge {} ------------------'.format(log_pbn)
 
         # Find all the logical blocks
         ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
         logical_blocks = set()
         for ppn in range(ppn_start, ppn_end):
             is_valid = self.oob.states.is_page_valid(ppn)
+            print 'ppn {} is valid: {}'.format(ppn, is_valid)
             if is_valid == True:
                 lpn = self.oob.ppn_to_lpn[ppn]
                 logical_block, _ = self.conf.page_to_block_off(lpn)
                 logical_blocks.add(logical_block)
 
-        print logical_blocks
-        exit(1)
+        print 'logical_blocks', logical_blocks
+
         # Move all the pages of a logical block to new block
         for logical_block in logical_blocks:
             self.aggregate_logical_block(logical_block, 'full_merge')
@@ -757,8 +827,17 @@ class GarbageCollector(object):
         8. see if old_block has any valid page left, if not, erase the
         old flash block and free it. Also delete the mapping in log group info
 
+        Well, you need to also consider the case that lbn has no valid pages,
+        in which case you need to specifically remove the data block mapping
         """
         print '------------------------- aggre logical block -----------------------'
+        print self.block_pool.visual()
+        print 'block_pool.freeblocks', self.block_pool.freeblocks
+        print 'block_pool.log_usedblocks', self.block_pool.log_usedblocks
+        print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
+        print 'oob.states', self.oob.display_bitmap_by_block()
+        print str(self.mapping_manager)
+
         dst_phy_block_num = self.block_pool.pop_a_free_block_to_data_blocks()
 
         lpn_start, lpn_end = self.conf.block_to_page_range(lbn)
@@ -766,6 +845,7 @@ class GarbageCollector(object):
             in_block_page_off = lpn - lpn_start
             dst_ppn = self.conf.block_off_to_page(dst_phy_block_num,
                 in_block_page_off)
+            data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
             found, src_ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
             if found == True and self.oob.states.is_page_valid(src_ppn):
@@ -777,6 +857,12 @@ class GarbageCollector(object):
 
                 self.oob.remap(lpn = lpn, old_ppn = src_ppn,
                     new_ppn = dst_ppn)
+
+                # Now you've moved lpn, you need to remove lpn mapping if it is
+                # in log blocks
+                if loc == IN_LOG_BLOCK:
+                    self.mapping_manager.log_mapping_table.remove_lpn(
+                            data_group_no, lpn)
 
                 # After moving, you need to check if the source block of src_ppn
                 # is totally free. If it is, we have to erase it and put it to
@@ -790,14 +876,13 @@ class GarbageCollector(object):
                     if loc == IN_DATA_BLOCK:
                         self.block_pool.free_used_data_block(src_pbn)
                         lbn, _ = self.conf.page_to_block_off(lpn)
-                        self.data_block_mapping_table\
+                        self.mapping_manager.data_block_mapping_table\
                             .remove_data_block_mapping(lbn = lbn)
                     elif loc == IN_LOG_BLOCK:
                         self.block_pool.free_used_log_block(src_pbn)
-                        data_group_no = self.conf\
-                            .nkftl_data_group_number_of_lpn(lpn)
-                        self.log_mapping_table.remove_log_block(
-                            data_group_no = data_group_no, log_lbn = src_pbn)
+                        self.mapping_manager.log_mapping_table\
+                            .remove_log_block(data_group_no = data_group_no,
+                            log_pbn = src_pbn)
             else:
                 # This lpn does not exist, so we just invalidate the
                 # destination page. We have to do this because we can only
@@ -807,8 +892,21 @@ class GarbageCollector(object):
 
         # Now we have all the pages in new block, we make the new block
         # the data block for lbn
-        self.mapping_manager.data_block_mapping_table.add_mapping(
+        found, old_pbn = self.mapping_manager.data_block_mapping_table\
+            .lbn_to_pbn(lbn)
+        if found == True:
+            # old_pbn must not have any valid pages, so we free it
+            self.clean_data_block(old_pbn)
+        self.mapping_manager.data_block_mapping_table.add_data_block_mapping(
             lbn = lbn, pbn = dst_phy_block_num)
+
+        print '--------------------AFTER aggregate-------------------'
+        print self.block_pool.visual()
+        print 'block_pool.freeblocks', self.block_pool.freeblocks
+        print 'block_pool.log_usedblocks', self.block_pool.log_usedblocks
+        print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
+        print 'oob.states', self.oob.display_bitmap_by_block()
+        print str(self.mapping_manager)
 
     def is_partial_mergable(self, log_pbn):
         """
@@ -1081,6 +1179,7 @@ class Nkftl(ftlbuilder.FtlBuilder):
 
         # OOB
         # print "lpn{}, old_ppn{}, new_ppn{}".format(lpn, old_ppn, new_ppn)
+        # Note that this may create empty data block, which need to be cleaned
         self.oob.remap(lpn = lpn, old_ppn = old_ppn, new_ppn = new_ppn)
 
         self.flash.page_write(new_ppn, DATA_USER, data = data)
@@ -1094,8 +1193,14 @@ class Nkftl(ftlbuilder.FtlBuilder):
         self.mapping_manager.log_mapping_table.add_mapping(data_group_no,
             lpn, new_ppn)
 
-        self.garbage_collector.try_gc()
+        print 'AFTER WRITE block_pool', self.block_pool.visual()
+        print 'AFTER WRITE block_pool.freeblocks', self.block_pool.freeblocks
+        print 'AFTER WRITE block_pool.log_usedblocks', self.block_pool.log_usedblocks
+        print 'AFTER WRITE block_pool.data_usedblocks', self.block_pool.data_usedblocks
+        print 'AFTER WRITE oob.states', self.oob.display_bitmap_by_block()
+        print 'AFTER WRITE mappings', str(self.mapping_manager)
 
+        self.garbage_collector.try_gc()
 
     def lba_discard(self, lpn):
         self.global_helper.incr_lba_op_timestamp()

@@ -153,9 +153,9 @@ class Manual(LBAWorkloadGenerator):
 
         events = []
         maxpage = 0
-        for i in range(128):
+        for i in range(10240):
             op = random.choice(ops)
-            page = int(random.random() * 8)
+            page = int(random.random() * 16)
             if maxpage < page:
                 maxpage = page
             events.append( (op, page) )
@@ -169,8 +169,8 @@ class Manual(LBAWorkloadGenerator):
         yield "enable_recorder 0 0"
 
         # events = self.test1410()
-        # events = self.test_random()
-        events = self.test3()
+        events = self.test_random()
+        # events = self.test1410()
 
         for op, lpn in events:
             offset = lpn * self.conf['flash_page_size']

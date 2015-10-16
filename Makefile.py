@@ -1427,7 +1427,7 @@ def simple_lba_test():
     metadata_dic['loop_dev_size_mb'] = 1
     conf.update(metadata_dic)
 
-    conf.set_flash_num_blocks_by_bytes(4096*64)
+    conf.set_flash_num_blocks_by_bytes(4096 * 28)
     runtime_update(conf)
     workflow(conf)
 
