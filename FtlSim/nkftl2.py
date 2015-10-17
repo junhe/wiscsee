@@ -656,9 +656,6 @@ class GarbageCollector(object):
             except StopIteration:
                 print 'GC stoped from StopIteration exception'
                 self.recorder.count_me("GC", "StopIteration")
-                # high utilization, raise watermarkt to reduce GC attempts
-                self.decider.raise_high_watermark()
-                # nothing to be cleaned
                 break
 
             self.clean_block(blockinfo)
