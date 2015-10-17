@@ -678,6 +678,7 @@ class GarbageCollector(object):
         """
         priority_q = Queue.PriorityQueue()
 
+        data_cnt = 0
         for data_block in self.block_pool.log_usedblocks:
             if not self.oob.is_any_page_valid(data_block):
                 # no page is valid
@@ -686,7 +687,9 @@ class GarbageCollector(object):
                     block_num = data_block,
                     last_used_time = -1)  # high priority
                 priority_q.put(blk_info)
+                data_cnt += 1
 
+        log_cnt = 0
         for data_group_no, log_group_info in self.mapping_manager\
             .log_mapping_table.log_group_info.items():
             for log_pbn, single_log_block_info in \
@@ -697,6 +700,12 @@ class GarbageCollector(object):
                     last_used_time = single_log_block_info.last_used_time,
                     data_group_no = data_group_no)
                 priority_q.put(blk_info)
+                log_cnt += 1
+        if global_debug:
+            print 'data_cnt', data_cnt, 'log_cnt', log_cnt, 'len(log_usedblocks)', \
+                len(self.block_pool.log_usedblocks), 'len(data_usedblocks)', \
+                len(self.block_pool.data_usedblocks), 'len(freeblocks)', \
+                len(self.block_pool.freeblocks)
 
         while not priority_q.empty():
             b_info =  priority_q.get()
