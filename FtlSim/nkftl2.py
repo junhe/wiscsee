@@ -45,6 +45,8 @@ IN_LOG_BLOCK = "IN_LOG_BLOCK"
 IN_DATA_BLOCK = "IN_DATA_BLOCK"
 TYPE_LOG_BLOCK, TYPE_DATA_BLOCK = ('TYPE_LOG_BLOCK', 'TYPE_DATA_BLOCK')
 
+global_debug = False
+
 class GlobalHelper(object):
     """
     In case you need some global variables. We put all global stuff here so
@@ -780,7 +782,8 @@ class GarbageCollector(object):
         with data_group_no into data blocks. After calling this function,
         there should be no log blocks remaining for this data group.
         """
-        # print '======= clean_data_group()'
+        if global_debug:
+            print '======= clean_data_group()'
         # print str(self.mapping_manager)
 
         # We make local copy since we may need to modify the original data
@@ -791,8 +794,11 @@ class GarbageCollector(object):
         # the states of the second log block and makes full merge impossible.
         log_block_list = copy.copy(self.mapping_manager.log_mapping_table\
                 .log_group_info[data_group_no].log_blocks().keys())
+        if global_debug:
+            print 'log_block_list:', log_block_list
         for log_block in log_block_list:
-            # print 'merging log block ------>', log_block
+            if global_debug:
+                print 'merging log block ------>', log_block
             # print 'before merge', self.block_pool.visual()
             # A log block may not be a log block anymore after the loop starts
             # It may be freed, it may be a data block now,.. Be careful
@@ -802,6 +808,7 @@ class GarbageCollector(object):
                         last_used_time = None,
                         data_group_no = data_group_no))
             # print 'after  merge', self.block_pool.visual()
+            self.asserts()
 
     def full_merge(self, log_pbn):
         """
@@ -810,7 +817,8 @@ class GarbageCollector(object):
         find in this log block, we iterate all LPNs to and copy their
         data to a new free block.
         """
-        # print '------------------- full merge {} ------------------'.format(log_pbn)
+        if global_debug:
+            print '------------------- full merge {} ------------------'.format(log_pbn)
 
         # Find all the logical blocks
         ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
@@ -823,11 +831,13 @@ class GarbageCollector(object):
                 logical_block, _ = self.conf.page_to_block_off(lpn)
                 logical_blocks.add(logical_block)
 
-        # print 'logical_blocks', logical_blocks
+        if global_debug:
+            print 'logical_blocks to be aggregated', logical_blocks
 
         # Move all the pages of a logical block to new block
         for logical_block in logical_blocks:
             self.aggregate_logical_block(logical_block, 'full_merge')
+            self.asserts()
 
     def debug(self):
         print self.block_pool.visual()
@@ -837,8 +847,6 @@ class GarbageCollector(object):
         print 'oob.states', self.oob.display_bitmap_by_block()
         print 'oob.ppn_to_lpn', self.oob.ppn_to_lpn
         print str(self.mapping_manager)
-
-
 
     def aggregate_logical_block(self, lbn, tag):
         """
@@ -864,15 +872,17 @@ class GarbageCollector(object):
         Well, you need to also consider the case that lbn has no valid pages,
         in which case you need to specifically remove the data block mapping
         """
-        # print '------------------------- aggre logical block -----------------------'
-        # print self.block_pool.visual()
-        # print 'block_pool.freeblocks', self.block_pool.freeblocks
-        # print 'block_pool.log_usedblocks', self.block_pool.log_usedblocks
-        # print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
-        # print 'oob.states', self.oob.display_bitmap_by_block()
-        # print str(self.mapping_manager)
+        if global_debug:
+            print '------------------------- aggre logical block -----------------------'
+            # print self.block_pool.visual()
+            print 'block_pool.freeblocks', self.block_pool.freeblocks
+            # print 'block_pool.log_usedblocks', self.block_pool.log_usedblocks
+            # print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
+            # print 'oob.states', self.oob.display_bitmap_by_block()
+            # print str(self.mapping_manager)
 
         # We have to make sure this does not fail, somehow.
+        self.asserts()
         dst_phy_block_num = self.block_pool.pop_a_free_block_to_data_blocks()
 
         lpn_start, lpn_end = self.conf.block_to_page_range(lbn)
@@ -887,8 +897,9 @@ class GarbageCollector(object):
                 data = self.flash.page_read(src_ppn, tag)
                 self.flash.page_write(dst_ppn, tag, data = data)
 
-                # print 'Moved lpn:{} (data:{}, src_ppn:{}) to dst_ppn:{}'.format(
-                    # lpn, data, src_ppn, dst_ppn)
+                if global_debug:
+                    print 'Moved lpn:{} (data:{}, src_ppn:{}) to dst_ppn:{}'.format(
+                        lpn, data, src_ppn, dst_ppn)
 
                 self.oob.remap(lpn = lpn, old_ppn = src_ppn,
                     new_ppn = dst_ppn)
@@ -935,13 +946,14 @@ class GarbageCollector(object):
         self.mapping_manager.data_block_mapping_table.add_data_block_mapping(
             lbn = lbn, pbn = dst_phy_block_num)
 
-        # print '--------------------AFTER aggregate-------------------'
-        # print self.block_pool.visual()
-        # print 'block_pool.freeblocks', self.block_pool.freeblocks
-        # print 'block_pool.log_usedblocks', self.block_pool.log_usedblocks
-        # print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
-        # print 'oob.states', self.oob.display_bitmap_by_block()
-        # print str(self.mapping_manager)
+        if global_debug:
+            print '--------------------AFTER aggregate-------------------'
+            # print self.block_pool.visual()
+            print 'block_pool.freeblocks', self.block_pool.freeblocks
+            # print 'block_pool.log_usedblocks', self.block_pool.log_usedblocks
+            # print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
+            # print 'oob.states', self.oob.display_bitmap_by_block()
+            # print str(self.mapping_manager)
 
     def is_partial_mergable(self, log_pbn):
         """
@@ -1110,6 +1122,52 @@ class GarbageCollector(object):
         # Need to mark the log block as used data block now
         self.block_pool.move_used_log_to_data_block(log_pbn)
 
+    def asserts(self):
+        # number of data blocks cannot excceed the setting
+        print 'calling asserts()'
+        block_span =  int(self.conf['flash_num_blocks'] * \
+                self.conf['nkftl']['n_blocks_in_data_group'] \
+                / (self.conf['nkftl']['max_blocks_in_log_group'] \
+                   + self.conf['nkftl']['n_blocks_in_data_group']) - 1)
+
+        if not len(self.block_pool.data_usedblocks) <= block_span:
+            raise RuntimeError("not data_usedblocks:{} <= block_spn: {}".format(
+                len(self.block_pool.data_usedblocks), block_span))
+        if global_debug:
+            print "data_usedblocks:{} <= block_spn: {}".format(
+                len(self.block_pool.data_usedblocks), block_span)
+
+        # number of log blocks in logblockinfo should be equal to
+        # used log blocks in block_pool
+        log_block_cnt = 0
+        for dgn, loggroupinfo in self.mapping_manager.log_mapping_table\
+            .log_group_info.items():
+            logblocks = loggroupinfo.log_blocks()
+            log_block_cnt += len(logblocks)
+            assert len(logblocks) <= self.conf['nkftl']['max_blocks_in_log_group']
+
+        if not log_block_cnt == len(self.block_pool.log_usedblocks):
+            raise RuntimeError(
+                "not log_block_cnt{} == len(self.block_pool.log_usedblocks{})"\
+                .format(log_block_cnt, len(self.block_pool.log_usedblocks)))
+        if global_debug:
+            print "log_block_cnt{} == len(self.block_pool.log_usedblocks{})"\
+                .format(log_block_cnt, len(self.block_pool.log_usedblocks))
+
+        total_log_blocks = int(block_span * self.conf['nkftl']['max_blocks_in_log_group'] \
+            / self.conf['nkftl']['n_blocks_in_data_group'])
+        if not len(self.block_pool.log_usedblocks) <= total_log_blocks:
+            raise RuntimeError(
+                "not len(self.block_pool.log_usedblocks){} <= total_log_blocks:{}"\
+                .format(len(self.block_pool.log_usedblocks),
+                total_log_blocks))
+        if global_debug:
+            print "len(self.block_pool.log_usedblocks){} <= total_log_blocks:{}"\
+                .format(len(self.block_pool.log_usedblocks), total_log_blocks)
+
+
+
+
 class Nkftl(ftlbuilder.FtlBuilder):
     """
     This is an FTL implemented according to paper:
@@ -1139,6 +1197,7 @@ class Nkftl(ftlbuilder.FtlBuilder):
             mappingmanagerobj = self.mapping_manager,
             global_helper_obj = self.global_helper
             )
+        self.tmpcnt = 0
 
     def lpn_to_ppn(self, lpn):
         found, ppn, location = self.mapping_manager.lpn_to_ppn(lpn)
@@ -1183,7 +1242,18 @@ class Nkftl(ftlbuilder.FtlBuilder):
         """
         self.global_helper.incr_lba_op_timestamp()
 
+        # if lpn == 6:
+            # self.tmpcnt += 1
+            # if self.tmpcnt == 7:
+                # utils.breakpoint()
+
         print 'lba_write', lpn, 'data=', data
+
+        if data == '1197.6359':
+            # utils.breakpoint()
+            global global_debug
+            global_debug = False
+
         self.recorder.write_file('tmp.lba.trace.txt', operation = 'write',
             page = lpn)
 

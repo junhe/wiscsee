@@ -134,4 +134,19 @@ class Config(dict):
         return self['nkftl']['max_blocks_in_log_group'] * \
             self['flash_npage_per_block']
 
+    def nkftl_allowed_num_of_data_blocks(self):
+        """
+        NKFTL has to have certain amount of log and data blocks
+        Required data blocks =
+        ((num of total block-1) * num of blocks in data group / (num of blocks in
+        data group + num of blocks in a log group))
+
+        -1 is because we need to at least one staging block for the purposes
+        such as merging.
+        """
+        block_span =  int((self['flash_num_blocks'] - 1) * \
+                self['nkftl']['n_blocks_in_data_group'] \
+                / (self['nkftl']['n_blocks_in_data_group'] \
+                   + self['nkftl']['max_blocks_in_log_group']))
+        return block_span
 

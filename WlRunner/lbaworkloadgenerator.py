@@ -144,7 +144,6 @@ class Manual(LBAWorkloadGenerator):
 
         return events
 
-
     def test_random(self):
         w = 'write'
         r = 'read'
@@ -153,9 +152,22 @@ class Manual(LBAWorkloadGenerator):
 
         events = []
         maxpage = 0
+
+        block_span = self.conf.nkftl_allowed_num_of_data_blocks()
+        lba_span = block_span * self.conf['flash_npage_per_block']
+
+        print "Number of flash blocks:", self.conf['flash_num_blocks']
+        print "Number of pages:", self.conf.total_num_pages()
+        print "LBA span of lba:", lba_span
+        print "flash_npage_per_block:", self.conf['flash_npage_per_block']
+        print "n_blocks_in_data_group:", \
+            self.conf['nkftl']['n_blocks_in_data_group']
+        print "max_blocks_in_log_group:",\
+            self.conf['nkftl']['max_blocks_in_log_group']
+
         for i in range(100000):
             op = random.choice(ops)
-            page = int(random.random() * 32)
+            page = int(random.random() * lba_span)
             if maxpage < page:
                 maxpage = page
             events.append( (op, page) )
@@ -169,8 +181,10 @@ class Manual(LBAWorkloadGenerator):
         yield "enable_recorder 0 0"
 
         # events = self.test1410()
+        # events = self.test3()
+        # events = self.test2()
+        # events = self.test1()
         events = self.test_random()
-        # events = self.test1410()
 
         for op, lpn in events:
             offset = lpn * self.conf['flash_page_size']
