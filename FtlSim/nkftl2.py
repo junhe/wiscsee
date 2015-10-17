@@ -1130,7 +1130,7 @@ class GarbageCollector(object):
 
     def asserts(self):
         # number of data blocks cannot excceed the setting
-        print 'calling asserts()'
+        # print 'calling asserts()'
         block_span =  int(self.conf['flash_num_blocks'] * \
                 self.conf['nkftl']['n_blocks_in_data_group'] \
                 / (self.conf['nkftl']['max_blocks_in_log_group'] \
