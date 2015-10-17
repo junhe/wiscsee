@@ -150,3 +150,18 @@ class Config(dict):
                    + self['nkftl']['max_blocks_in_log_group']))
         return block_span
 
+    def nkftl_set_flash_num_blocks_by_data_block_bytes(self, data_bytes):
+        """
+        Example:
+        data_byptes is the filesystem size (LBA size), and this will set
+        the number of flash blocks based on the ratio of data blocks and
+        log blocks.
+        """
+        n_data_blocks = data_bytes / (self['flash_page_size'] * \
+            self['flash_npage_per_block'])
+        n = (n_data_blocks * (self['nkftl']['n_blocks_in_data_group'] + \
+            self['nkftl']['max_blocks_in_log_group']) / \
+            self['nkftl']['n_blocks_in_data_group']) + 2
+        self['flash_num_blocks'] = n
+        return n
+
