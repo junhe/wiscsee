@@ -138,8 +138,8 @@ class Config(dict):
         """
         NKFTL has to have certain amount of log and data blocks
         Required data blocks =
-        ((num of total block-1) * num of blocks in data group / (num of blocks in
-        data group + num of blocks in a log group))
+        ((num of total block-1) * num of blocks in data group / (num of blocks
+        in data group + num of blocks in a log group))
 
         -1 is because we need to at least one staging block for the purposes
         such as merging.
