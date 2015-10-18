@@ -987,7 +987,6 @@ class GarbageCollector(object):
 
         Return: True/False, logical block, offset of the first erased page
         """
-        return False, None, None
         ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
         lpn_start = None
         logical_block = None
@@ -1061,16 +1060,19 @@ class GarbageCollector(object):
             dst_ppn = self.conf.block_off_to_page(log_pbn, offset)
 
             found, src_ppn, location = self.mapping_manager.lpn_to_ppn(lpn)
-            src_block, _ = self.conf.page_to_block_off(src_ppn)
-            if not found == True:
+            if not found or not self.oob.states.is_page_valid(src_ppn):
                 # the lpn does not exist
+                # 1. cannot find
+                # 2. found, but not valid
                 self.oob.states.invalidate_page(dst_ppn)
             elif found == True and location == IN_DATA_BLOCK:
+                src_block, _ = self.conf.page_to_block_off(src_ppn)
                 data = self.flash.page_read(src_ppn, 'partial_merge')
                 self.flash.page_write(dst_ppn, 'partial_merge', data = data)
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
                 self.recycle_empty_data_block(src_block) # check and then recycle
             elif found == True and location == IN_LOG_BLOCK:
+                src_block, _ = self.conf.page_to_block_off(src_ppn)
                 # If the lpn is in log block
                 data = self.flash.page_read(src_ppn, 'partial_merge')
                 self.flash.page_write(dst_ppn, 'partial_merge', data = data)
