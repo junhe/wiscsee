@@ -1427,11 +1427,11 @@ def simple_lba_test():
     metadata_dic['loop_dev_size_mb'] = 1
     conf.update(metadata_dic)
 
-    conf['flash_npage_per_block'] = 32
+    conf['flash_npage_per_block'] = 4
     conf['nkftl']['n_blocks_in_data_group'] = 4
     conf['nkftl']['max_blocks_in_log_group'] = 2
-    # conf.set_flash_num_blocks_by_bytes( 64 * 2**20 )
-    conf.nkftl_set_flash_num_blocks_by_data_block_bytes(4 * 2**20)
+    conf.set_flash_num_blocks_by_bytes( 4096 * 28 )
+    # conf.nkftl_set_flash_num_blocks_by_data_block_bytes(4 * 2**20)
     runtime_update(conf)
     workflow(conf)
 

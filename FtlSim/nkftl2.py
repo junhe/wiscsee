@@ -717,11 +717,11 @@ class GarbageCollector(object):
         update all the relevant information such as mapping, oob, flash.
         """
         if blk_info.block_type == TYPE_DATA_BLOCK:
-            self.clean_data_block(blk_info.block_num)
+            self.recycle_empty_data_block(blk_info.block_num)
         elif blk_info.block_type == TYPE_LOG_BLOCK:
             self.clean_log_block(blk_info)
 
-    def clean_data_block(self, data_block):
+    def recycle_empty_data_block(self, data_block):
         if data_block in self.block_pool.data_usedblocks and \
             not self.oob.is_any_page_valid(data_block):
             self.oob.erase_block(data_block)
@@ -730,6 +730,20 @@ class GarbageCollector(object):
             self.mapping_manager.data_block_mapping_table\
                 .remove_data_block_mapping_by_pbn(data_block)
             self.block_pool.free_used_data_block(data_block)
+
+    def recycle_empty_log_block(self, data_group_no, log_pbn):
+        """
+        We will double check to see if the block has any valid page
+        Remove the log block in every relevant data structure
+        """
+        if log_pbn in self.block_pool.log_usedblocks and \
+            not self.oob.is_any_page_valid(log_pbn):
+            self.oob.erase_block(log_pbn)
+            self.flash.block_erase(log_pbn, 'gc')
+            # remove log mapping
+            self.mapping_manager.log_mapping_table.remove_log_block(
+                log_pbn = log_pbn)
+            self.block_pool.free_used_log_block(log_pbn = log_pbn)
 
     def clean_log_block(self, blk_info):
         """
@@ -948,7 +962,7 @@ class GarbageCollector(object):
             .lbn_to_pbn(lbn)
         if found == True:
             # old_pbn must not have any valid pages, so we free it
-            self.clean_data_block(old_pbn)
+            self.recycle_empty_data_block(old_pbn)
         self.mapping_manager.data_block_mapping_table.add_data_block_mapping(
             lbn = lbn, pbn = dst_phy_block_num)
 
@@ -968,10 +982,12 @@ class GarbageCollector(object):
         To be partial mergable, you need:
         1. first k pages are valid, the rest are erased
         2. the first k pages are aligned with logical block
-        3. the kth-nth pages exist in the data block
+        3. the kth-nth pages can exist in data block, other log blocks or not
+        exist
 
         Return: True/False, logical block, offset of the first erased page
         """
+        return False, None, None
         ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
         lpn_start = None
         logical_block = None
@@ -1009,18 +1025,32 @@ class GarbageCollector(object):
                 if first_free_ppn == None:
                     first_free_ppn = ppn
 
-                # check if the content is in data block
-                lpn = lpn_start + (ppn - ppn_start)
-                has_it, tmp_ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
-                if has_it == False or loc != IN_DATA_BLOCK or \
-                    not self.oob.states.is_page_valid(tmp_ppn):
-                    # ppn not exist
-                    return False, None, None
+                # # the conent can be anywhere or not exist
+                # lpn = lpn_start + (ppn - ppn_start)
+                # has_it, tmp_ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
+                # if has_it == False or loc != IN_DATA_BLOCK or \
+                    # not self.oob.states.is_page_valid(tmp_ppn):
+                    # # ppn not exist
+                #     return False, None, None
 
         return True, logical_block, first_free_ppn - ppn_start
 
     def partial_merge(self, log_pbn, lbn, first_free_offset):
         """
+        TODO: Should allow paritl merge when the rest of blocks
+        exist anywhere (not limited to data block), or not exist.
+
+        The lpn in the kth-nth pages:
+        if not exist:
+            invalidate the corresponding page
+        if in data block:
+            copy it to the corresponding page
+            check if we need to free the data block
+        if in log block:
+            copy it to the corresponding page
+            check if we need to free the log block
+
+        After this function, log_pbn will become a data block
         """
         data_group_no = self.conf.nkftl_data_group_number_of_logical_block(
             lbn)
@@ -1028,26 +1058,25 @@ class GarbageCollector(object):
         for offset in range(first_free_offset,
                 self.conf['flash_npage_per_block']):
             lpn = self.conf.block_off_to_page(lbn, offset)
-            found, src_ppn, location = self.mapping_manager.lpn_to_ppn(lpn)
-            # src_ppn should be valid since we have checked it
-            # is_partial_mergable()
-            assert found
-            assert location == IN_DATA_BLOCK
-
             dst_ppn = self.conf.block_off_to_page(log_pbn, offset)
 
-            data = self.flash.page_read(src_ppn, 'partial_merge')
-            self.flash.page_write(dst_ppn, 'partial_merge', data = data)
-
-            self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
-
-        # Now the old block should be empty
-        src_block, _ = self.conf.page_to_block_off(src_ppn)
-        self.oob.erase_block(src_block)
-        self.flash.block_erase(src_block, 'partial.merge')
-        self.block_pool.free_used_data_block(src_block)
-        self.mapping_manager.data_block_mapping_table\
-            .remove_data_block_mapping(lbn)
+            found, src_ppn, location = self.mapping_manager.lpn_to_ppn(lpn)
+            src_block, _ = self.conf.page_to_block_off(src_ppn)
+            if not found == True:
+                # the lpn does not exist
+                self.oob.states.invalidate_page(dst_ppn)
+            elif found == True and location == IN_DATA_BLOCK:
+                data = self.flash.page_read(src_ppn, 'partial_merge')
+                self.flash.page_write(dst_ppn, 'partial_merge', data = data)
+                self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
+                self.recycle_empty_data_block(src_block) # check and then recycle
+            elif found == True and location == IN_LOG_BLOCK:
+                # If the lpn is in log block
+                data = self.flash.page_read(src_ppn, 'partial_merge')
+                self.flash.page_write(dst_ppn, 'partial_merge', data = data)
+                self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
+                self.recycle_empty_log_block(data_group_no = data_group_no,
+                    log_pbn = src_block)
 
         # Now the log block lgo_pbn has all the content of lbn
         self.mapping_manager.data_block_mapping_table\
@@ -1056,6 +1085,9 @@ class GarbageCollector(object):
         # Remove log_pbn from log group
         self.mapping_manager.log_mapping_table.remove_log_block(
             data_group_no = data_group_no, log_pbn = log_pbn)
+
+        # move from log pool to data pool
+        self.block_pool.move_used_log_to_data_block(log_pbn)
 
     def is_switch_mergable(self, log_pbn):
         """
