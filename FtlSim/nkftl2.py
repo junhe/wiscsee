@@ -1361,6 +1361,8 @@ class Nkftl(ftlbuilder.FtlBuilder):
     def lba_discard(self, lpn):
         self.global_helper.incr_lba_op_timestamp()
 
+        self.recorder.put('logical_discard', lpn, 'user')
+
         # print 'lba_discard', lpn
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
@@ -1370,5 +1372,4 @@ class Nkftl(ftlbuilder.FtlBuilder):
                 self.mapping_manager.log_mapping_table.remove_lpn(
                     data_group_no, lpn)
             self.oob.wipe_ppn(ppn)
-
 
