@@ -1275,7 +1275,7 @@ class Nkftl(ftlbuilder.FtlBuilder):
         else:
             content = None
 
-        print 'lba_read', lpn, 'ppn', ppn, 'got', content
+        # print 'lba_read', lpn, 'ppn', ppn, 'got', content
         return content
 
     def lba_write(self, lpn, data = None):
@@ -1298,15 +1298,13 @@ class Nkftl(ftlbuilder.FtlBuilder):
             # if self.tmpcnt == 7:
                 # utils.breakpoint()
 
-        print 'lba_write', lpn, 'data=', data
+        # print 'lba_write', lpn, 'data=', data
 
         if data == '1197.6359':
             # utils.breakpoint()
             global global_debug
             global_debug = False
 
-        self.recorder.write_file('tmp.lba.trace.txt', operation = 'write',
-            page = lpn)
 
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
@@ -1363,7 +1361,7 @@ class Nkftl(ftlbuilder.FtlBuilder):
     def lba_discard(self, lpn):
         self.global_helper.incr_lba_op_timestamp()
 
-        print 'lba_discard', lpn
+        # print 'lba_discard', lpn
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
         found, ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
