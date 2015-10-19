@@ -99,6 +99,7 @@ def convert_unit_to_byte(conf, stats):
 def create_result_table(exp_dir):
     """
     Each directory in exp_dir is a sub experiment dir
+    This is for dftl2
     """
     sub_exp_dirs = [d for d in os.listdir(exp_dir)
             if os.path.isdir(os.path.join(exp_dir, d))]
@@ -125,8 +126,57 @@ def create_result_table(exp_dir):
     pprint.pprint( table )
     utils.table_to_file(table, os.path.join(exp_dir, 'result-table.txt'))
 
+
+################# For NKFTL #####################
+def nkftl_create_result_row(sub_exp_dir):
+    conf = get_conf(sub_exp_dir)
+    if conf == None:
+        return None
+
+    stats = get_general_stats(sub_exp_dir)
+    convert_unit_to_byte(conf, stats)
+
+    row = {}
+    row.update(stats)
+    row['hash'] = 'HASH' + str(conf['hash'])
+    row['filesystem'] = conf['filesystem']
+
+    return row
+
+def nkftl_create_result_table(exp_dir):
+    """
+    Each directory in exp_dir is a sub experiment dir
+    """
+    sub_exp_dirs = [d for d in os.listdir(exp_dir)
+            if os.path.isdir(os.path.join(exp_dir, d))]
+    sub_exp_dirs = [os.path.join(exp_dir, d) for d in sub_exp_dirs]
+
+    colnames = set()
+    table = []
+    for sub_exp_dir in sub_exp_dirs:
+        row = nkftl_create_result_row(sub_exp_dir)
+        if row == None:
+            continue
+        table.append(row)
+        colnames.update(row.keys())
+
+    # some row may miss some columns, we need to make sure every row
+    # has the same columns so it can be output to a table
+    colnames = list(colnames)
+    # print colnames
+    for row in table:
+        for col in colnames:
+            if not col in row.keys():
+                row[col] = 'NA'
+
+    pprint.pprint( table )
+    utils.table_to_file(table, os.path.join(exp_dir, 'result-table.txt'))
+
+
 if __name__ == '__main__':
-    create_result_table('/tmp/results/newnew/')
+    # create_result_table('/tmp/results/newnew/')
+
+    nkftl_create_result_table('/tmp/results/thrid/')
 
     # get cache info
     # table = get_count_table('/tmp/results/reallyreally/default-subexp-f2fs-09-21-21-54-02-2663993657917388495/')
