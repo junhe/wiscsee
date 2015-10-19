@@ -1427,35 +1427,40 @@ def test_nkftl():
     metadata_dic = choose_exp_metadata(conf)
     conf.update(metadata_dic)
 
-    loop_dev_mb = 128   # <--------------------- Set it?
-    conf['workload_src'] = WLRUNNER
-    conf['filesystem'] = 'ext4'
-    conf['flash_npage_per_block'] = 32
-    conf['nkftl']['n_blocks_in_data_group'] = 4
-    conf['nkftl']['max_blocks_in_log_group'] = 2
-    conf['nkftl']['GC_threshold_ratio'] = 0.8
-    conf['nkftl']['GC_low_threshold_ratio'] = 0.6
-    conf['loop_dev_size_mb'] = loop_dev_mb
-    conf.nkftl_set_flash_num_blocks_by_data_block_bytes(loop_dev_mb * 2**20)
+    for N in (2, 4, 8):
+        for K in (4, 8):
+            for fs in ('f2fs', 'ext4'):
+                loop_dev_mb = 1024   # <--------------------- Set it?
+                conf['workload_src'] = WLRUNNER
+                # conf['filesystem'] = 'ext4'
+                conf['filesystem'] = fs
+                conf['flash_npage_per_block'] = 32
+                conf['nkftl']['n_blocks_in_data_group'] = N
+                conf['nkftl']['max_blocks_in_log_group'] = K
+                conf['nkftl']['GC_threshold_ratio'] = 0.8
+                conf['nkftl']['GC_low_threshold_ratio'] = 0.6
+                conf['loop_dev_size_mb'] = loop_dev_mb
+                conf.nkftl_set_flash_num_blocks_by_data_block_bytes(
+                    loop_dev_mb * 2**20)
 
-    conf["workload_class"] = "Synthetic"
-    conf["Synthetic"] = {
-            # "generating_func": "self.generate_hotcold_workload",
-            # "generating_func": "self.generate_sequential_workload",
-            # "generating_func": "self.generate_backward_workload",
-            "generating_func": "self.generate_random_workload",
-            # "chunk_count": 100*2**20/(8*1024),
-            "chunk_count": 64 * 2**20 / (32 * 1024),
-            "chunk_size" : 32 * 1024,
-            "iterations" : 50,
-            "n_col"      : 5   # only for hotcold workload
-        }
+                conf["workload_class"] = "Synthetic"
+                conf["Synthetic"] = {
+                        # "generating_func": "self.generate_hotcold_workload",
+                        # "generating_func": "self.generate_sequential_workload",
+                        # "generating_func": "self.generate_backward_workload",
+                        "generating_func": "self.generate_random_workload",
+                        # "chunk_count": 100*2**20/(8*1024),
+                        "chunk_count": 64 * 2**20 / (512 * 1024),
+                        "chunk_size" : 512 * 1024,
+                        "iterations" : 50,
+                        "n_col"      : 5   # only for hotcold workload
+                    }
 
-    runtime_update(conf)
+                runtime_update(conf)
 
-    assert loop_dev_mb > conf["Synthetic"]["chunk_count"] \
-        * conf["Synthetic"]["chunk_size"] / 2**20
-    workflow(conf)
+                assert loop_dev_mb > conf["Synthetic"]["chunk_count"] \
+                    * conf["Synthetic"]["chunk_size"] / 2**20
+                workflow(conf)
 
 def simple_lba_test():
     confdic = get_default_config()
