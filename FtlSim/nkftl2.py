@@ -47,12 +47,12 @@ TYPE_LOG_BLOCK, TYPE_DATA_BLOCK = ('TYPE_LOG_BLOCK', 'TYPE_DATA_BLOCK')
 
 global_debug = False
 
-TAG_PARTIAL_MERGE   = 'TAG.PARTIAL.MERGE'
-TAG_TRY_GC          = 'TAG.TRY.GC'
-TAG_SWITCH_MERGE    = 'TAG.SWITCH.MERGE'
-TAG_FULL_MERGE      = 'TAG.FULL.MERGE'
-TAG_FORGROUND       = 'TAG.FORGROUND'
-TAG_CLEAN_DATA_GROUP= 'TAG.CLEAN.DATA.GROUP'
+TAG_PARTIAL_MERGE   = 'PARTIAL.MERGE'
+TAG_TRY_GC          = 'TRY.GC'
+TAG_SWITCH_MERGE    = 'SWITCH.MERGE'
+TAG_FULL_MERGE      = 'FULL.MERGE'
+TAG_FORGROUND       = 'FORGROUND'
+TAG_CLEAN_DATA_GROUP= 'CLEAN.DATA.GROUP'
 
 class GlobalHelper(object):
     """
@@ -1372,16 +1372,5 @@ class Nkftl(ftlbuilder.FtlBuilder):
                 self.mapping_manager.log_mapping_table.remove_lpn(
                     data_group_no, lpn)
             self.oob.wipe_ppn(ppn)
-
-
-
-
-
-
-
-
-
-
-
 
 
