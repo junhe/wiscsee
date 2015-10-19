@@ -1215,8 +1215,8 @@ def get_default_config():
     confdic = {
         ############### Global #########
         "result_dir"            : None,
-        # "workload_src"          : WLRUNNER,
-        "workload_src"          : LBAGENERATOR,
+        "workload_src"          : WLRUNNER,
+        # "workload_src"          : LBAGENERATOR,
         "expname"               : "default-expname",
         "time"                  : None,
         "subexpname"            : "default-subexp",
@@ -1228,7 +1228,7 @@ def get_default_config():
         "flash_page_size"       : 4096,
         "flash_npage_per_block" : 4,
         "flash_num_blocks"      : None,
-        "enable_e2e_test"       : True,
+        "enable_e2e_test"       : False,
 
         ############## Dftl ############
         "dftl": {
@@ -1418,6 +1418,45 @@ def reproduce():
     pprint.pprint(conf)
     workflow(conf)
 
+def test_nkftl():
+    """
+    """
+    confdic = get_default_config()
+    conf = config.Config(confdic)
+
+    metadata_dic = choose_exp_metadata(conf)
+    conf.update(metadata_dic)
+
+    loop_dev_mb = 128   # <--------------------- Set it?
+    conf['workload_src'] = WLRUNNER
+    conf['filesystem'] = 'ext4'
+    conf['flash_npage_per_block'] = 32
+    conf['nkftl']['n_blocks_in_data_group'] = 4
+    conf['nkftl']['max_blocks_in_log_group'] = 2
+    conf['nkftl']['GC_threshold_ratio'] = 0.8
+    conf['nkftl']['GC_low_threshold_ratio'] = 0.6
+    conf['loop_dev_size_mb'] = loop_dev_mb
+    conf.nkftl_set_flash_num_blocks_by_data_block_bytes(loop_dev_mb * 2**20)
+
+    conf["workload_class"] = "Synthetic"
+    conf["Synthetic"] = {
+            # "generating_func": "self.generate_hotcold_workload",
+            # "generating_func": "self.generate_sequential_workload",
+            # "generating_func": "self.generate_backward_workload",
+            "generating_func": "self.generate_random_workload",
+            # "chunk_count": 100*2**20/(8*1024),
+            "chunk_count": 64 * 2**20 / (32 * 1024),
+            "chunk_size" : 32 * 1024,
+            "iterations" : 50,
+            "n_col"      : 5   # only for hotcold workload
+        }
+
+    runtime_update(conf)
+
+    assert loop_dev_mb > conf["Synthetic"]["chunk_count"] \
+        * conf["Synthetic"]["chunk_size"] / 2**20
+    workflow(conf)
+
 def simple_lba_test():
     confdic = get_default_config()
     conf = config.Config(confdic)
@@ -1427,14 +1466,13 @@ def simple_lba_test():
     metadata_dic['loop_dev_size_mb'] = 1
     conf.update(metadata_dic)
 
-    conf['flash_npage_per_block'] = 4
+    conf['flash_npage_per_block'] = 32
     conf['nkftl']['n_blocks_in_data_group'] = 4
     conf['nkftl']['max_blocks_in_log_group'] = 2
-    conf.set_flash_num_blocks_by_bytes( 4096 * 28 )
+    conf.set_flash_num_blocks_by_bytes( 4 * 1024 * 1024 )
     # conf.nkftl_set_flash_num_blocks_by_data_block_bytes(4 * 2**20)
     runtime_update(conf)
     workflow(conf)
-
 
 def choose_exp_metadata(default_conf):
     """
