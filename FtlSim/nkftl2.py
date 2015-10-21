@@ -752,8 +752,9 @@ class GarbageCollector(object):
             self.flash.block_erase(log_pbn, cat = tag)
             # remove log mapping
             self.mapping_manager.log_mapping_table.remove_log_block(
+                data_group_no = data_group_no,
                 log_pbn = log_pbn)
-            self.block_pool.free_used_log_block(log_pbn = log_pbn)
+            self.block_pool.free_used_log_block(log_pbn)
 
     def clean_log_block(self, blk_info, tag):
         """
