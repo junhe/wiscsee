@@ -555,8 +555,9 @@ class GcDecider(object):
 
         self.high_watermark = self.conf['nkftl']['GC_threshold_ratio'] * \
             self.conf['flash_num_blocks']
-        self.low_watermark = self.conf['nkftl']['GC_low_threshold_ratio'] * \
-            self.conf['flash_num_blocks']
+        self.low_watermark = max( self.conf['nkftl']['GC_low_threshold_ratio'] * \
+            self.conf['flash_num_blocks'],
+            self.conf['flash_num_blocks'] / self.conf['nkftl']['provision_ratio'])
 
         self.call_index = -1
 
