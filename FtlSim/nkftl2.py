@@ -1208,20 +1208,6 @@ class GarbageCollector(object):
         self.block_pool.move_used_log_to_data_block(log_pbn)
 
     def asserts(self):
-        # number of data blocks cannot excceed the setting
-        # print 'calling asserts()'
-        block_span =  int(self.conf['flash_num_blocks'] * \
-                self.conf['nkftl']['n_blocks_in_data_group'] \
-                / (self.conf['nkftl']['max_blocks_in_log_group'] \
-                   + self.conf['nkftl']['n_blocks_in_data_group']) - 1)
-
-        if not len(self.block_pool.data_usedblocks) <= block_span:
-            raise RuntimeError("not data_usedblocks:{} <= block_spn: {}".format(
-                len(self.block_pool.data_usedblocks), block_span))
-        if global_debug:
-            print "data_usedblocks:{} <= block_spn: {}".format(
-                len(self.block_pool.data_usedblocks), block_span)
-
         # number of log blocks in logblockinfo should be equal to
         # used log blocks in block_pool
         log_block_cnt = 0
@@ -1238,6 +1224,36 @@ class GarbageCollector(object):
         if global_debug:
             print "log_block_cnt{} == len(self.block_pool.log_usedblocks{})"\
                 .format(log_block_cnt, len(self.block_pool.log_usedblocks))
+
+
+        # number of data blocks in data_block_mapping_table should be equal to
+        # used data blocks in block_pool
+        data_blocks_in_map = len(self.mapping_manager.data_block_mapping_table\
+            .logical_to_physical_block)
+        if not data_blocks_in_map == len(self.block_pool.data_usedblocks):
+            raise RuntimeError(
+                "not data_blocks_in_map{} == len(self.block_pool.data_usedblocks){}"\
+                .format(data_blocks_in_map, len(self.block_pool.data_usedblocks)))
+        if global_debug:
+            print "not data_blocks_in_map{} == "\
+                "len(self.block_pool.data_usedblocks){}"\
+                .format(data_blocks_in_map, len(self.block_pool.data_usedblocks))
+
+        return
+
+        # number of data blocks cannot excceed the setting
+        # print 'calling asserts()'
+        block_span =  int(self.conf['flash_num_blocks'] * \
+                self.conf['nkftl']['n_blocks_in_data_group'] \
+                / (self.conf['nkftl']['max_blocks_in_log_group'] \
+                   + self.conf['nkftl']['n_blocks_in_data_group']) - 1)
+
+        if not len(self.block_pool.data_usedblocks) <= block_span:
+            raise RuntimeError("not data_usedblocks:{} <= block_spn: {}".format(
+                len(self.block_pool.data_usedblocks), block_span))
+        if global_debug:
+            print "data_usedblocks:{} <= block_spn: {}".format(
+                len(self.block_pool.data_usedblocks), block_span)
 
         total_log_blocks = int(block_span * self.conf['nkftl']['max_blocks_in_log_group'] \
             / self.conf['nkftl']['n_blocks_in_data_group'])
