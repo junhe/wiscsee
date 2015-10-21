@@ -1049,9 +1049,6 @@ class GarbageCollector(object):
 
     def partial_merge(self, log_pbn, lbn, first_free_offset):
         """
-        TODO: Should allow paritl merge when the rest of blocks
-        exist anywhere (not limited to data block), or not exist.
-
         The lpn in the kth-nth pages:
         if not exist:
             invalidate the corresponding page
@@ -1084,8 +1081,32 @@ class GarbageCollector(object):
                 self.flash.page_write(dst_ppn, cat = TAG_PARTIAL_MERGE,
                     data = data)
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
-                self.recycle_empty_data_block(src_block,
-                    tag = TAG_PARTIAL_MERGE ) # check and then recycle
+                print 'hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh'
+
+                # This branch may never be called because the none of the rest
+                # of the pages is valid, thus you don't have the change
+                # to recyle the old data block
+                # for example:
+                #         - Log BLock -
+                #          pages: 0123
+                #          state: VEEE
+                #  logical block:   7
+                #
+                #         - Data BLock -
+                #          pages: 0123
+                #          state: IIII
+                #  logical block:   7
+                # In the case above, log block is partial mergable. When you
+                # try to partial merge it, you try to find valid pages of page
+                # 123. But none of them is valid. So you will not come to this
+                # branch. So the data block will not be recyled.
+                #
+                # Actually it is not a good idea to recyle the data block here.
+                # Because there should be only one data block associated with
+                # on partial merge. You can just find out which one it is and
+                # try to recycle it once.
+                # self.recycle_empty_data_block(src_block,
+                    # tag = TAG_PARTIAL_MERGE ) # check and then recycle
             elif found == True and location == IN_LOG_BLOCK:
                 src_block, _ = self.conf.page_to_block_off(src_ppn)
                 # If the lpn is in log block
@@ -1096,7 +1117,15 @@ class GarbageCollector(object):
                 self.recycle_empty_log_block(data_group_no = data_group_no,
                     log_pbn = src_block, tag = TAG_PARTIAL_MERGE)
 
+        # If there is an old data block, we need to recycle it because we
+        # now have a new one.
+        found, old_pbn = self.mapping_manager.data_block_mapping_table\
+            .lbn_to_pbn(lbn = lbn)
+        if found:
+            self.recycle_empty_data_block(old_pbn, tag = TAG_PARTIAL_MERGE)
+
         # Now the log block lgo_pbn has all the content of lbn
+        # Now add the new mapping
         self.mapping_manager.data_block_mapping_table\
             .add_data_block_mapping(lbn = lbn, pbn = log_pbn)
 
