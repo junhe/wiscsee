@@ -69,6 +69,10 @@ class Config(dict):
     def total_num_pages(self):
         return self['flash_npage_per_block'] * self['flash_num_blocks']
 
+    def total_flash_bytes(self):
+        return self['flash_npage_per_block'] * self['flash_num_blocks'] \
+            * self['flash_page_size']
+
     def off_size_to_page_list(self, off, size, force_alignment = True):
         if force_alignment:
             assert size % self['flash_page_size'] == 0, \
