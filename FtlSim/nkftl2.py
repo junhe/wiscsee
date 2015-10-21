@@ -808,6 +808,8 @@ class GarbageCollector(object):
         This function will merge the contents of all log blocks associated
         with data_group_no into data blocks. After calling this function,
         there should be no log blocks remaining for this data group.
+
+        TODO: Maybe also try to free empty data blocks here?
         """
         if global_debug:
             print '======= clean_data_group()'

@@ -1411,11 +1411,14 @@ def test_experimental_design():
 
 def reproduce():
     conf = config.Config()
-    conf.load_from_json_file('./5732845.json')
-    metadata_dic = choose_exp_metadata(conf)
-    conf.update(metadata_dic)
-    runtime_update(conf)
-    pprint.pprint(conf)
+    conf.load_from_json_file('/tmp/results/100iter-0.7low/default-subexp-f2fs-10-19-14-15-08--3121215361837401485/config.json')
+
+    # Comment out the following lines if you don't want to reset the target dir
+    # metadata_dic = choose_exp_metadata(conf)
+    # conf.update(metadata_dic)
+    # runtime_update(conf)
+    # pprint.pprint(conf)
+
     workflow(conf)
 
 def test_nkftl():
@@ -1438,7 +1441,7 @@ def test_nkftl():
                 conf['nkftl']['n_blocks_in_data_group'] = N
                 conf['nkftl']['max_blocks_in_log_group'] = K
                 conf['nkftl']['GC_threshold_ratio'] = 0.8
-                conf['nkftl']['GC_low_threshold_ratio'] = 0.6
+                conf['nkftl']['GC_low_threshold_ratio'] = 0.7
                 conf['loop_dev_size_mb'] = loop_dev_mb
                 conf.nkftl_set_flash_num_blocks_by_data_block_bytes(
                     loop_dev_mb * 2**20)
@@ -1450,9 +1453,9 @@ def test_nkftl():
                         # "generating_func": "self.generate_backward_workload",
                         "generating_func": "self.generate_random_workload",
                         # "chunk_count": 100*2**20/(8*1024),
-                        "chunk_count": 64 * 2**20 / (512 * 1024),
-                        "chunk_size" : 512 * 1024,
-                        "iterations" : 50,
+                        "chunk_count": 64 * 2**20 / (16 * 1024),
+                        "chunk_size" : 16 * 1024,
+                        "iterations" : 100,
                         "n_col"      : 5   # only for hotcold workload
                     }
 
