@@ -1423,6 +1423,31 @@ def reproduce():
 
     workflow(conf)
 
+def simple_lba_test():
+    confdic = get_default_config()
+    conf = config.Config(confdic)
+
+    loop_dev_mb = 1
+
+    metadata_dic = {}
+    metadata_dic['workload_src'] = LBAGENERATOR
+    metadata_dic['targetdir'] = '/tmp/results'
+    metadata_dic['filesystem'] = 'none'
+    metadata_dic['loop_dev_size_mb'] = loop_dev_mb
+    conf.update(metadata_dic)
+
+    conf['flash_npage_per_block'] = 4
+    conf['nkftl']['n_blocks_in_data_group'] = 1
+    conf['nkftl']['max_blocks_in_log_group'] = 1
+    conf['nkftl']['provision_ratio'] = 1.5
+    conf['enable_e2e_test'] = True
+    conf.set_flash_num_blocks_by_bytes(
+        int((loop_dev_mb * 2**20) * conf['nkftl']['provision_ratio']))
+    # conf.nkftl_set_flash_num_blocks_by_data_block_bytes(4 * 2**20)
+    print conf
+    runtime_update(conf)
+    workflow(conf)
+
 def test_nkftl():
     """
     """
@@ -1466,23 +1491,6 @@ def test_nkftl():
                 assert loop_dev_mb > conf["Synthetic"]["chunk_count"] \
                     * conf["Synthetic"]["chunk_size"] / 2**20
                 workflow(conf)
-
-def simple_lba_test():
-    confdic = get_default_config()
-    conf = config.Config(confdic)
-    metadata_dic = {}
-    metadata_dic['targetdir'] = '/tmp/results'
-    metadata_dic['filesystem'] = 'none'
-    metadata_dic['loop_dev_size_mb'] = 1
-    conf.update(metadata_dic)
-
-    conf['flash_npage_per_block'] = 32
-    conf['nkftl']['n_blocks_in_data_group'] = 4
-    conf['nkftl']['max_blocks_in_log_group'] = 2
-    conf.set_flash_num_blocks_by_bytes( 4 * 1024 * 1024 )
-    # conf.nkftl_set_flash_num_blocks_by_data_block_bytes(4 * 2**20)
-    runtime_update(conf)
-    workflow(conf)
 
 def choose_exp_metadata(default_conf):
     """
