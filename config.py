@@ -144,6 +144,13 @@ class Config(dict):
         -1 is because we need to at least one staging block for the purposes
         such as merging.
         """
+
+        raise RuntimeError("nkftl_set_flash_num_blocks_by_data_block_bytes()"
+            "should not be called anymore because it assumes the total number "
+            "of data blocks and log blocks in flash to be proportional "
+            "following N/K. In fact, the number of log blocks in flash can be "
+            "less than total.flash.block * K/(N+K).")
+
         block_span =  int((self['flash_num_blocks'] - 1) * \
                 self['nkftl']['n_blocks_in_data_group'] \
                 / (self['nkftl']['n_blocks_in_data_group'] \
@@ -157,6 +164,13 @@ class Config(dict):
         the number of flash blocks based on the ratio of data blocks and
         log blocks.
         """
+
+        raise RuntimeError("nkftl_set_flash_num_blocks_by_data_block_bytes()"
+            "should not be called anymore because it assumes the total number "
+            "of data blocks and log blocks in flash to be proportional "
+            "following N/K. In fact, the number of log blocks in flash can be "
+            "less than total.flash.block * K/(N+K).")
+
         n_data_blocks = data_bytes / (self['flash_page_size'] * \
             self['flash_npage_per_block'])
         n = (n_data_blocks * (self['nkftl']['n_blocks_in_data_group'] + \

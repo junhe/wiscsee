@@ -1250,7 +1250,9 @@ def get_default_config():
             'max_blocks_in_log_group': 2, # max number of blocks in a log block group
 
             "GC_threshold_ratio": 0.8,
-            "GC_low_threshold_ratio": 0.6
+            "GC_low_threshold_ratio": 0.7,
+
+            "provision_ratio": 1.5 # 1.5: 1GB user size, 1.5 flash size behind
         },
 
         ############## hybridmap ############

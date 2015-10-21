@@ -153,17 +153,22 @@ class Manual(LBAWorkloadGenerator):
         events = []
         maxpage = 0
 
-        block_span = self.conf.nkftl_allowed_num_of_data_blocks()
-        lba_span = block_span * self.conf['flash_npage_per_block']
+        # block_span = self.conf.nkftl_allowed_num_of_data_blocks()
+        # lba_span = block_span * self.conf['flash_npage_per_block']
+        lba_span = int(self.conf.total_num_pages() / \
+            self.conf['nkftl']['provision_ratio'])
 
         print "Number of flash blocks:", self.conf['flash_num_blocks']
         print "Number of pages:", self.conf.total_num_pages()
         print "LBA span of lba:", lba_span
+        print "LBA span in blocks", lba_span/self.conf['flash_npage_per_block']
         print "flash_npage_per_block:", self.conf['flash_npage_per_block']
         print "n_blocks_in_data_group:", \
             self.conf['nkftl']['n_blocks_in_data_group']
         print "max_blocks_in_log_group:",\
             self.conf['nkftl']['max_blocks_in_log_group']
+        print "GC trigger blocks:", self.conf['flash_num_blocks'] * \
+            self.conf['nkftl']['GC_threshold_ratio']
 
         for i in range(100000):
             op = random.choice(ops)
