@@ -559,6 +559,8 @@ class GcDecider(object):
             self.conf['flash_num_blocks'],
             self.conf['flash_num_blocks'] / self.conf['nkftl']['provision_ratio'])
 
+        assert self.high_watermark > self.low_watermark
+
         self.call_index = -1
 
     def refresh(self):
