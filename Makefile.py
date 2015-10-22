@@ -1437,8 +1437,8 @@ def simple_lba_test():
     conf.update(metadata_dic)
 
     conf['flash_npage_per_block'] = 4
-    conf['nkftl']['n_blocks_in_data_group'] = 1
-    conf['nkftl']['max_blocks_in_log_group'] = 1
+    conf['nkftl']['n_blocks_in_data_group'] = 4
+    conf['nkftl']['max_blocks_in_log_group'] = 8
     conf['nkftl']['provision_ratio'] = 1.5
     conf['enable_e2e_test'] = True
     conf.set_flash_num_blocks_by_bytes(
