@@ -1082,7 +1082,6 @@ class GarbageCollector(object):
                 self.flash.page_write(dst_ppn, cat = TAG_PARTIAL_MERGE,
                     data = data)
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
-                print 'hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh'
 
                 # This branch may never be called because the none of the rest
                 # of the pages is valid, thus you don't have the change
