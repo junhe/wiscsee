@@ -1208,6 +1208,19 @@ class GarbageCollector(object):
         # Need to mark the log block as used data block now
         self.block_pool.move_used_log_to_data_block(log_pbn)
 
+    def assert_mapping(self, lpn):
+        # Try log blocks
+        log_found, log_ppn = self.mapping_manager.log_mapping_table.lpn_to_ppn(lpn)
+
+        # Try data blocks
+        data_found, data_ppn = self.mapping_manager.data_block_mapping_table\
+            .lpn_to_ppn(lpn)
+
+        if log_found == True and self.oob.states.is_page_valid(log_ppn) and \
+            data_found == True and self.oob.states.is_page_valid(data_ppn):
+            raise RuntimeError("lpn:{} is valid in log mapping (ppn:{}) "\
+                "and data mapping (ppn:{})".format(lpn, log_ppn, data_ppn))
+
     def asserts(self):
         # number of log blocks in logblockinfo should be equal to
         # used log blocks in block_pool
