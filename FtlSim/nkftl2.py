@@ -1115,6 +1115,11 @@ class GarbageCollector(object):
                 self.flash.page_write(dst_ppn, cat = TAG_PARTIAL_MERGE,
                     data = data)
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
+
+                # you need to remove lpn from log mapping here
+                self.mapping_manager.log_mapping_table.remove_lpn(
+                    data_group_no = data_group_no, lpn = lpn)
+
                 self.recycle_empty_log_block(data_group_no = data_group_no,
                     log_pbn = src_block, tag = TAG_PARTIAL_MERGE)
 
