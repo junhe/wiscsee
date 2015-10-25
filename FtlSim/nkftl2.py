@@ -604,6 +604,7 @@ class GcDecider(object):
         return ret
 
     def freezed_too_long(self, cur_n_used_blocks):
+        return False
         if self.improved(cur_n_used_blocks):
             self.freeze_count = 0
             ret = False
