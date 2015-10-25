@@ -53,6 +53,7 @@ TAG_SWITCH_MERGE    = 'SWITCH.MERGE'
 TAG_FULL_MERGE      = 'FULL.MERGE'
 TAG_FORGROUND       = 'FORGROUND'
 TAG_CLEAN_DATA_GROUP= 'CLEAN.DATA.GROUP'
+TAG_DIRECT_ERASE    = 'DIRECT_ERASE'
 
 class GlobalHelper(object):
     """
@@ -782,7 +783,7 @@ class GarbageCollector(object):
         # Just free it?
         if not self.oob.is_any_page_valid(log_pbn):
             self.oob.erase_block(log_pbn)
-            self.flash.block_erase(log_pbn, cat = tag)
+            self.flash.block_erase(log_pbn, cat = TAG_DIRECT_ERASE)
             self.block_pool.free_used_log_block(log_pbn)
             self.mapping_manager.log_mapping_table\
                 .remove_log_block(data_group_no = blk_info.data_group_no,
