@@ -52,8 +52,8 @@ TAG_TRY_GC          = 'TRY.GC'
 TAG_SWITCH_MERGE    = 'SWITCH.MERGE'
 TAG_FULL_MERGE      = 'FULL.MERGE'
 TAG_FORGROUND       = 'FORGROUND'
-TAG_CLEAN_DATA_GROUP= 'CLEAN.DATA.GROUP'
-TAG_DIRECT_ERASE    = 'DIRECT_ERASE'
+TAG_WRITE_DRIVEN    = 'WRITE.DRIVEN.DIRECT.ERASE'
+TAG_THRESHOLD_GC    = 'THRESHOLD.GC.DIRECT.ERASE'
 
 class GlobalHelper(object):
     """
@@ -670,7 +670,7 @@ class GarbageCollector(object):
                 self.recorder.count_me("GC", "StopIteration")
                 break
 
-            self.clean_block(blockinfo, tag = TAG_TRY_GC)
+            self.clean_block(blockinfo, tag = TAG_THRESHOLD_GC)
 
             blk_cnt += 1
 
@@ -784,7 +784,7 @@ class GarbageCollector(object):
         # Just free it?
         if not self.oob.is_any_page_valid(log_pbn):
             self.oob.erase_block(log_pbn)
-            self.flash.block_erase(log_pbn, cat = TAG_DIRECT_ERASE)
+            self.flash.block_erase(log_pbn, cat = tag)
             self.block_pool.free_used_log_block(log_pbn)
             self.mapping_manager.log_mapping_table\
                 .remove_log_block(data_group_no = blk_info.data_group_no,
@@ -842,7 +842,7 @@ class GarbageCollector(object):
                         block_num = log_block,
                         last_used_time = None,
                         data_group_no = data_group_no),
-                        tag = TAG_CLEAN_DATA_GROUP)
+                        tag = TAG_WRITE_DRIVEN)
             # print 'after  merge', self.block_pool.visual()
             self.asserts()
 
