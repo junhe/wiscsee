@@ -713,7 +713,7 @@ class GarbageCollector(object):
                     data_group_no = data_group_no)
                 priority_q.put(blk_info)
                 log_cnt += 1
-        if global_debug:
+        if True or global_debug:
             print 'data_cnt', data_cnt, 'log_cnt', log_cnt, 'len(log_usedblocks)', \
                 len(self.block_pool.log_usedblocks), 'len(data_usedblocks)', \
                 len(self.block_pool.data_usedblocks), 'len(freeblocks)', \

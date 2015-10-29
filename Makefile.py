@@ -20,6 +20,7 @@ import FtlSim
 import WlRunner
 from utils import *
 
+KB, MB, GB = 2**10, 2**20, 2**30
 
 #########################################################
 # Git helper
@@ -1307,6 +1308,25 @@ def get_default_config():
         "f2fs"  : {"make_opts": {}, 'sysfs':{}},
         "btrfs"  : {"make_opts": {}},
 
+
+        ############## workload.py workload to age FS ###
+        # This is run after mounting the file and before real workload
+        # Having this specific aging workload is because we don't want
+        # its performance statistics to be recorded.
+        "age_workload_class"    : "Synthetic",
+
+        # the following config should match the age_workload_class you use
+        "aging_config" :{
+            "generating_func": "self.generate_random_workload",
+            # "chunk_count": 100*2**20/(8*1024),
+            "chunk_count": 4 * 2**20 / (512 * 1024),
+            "chunk_size" : 512 * 1024,
+            "iterations" : 1,
+            "filename"   : "aging.file",
+            "n_col"      : 5   # only for hotcold workload
+        },
+
+
         ############## workload.py on top of FS #########
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
@@ -1428,7 +1448,7 @@ def simple_lba_test():
     confdic = get_default_config()
     conf = config.Config(confdic)
 
-    loop_dev_mb = 1
+    loop_dev_mb = 1024
 
     metadata_dic = {}
     metadata_dic['workload_src'] = LBAGENERATOR
@@ -1437,10 +1457,12 @@ def simple_lba_test():
     metadata_dic['loop_dev_size_mb'] = loop_dev_mb
     conf.update(metadata_dic)
 
-    conf['flash_npage_per_block'] = 4
-    conf['nkftl']['n_blocks_in_data_group'] = 4
-    conf['nkftl']['max_blocks_in_log_group'] = 8
+    conf['flash_npage_per_block'] = 32
+    conf['nkftl']['n_blocks_in_data_group'] = 2
+    conf['nkftl']['max_blocks_in_log_group'] = 4
     conf['nkftl']['provision_ratio'] = 1.5
+    conf['nkftl']['GC_threshold_ratio'] = 0.8
+    conf['nkftl']['GC_low_threshold_ratio'] = 0.7
     conf['enable_e2e_test'] = True
     conf.set_flash_num_blocks_by_bytes(
         int((loop_dev_mb * 2**20) * conf['nkftl']['provision_ratio']))
@@ -1458,40 +1480,84 @@ def test_nkftl():
     metadata_dic = choose_exp_metadata(conf)
     conf.update(metadata_dic)
 
-    for N in (2, 4, 8):
-        for K in (4, 8):
-            for fs in ('f2fs', 'ext4'):
-                loop_dev_mb = 1024   # <--------------------- Set it?
-                conf['workload_src'] = WLRUNNER
-                # conf['filesystem'] = 'ext4'
-                conf['filesystem'] = fs
-                conf['flash_npage_per_block'] = 32
-                conf['nkftl']['n_blocks_in_data_group'] = N
-                conf['nkftl']['max_blocks_in_log_group'] = K
-                conf['nkftl']['GC_threshold_ratio'] = 0.8
-                conf['nkftl']['GC_low_threshold_ratio'] = 0.7
-                conf['loop_dev_size_mb'] = loop_dev_mb
-                conf.nkftl_set_flash_num_blocks_by_data_block_bytes(
-                    loop_dev_mb * 2**20)
+    age_filesize = 512 * MB
+    age_chunksize = 64 * KB
+    age_trafficsize = 4 * GB
+    aging_update = {
+        "aging_config" :{
+            "generating_func": "self.generate_random_workload",
+            # "chunk_count": 100*2**20/(8*1024),
+            "chunk_count": age_filesize / age_chunksize,
+            "chunk_size" : age_chunksize,
+            "iterations" : age_trafficsize / age_filesize,
+            "filename"   : "aging.file"
+        }
+    }
+    conf.update(aging_update)
 
-                conf["workload_class"] = "Synthetic"
-                conf["Synthetic"] = {
-                        # "generating_func": "self.generate_hotcold_workload",
-                        # "generating_func": "self.generate_sequential_workload",
-                        # "generating_func": "self.generate_backward_workload",
-                        "generating_func": "self.generate_random_workload",
-                        # "chunk_count": 100*2**20/(8*1024),
-                        "chunk_count": 64 * 2**20 / (16 * 1024),
-                        "chunk_size" : 16 * 1024,
-                        "iterations" : 100,
-                        "n_col"      : 5   # only for hotcold workload
-                    }
+    nks = [
+            # {'N': 1024, 'K': 1024},
+            # {'N': 4, 'K': 2**30},
+            {'N': 1, 'K': 1}
+            # {'N': 4, 'K': 8},
+            # {'N': 8, 'K': 4},
+            # {'N': 4, 'K': 4},
+            # {'N': 'nflashblocks', 'K': 2**30}
+            ]
+    loop_dev_mb = 1 * 1024   # <--------------------- Set it?
+    # bytes_to_write = 20 * 2**30
+    bytes_to_write = 4 * GB
 
-                runtime_update(conf)
+    for nk in nks:
+        N = nk['N']
+        K = nk['K']
+        # for fs in ('f2fs', 'ext4'):
+        for fs in ('f2fs', 'ext4'):
+            # for chunksize in (16 * 1024, 64 * 1024, 512 * 1024):
+            for chunksize in (64 * KB,):
+                # for filesize in [ 2**i * 32*2**20 for i in range(0, 5, 1) ]:
+                for filesize in [ 64 * MB ]:
 
-                assert loop_dev_mb > conf["Synthetic"]["chunk_count"] \
-                    * conf["Synthetic"]["chunk_size"] / 2**20
-                workflow(conf)
+                    # this will garantee that file system writes is confined
+                    # in this space
+                    conf['loop_dev_size_mb'] = loop_dev_mb
+                    conf.set_flash_num_blocks_by_bytes(
+                        int((loop_dev_mb * 2**20) * conf['nkftl']['provision_ratio']))
+
+                    conf['workload_src'] = WLRUNNER
+                    conf['filesystem'] = fs
+                    conf['flash_npage_per_block'] = 32
+                    if N == 'nflashblocks':
+                        N = conf['flash_num_blocks']
+                    conf['nkftl']['n_blocks_in_data_group'] = N
+                    conf['nkftl']['max_blocks_in_log_group'] = K
+                    conf['nkftl']['GC_threshold_ratio'] = 0.8
+                    conf['nkftl']['GC_low_threshold_ratio'] = 0.7
+                    conf['nkftl']['provision_ratio'] = 1.28
+
+                    conf["workload_class"] = "Synthetic"
+                    conf["Synthetic"] = {
+                            # "generating_func": "self.generate_hotcold_workload",
+                            # "generating_func": "self.generate_sequential_workload",
+                            # "generating_func": "self.generate_backward_workload",
+                            "generating_func": "self.generate_random_workload",
+                            # "chunk_count": 100*2**20/(8*1024),
+                            "chunk_count": filesize / chunksize,
+                            "chunk_size" : chunksize,
+                            "iterations" : int(bytes_to_write/filesize),
+                            "filename"   : "test.file",
+                            "n_col"      : 5   # only for hotcold workload
+                        }
+
+                    runtime_update(conf)
+
+                    print 'filesize', filesize/2**20
+                    print conf['Synthetic']['chunk_count'] * conf['Synthetic']['chunk_size'] / 2**20
+                    print 'iteration', conf['Synthetic']['iterations']
+
+                    assert loop_dev_mb > conf["Synthetic"]["chunk_count"] \
+                        * conf["Synthetic"]["chunk_size"] / 2**20
+                    workflow(conf)
 
 def choose_exp_metadata(default_conf):
     """

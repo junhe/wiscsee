@@ -170,7 +170,7 @@ class Manual(LBAWorkloadGenerator):
         print "GC trigger blocks:", self.conf['flash_num_blocks'] * \
             self.conf['nkftl']['GC_threshold_ratio']
 
-        for i in range(100000):
+        for i in range(lba_span * 4):
             op = random.choice(ops)
             page = int(random.random() * lba_span)
             if maxpage < page:
