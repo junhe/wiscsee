@@ -216,7 +216,7 @@ class Sqlbench(Workload):
 
 class Synthetic(Workload):
     def generate_sequential_workload(self):
-        setting = self.conf['Synthetic']
+        setting = self.workload_conf
 
         wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
         filepath = 'testfile'
