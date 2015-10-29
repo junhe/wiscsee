@@ -7,12 +7,23 @@ import utils
 import workloadlist
 
 class Workload(object):
-    def __init__(self, confobj):
+    def __init__(self, confobj, workload_conf = None):
+        """
+        workload_conf is part of confobj. But we may need to run
+        multiple workloads with different configurations in our
+        experiements. So we need workload_conf to specify which
+        configuration we will use in a Workload instance.
+
+        Since workload_conf has a default value, it should be
+        compatible with previous code. However, new classes based
+        one Workload should use this new __init__() with two parameters.
+        """
         if not isinstance(confobj, config.Config):
             raise TypeError("confobj is not of type class config.Config".
                 format(type(confobj).__name__))
 
         self.conf = confobj
+        self.workload_conf = workload_conf
 
     def run(self):
         raise NotImplementedError
@@ -20,6 +31,17 @@ class Workload(object):
     def stop(self):
         raise NotImplementedError
 
+class NoOp(Workload):
+    """
+    This is a workload class that does nothing. It may be used to skip
+    the file system aging stage. To skip aging workload, set
+    conf['age_workload_class'] = "NoOp"
+    """
+    def run(self):
+        pass
+
+    def stop(self):
+        pass
 
 class Simple(Workload):
     def run(self):
@@ -230,10 +252,11 @@ class Synthetic(Workload):
         return wllist
 
     def generate_random_workload(self):
-        setting = self.conf['Synthetic']
+        # setting = self.conf['Synthetic']
+        setting = self.workload_conf
 
         wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
-        filepath = 'testfile'
+        filepath = setting['filename']
         wllist.add_call(name='open', pid=0, path=filepath)
 
         random.seed(1)

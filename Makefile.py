@@ -1319,7 +1319,8 @@ def get_default_config():
             "chunk_count": 4 * 2**20 / (512 * 1024),
             "chunk_size" : 512 * 1024,
             "iterations" : 1,
-            "n_col"      : 5   # only for hotcold workload
+            "n_col"      : 5,   # only for hotcold workload
+            "filename"   : "test.file"
         },
 
         ############## LBAGENERATOR  #########

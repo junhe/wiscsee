@@ -60,9 +60,21 @@ class WorkloadRunner(object):
             to_ftlsim_path = self.conf.get_ftlsim_events_output_path(),
             sector_size = self.conf['sector_size'])
 
+        # create aging workload object
+        self.aging_workload = eval("workload.{wlclass}(confobj = self.conf, " \
+            "workload_conf = {wlconf})".format(
+                wlclass = self.conf["age_workload_class"],
+                wlconf = self.conf["aging_config"]
+                ) #format
+            ) #eval
+
         # create workload object
-        self.workload = eval("workload.{}(self.conf)".format(
-            self.conf["workload_class"]))
+        self.workload = eval("workload.{wlclass}(confobj = self.conf, " \
+            "workload_conf = {wlconf})".format(
+                wlclass = self.conf["workload_class"],
+                wlconf = self.conf["Synthetic"]
+                ) #format
+            ) #eval
 
         # create Ftrace manager
         # self.ftrace = ftrace.Ftrace()
@@ -96,6 +108,8 @@ class WorkloadRunner(object):
                 for opt_name, value in \
                     self.conf['f2fs'].get('sysfs', {}).items():
                     self.fs.sysfs_setup(opt_name, value)
+
+            self.aging_workload.run()
 
             time.sleep(1)
             self.blktracer_mkfs.stop_tracing_and_collecting()
