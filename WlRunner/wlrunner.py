@@ -109,6 +109,7 @@ class WorkloadRunner(object):
                     self.conf['f2fs'].get('sysfs', {}).items():
                     self.fs.sysfs_setup(opt_name, value)
 
+            # Age the file system
             self.aging_workload.run()
 
             time.sleep(1)

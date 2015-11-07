@@ -1480,17 +1480,17 @@ def test_nkftl():
     metadata_dic = choose_exp_metadata(conf)
     conf.update(metadata_dic)
 
-    age_filesize = 512 * MB
+    age_filesize = 400 * MB
     age_chunksize = 64 * KB
-    age_trafficsize = 4 * GB
     aging_update = {
         "aging_config" :{
-            "generating_func": "self.generate_random_workload",
+            # "generating_func": "self.generate_random_workload",
+            "generating_func": "self.generate_mix_seq_workload",
             # "chunk_count": 100*2**20/(8*1024),
             "chunk_count": age_filesize / age_chunksize,
             "chunk_size" : age_chunksize,
-            "iterations" : age_trafficsize / age_filesize,
-            "filename"   : "aging.file"
+            "iterations" : 1,
+            "num_files" : 2
         }
     }
     conf.update(aging_update)
@@ -1531,16 +1531,16 @@ def test_nkftl():
                         N = conf['flash_num_blocks']
                     conf['nkftl']['n_blocks_in_data_group'] = N
                     conf['nkftl']['max_blocks_in_log_group'] = K
-                    conf['nkftl']['GC_threshold_ratio'] = 0.8
+                    conf['nkftl']['GC_threshold_ratio'] = 0.9
                     conf['nkftl']['GC_low_threshold_ratio'] = 0.7
                     conf['nkftl']['provision_ratio'] = 1.28
 
                     conf["workload_class"] = "Synthetic"
                     conf["Synthetic"] = {
                             # "generating_func": "self.generate_hotcold_workload",
-                            # "generating_func": "self.generate_sequential_workload",
+                            "generating_func": "self.generate_sequential_workload",
                             # "generating_func": "self.generate_backward_workload",
-                            "generating_func": "self.generate_random_workload",
+                            # "generating_func": "self.generate_random_workload",
                             # "chunk_count": 100*2**20/(8*1024),
                             "chunk_count": filesize / chunksize,
                             "chunk_size" : chunksize,

@@ -215,11 +215,44 @@ class Sqlbench(Workload):
 
 
 class Synthetic(Workload):
+    def generate_mix_seq_workload(self):
+        """
+        This workload writes two files alternatively and sequentially, and
+        then delete half of them
+        """
+        setting = self.workload_conf
+        nfiles = setting['num_files']
+
+        wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
+        filepaths = ['file.'+str(i) for i in range(nfiles)]
+
+        for filei in range(nfiles):
+            wllist.add_call(name='open', pid=0, path=filepaths[filei])
+
+        for _ in range(setting['iterations']):
+            for i in range(setting['chunk_count']):
+                for filei in range(nfiles):
+                    offset = setting['chunk_size'] * i
+                    size = setting['chunk_size']
+                    wllist.add_call(name='write', pid=0, path=filepaths[filei],
+                        offset=offset, count=size)
+                    # wllist.add_call(name='fsync', pid=0, path=filepaths[filei])
+            wllist.add_call(name='sync', pid=0)
+
+        for filei in range(nfiles):
+            wllist.add_call(name='close', pid=0, path=filepaths[filei])
+
+        for filei in range(nfiles):
+            if filei % 2 == 0:
+                wllist.add_call(name='rm', pid=0, path=filepaths[filei])
+        return wllist
+
+
     def generate_sequential_workload(self):
         setting = self.workload_conf
 
         wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
-        filepath = 'testfile'
+        filepath = setting['filename']
         wllist.add_call(name='open', pid=0, path=filepath)
 
         for rep in range(setting['iterations']):
@@ -228,7 +261,8 @@ class Synthetic(Workload):
                 size = setting['chunk_size']
                 wllist.add_call(name='write', pid=0, path=filepath,
                     offset=offset, count=size)
-            wllist.add_call(name='fsync', pid=0, path=filepath)
+            # wllist.add_call(name='fsync', pid=0, path=filepath)
+            wllist.add_call(name='sync', pid=0)
 
         wllist.add_call(name='close', pid=0, path=filepath)
         return wllist
@@ -271,6 +305,7 @@ class Synthetic(Workload):
                     offset=offset, count=size)
                 wllist.add_call(name='fsync', pid=0, path=filepath)
                 # wllist.add_call(name='sync', pid=0)
+            wllist.add_call(name='sync', pid=0)
 
         wllist.add_call(name='close', pid=0, path=filepath)
         return wllist
