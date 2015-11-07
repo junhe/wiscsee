@@ -9,7 +9,7 @@ class SysCall(dict):
 
         if self['name'] in ("write", "read"):
             items = ['pid', 'path', 'name', 'offset', 'count']
-        elif self['name'] in ("open", "close", "fsync", "mkdir"):
+        elif self['name'] in ("open", "close", "fsync", "mkdir", "rm"):
             items = ['pid', 'path', 'name']
         elif self['name'] in ("sync",):
             items = ['pid', 'NA', 'name']
