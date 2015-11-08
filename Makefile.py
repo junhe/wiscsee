@@ -1482,6 +1482,8 @@ def test_nkftl():
 
     age_filesize = 400 * MB
     age_chunksize = 64 * KB
+
+    conf["age_workload_class"] = "NoOp"
     aging_update = {
         "aging_config" :{
             # "generating_func": "self.generate_random_workload",
@@ -1506,7 +1508,7 @@ def test_nkftl():
             ]
     loop_dev_mb = 1 * 1024   # <--------------------- Set it?
     # bytes_to_write = 20 * 2**30
-    bytes_to_write = 4 * GB
+    bytes_to_write = 6 * GB
 
     for nk in nks:
         N = nk['N']
@@ -1514,9 +1516,9 @@ def test_nkftl():
         # for fs in ('f2fs', 'ext4'):
         for fs in ('f2fs', 'ext4'):
             # for chunksize in (16 * 1024, 64 * 1024, 512 * 1024):
-            for chunksize in (64 * KB,):
+            for chunksize in (16 * KB,):
                 # for filesize in [ 2**i * 32*2**20 for i in range(0, 5, 1) ]:
-                for filesize in [ 64 * MB ]:
+                for filesize in [ 512 * MB ]:
 
                     # this will garantee that file system writes is confined
                     # in this space
@@ -1531,16 +1533,16 @@ def test_nkftl():
                         N = conf['flash_num_blocks']
                     conf['nkftl']['n_blocks_in_data_group'] = N
                     conf['nkftl']['max_blocks_in_log_group'] = K
-                    conf['nkftl']['GC_threshold_ratio'] = 0.9
+                    conf['nkftl']['GC_threshold_ratio'] = 0.8
                     conf['nkftl']['GC_low_threshold_ratio'] = 0.7
                     conf['nkftl']['provision_ratio'] = 1.28
 
                     conf["workload_class"] = "Synthetic"
                     conf["Synthetic"] = {
                             # "generating_func": "self.generate_hotcold_workload",
-                            "generating_func": "self.generate_sequential_workload",
+                            # "generating_func": "self.generate_sequential_workload",
                             # "generating_func": "self.generate_backward_workload",
-                            # "generating_func": "self.generate_random_workload",
+                            "generating_func": "self.generate_random_workload",
                             # "chunk_count": 100*2**20/(8*1024),
                             "chunk_count": filesize / chunksize,
                             "chunk_size" : chunksize,
@@ -1726,7 +1728,8 @@ def main(cmd_args):
     # sqlbench_on_filesystems()
     # synthetic_on_filesystems()
     # test_ftl()
-    test_experimental_design()
+    # test_experimental_design()
+    test_nkftl()
 
 def _main():
     parser = argparse.ArgumentParser(
