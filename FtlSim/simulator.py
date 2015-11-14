@@ -54,6 +54,8 @@ class Simulator(object):
         elif self.conf['ftl_type'] == 'tpftl':
             ftl_class = tpftl.Tpftl
         elif self.conf['ftl_type'] == 'nkftl':
+            raise DeprecationWarning("You are trying to use nkftl, which is a "
+                "deprecated version of nkftl. Please use nkftl2 instead.")
             ftl_class = nkftl.Nkftl
         elif self.conf['ftl_type'] == 'nkftl2':
             ftl_class = nkftl2.Nkftl
