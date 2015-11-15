@@ -150,7 +150,7 @@ def get_default_config():
         # This is run after mounting the file and before real workload
         # Having this specific aging workload is because we don't want
         # its performance statistics to be recorded.
-        "age_workload_class"    : "Synthetic",
+        "age_workload_class"    : "NoOp",
 
         # the following config should match the age_workload_class you use
         "aging_config" :{
@@ -423,6 +423,7 @@ def runtime_update(conf):
         targetdir = conf['targetdir'], expname = conf['expname'],
         subexpname = conf['subexpname'],
         unique = '-'.join((conf['filesystem'], conf['time'], str(conf['hash']))))
+
 def test_dftl2_new():
     confdic = get_default_config()
     conf = config.Config(confdic)
