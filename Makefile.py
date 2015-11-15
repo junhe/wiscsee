@@ -73,6 +73,7 @@ def get_default_config():
             "global_mapping_entry_bytes": 4, # 32 bits
             "GC_threshold_ratio": 0.95,
             "GC_low_threshold_ratio": 0.9,
+            "over_provisioning": 1.28,
             "max_cmt_bytes": None, # cmt: cached mapping table
             "tpftl": {
                 "entry_node_bytes": 6, # page 8, TPFTL paper

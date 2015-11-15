@@ -896,6 +896,18 @@ class GcDecider(object):
         self.low_watermark = self.conf['dftl']['GC_low_threshold_ratio'] * \
             self.conf['flash_num_blocks']
 
+        # Check if the high_watermark is appropriate
+        # The high watermark should not be lower than the file system size
+        # because if the file system is full you have to constantly GC and
+        # cannot get more space
+        self.high_watermark = max(self.high_watermark,
+            1 / float(self.conf['dftl']['over_provisioning']))
+        self.low_watermark = max(self.low_watermark,
+            0.8 * 1 / self.conf['dftl']['over_provisioning'])
+
+        print 'High watermark', self.high_watermark
+        print 'Low watermark', self.low_watermark
+
         self.call_index = -1
         self.last_used_blocks = None
         self.freeze_count = 0
