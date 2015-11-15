@@ -1535,8 +1535,6 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         self.garbage_collector.try_gc()
 
-        print 'lba_read', 'lpn', lpn, 'ppn', ppn, 'data', data
-
         return data
 
     def lba_write(self, lpn, data = None):
