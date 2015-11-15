@@ -11,6 +11,7 @@ import config
 import ftlbuilder
 import lrulist
 import recorder
+import utils
 
 """
 This refactors Dftl
