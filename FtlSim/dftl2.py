@@ -891,20 +891,33 @@ class GcDecider(object):
         self.block_pool = block_pool
         self.recorder = recorderobj
 
-        self.high_watermark = self.conf['dftl']['GC_threshold_ratio'] * \
-            self.conf['flash_num_blocks']
-        self.high_watermark_orig = self.high_watermark
-        self.low_watermark = self.conf['dftl']['GC_low_threshold_ratio'] * \
-            self.conf['flash_num_blocks']
-
         # Check if the high_watermark is appropriate
         # The high watermark should not be lower than the file system size
         # because if the file system is full you have to constantly GC and
         # cannot get more space
-        self.high_watermark = max(self.high_watermark,
-            1 / float(self.conf['dftl']['over_provisioning']))
-        self.low_watermark = max(self.low_watermark,
-            0.8 * 1 / self.conf['dftl']['over_provisioning'])
+        min_high = 1 / float(self.conf['dftl']['over_provisioning'])
+        if self.conf['dftl']['GC_threshold_ratio'] < min_high:
+            hi_watermark_ratio = min_high
+            print 'High watermark is reset to {}. It was {}'.format(
+                hi_watermark, self.conf['dftl']['GC_threshold_ratio'])
+        else:
+            hi_watermark_ratio = self.conf['dftl']['GC_threshold_ratio']
+            print 'Using user defined high watermark', hi_watermark_ratio
+
+        self.high_watermark = hi_watermark_ratio * \
+            self.conf['flash_num_blocks']
+
+        min_low = 0.8 * 1 / self.conf['dftl']['over_provisioning']
+        if self.conf['dftl']['GC_low_threshold_ratio'] < min_low:
+            low_watermark_ratio = min_low
+            print 'Low watermark is reset to {}. It was {}'.format(
+                low_watermark, self.conf['dftl']['GC_low_threshold_ratio'])
+        else:
+            low_watermark_ratio = self.conf['dftl']['GC_low_threshold_ratio']
+            print 'Using user defined low watermark', low_watermark_ratio
+
+        self.low_watermark = low_watermark_ratio * \
+            self.conf['flash_num_blocks']
 
         print 'High watermark', self.high_watermark
         print 'Low watermark', self.low_watermark
