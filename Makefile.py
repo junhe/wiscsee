@@ -241,6 +241,51 @@ def simple_lba_test():
     runtime_update(conf)
     workflow(conf)
 
+def simple_lba_test_dftl():
+    confdic = get_default_config()
+    conf = config.Config(confdic)
+
+    # Experiment metadata
+    metadata_dic = {}
+    metadata_dic['workload_src'] = LBAGENERATOR
+    metadata_dic['targetdir'] = '/tmp/results'
+    metadata_dic['filesystem'] = 'none'
+    metadata_dic["lba_workload_class"] = "Manual"
+    conf.update(metadata_dic)
+
+    # DFTL config
+    dftl_update = {
+        "ftl_type": "dftl2",
+        "dftl": {
+            # number of bytes per entry in global_mapping_table
+            "global_mapping_entry_bytes": 4, # 32 bits
+            "GC_threshold_ratio": 0.8,
+            "GC_low_threshold_ratio": 0.6,
+            "over_provisioning": 1.28,
+            "max_cmt_bytes": None, # cmt: cached mapping table
+        }
+    }
+    conf.update(dftl_update)
+
+    devsize_mb = loop_dev_mb = 16
+
+    conf['flash_npage_per_block'] = 32
+    conf['enable_e2e_test'] = True
+
+    # More DFTL
+    entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
+    conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+    conf['interface_level'] =  'page'
+    conf['loop_dev_size_mb'] = devsize_mb
+    conf['filesystem'] =  'f2fs'
+
+    to_bytes = int((loop_dev_mb * MB) * conf['dftl']['over_provisioning'])
+    conf.set_flash_num_blocks_by_bytes(to_bytes)
+
+    runtime_update(conf)
+
+    workflow(conf)
+
 def test_nkftl():
     """
     """
