@@ -1376,12 +1376,6 @@ class Nkftl(ftlbuilder.FtlBuilder):
 
         # print 'lba_write', lpn, 'data=', data
 
-        if data == '1197.6359':
-            # utils.breakpoint()
-            global global_debug
-            global_debug = False
-
-
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
         found, new_ppn = self.mapping_manager.log_mapping_table\
