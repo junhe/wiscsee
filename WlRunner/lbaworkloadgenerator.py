@@ -144,6 +144,40 @@ class Manual(LBAWorkloadGenerator):
 
         return events
 
+    def test_random_dftl(self):
+        w = 'write'
+        r = 'read'
+        d = 'discard'
+        # ops = [w, r, d]
+        ops = [w]
+
+        events = []
+        maxpage = 0
+
+        # block_span = self.conf.nkftl_allowed_num_of_data_blocks()
+        # lba_span = block_span * self.conf['flash_npage_per_block']
+        lba_span = int(self.conf.total_num_pages() / \
+            self.conf['nkftl']['provision_ratio'])
+
+        print "Number of flash blocks:", self.conf['flash_num_blocks']
+        print "Number of pages:", self.conf.total_num_pages()
+        print "LBA span of lba:", lba_span
+        print "LBA span of lba (MB):", lba_span * self.conf['flash_page_size'] / float(2**20)
+        print "LBA span in blocks", lba_span/self.conf['flash_npage_per_block']
+        print "flash_npage_per_block:", self.conf['flash_npage_per_block']
+
+        for i in range(lba_span * 50):
+            op = random.choice(ops)
+            page = int(random.random() * lba_span)
+            if maxpage < page:
+                maxpage = page
+            events.append( (op, page) )
+
+        for page in range(maxpage):
+            events.append( (r, page) )
+
+        return events
+
     def test_random(self):
         w = 'write'
         r = 'read'
@@ -189,7 +223,8 @@ class Manual(LBAWorkloadGenerator):
         # events = self.test3()
         # events = self.test2()
         # events = self.test1()
-        events = self.test_random()
+        # events = self.test_random()
+        events = self.test_random_dftl()
 
         for op, lpn in events:
             offset = lpn * self.conf['flash_page_size']
