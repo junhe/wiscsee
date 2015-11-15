@@ -1134,14 +1134,14 @@ class GarbageCollector(object):
         old_ppn = ppn
 
         # read the the data page
-        self.flash.page_read(old_ppn, DATA_CLEANING)
+        pagedata = self.flash.page_read(old_ppn, DATA_CLEANING)
 
         # find the mapping
         lpn = self.oob.translate_ppn_to_lpn(old_ppn)
 
         # write to new page
         new_ppn = self.block_pool.next_gc_data_page_to_program()
-        self.flash.page_write(new_ppn, DATA_CLEANING)
+        self.flash.page_write(new_ppn, DATA_CLEANING, data = pagedata)
 
         # update new page and old page's OOB
         self.oob.new_write(lpn, old_ppn, new_ppn)
@@ -1167,14 +1167,14 @@ class GarbageCollector(object):
         old_ppn = ppn
 
         # read the the data page
-        self.flash.page_read(old_ppn, DATA_CLEANING)
+        pagedata = self.flash.page_read(old_ppn, DATA_CLEANING)
 
         # find the mapping
         lpn = self.oob.translate_ppn_to_lpn(old_ppn)
 
         # write to new page
         new_ppn = self.block_pool.next_gc_data_page_to_program()
-        self.flash.page_write(new_ppn, DATA_CLEANING)
+        self.flash.page_write(new_ppn, DATA_CLEANING, data = pagedata)
 
         # update new page and old page's OOB
         self.oob.data_page_move(lpn, old_ppn, new_ppn)
@@ -1501,7 +1501,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.recorder.put('logical_read', lpn, 'user')
 
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
-        self.flash.page_read(ppn, DATA_USER)
+        data = self.flash.page_read(ppn, DATA_USER)
 
         self.recorder.write_file('lba.trace.txt',
             timestamp = self.oob.timestamp(),
@@ -1511,7 +1511,11 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         self.garbage_collector.try_gc()
 
-    def lba_write(self, lpn):
+        print 'lba_read', 'lpn', lpn, 'ppn', ppn, 'data', data
+
+        return data
+
+    def lba_write(self, lpn, data = None):
         """
         This is the interface for higher level to call, do NOT use it for
         internal use. If you need, create new one and refactor the code.
@@ -1560,7 +1564,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         )
 
         # Flash
-        self.flash.page_write(new_ppn, DATA_USER)
+        self.flash.page_write(new_ppn, DATA_USER, data = data)
 
         # garbage collection
         self.garbage_collector.try_gc()
