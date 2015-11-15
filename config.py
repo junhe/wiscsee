@@ -106,8 +106,15 @@ class Config(dict):
         return os.path.join(self['result_dir'], 'ftlsim.out')
 
     def set_flash_num_blocks_by_bytes(self, size_byte):
-        self['flash_num_blocks'] = size_byte/ \
+        nblocks = size_byte / \
             (self['flash_page_size'] * self['flash_npage_per_block'])
+
+        rem = size_byte % \
+            (self['flash_page_size'] * self['flash_npage_per_block'])
+
+        print 'WARNING: set_flash_num_blocks_by_bytes() cannot set to '\
+            'exact bytes. rem:', rem
+        self['flash_num_blocks'] = nblocks
 
     def dftl_n_mapping_entries_per_page(self):
         "used by dftl, return the number of mapping entries in a page"
