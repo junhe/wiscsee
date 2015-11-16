@@ -8,6 +8,7 @@ import Queue
 import bidict
 
 import config
+import flash
 import ftlbuilder
 import lrulist
 import recorder
@@ -194,6 +195,50 @@ random.seed(0)
 # debugrec = recorder.Recorder(recorder.STDOUT_TARGET, verbose_level = 3)
 # def db(*args):
     # debugrec.debug(*args)
+
+class GlobalHelper(object):
+    """
+    In case you need some global variables. We put all global stuff here so
+    it is easier to manage. (And you know all the bad things you did :)
+    """
+    def __init__(self, confobj):
+        self.timeline = Timeline(confobj)
+
+class Timeline(object):
+    """
+    This is intended for global use. It maintains a table like:
+
+    lpn operation    flash.read flash.write flash.erasure
+    34  write        33         1           35
+    77  read         3          5           666
+
+    flash.* is the flash operations taken to finish the lpn operation
+
+    This is how it should be used:
+    1. the interface calls lba_read(), lba_write(), and lba_discard() will
+    add a new row to the table,
+    2. the flash class will simply increment the counter
+    3. go to 1.
+    """
+    def __init__(self, confobj):
+        self.table = []
+        self.conf = confobj
+
+    def add_lpn_op(self, lpn, op):
+        self.table.append( {'lpn':lpn, 'operation': op,
+            'flash.read':0, 'flash.write':0, 'flash.erasure':0} )
+
+    def incr_flash_op(self, op):
+        last_row = self.table[-1]
+        last_row[op] += 1
+
+    def save(self):
+        path = os.path.join(self.conf['result_dir'], 'timeline.txt')
+        utils.table_to_file(self.table, path)
+
+    def __del__(self):
+        self.save()
+
 
 class OutOfBandAreas(object):
     """
@@ -1492,6 +1537,12 @@ class Dftl(ftlbuilder.FtlBuilder):
         # self.bitmap.initialize()
         # del self.bitmap
 
+        self.global_helper = GlobalHelper(confobj)
+
+        # Replace the flash object with a new one, which has global helper
+        flashobj = flash.Flash(recorderobj, confobj, self.global_helper)
+        self.flash = flashobj
+
         self.block_pool = BlockPool(confobj)
         self.oob = OutOfBandAreas(confobj)
 
@@ -1523,6 +1574,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         flash.read(ppn)
         """
         self.recorder.put('logical_read', lpn, 'user')
+        self.global_helper.timeline.add_lpn_op(lpn, 'read')
 
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
         data = self.flash.page_read(ppn, DATA_USER)
@@ -1563,6 +1615,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         Flash
         """
         self.recorder.put('logical_write', lpn, 'user')
+        self.global_helper.timeline.add_lpn_op(lpn, 'write')
 
         old_ppn = self.mapping_manager.lpn_to_ppn(lpn)
 
@@ -1610,6 +1663,7 @@ class Dftl(ftlbuilder.FtlBuilder):
             updates should be done by GC
         """
         self.recorder.put('logical_discard', lpn, 'user')
+        self.global_helper.timeline.add_lpn_op(lpn, 'discard')
 
         # self.recorder.write_file('lba.trace.txt',
             # timestamp = self.oob.timestamp(),
