@@ -899,7 +899,7 @@ class GcDecider(object):
         if self.conf['dftl']['GC_threshold_ratio'] < min_high:
             hi_watermark_ratio = min_high
             print 'High watermark is reset to {}. It was {}'.format(
-                hi_watermark, self.conf['dftl']['GC_threshold_ratio'])
+                hi_watermark_ratio, self.conf['dftl']['GC_threshold_ratio'])
         else:
             hi_watermark_ratio = self.conf['dftl']['GC_threshold_ratio']
             print 'Using user defined high watermark', hi_watermark_ratio
@@ -911,7 +911,7 @@ class GcDecider(object):
         if self.conf['dftl']['GC_low_threshold_ratio'] < min_low:
             low_watermark_ratio = min_low
             print 'Low watermark is reset to {}. It was {}'.format(
-                low_watermark, self.conf['dftl']['GC_low_threshold_ratio'])
+                low_watermark_ratio, self.conf['dftl']['GC_low_threshold_ratio'])
         else:
             low_watermark_ratio = self.conf['dftl']['GC_low_threshold_ratio']
             print 'Using user defined low watermark', low_watermark_ratio
