@@ -329,9 +329,9 @@ class Synthetic(Workload):
         # store the random chunk sequence for each file
         # each file is accessed in the sequence of popping
         rand_seqs = {}
-        for rep in range(setting['iterations']):
-            for i in range(0, chunkcnt):
-                for fileid in fileids:
+        for fileid in fileids:
+            for rep in range(setting['iterations']):
+                for i in range(0, chunkcnt):
                     if not rand_seqs.has_key(fileid):
                         rand_seqs[fileid] = []
                     rand_seqs[fileid].append(random.randint(0, chunkcnt))
@@ -376,9 +376,9 @@ class Synthetic(Workload):
         # store the random chunk sequence for each file
         # each file is accessed in the sequence of popping
         rand_seqs = {}
-        for rep in range(setting['iterations']):
-            for i in range(0, chunkcnt):
-                for fileid in fileids:
+        for fileid in fileids:
+            for rep in range(setting['iterations']):
+                for i in range(0, chunkcnt):
                     if not rand_seqs.has_key(fileid):
                         rand_seqs[fileid] = []
                     rand_seqs[fileid].append(random.randint(0, chunkcnt))
