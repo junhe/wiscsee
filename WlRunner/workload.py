@@ -304,10 +304,55 @@ class Synthetic(Workload):
                 wllist.add_call(name='write', pid=0, path=filepath,
                     offset=offset, count=size)
                 wllist.add_call(name='fsync', pid=0, path=filepath)
-                # wllist.add_call(name='sync', pid=0)
-            wllist.add_call(name='sync', pid=0)
 
         wllist.add_call(name='close', pid=0, path=filepath)
+        return wllist
+
+    def generate_serial_random_writes(self):
+        """
+        Counterpart of parallel random writes, only difference is that
+        this one write one file after another. The order of chunks is
+        the same.
+        """
+        setting = self.workload_conf
+
+        nfiles = setting['nfiles']
+
+        fileids = range(nfiles)
+        filepaths = [ setting['filename'] + str(i) for i in fileids ]
+
+        wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
+
+        random.seed(1)
+        chunkcnt = setting['chunk_count']
+
+        # store the random chunk sequence for each file
+        # each file is accessed in the sequence of popping
+        rand_seqs = {}
+        for rep in range(setting['iterations']):
+            for i in range(0, chunkcnt):
+                for fileid in fileids:
+                    if not rand_seqs.has_key(fileid):
+                        rand_seqs[fileid] = []
+                    rand_seqs[fileid].append(random.randint(0, chunkcnt))
+
+        for fileid in fileids:
+            # do the files one by one
+            filepath = filepaths[fileid]
+            wllist.add_call(name='open', pid=fileid, path=filepath)
+
+            for rep in range(setting['iterations']):
+                for i in range(0, chunkcnt):
+                    filepath = filepaths[fileid]
+                    offset = setting['chunk_size'] *  rand_seqs[fileid].pop()
+                    size = setting['chunk_size']
+                    wllist.add_call(name='write', pid=fileid, path=filepath,
+                        offset=offset, count=size)
+                    wllist.add_call(name='fsync', pid=fileid, path=filepath)
+
+            # close
+            wllist.add_call(name='close', pid=fileid, path=filepath)
+
         return wllist
 
     def generate_parallel_random_writes(self):
@@ -328,11 +373,21 @@ class Synthetic(Workload):
         random.seed(1)
         chunkcnt = setting['chunk_count']
 
+        # store the random chunk sequence for each file
+        # each file is accessed in the sequence of popping
+        rand_seqs = {}
+        for rep in range(setting['iterations']):
+            for i in range(0, chunkcnt):
+                for fileid in fileids:
+                    if not rand_seqs.has_key(fileid):
+                        rand_seqs[fileid] = []
+                    rand_seqs[fileid].append(random.randint(0, chunkcnt))
+
         for rep in range(setting['iterations']):
             for i in range(0, chunkcnt):
                 for fileid in fileids:
                     filepath = filepaths[fileid]
-                    offset = setting['chunk_size'] * random.randint(0, chunkcnt)
+                    offset = setting['chunk_size'] * rand_seqs[fileid].pop()
                     size = setting['chunk_size']
                     wllist.add_call(name='write', pid=fileid, path=filepath,
                         offset=offset, count=size)
