@@ -148,8 +148,7 @@ class Manual(LBAWorkloadGenerator):
         w = 'write'
         r = 'read'
         d = 'discard'
-        # ops = [w, r, d]
-        ops = [w]
+        ops = [w, r, d]
 
         events = []
         maxpage = 0
@@ -166,7 +165,7 @@ class Manual(LBAWorkloadGenerator):
         print "LBA span in blocks", lba_span/self.conf['flash_npage_per_block']
         print "flash_npage_per_block:", self.conf['flash_npage_per_block']
 
-        for i in range(lba_span * 50):
+        for i in range(lba_span * 4):
             op = random.choice(ops)
             page = int(random.random() * lba_span)
             if maxpage < page:
