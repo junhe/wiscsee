@@ -313,7 +313,7 @@ class Synthetic(Workload):
     def generate_parallel_random_writes(self):
         setting = self.workload_conf
 
-        nfiles = 2
+        nfiles = setting['nfiles']
 
         fileids = range(nfiles)
         filepaths = [ setting['filename'] + str(i) for i in fileids ]
