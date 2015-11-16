@@ -1527,11 +1527,11 @@ class Dftl(ftlbuilder.FtlBuilder):
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
         data = self.flash.page_read(ppn, DATA_USER)
 
-        self.recorder.write_file('lba.trace.txt',
-            timestamp = self.oob.timestamp(),
-            operation = 'read',
-            lpn =  lpn
-        )
+        # self.recorder.write_file('lba.trace.txt',
+            # timestamp = self.oob.timestamp(),
+            # operation = 'read',
+            # lpn =  lpn
+        # )
 
         self.garbage_collector.try_gc()
 
@@ -1579,11 +1579,11 @@ class Dftl(ftlbuilder.FtlBuilder):
             new_ppn = new_ppn)
 
         # The LBA trace to file
-        self.recorder.write_file('lba.trace.txt',
-            timestamp = self.oob.timestamp_table[new_ppn],
-            operation = 'write',
-            lpn =  lpn
-        )
+        # self.recorder.write_file('lba.trace.txt',
+            # timestamp = self.oob.timestamp_table[new_ppn],
+            # operation = 'write',
+            # lpn =  lpn
+        # )
 
         # Flash
         self.flash.page_write(new_ppn, DATA_USER, data = data)
@@ -1608,15 +1608,14 @@ class Dftl(ftlbuilder.FtlBuilder):
         GTD:
             no updates needed
             updates should be done by GC
-
         """
         self.recorder.put('logical_discard', lpn, 'user')
 
-        self.recorder.write_file('lba.trace.txt',
-            timestamp = self.oob.timestamp(),
-            operation = 'discard',
-            lpn =  lpn
-        )
+        # self.recorder.write_file('lba.trace.txt',
+            # timestamp = self.oob.timestamp(),
+            # operation = 'discard',
+            # lpn =  lpn
+        # )
 
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
         if ppn == UNINITIATED:
