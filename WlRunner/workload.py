@@ -310,6 +310,41 @@ class Synthetic(Workload):
         wllist.add_call(name='close', pid=0, path=filepath)
         return wllist
 
+    def generate_parallel_random_writes(self):
+        setting = self.workload_conf
+
+        nfiles = 2
+
+        fileids = range(nfiles)
+        filepaths = [ setting['filename'] + str(i) for i in fileids ]
+
+        wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
+
+        # open
+        for fileid in fileids:
+            filepath = filepaths[fileid]
+            wllist.add_call(name='open', pid=fileid, path=filepath)
+
+        random.seed(1)
+        chunkcnt = setting['chunk_count']
+
+        for rep in range(setting['iterations']):
+            for i in range(0, chunkcnt):
+                for fileid in fileids:
+                    filepath = filepaths[fileid]
+                    offset = setting['chunk_size'] * random.randint(0, chunkcnt)
+                    size = setting['chunk_size']
+                    wllist.add_call(name='write', pid=fileid, path=filepath,
+                        offset=offset, count=size)
+                    wllist.add_call(name='fsync', pid=fileid, path=filepath)
+
+        # close
+        for fileid in fileids:
+            filepath = filepaths[fileid]
+            wllist.add_call(name='close', pid=fileid, path=filepath)
+
+        return wllist
+
     def generate_hotcold_workload(self):
         def write_chunk(chunk_id):
             offset = setting['chunk_size'] * chunk_id
@@ -338,7 +373,8 @@ class Synthetic(Workload):
         tmppath = '/tmp/tmp_workloadfile'
         wllist.save(tmppath)
 
-        utils.shcmd("mpirun -np 1 ../wlgen/player {}".format(tmppath))
+        utils.shcmd("mpirun -np {np} ../wlgen/player {workload}"\
+            .format(np = wllist.max_pid + 1, workload = tmppath))
         utils.shcmd("sync")
 
     def run(self):

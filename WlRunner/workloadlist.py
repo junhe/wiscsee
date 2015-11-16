@@ -34,6 +34,7 @@ class WorkloadList(object):
     def __init__(self, mountpoint):
         self.action_list = []
         self.mountpoint = mountpoint
+        self.max_pid = 0
 
     def get_abs_path(self, path):
         if not os.path.isabs(path):
@@ -44,6 +45,9 @@ class WorkloadList(object):
         # change path if necessary
         if kwargs.has_key('path'):
             kwargs['path'] = self.get_abs_path(kwargs['path'])
+
+        if kwargs['pid'] > self.max_pid:
+            self.max_pid = kwargs['pid']
 
         self.action_list.append(SysCall(kwargs))
 
