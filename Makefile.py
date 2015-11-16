@@ -267,7 +267,7 @@ def simple_lba_test_dftl():
     }
     conf.update(dftl_update)
 
-    devsize_mb = loop_dev_mb = 16
+    devsize_mb = loop_dev_mb = 1024
 
     conf['flash_npage_per_block'] = 32
     conf['enable_e2e_test'] = True
@@ -432,53 +432,42 @@ def test_dftl2_new():
     metadata_dic = choose_exp_metadata(conf)
     conf.update(metadata_dic)
 
-    age_filesize = 400 * MB
-    age_chunksize = 64 * KB
+    for fs in ('ext4', 'f2fs'):
+        for nfiles in (1, 2):
+            conf["age_workload_class"] = "NoOp"
 
-    conf["age_workload_class"] = "NoOp"
-    aging_update = {
-        "aging_config" :{
-            # "generating_func": "self.generate_random_workload",
-            "generating_func": "self.generate_mix_seq_workload",
-            # "chunk_count": 100*2**20/(8*1024),
-            "chunk_count": age_filesize / age_chunksize,
-            "chunk_size" : age_chunksize,
-            "iterations" : 1,
-            "num_files" : 2
-        }
-    }
-    conf.update(aging_update)
+            devsize_mb = 1024
+            entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
+            conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+            conf['interface_level'] =  'page'
+            conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+            conf['loop_dev_size_mb'] = devsize_mb
+            conf['filesystem'] =  fs
 
-    devsize_mb = 256
-    entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
-    conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
-    conf['interface_level'] =  'page'
-    conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
-    conf['loop_dev_size_mb'] = devsize_mb
-    conf['filesystem'] =  'f2fs'
+            # Setup workload
+            filesize = 256 * MB
+            chunksize = 512 * KB
+            bytes_to_write = filesize * 8
+            conf["workload_class"] = "Synthetic"
+            conf["Synthetic"] = {
+                    # "generating_func": "self.generate_hotcold_workload",
+                    # "generating_func": "self.generate_sequential_workload",
+                    # "generating_func": "self.generate_backward_workload",
+                    # "generating_func": "self.generate_random_workload",
+                    "generating_func": "self.generate_parallel_random_writes",
+                    # "generating_func": gen_func,
+                    # "chunk_count": 100*2**20/(8*1024),
+                    "chunk_count": filesize / chunksize,
+                    "chunk_size" : chunksize,
+                    "iterations" : int(bytes_to_write/filesize),
+                    "filename"   : "test.file",
+                    "n_col"      : 5,   # only for hotcold workload
+                    "nfiles"     : nfiles   # for parallel random writes
+                }
 
-    # Setup workload
-    filesize = 1 * MB
-    chunksize = 512 * KB
-    bytes_to_write = 1 * MB
-    conf["workload_class"] = "Synthetic"
-    conf["Synthetic"] = {
-            # "generating_func": "self.generate_hotcold_workload",
-            # "generating_func": "self.generate_sequential_workload",
-            # "generating_func": "self.generate_backward_workload",
-            "generating_func": "self.generate_random_workload",
-            # "chunk_count": 100*2**20/(8*1024),
-            "chunk_count": filesize / chunksize,
-            "chunk_size" : chunksize,
-            "iterations" : int(bytes_to_write/filesize),
-            "filename"   : "test.file",
-            "n_col"      : 5   # only for hotcold workload
-        }
+            runtime_update(conf)
 
-    runtime_update(conf)
-
-    workflow(conf)
-
+            workflow(conf)
 
 def main(cmd_args):
     if cmd_args.git == True:
