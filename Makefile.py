@@ -432,7 +432,7 @@ def test_dftl2_new():
     metadata_dic = choose_exp_metadata(conf)
     conf.update(metadata_dic)
 
-    def run(fs, nfiles, divider):
+    def run(fs, nfiles, divider, filesize, chunksize):
         conf["age_workload_class"] = "NoOp"
 
         devsize_mb = 1024 / divider
@@ -444,8 +444,8 @@ def test_dftl2_new():
         conf['filesystem'] =  fs
 
         # Setup workload
-        filesize = 256 * MB
-        chunksize = 16 * KB
+        # filesize = 256 + 128) * MB
+        # chunksize = 16 * KB
         bytes_to_write = filesize * 8
         conf["workload_class"] = "Synthetic"
         conf["Synthetic"] = {
@@ -468,12 +468,16 @@ def test_dftl2_new():
 
         workflow(conf)
 
-    for fs in ('btrfs',):
-        for nfiles in (2,):
-            if nfiles == 1:
-                run(fs = fs, nfiles = nfiles, divider = 2)
-            else:
-                run(fs = fs, nfiles = nfiles, divider = 1)
+    for fs in ('ext4', 'f2fs'):
+        for nfiles in (2, 1):
+            for filesize in (128 * MB, 128 * 3 * MB):
+                for chunksize in (16 * KB, 512 * KB):
+                    if nfiles == 1:
+                        run(fs = fs, nfiles = nfiles, divider = 2,
+                            filesize = filesize, chunksize = chunksize)
+                    else:
+                        run(fs = fs, nfiles = nfiles, divider = 1,
+                            filesize = filesize, chunksize = chunksize)
 
 
 def main(cmd_args):
