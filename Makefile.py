@@ -445,7 +445,7 @@ def test_dftl2_new():
 
         # Setup workload
         filesize = 256 * MB
-        chunksize = 512 * KB
+        chunksize = 16 * KB
         bytes_to_write = filesize * 8
         conf["workload_class"] = "Synthetic"
         conf["Synthetic"] = {
@@ -468,8 +468,8 @@ def test_dftl2_new():
 
         workflow(conf)
 
-    for fs in ('ext4', 'f2fs', 'btrfs'):
-        for nfiles in (2, 1):
+    for fs in ('btrfs',):
+        for nfiles in (2,):
             if nfiles == 1:
                 run(fs = fs, nfiles = nfiles, divider = 2)
             else:
