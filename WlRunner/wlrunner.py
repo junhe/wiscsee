@@ -165,6 +165,7 @@ class WorkloadRunner(object):
 
         # special event indicates the start of workload
         yield "enable_recorder 0 0"
+        yield "workloadstart 0 0"
 
         workload_iter = FileLineIterator(
             self.conf.get_ftlsim_events_output_path())

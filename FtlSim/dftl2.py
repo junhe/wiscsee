@@ -223,12 +223,25 @@ class Timeline(object):
     def __init__(self, confobj):
         self.table = []
         self.conf = confobj
+        self.ON = False
+
+    def turn_on(self):
+        self.ON = True
+
+    def turn_off(self):
+        self.ON = False
 
     def add_lpn_op(self, lpn, op):
+        if not self.ON:
+            return
+
         self.table.append( {'lpn':lpn, 'operation': op,
             'flash.read':0, 'flash.write':0, 'flash.erasure':0} )
 
     def incr_flash_op(self, op):
+        if not self.ON:
+            return
+
         last_row = self.table[-1]
         last_row[op] += 1
 
@@ -1681,6 +1694,9 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         # garbage collection checking and possibly doing
         # self.garbage_collector.try_gc()
+
+    def pre_workload(self):
+        self.global_helper.timeline.turn_on()
 
     def post_processing(self):
         """

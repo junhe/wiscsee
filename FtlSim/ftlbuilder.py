@@ -230,6 +230,13 @@ class FtlBuilder(object):
     def disable_recording(self):
         self.recorder.disable()
 
+    def pre_workload(self):
+        """
+        This will be called right before workload to be tested.
+        It is after mounting and aging.
+        """
+        raise NotImplementedError
+
     def post_processing(self):
         raise NotImplementedError
 

@@ -116,6 +116,8 @@ class Simulator(object):
             self.ftl.enable_recording()
         elif event['operation'] == 'disable_recorder':
             self.ftl.disable_recording()
+        elif event['operation'] == 'workloadstart':
+            self.ftl.pre_workload()
         else:
             raise RuntimeError("operation '{}' is not supported".format(
                 event['operation']))
@@ -167,6 +169,8 @@ class Simulator(object):
             self.ftl.enable_recording()
         elif event['operation'] == 'disable_recorder':
             self.ftl.disable_recording()
+        elif event['operation'] == 'workloadstart':
+            self.ftl.pre_workload()
         else:
             raise RuntimeError("operation '{}' is not supported".format(
                 event['operation']))
