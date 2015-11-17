@@ -236,9 +236,6 @@ class Timeline(object):
         path = os.path.join(self.conf['result_dir'], 'timeline.txt')
         utils.table_to_file(self.table, path)
 
-    def __del__(self):
-        self.save()
-
 
 class OutOfBandAreas(object):
     """
@@ -1684,6 +1681,12 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         # garbage collection checking and possibly doing
         # self.garbage_collector.try_gc()
+
+    def post_processing(self):
+        """
+        This function is called after the simulation.
+        """
+        self.global_helper.timeline.save()
 
 def main():
     pass

@@ -230,6 +230,9 @@ class FtlBuilder(object):
     def disable_recording(self):
         self.recorder.disable()
 
+    def post_processing(self):
+        raise NotImplementedError
+
 if __name__ == '__main__':
     b = bitarray.bitarray(10)
     print b

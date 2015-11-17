@@ -181,3 +181,5 @@ class Simulator(object):
                 print '|',
                 sys.stdout.flush()
 
+        self.ftl.post_processing()
+
