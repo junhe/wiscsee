@@ -468,7 +468,7 @@ def test_dftl2_new():
 
         workflow(conf)
 
-    for fs in ('f2fs', 'btrfs'):
+    for fs in ('ext4', 'f2fs', 'btrfs'):
         for nfiles in (2, 1):
             if nfiles == 1:
                 run(fs = fs, nfiles = nfiles, divider = 2)
