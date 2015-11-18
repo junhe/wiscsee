@@ -108,9 +108,13 @@ def get_default_config():
         "record_bad_victim_block": False,
 
         ############## For WlRunner ########
-        "loop_path"             : "/dev/loop0",
+        # for loop dev
         "loop_dev_size_mb"      : None,
         "tmpfs_mount_point"     : "/mnt/tmpfs",
+
+        "device_path"           : "/dev/loop0",
+        "device_type"           : "real", # loop, real
+
         "fs_mount_point"        : "/mnt/fsonloop",
         "mnt_opts" : {
             "ext4":   { 'discard': MOpt(opt_name = "discard",

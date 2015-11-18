@@ -24,11 +24,12 @@ class WorkloadRunner(object):
                 format(type(confobj).__name__()))
         self.conf = confobj
 
-        # create loop dev object, it is not physically created
-        self.loopdev = filesystem.LoopDevice(
-            dev_path = self.conf['loop_path'],
-            tmpfs_mount_point = self.conf['tmpfs_mount_point'],
-            size_mb = self.conf['loop_dev_size_mb'])
+        if self.conf['device_type'] == 'loop':
+            # create loop dev object, it is not physically created yet
+            self.loopdev = filesystem.LoopDevice(
+                dev_path = self.conf['device_path'],
+                tmpfs_mount_point = self.conf['tmpfs_mount_point'],
+                size_mb = self.conf['loop_dev_size_mb'])
 
         # create file system object, it is not physically created
         fs = self.conf['filesystem']
@@ -43,19 +44,19 @@ class WorkloadRunner(object):
         else:
             raise RuntimeError("{} is not a valid file system type"\
                 .format(fs))
-        self.fs = fsclass(device = self.conf['loop_path'],
+        self.fs = fsclass(device = self.conf['device_path'],
             mount_point = self.conf['fs_mount_point'])
 
         # blktracer for making file system
         self.blktracer_mkfs = blocktrace.BlockTraceManager(
-            dev = self.conf['loop_path'],
+            dev = self.conf['device_path'],
             resultpath = self.conf.get_blkparse_result_path_mkfs(),
             to_ftlsim_path = self.conf.get_ftlsim_events_output_path_mkfs(),
             sector_size = self.conf['sector_size'])
 
         # blktracer for running workload
         self.blktracer = blocktrace.BlockTraceManager(
-            dev = self.conf['loop_path'],
+            dev = self.conf['device_path'],
             resultpath = self.conf.get_blkparse_result_path(),
             to_ftlsim_path = self.conf.get_ftlsim_events_output_path(),
             sector_size = self.conf['sector_size'])
@@ -82,7 +83,8 @@ class WorkloadRunner(object):
     def run(self):
         try:
             # Prepare file systems
-            self.loopdev.create()
+            if self.conf['device_type'] == 'loop':
+                self.loopdev.create()
 
             # strat blktrace
             # This is only for making and mounting file system, because we
