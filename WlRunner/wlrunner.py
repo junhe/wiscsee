@@ -145,6 +145,7 @@ class WorkloadRunner(object):
             # time.sleep(2)
             # ftr.write_marker('JUNJun marked this beginning.')
 
+            print 'Running workload ....'
             self.workload.run()
 
             utils.shcmd('sync')

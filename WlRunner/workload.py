@@ -428,8 +428,17 @@ class Synthetic(Workload):
         tmppath = '/tmp/tmp_workloadfile'
         wllist.save(tmppath)
 
-        utils.shcmd("mpirun -np {np} ../wlgen/player {workload}"\
-            .format(np = wllist.max_pid + 1, workload = tmppath))
+        cmd = "mpirun -np {np} ../wlgen/player {workload}"\
+            .format(np = wllist.max_pid + 1, workload = tmppath)
+        # utils.shcmd("mpirun -np {np} ../wlgen/player {workload}"\
+            # .format(np = wllist.max_pid + 1, workload = tmppath))
+        perf_text = utils.run_and_get_output(cmd)
+        duration = float(perf_text[-1].split()[-1])
+
+        path = os.path.join(self.conf['result_dir'], 'workloadrun-duratio.txt')
+        with open(path, 'w') as f:
+            f.write(str(duration))
+
         utils.shcmd("sync")
 
     def run(self):
