@@ -3,6 +3,7 @@ import time
 import blocktrace
 import config
 import filesystem
+import fshelper
 import ftrace
 import utils
 import workload
@@ -85,6 +86,11 @@ class WorkloadRunner(object):
             # Prepare file systems
             if self.conf['device_type'] == 'loop':
                 self.loopdev.create()
+            elif self.conf['device_type'] == 'real':
+                # umount file system if it is mounted
+                if fshelper.isMounted(self.conf['fs_mount_point']):
+                    utils.shcmd(
+                        "sudo umount {}".format(self.conf['fs_mount_point']))
 
             # strat blktrace
             # This is only for making and mounting file system, because we
