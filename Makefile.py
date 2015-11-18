@@ -112,7 +112,7 @@ def get_default_config():
         "loop_dev_size_mb"      : None,
         "tmpfs_mount_point"     : "/mnt/tmpfs",
 
-        "device_path"           : "/dev/loop0",
+        "device_path"           : "/dev/loop0", # or sth. like /dev/sdc1
         "device_type"           : "real", # loop, real
 
         "fs_mount_point"        : "/mnt/fsonloop",
