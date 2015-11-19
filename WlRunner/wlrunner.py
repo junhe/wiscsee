@@ -1,3 +1,4 @@
+import re
 import time
 
 import blocktrace
@@ -91,6 +92,22 @@ class WorkloadRunner(object):
                 if fshelper.isMounted(self.conf['fs_mount_point']):
                     utils.shcmd(
                         "sudo umount {}".format(self.conf['fs_mount_point']))
+                # partition the dev
+                base_dev_path = self.conf['device_path'].rstrip('0123456789')
+
+                mo = re.search(r'\d+$', self.conf['device_path'])
+                if mo == None:
+                    raise RuntimeError("You have to specify a partition, not "
+                            "an entire disk: {}".format(
+                            self.conf['device_path']))
+                dev_id = int(mo.group())
+                # if dev_id = 3, we will have:
+                #    [0 0 0]
+                # sdc 1 2 3
+                part_sizes = [0 for i in range(dev_id)]
+                size = self.conf['loop_dev_size_mb'] * 2**20
+                part_sizes[dev_id - 1] = size
+                fshelper.partition_disk(base_dev_path, part_sizes)
 
             # strat blktrace
             # This is only for making and mounting file system, because we

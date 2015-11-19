@@ -4,6 +4,8 @@ import os
 import re
 import subprocess
 
+import utils
+
 def umountFS(mountpoint):
     cmd = ["umount", mountpoint]
     p = subprocess.Popen(cmd)
@@ -178,4 +180,49 @@ def mountTmpfs(mountpoint, size):
 
 # def prepare_loop():
     # make_loop_device(config["loop_path"], config["tmpfs_mount_point"], 4096, img_file=None)
+
+def partition_disk(dev, part_sizes):
+    """
+    Example:
+    dev = '/dev/sdc'
+    part_sizes = [1 * GB, 4 * GB, 8 * GB]
+    """
+    create_layout_file(part_sizes)
+    utils.shcmd("sudo sfdisk {} < my.layout".format(dev), ignore_error = True)
+    utils.shcmd("sudo partprobe -s {}".format(dev))
+
+
+# partition table of /dev/sdb
+#unit: sectors
+#
+#/dev/sdb1 : start=     4096, size=125829120, Id=a5
+#/dev/sdb2 : start=125833216, size=125829120, Id=83
+#/dev/sdb3 : start=        0, size=        0, Id= 0
+#/dev/sdb4 : start=        0, size=        0, Id= 0
+
+def create_layout_file(part_sizes):
+    sector_size = 512
+
+    lines = ["unit: sectors", '']
+    # Id is to specify Linux/FreeBSD/swap...
+    line_temp = "/dev/sdb{id} : start=     {start}, size={size}, Id=83"
+
+    cur_sectors = 4096 # start with 8 sector
+    for i, partsize in enumerate(part_sizes):
+        size_in_sector = partsize / sector_size
+        line = line_temp.format(id=i, start = cur_sectors,
+            size = size_in_sector)
+        lines.append(line)
+        cur_sectors += size_in_sector
+
+    with open('my.layout', 'w') as f:
+        f.write('\n'.join(lines))
+        f.write('\n')
+
+
+
+
+
+
+
 
