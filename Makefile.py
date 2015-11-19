@@ -484,6 +484,94 @@ def test_dftl2_new():
                             filesize = filesize, chunksize = chunksize)
 
 
+def test_dftl2_new_parallel_write():
+    confdic = get_default_config()
+    conf = config.Config(confdic)
+    conf['ftl_type'] = 'dftl2'
+    conf['enable_e2e_test'] = True
+
+    metadata_dic = choose_exp_metadata(conf)
+    conf.update(metadata_dic)
+
+    def run(fs, divider, syn_conf):
+        conf["age_workload_class"] = "NoOp"
+
+        devsize_mb = 1024 / divider
+        entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
+        conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        conf['interface_level'] =  'page'
+        conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+        conf['loop_dev_size_mb'] = devsize_mb
+        conf['filesystem'] =  fs
+
+        # Setup workload
+        conf["workload_class"] = "Synthetic"
+        conf["Synthetic"] = {
+                "generating_func": "self.generate_parallel_writes",
+
+                "iterations" : 8,
+                "filename"   : "test.file",
+            }
+        conf["Synthetic"].update(syn_conf)
+        print conf['Synthetic']
+
+        runtime_update(conf)
+
+        workflow(conf)
+
+    confs = [
+                # single sequential
+                {
+                    "name"       : 'single-seq',
+                    "filesizes"  : [256 * MB],
+                    "patterns"   : ['sequential'],
+                    "chunk_sizes": [16 * KB],
+                    "writes_per_iter": 256 * MB / (16 * KB)
+                },
+                # seq + random
+                {
+                    "name"       : 'seq+rand',
+                    "filesizes"  : [256 * MB, 256 * MB],
+                    "patterns"   : ['sequential', 'random'],
+                    "chunk_sizes": [16 * KB, 64 * KB],
+                    "writes_per_iter": 256 * MB / (16 * KB)
+                },
+                # mixing sequential
+                {
+                    "name"       : 'mix-seq',
+                    "filesizes"  : [256 * MB, 256 * MB],
+                    "patterns"   : ['sequential', 'sequential'],
+                    "chunk_sizes": [16 * KB, 64 * KB],
+                    "writes_per_iter": 256 * MB / (16 * KB)
+                },
+                # mixing random
+                {
+                    "name"       : 'mix-rand',
+                    "filesizes"  : [256 * MB, 256 * MB],
+                    "patterns"   : ['random', 'random'],
+                    "chunk_sizes": [16 * KB, 64 * KB],
+                    "writes_per_iter": 256 * MB / (16 * KB)
+                },
+                # single random
+                {
+                    "name"       : 'single-rand',
+                    "filesizes"  : [256 * MB],
+                    "patterns"   : ['random'],
+                    "chunk_sizes": [16 * KB],
+                    "writes_per_iter": 256 * MB / (16 * KB)
+                }
+            ]
+
+    for fs in ('ext4', 'f2fs'):
+        for conf_update in confs:
+            nfiles = len(conf_update['filesizes'])
+            print conf_update
+            if nfiles == 1:
+                run(fs = fs, divider = 2, syn_conf = conf_update)
+            else:
+                run(fs = fs, divider = 1, syn_conf = conf_update)
+
+
 def main(cmd_args):
     if cmd_args.git == True:
         shcmd("sudo -u jun git commit -am 'commit by Makefile: {commitmsg}'"\
