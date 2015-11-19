@@ -1,3 +1,4 @@
+import collections
 import os
 import random
 import time
@@ -354,6 +355,81 @@ class Synthetic(Workload):
             wllist.add_call(name='close', pid=fileid, path=filepath)
 
         return wllist
+
+    def generate_parallel_writes(self):
+        """
+        You will be able to tune
+        - file size of each file.
+        - number of files
+        - sequential or random
+        - chunk size, each file will have the same number of chunks, having larger
+        chunk size will invalidate a file quicker (thus hotter).
+
+        example setting:
+        { filesizes: [1MB, 2MB],
+          pattern:   ['sequential', 'random'],
+          chunksize: [16KB, 32KB]
+          }
+
+        You will need to use file size and chunk count to find chunk size
+        """
+        setting = self.workload_conf
+
+        filesizes = setting['filesizes']
+        nfiles = len(filesizes)
+        fileids = range(nfiles)
+        filepaths = [ setting['filename'] + str(i) for i in fileids ]
+
+        patterns = setting['patterns']
+        chunksizes = setting['chunk_sizes']
+        # note writes_per_iter * chunk_size may not =filesize
+        writes_per_iter = setting['writes_per_iter']
+        chunkcnts = [ filesizes[fileid] / chunksizes[fileid] for fileid in fileids ]
+
+        wllist = workloadlist.WorkloadList(self.conf['fs_mount_point'])
+
+        # open
+        for fileid in fileids:
+            filepath = filepaths[fileid]
+            wllist.add_call(name='open', pid=fileid, path=filepath)
+
+        random.seed(1)
+
+        # store the random chunk sequence for each file
+        # each file is accessed in the sequence of popping
+        rand_seqs = {}
+        for fileid in fileids:
+            per_file_total = 0
+            for rep in range(setting['iterations']):
+                for i in range(0, writes_per_iter):
+                    if not rand_seqs.has_key(fileid):
+                        rand_seqs[fileid] = collections.deque()
+
+                    if patterns[fileid] == 'sequential':
+                        rand_seqs[fileid].append(per_file_total % chunkcnts[fileid])
+                        per_file_total += 1
+                    elif patterns[fileid] == 'random':
+                        rand_seqs[fileid].append(random.randint(0, chunkcnts[fileid]))
+                    else:
+                        raise NotImplementedError()
+
+        for rep in range(setting['iterations']):
+            for i in range(0, writes_per_iter):
+                for fileid in fileids:
+                    filepath = filepaths[fileid]
+                    offset = chunksizes[fileid] * rand_seqs[fileid].popleft()
+                    size = chunksizes[fileid]
+                    wllist.add_call(name='write', pid=fileid, path=filepath,
+                        offset=offset, count=size)
+                    wllist.add_call(name='fsync', pid=fileid, path=filepath)
+
+        # close
+        for fileid in fileids:
+            filepath = filepaths[fileid]
+            wllist.add_call(name='close', pid=fileid, path=filepath)
+
+        return wllist
+
 
     def generate_parallel_random_writes(self):
         setting = self.workload_conf
