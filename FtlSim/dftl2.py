@@ -224,6 +224,12 @@ class Timeline(object):
         self.table = []
         self.conf = confobj
         self.ON = False
+        self.duration = 0
+        self.op_time = {
+            'flash.read':   0.050,     # milli sec
+            'flash.write':  0.750,     # milli sec
+            'flash.erasure':3.000  # milli sec
+        }
 
     def turn_on(self):
         self.ON = True
@@ -244,11 +250,15 @@ class Timeline(object):
 
         last_row = self.table[-1]
         last_row[op] += 1
+        self.duration += self.op_time[op]
 
     def save(self):
         path = os.path.join(self.conf['result_dir'], 'timeline.txt')
         utils.table_to_file(self.table, path)
 
+        sim_dur_path = os.path.join(self.conf['result_dir'], 'sim.duration.txt')
+        with open(sim_dur_path, 'w') as f:
+            f.write(str(self.duration))
 
 class OutOfBandAreas(object):
     """
