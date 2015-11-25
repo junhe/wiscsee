@@ -505,11 +505,9 @@ def test_dftl2_new_parallel_write():
         conf['filesystem'] =  fs
 
         # Setup workload
-        conf["workload_class"] = "Synthetic"
+        conf["workload_class"] = "WlMultiWriters"
         conf["workload_conf"] = {
                 "generating_func": "self.generate_parallel_writes",
-
-                "iterations" : 8,
                 "filename"   : "test.file",
             }
         conf["workload_conf"].update(syn_conf)
@@ -519,50 +517,88 @@ def test_dftl2_new_parallel_write():
 
         workflow(conf)
 
+    FILESIZE = 256 * MB
     confs = [
                 # single sequential
                 {
                     "name"       : 'single-seq',
-                    "filesizes"  : [256 * MB],
+                    "filesizes"  : [FILESIZE],
                     "patterns"   : ['sequential'],
-                    "chunk_sizes": [16 * KB],
-                    "writes_per_iter": 256 * MB / (16 * KB)
+                    "write_sizes": [64 * KB],
+                    "n_writes": [FILESIZE / (64 * KB)]
                 },
                 # seq + random
                 {
                     "name"       : 'seq+rand',
-                    "filesizes"  : [256 * MB, 256 * MB],
+                    "filesizes"  : [FILESIZE, FILESIZE],
                     "patterns"   : ['sequential', 'random'],
-                    "chunk_sizes": [16 * KB, 64 * KB],
-                    "writes_per_iter": 256 * MB / (16 * KB)
+                    "write_sizes": [64 * KB, 64 * KB],
+                    "n_writes": [FILESIZE / (64 * KB), FILESIZE / (64 * KB)]
                 },
                 # mixing sequential
                 {
                     "name"       : 'mix-seq',
-                    "filesizes"  : [256 * MB, 256 * MB],
+                    "filesizes"  : [FILESIZE, FILESIZE],
                     "patterns"   : ['sequential', 'sequential'],
-                    "chunk_sizes": [16 * KB, 64 * KB],
-                    "writes_per_iter": 256 * MB / (16 * KB)
+                    "write_sizes": [64 * KB, 64 * KB],
+                    "n_writes": [FILESIZE / (64 * KB), FILESIZE / (64 * KB)]
                 },
                 # mixing random
                 {
                     "name"       : 'mix-rand',
-                    "filesizes"  : [256 * MB, 256 * MB],
+                    "filesizes"  : [FILESIZE, FILESIZE],
                     "patterns"   : ['random', 'random'],
-                    "chunk_sizes": [16 * KB, 64 * KB],
-                    "writes_per_iter": 256 * MB / (16 * KB)
+                    "write_sizes": [64 * KB, 64 * KB],
+                    "n_writes": [FILESIZE / (64 * KB), FILESIZE / (64 * KB)]
                 },
                 # single random
                 {
                     "name"       : 'single-rand',
-                    "filesizes"  : [256 * MB],
+                    "filesizes"  : [FILESIZE],
                     "patterns"   : ['random'],
-                    "chunk_sizes": [16 * KB],
-                    "writes_per_iter": 256 * MB / (16 * KB)
+                    "write_sizes": [64 * KB],
+                    "n_writes": [FILESIZE / (64 * KB)]
                 }
             ]
 
-    for fs in ('ext4', 'f2fs'):
+    confs = [
+                # seq + random
+                {
+                    "name"       : 'seq+rand',
+                    "filesizes"  : [FILESIZE, FILESIZE],
+                    "patterns"   : ['sequential', 'random'],
+                    "write_sizes": [64 * KB, 64 * KB],
+                    "n_writes": [FILESIZE / (64 * KB), FILESIZE / (64 * KB)]
+                },
+                # mixing sequential
+                {
+                    "name"       : 'mix-seq',
+                    "filesizes"  : [FILESIZE, FILESIZE],
+                    "patterns"   : ['sequential', 'sequential'],
+                    "write_sizes": [64 * KB, 64 * KB],
+                    "n_writes": [FILESIZE / (64 * KB), FILESIZE / (64 * KB)]
+                },
+                # mixing random
+                {
+                    "name"       : 'mix-rand',
+                    "filesizes"  : [FILESIZE, FILESIZE],
+                    "patterns"   : ['random', 'random'],
+                    "write_sizes": [64 * KB, 64 * KB],
+                    "n_writes": [FILESIZE / (64 * KB), FILESIZE / (64 * KB)]
+                },
+                # single random
+                {
+                    "name"       : 'single-rand',
+                    "filesizes"  : [FILESIZE],
+                    "patterns"   : ['random'],
+                    "write_sizes": [64 * KB],
+                    "n_writes": [FILESIZE / (64 * KB)]
+                }
+            ]
+
+
+
+    for fs in ('ext4',):
         for conf_update in confs:
             nfiles = len(conf_update['filesizes'])
             print conf_update

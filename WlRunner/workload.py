@@ -1,9 +1,11 @@
 import collections
 import os
+import pprint
 import random
 import time
 
 import config
+import multiwriters
 import utils
 import workloadlist
 
@@ -43,6 +45,44 @@ class NoOp(Workload):
 
     def stop(self):
         pass
+
+class WlMultiWriters(Workload):
+    """
+    """
+    def translate(self, conf):
+        """
+        translate workload_conf to config used in multiwriters
+        """
+        nfiles = len(conf['filesizes'])
+        fileids = range(nfiles)
+
+        args_table = []
+        for i in fileids:
+            d = {   'file_size': conf['filesizes'][i],
+                    'write_size': conf['write_sizes'][i],
+                    'n_writes': conf['n_writes'][i],
+                    'pattern': conf['patterns'][i],
+                    'fsync': 1,
+                    'sync': 1,
+                    'file_path': os.path.join(self.conf['fs_mount_point'],
+                        'multiwriter.file.' + str(i)),
+                    'tag': 'tag' + str(i)
+                  }
+            args_table.append(d)
+
+        return args_table
+
+    def run(self):
+        args_table = self.translate(self.workload_conf)
+        mw = multiwriters.MultiWriters("../wlgen/player-runtime",
+                args_table)
+        results = mw.run()
+
+        pprint.pprint( results )
+
+    def stop(self):
+        pass
+
 
 class Simple(Workload):
     def run(self):
@@ -509,6 +549,7 @@ class Synthetic(Workload):
         # utils.shcmd("mpirun -np {np} ../wlgen/player {workload}"\
             # .format(np = wllist.max_pid + 1, workload = tmppath))
         perf_text = utils.run_and_get_output(cmd)
+        print '\n'.join(perf_text)
         duration = float(perf_text[-1].split()[-1])
 
         path = os.path.join(self.conf['result_dir'], 'workloadrun-duratio.txt')
