@@ -165,8 +165,6 @@ class WorkloadRunner(object):
             print 'Running workload ....'
             self.workload.run()
 
-            utils.shcmd('sync')
-
             # ftr.write_marker('Jun marked this end.')
             # ftr.stop_tracing()
 
