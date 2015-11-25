@@ -81,6 +81,10 @@ class WlMultiWriters(Workload):
 
         pprint.pprint( results )
 
+        utils.table_to_file(results, os.path.join(self.conf['result_dir'],
+            'multiwriters.results.txt'))
+        print 'Written to disk'
+
     def stop(self):
         pass
 
