@@ -75,7 +75,7 @@ class WorkloadRunner(object):
         self.workload = eval("workload.{wlclass}(confobj = self.conf, " \
             "workload_conf = {wlconf})".format(
                 wlclass = self.conf["workload_class"],
-                wlconf = self.conf["Synthetic"]
+                wlconf = self.conf["workload_conf"]
                 ) #format
             ) #eval
 

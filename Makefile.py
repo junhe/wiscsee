@@ -171,7 +171,7 @@ def get_default_config():
         ############## workload.py on top of FS #########
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
-        "Synthetic" :{
+        "workload_conf" :{
             # "generating_func": "self.generate_hotcold_workload",
             # "generating_func": "self.generate_sequential_workload",
             # "generating_func": "self.generate_backward_workload",
@@ -452,7 +452,7 @@ def test_dftl2_new():
         # chunksize = 16 * KB
         bytes_to_write = filesize * 8
         conf["workload_class"] = "Synthetic"
-        conf["Synthetic"] = {
+        conf["workload_conf"] = {
                 # "generating_func": "self.generate_hotcold_workload",
                 # "generating_func": "self.generate_sequential_workload",
                 # "generating_func": "self.generate_backward_workload",
@@ -506,14 +506,14 @@ def test_dftl2_new_parallel_write():
 
         # Setup workload
         conf["workload_class"] = "Synthetic"
-        conf["Synthetic"] = {
+        conf["workload_conf"] = {
                 "generating_func": "self.generate_parallel_writes",
 
                 "iterations" : 8,
                 "filename"   : "test.file",
             }
-        conf["Synthetic"].update(syn_conf)
-        print conf['Synthetic']
+        conf["workload_conf"].update(syn_conf)
+        print conf['workload_conf']
 
         runtime_update(conf)
 
