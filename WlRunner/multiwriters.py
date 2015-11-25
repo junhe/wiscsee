@@ -12,7 +12,8 @@ translator = {  'file_size': '-f',
                 'fsync': '-y',
                 'sync': '-s',
                 'file_path': '-l',
-                'tag': '-t'
+                'tag': '-t',
+                'markerfile': '-m'
               }
 
 
@@ -39,6 +40,7 @@ class MultiWriters(object):
             'sync':
             'file_path':
             'tag':
+            'markerfile':
           },
           ...
         ]
@@ -74,6 +76,7 @@ class MultiWriters(object):
 
         # pprint.pprint( results )
         return results
+
 
 def main():
     parameters = [

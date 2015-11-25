@@ -43,7 +43,7 @@ def start_blktrace_on_bg(dev, resultpath):
         time.sleep(5)
 
     cmd = "sudo blktrace -a {filtermask} -d {dev} -o - | "\
-            "blkparse -a {filtermask} -i - > "\
+            "blkparse -a {filtermask} -i - >> "\
         "{resultpath}".format(dev = dev, resultpath = resultpath,
         filtermask = trace_filter)
     print cmd
