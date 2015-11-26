@@ -1588,7 +1588,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.mapping_manager.initialize_mappings()
 
     # FTL APIs
-    def lba_read(self, lpn):
+    def lba_read(self, lpn, pid = None):
         """
         ppn = translate(pagenum))
         flash.read(ppn)
@@ -1609,7 +1609,7 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         return data
 
-    def lba_write(self, lpn, data = None):
+    def lba_write(self, lpn, data = None, pid = None):
         """
         This is the interface for higher level to call, do NOT use it for
         internal use. If you need, create new one and refactor the code.
@@ -1664,7 +1664,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         # garbage collection
         self.garbage_collector.try_gc()
 
-    def lba_discard(self, lpn):
+    def lba_discard(self, lpn, pid = None):
         """
         block_pool:
             no need to update

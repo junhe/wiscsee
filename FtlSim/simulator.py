@@ -18,10 +18,10 @@ import tpftl
 
 
 def event_line_to_dic(line):
-    keys = ['operation', 'offset', 'size']
+    keys = ['pid', 'operation', 'offset', 'size']
     items = line.strip('\n').split()
-    items[1] = eval(items[1]) # offset
-    items[2] = eval(items[2]) # size
+    # items[1] = eval(items[1]) # offset
+    # items[2] = eval(items[2]) # size
     event = dict(zip(keys, items))
     return event
 
@@ -79,11 +79,13 @@ class Simulator(object):
 
     def process_event_e2e_test(self, event):
         if event['operation'] == 'read':
+            event['offset'] = int(event['offset'])
+            event['size'] = int(event['size'])
             assert self.interface_level == 'page'
             pages = self.conf.off_size_to_page_list(event['offset'],
                 event['size'], force_alignment = False)
             for page in pages:
-                data = self.ftl.lba_read(page)
+                data = self.ftl.lba_read(page, pid = event['pid'])
                 correct = self.lpn_to_data.get(page, None)
                 if data != correct:
                     print "!!!!!!!!!! Correct: {}, Got: {}".format(
@@ -91,6 +93,8 @@ class Simulator(object):
                     raise RuntimeError()
 
         elif event['operation'] == 'write':
+            event['offset'] = int(event['offset'])
+            event['size'] = int(event['size'])
             assert self.interface_level == 'page'
             pages = self.conf.off_size_to_page_list(event['offset'],
                 event['size'])
@@ -98,15 +102,17 @@ class Simulator(object):
                 # generate random content
                 content = random.randint(0, 10000)
                 content = "{}.{}".format(page, content)
-                self.ftl.lba_write(page, data = content)
+                self.ftl.lba_write(page, data = content, pid = event['pid'])
                 self.lpn_to_data[page] = content
 
         elif event['operation'] == 'discard':
+            event['offset'] = int(event['offset'])
+            event['size'] = int(event['size'])
             assert self.interface_level == 'page'
             pages = self.conf.off_size_to_page_list(event['offset'],
                 event['size'])
             for page in pages:
-                self.ftl.lba_discard(page)
+                self.ftl.lba_discard(page, pid = event['pid'])
                 try:
                     del self.lpn_to_data[page]
                 except KeyError:
@@ -118,17 +124,23 @@ class Simulator(object):
             self.ftl.disable_recording()
         elif event['operation'] == 'workloadstart':
             self.ftl.pre_workload()
+        elif event['operation'] == 'finish':
+            # ignore this
+            pass
         else:
+            print event
             raise RuntimeError("operation '{}' is not supported".format(
                 event['operation']))
 
     def process_event(self, event):
         if event['operation'] == 'read':
+            event['offset'] = int(event['offset'])
+            event['size'] = int(event['size'])
             if self.interface_level == 'page':
                 pages = self.conf.off_size_to_page_list(event['offset'],
                     event['size'], force_alignment = False)
                 for page in pages:
-                    self.ftl.lba_read(page)
+                    self.ftl.lba_read(page, pid = event['pid'])
             elif self.interface_level == 'range':
                 start_page, npages = self.conf.off_size_to_page_range(
                     event['offset'], event['size'], force_alignment = False)
@@ -138,11 +150,13 @@ class Simulator(object):
                     self.interface_level))
 
         elif event['operation'] == 'write':
+            event['offset'] = int(event['offset'])
+            event['size'] = int(event['size'])
             if self.interface_level == 'page':
                 pages = self.conf.off_size_to_page_list(event['offset'],
                     event['size'])
                 for page in pages:
-                    self.ftl.lba_write(page)
+                    self.ftl.lba_write(page, pid = event['pid'])
             elif self.interface_level == 'range':
                 start_page, npages = self.conf.off_size_to_page_range(
                     event['offset'], event['size'])
@@ -152,11 +166,13 @@ class Simulator(object):
                     self.interface_level))
 
         elif event['operation'] == 'discard':
+            event['offset'] = int(event['offset'])
+            event['size'] = int(event['size'])
             if self.interface_level == 'page':
                 pages = self.conf.off_size_to_page_list(event['offset'],
                     event['size'])
                 for page in pages:
-                    self.ftl.lba_discard(page)
+                    self.ftl.lba_discard(page, pid = event['pid'])
             elif self.interface_level == 'range':
                 start_page, npages = self.conf.off_size_to_page_range(
                     event['offset'], event['size'])
@@ -171,6 +187,9 @@ class Simulator(object):
             self.ftl.disable_recording()
         elif event['operation'] == 'workloadstart':
             self.ftl.pre_workload()
+        elif event['operation'] == 'finish':
+            # ignore this
+            pass
         else:
             raise RuntimeError("operation '{}' is not supported".format(
                 event['operation']))

@@ -74,6 +74,9 @@ def is_data_line(line):
     else:
         return True
 
+def is_multiwriter_line(line):
+    return line.startswith("MARK:")
+
 def parse_blkparse_to_table(line_iter):
     def line2dic(line):
         "is_data_line() must be true for this line"\
@@ -91,9 +94,15 @@ def parse_blkparse_to_table(line_iter):
     for line in line_iter:
         line = line.strip()
         # print is_data_line(line), line
-        if not is_data_line(line):
-            continue
-        ret = line2dic(line)
+        if is_data_line(line):
+            ret = line2dic(line)
+            ret['type'] = 'blkparse'
+        elif is_multiwriter_line(line):
+            filepath = line.split(":")[1]
+            ret = {'filepath': filepath,
+                   'type':     'multiwriters'}
+        else:
+            ret = None
         if ret != None:
             table.append(ret)
     return table
@@ -134,23 +143,35 @@ def finaltable_to_ftlsim_input(table, out_path, sector_size):
     utils.prepare_dir_for_path(out_path)
     out = open(out_path, 'w')
     for row in table:
-        blk_start = int(row['blockstart'])
-        size = int(row['size'])
+        if row['type'] == 'blkparse':
+            pid = row['pid']
+            blk_start = int(row['blockstart'])
+            size = int(row['size'])
 
-        byte_offset = blk_start * sector_size
-        byte_size = size * sector_size
+            byte_offset = blk_start * sector_size
+            byte_size = size * sector_size
 
-        if row['RWBS'] == 'D':
-            operation = 'discard'
-        elif 'W' in row['RWBS']:
-            operation = 'write'
-        elif 'R' in row['RWBS']:
-            operation = 'read'
+            if row['RWBS'] == 'D':
+                operation = 'discard'
+            elif 'W' in row['RWBS']:
+                operation = 'write'
+            elif 'R' in row['RWBS']:
+                operation = 'read'
+            else:
+                raise RuntimeError('unknow operation')
+
+            items = [str(x) for x in [pid, operation, byte_offset, byte_size]]
+            line = ' '.join(items)+'\n'
+        elif row['type'] == 'multiwriters':
+            pid = 'NA'
+            operation = 'finish'
+            byte_offset = row['filepath']
+            byte_size = 'NA'
+            items = [str(x) for x in [pid, operation, byte_offset, byte_size]]
+            line = ' '.join(items)+'\n'
         else:
-            raise RuntimeError('unknow operation')
+            raise NotImplementedError()
 
-        items = [str(x) for x in [operation, byte_offset, byte_size]]
-        line = ' '.join(items)+'\n'
         out.write( line )
 
     out.flush()

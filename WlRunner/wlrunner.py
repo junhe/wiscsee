@@ -179,7 +179,7 @@ class WorkloadRunner(object):
             self.blktracer.stop_tracing_and_collecting()
 
     def get_event_iterator(self):
-        yield "disable_recorder 0 0"
+        yield "NA disable_recorder 0 0"
 
         mkfs_iter = FileLineIterator(
             self.conf.get_ftlsim_events_output_path_mkfs())
@@ -188,8 +188,8 @@ class WorkloadRunner(object):
             yield event
 
         # special event indicates the start of workload
-        yield "enable_recorder 0 0"
-        yield "workloadstart 0 0"
+        yield "NA enable_recorder 0 0"
+        yield "NA workloadstart 0 0"
 
         workload_iter = FileLineIterator(
             self.conf.get_ftlsim_events_output_path())
