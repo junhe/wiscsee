@@ -71,7 +71,7 @@ class MultiWriters(object):
         for p in procs:
             lines = p.communicate()[0].split('\n')
             d = parse_player_runtime_out(lines)
-            d['pid'] = p.pid
+            d['pid.python'] = p.pid
             results.append(d)
 
         # pprint.pprint( results )

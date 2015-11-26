@@ -1,5 +1,6 @@
 import bitarray
 from collections import deque
+import csv
 import datetime
 import random
 import os
@@ -208,9 +209,9 @@ class Timeline(object):
     """
     This is intended for global use. It maintains a table like:
 
-    lpn operation    flash.read flash.write flash.erasure
-    34  write        33         1           35
-    77  read         3          5           666
+    pid lpn operation    flash.read flash.write flash.erasure
+    133 34  write        33         1           35
+    555 77  read         3          5           666
 
     flash.* is the flash operations taken to finish the lpn operation
 
@@ -224,12 +225,15 @@ class Timeline(object):
         self.table = []
         self.conf = confobj
         self.ON = False
-        self.duration = 0
+        self.timestamp = 0
         self.op_time = {
             'flash.read':   0.050,     # milli sec
             'flash.write':  0.750,     # milli sec
             'flash.erasure':3.000  # milli sec
         }
+        # {32335: {'start': 32, 'end': 5544}, xxx}
+        self.cur_pid = None
+        self.pid_timestamps = {}
 
     def turn_on(self):
         self.ON = True
@@ -237,12 +241,17 @@ class Timeline(object):
     def turn_off(self):
         self.ON = False
 
-    def add_lpn_op(self, lpn, op):
+    def add_lpn_op(self, lpn, op, pid):
         if not self.ON:
             return
 
-        self.table.append( {'lpn':lpn, 'operation': op,
+        self.table.append( {'pid': pid, 'lpn':lpn, 'operation': op,
             'flash.read':0, 'flash.write':0, 'flash.erasure':0} )
+
+        self.cur_pid = pid
+        if not self.pid_timestamps.has_key(pid):
+            self.pid_timestamps[pid] = {'sim_start_timestamp': self.timestamp,
+                'sim_last_timestamp': self.timestamp}
 
     def incr_flash_op(self, op):
         if not self.ON:
@@ -250,15 +259,55 @@ class Timeline(object):
 
         last_row = self.table[-1]
         last_row[op] += 1
-        self.duration += self.op_time[op]
+        self.timestamp += self.op_time[op]
+
+        self.update_pid_timestamp()
+
+    def update_pid_timestamp(self):
+        self.pid_timestamps[self.cur_pid]['sim_last_timestamp'] = self.timestamp
+
+    def convert_pid_timestamps_to_table(self):
+        table = []
+        for pid, timestamps in self.pid_timestamps.items():
+            timestamps['pid'] = pid
+            table.append(timestamps)
+
+        return table
+
+    def merge_sim_and_real(self):
+        # real real time
+        real_time_path = os.path.join(self.conf['result_dir'],
+            'multiwriters.results.txt')
+
+        with open(real_time_path, 'rb') as f:
+            reader = csv.DictReader(f, delimiter = ';')
+            real_table = [row for row in reader]
+
+        for realrow in real_table:
+            realpid = realrow['player_pid']
+            realrow.update(self.pid_timestamps[realpid])
+
+        return real_table
 
     def save(self):
         path = os.path.join(self.conf['result_dir'], 'timeline.txt')
         utils.table_to_file(self.table, path)
 
-        sim_dur_path = os.path.join(self.conf['result_dir'], 'sim.duration.txt')
+        sim_dur_path = os.path.join(self.conf['result_dir'],
+            'sim.duration.txt')
         with open(sim_dur_path, 'w') as f:
-            f.write(str(self.duration))
+            f.write(str(self.timestamp))
+
+        pid_time_path = os.path.join(self.conf['result_dir'],
+            'sim_pid_timestamps.txt')
+        table = self.convert_pid_timestamps_to_table()
+        utils.table_to_file(table, pid_time_path)
+
+        real_sim_proc_times_table = self.merge_sim_and_real()
+        real_sim_proc_times_path = os.path.join(self.conf['result_dir'],
+            'proc_times_sim_and_real.txt')
+        utils.table_to_file(real_sim_proc_times_table, real_sim_proc_times_path)
+
 
 class OutOfBandAreas(object):
     """
@@ -1594,7 +1643,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         flash.read(ppn)
         """
         self.recorder.put('logical_read', lpn, 'user')
-        self.global_helper.timeline.add_lpn_op(lpn, 'read')
+        self.global_helper.timeline.add_lpn_op(lpn, 'read', pid)
 
         ppn = self.mapping_manager.lpn_to_ppn(lpn)
         data = self.flash.page_read(ppn, DATA_USER)
@@ -1635,7 +1684,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         Flash
         """
         self.recorder.put('logical_write', lpn, 'user')
-        self.global_helper.timeline.add_lpn_op(lpn, 'write')
+        self.global_helper.timeline.add_lpn_op(lpn, 'write', pid)
 
         old_ppn = self.mapping_manager.lpn_to_ppn(lpn)
 
@@ -1683,7 +1732,7 @@ class Dftl(ftlbuilder.FtlBuilder):
             updates should be done by GC
         """
         self.recorder.put('logical_discard', lpn, 'user')
-        self.global_helper.timeline.add_lpn_op(lpn, 'discard')
+        self.global_helper.timeline.add_lpn_op(lpn, 'discard', pid)
 
         # self.recorder.write_file('lba.trace.txt',
             # timestamp = self.oob.timestamp(),
@@ -1713,6 +1762,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         This function is called after the simulation.
         """
         self.global_helper.timeline.save()
+
 
 def main():
     pass

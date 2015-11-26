@@ -172,6 +172,8 @@ class WorkloadRunner(object):
             raise
         else:
             time.sleep(1)
+            self.blktracer.stop_tracing_and_collecting()
+            utils.shcmd("sync")
             self.blktracer.blkparse_file_to_ftlsim_input_file()
             return self.get_event_iterator()
         finally:

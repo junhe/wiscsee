@@ -79,7 +79,10 @@ class WlMultiWriters(Workload):
                 args_table)
         results = mw.run()
 
-        pprint.pprint( results )
+        for i, row in enumerate(results):
+            results[i] = { 'player_'+k:v for k, v in row.items() }
+
+        pprint.pprint(results)
 
         utils.table_to_file(results, os.path.join(self.conf['result_dir'],
             'multiwriters.results.txt'))
