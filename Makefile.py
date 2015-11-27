@@ -518,6 +518,7 @@ def test_dftl2_new_parallel_write():
         workflow(conf)
 
     FILESIZE = 256 * MB
+    NWRITES = 4 * FILESIZE / (64 * KB)
     confs = [
                 # single sequential
                 {
@@ -525,7 +526,7 @@ def test_dftl2_new_parallel_write():
                     "filesizes"  : [FILESIZE],
                     "patterns"   : ['sequential'],
                     "write_sizes": [64 * KB],
-                    "n_writes": [FILESIZE / (64 * KB)]
+                    "n_writes": [NWRITES]
                 },
                 # seq + random
                 {
@@ -533,7 +534,7 @@ def test_dftl2_new_parallel_write():
                     "filesizes"  : [FILESIZE, FILESIZE],
                     "patterns"   : ['sequential', 'random'],
                     "write_sizes": [64 * KB, 64 * KB],
-                    "n_writes": [FILESIZE / (64 * KB), FILESIZE / (64 * KB)]
+                    "n_writes": [NWRITES, NWRITES]
                 },
                 # mixing sequential
                 {
@@ -541,7 +542,7 @@ def test_dftl2_new_parallel_write():
                     "filesizes"  : [FILESIZE, FILESIZE],
                     "patterns"   : ['sequential', 'sequential'],
                     "write_sizes": [64 * KB, 64 * KB],
-                    "n_writes": [FILESIZE / (64 * KB), FILESIZE / (64 * KB)]
+                    "n_writes": [NWRITES, NWRITES]
                 },
                 # mixing random
                 {
@@ -549,7 +550,7 @@ def test_dftl2_new_parallel_write():
                     "filesizes"  : [FILESIZE, FILESIZE],
                     "patterns"   : ['random', 'random'],
                     "write_sizes": [64 * KB, 64 * KB],
-                    "n_writes": [FILESIZE / (64 * KB), FILESIZE / (64 * KB)]
+                    "n_writes": [NWRITES, NWRITES]
                 },
                 # single random
                 {
@@ -557,48 +558,11 @@ def test_dftl2_new_parallel_write():
                     "filesizes"  : [FILESIZE],
                     "patterns"   : ['random'],
                     "write_sizes": [64 * KB],
-                    "n_writes": [FILESIZE / (64 * KB)]
+                    "n_writes": [NWRITES]
                 }
             ]
 
-    confs = [
-                # seq + random
-                {
-                    "name"       : 'seq+rand',
-                    "filesizes"  : [FILESIZE, FILESIZE],
-                    "patterns"   : ['sequential', 'random'],
-                    "write_sizes": [64 * KB, 64 * KB],
-                    "n_writes": [FILESIZE / (64 * KB), FILESIZE / (64 * KB)]
-                },
-                # mixing sequential
-                {
-                    "name"       : 'mix-seq',
-                    "filesizes"  : [FILESIZE, FILESIZE],
-                    "patterns"   : ['sequential', 'sequential'],
-                    "write_sizes": [64 * KB, 64 * KB],
-                    "n_writes": [FILESIZE / (64 * KB), FILESIZE / (64 * KB)]
-                },
-                # mixing random
-                {
-                    "name"       : 'mix-rand',
-                    "filesizes"  : [FILESIZE, FILESIZE],
-                    "patterns"   : ['random', 'random'],
-                    "write_sizes": [64 * KB, 64 * KB],
-                    "n_writes": [FILESIZE / (64 * KB), FILESIZE / (64 * KB)]
-                },
-                # single random
-                {
-                    "name"       : 'single-rand',
-                    "filesizes"  : [FILESIZE],
-                    "patterns"   : ['random'],
-                    "write_sizes": [64 * KB],
-                    "n_writes": [FILESIZE / (64 * KB)]
-                }
-            ]
-
-
-
-    for fs in ('ext4',):
+    for fs in ('ext4', 'f2fs'):
         for conf_update in confs:
             nfiles = len(conf_update['filesizes'])
             print conf_update
