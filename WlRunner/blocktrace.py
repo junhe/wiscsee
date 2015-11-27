@@ -99,6 +99,7 @@ def parse_blkparse_to_table(line_iter):
             ret = line2dic(line)
             ret['type'] = 'blkparse'
         elif is_multiwriter_line(line):
+            continue # we don't use this at this moment
             filepath = line.split(":")[1]
             ret = {'filepath': filepath,
                    'type':     'multiwriters'}
@@ -106,6 +107,8 @@ def parse_blkparse_to_table(line_iter):
             ret = None
         if ret != None:
             table.append(ret)
+
+    table.sort(key = lambda k: k['time'])
     return table
 
 ########################################################
@@ -178,5 +181,14 @@ def finaltable_to_ftlsim_input(table, out_path, sector_size):
     out.flush()
     os.fsync(out)
     out.close()
+
+
+def main():
+    with open("/tmp/results/charlie/default-subexp-f2fs-11-26-15-02-58--3688122402994453586/blkparse-output.txt") \
+        as f:
+        parse_blkparse_to_table(f)
+
+if __name__ == '__main__':
+    main()
 
 
