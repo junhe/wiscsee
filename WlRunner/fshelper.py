@@ -207,7 +207,7 @@ def create_layout_file(part_sizes):
     # Id is to specify Linux/FreeBSD/swap...
     line_temp = "/dev/sdb{id} : start=     {start}, size={size}, Id=83"
 
-    cur_sectors = 4096 # start with 8 sector
+    cur_sectors = 8 * 2**20 / sector_size # start with 8 sector
     for i, partsize in enumerate(part_sizes):
         size_in_sector = partsize / sector_size
         line = line_temp.format(id=i, start = cur_sectors,
