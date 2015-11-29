@@ -182,11 +182,56 @@ def finaltable_to_ftlsim_input(table, out_path, sector_size):
     os.fsync(out)
     out.close()
 
+def finaltable_to_ftlsim_input_with_timestamp(table, out_path, sector_size):
+    utils.prepare_dir_for_path(out_path)
+    out = open(out_path, 'w')
+    for row in table:
+        if row['type'] == 'blkparse':
+            pid = row['pid']
+            blk_start = int(row['blockstart'])
+            size = int(row['size'])
+            timestamp = row['time']
+
+            byte_offset = blk_start * sector_size
+            byte_size = size * sector_size
+
+            if row['RWBS'] == 'D':
+                operation = 'discard'
+            elif 'W' in row['RWBS']:
+                operation = 'write'
+            elif 'R' in row['RWBS']:
+                operation = 'read'
+            else:
+                raise RuntimeError('unknow operation')
+
+            items = [str(x) for x in [pid, timestamp, operation, byte_offset, byte_size]]
+            line = ' '.join(items)+'\n'
+        elif row['type'] == 'multiwriters':
+            pid = 'NA'
+            operation = 'finish'
+            byte_offset = row['filepath']
+            byte_size = 'NA'
+            items = [str(x) for x in [pid, operation, byte_offset, byte_size]]
+            line = ' '.join(items)+'\n'
+        else:
+            raise NotImplementedError()
+
+        out.write( line )
+
+    out.flush()
+    os.fsync(out)
+    out.close()
+
+
+def extract_with_time(blkparse_file_path):
+    outpath = blkparse_file_path + '.parsed'
+    with open(blkparse_file_path, 'r') as f:
+        table = parse_blkparse_to_table(f)
+        finaltable_to_ftlsim_input_with_timestamp(table, outpath, 512)
 
 def main():
-    with open("/tmp/results/charlie/default-subexp-f2fs-11-26-15-02-58--3688122402994453586/blkparse-output.txt") \
-        as f:
-        parse_blkparse_to_table(f)
+    # extract_with_time("/tmp/results/fivexp-fivetimes/default-subexp-f2fs-11-28-11-13-11-1951338773826761329/blkparse-output.txt")
+    extract_with_time("/tmp/results/fivexp-fivetimes/default-subexp-f2fs-11-28-11-48-43-3011964329397826476/blkparse-output.txt")
 
 if __name__ == '__main__':
     main()
