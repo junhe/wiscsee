@@ -597,7 +597,7 @@ def main(cmd_args):
     # test_experimental_design()
 
     # test_nkftl()
-    test_dftl2_new()
+    test_dftl2_new_parallel_write()
 
 def _main():
     parser = argparse.ArgumentParser(
