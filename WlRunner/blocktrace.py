@@ -222,6 +222,57 @@ def finaltable_to_ftlsim_input_with_timestamp(table, out_path, sector_size):
     os.fsync(out)
     out.close()
 
+def blktrace_to_wlgen_workload(table, target_path, sector_size):
+    """
+    target_path is the file you will access
+    it return a table of workload lines
+    """
+    PID = 0
+
+    # items = [PID, target_path, 'open']
+    # items = [str(e) for e in items]
+    # line = ';'.join(items)+'\n'
+    # out.write(line)
+
+    ret_table = []
+    for row in table:
+        if row['type'] == 'blkparse':
+            # pid = row['pid']
+            blk_start = int(row['blockstart'])
+            size = int(row['size'])
+            timestamp = row['time']
+
+            byte_offset = blk_start * sector_size
+            byte_size = size * sector_size
+
+            if row['RWBS'] == 'D':
+                operation = 'discard'
+            elif 'W' in row['RWBS']:
+                operation = 'write'
+            elif 'R' in row['RWBS']:
+                operation = 'read'
+            else:
+                raise RuntimeError('unknow operation')
+
+            # if operation == 'discard':
+                # continue
+
+            items = [str(x) for x in [PID, target_path, operation, byte_offset, byte_size]]
+            line = ';'.join(items)+'\n'
+
+            if operation == 'write':
+                items = [str(x) for x in [PID, target_path, 'fsync']]
+                line += ';'.join(items)+'\n'
+
+            ret_table.append(line)
+
+        elif row['type'] == 'multiwriters':
+            continue
+        else:
+            raise NotImplementedError()
+
+    return ret_table
+
 
 def extract_with_time(blkparse_file_path):
     outpath = blkparse_file_path + '.parsed'
@@ -229,9 +280,43 @@ def extract_with_time(blkparse_file_path):
         table = parse_blkparse_to_table(f)
         finaltable_to_ftlsim_input_with_timestamp(table, outpath, 512)
 
+def blkparse_to_wlgen(blkparse_file_paths):
+    outpath = os.path.join( os.path.dirname(blkparse_file_paths[0]), '4wlgen' )
+    target_path = "/dev/sdc1"
+
+    workload_table = []
+
+    items = [0, target_path, 'open']
+    items = [str(e) for e in items]
+    line = ';'.join(items)+'\n'
+    workload_table.append(line)
+
+    for path in blkparse_file_paths:
+        with open(path, 'r') as f:
+            table = parse_blkparse_to_table(f)
+            ret = blktrace_to_wlgen_workload(table, target_path, 512)
+            workload_table.extend(ret)
+
+    items = [0, target_path, 'close']
+    items = [str(e) for e in items]
+    line = ';'.join(items)+'\n'
+    workload_table.append(line)
+
+    with open(outpath, 'w') as f:
+        for row_line in workload_table:
+            f.write(row_line)
+
 def main():
-    # extract_with_time("/tmp/results/fivexp-fivetimes/default-subexp-f2fs-11-28-11-13-11-1951338773826761329/blkparse-output.txt")
-    extract_with_time("/tmp/results/fivexp-fivetimes/default-subexp-f2fs-11-28-11-48-43-3011964329397826476/blkparse-output.txt")
+    # extract_with_time("/tmp/results/fivexp-fivetimes/default-subexp-f2fs-11-28-11-13-11-1951338773826761329/blkparse-output-mkfs.txt")
+    # extract_with_time("/tmp/results/fivexp-fivetimes/default-subexp-f2fs-11-28-11-48-43-3011964329397826476/blkparse-output-mkfs.txt")
+
+    # blkparse_to_wlgen([
+        # "/tmp/results/fivexp-fivetimes/default-subexp-f2fs-11-28-11-13-11-1951338773826761329/blkparse-output-mkfs.txt",
+        # "/tmp/results/fivexp-fivetimes/default-subexp-f2fs-11-28-11-13-11-1951338773826761329/blkparse-output.txt"
+        # ])
+    blkparse_to_wlgen([
+        "/tmp/results/fivexp-fivetimes/default-subexp-f2fs-11-28-11-48-43-3011964329397826476/blkparse-output-mkfs.txt",
+        "/tmp/results/fivexp-fivetimes/default-subexp-f2fs-11-28-11-48-43-3011964329397826476/blkparse-output.txt"])
 
 if __name__ == '__main__':
     main()
