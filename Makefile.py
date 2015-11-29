@@ -42,7 +42,6 @@ def workflow(conf):
         raise RuntimeError("{} is not a valid workload source"\
             .format(workload_src))
 
-    return
     # run the Ftl Simulator
     print "Start simulation.........."
     sim = FtlSim.simulator.Simulator(conf)
