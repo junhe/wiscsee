@@ -116,6 +116,8 @@ def get_default_config():
 
         "device_path"           : "/dev/sdc1", # or sth. like /dev/sdc1
         "device_type"           : "real", # loop, real
+        # "device_path"           : "/dev/loop0", # or sth. like /dev/sdc1
+        # "device_type"           : "loop", # loop, real
 
         "fs_mount_point"        : "/mnt/fsonloop",
         "mnt_opts" : {
