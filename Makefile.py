@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import copy
 import itertools
 import random
 import argparse
@@ -562,14 +563,79 @@ def test_dftl2_new_parallel_write():
                 }
             ]
 
-    for fs in ('ext4', 'f2fs'):
-        for conf_update in confs:
-            nfiles = len(conf_update['filesizes'])
-            print conf_update
-            if nfiles == 1:
-                run(fs = fs, divider = 2, syn_conf = conf_update)
-            else:
-                run(fs = fs, divider = 1, syn_conf = conf_update)
+    new_confs = []
+    for _ in range(5):
+        for fs in ('ext4', 'f2fs'):
+            for conf_update in confs:
+                c = copy.deepcopy(conf_update)
+                c['fs'] = fs
+                new_confs.append(c)
+
+    random.shuffle(new_confs)
+
+    for conf_update in new_confs:
+        nfiles = len(conf_update['filesizes'])
+        print conf_update
+        fs = conf_update['fs']
+        if nfiles == 1:
+            run(fs = fs, divider = 2, syn_conf = conf_update)
+        else:
+            run(fs = fs, divider = 1, syn_conf = conf_update)
+
+def smallnlarge():
+    """
+    sequential
+        - full associative
+            - page-level:  small=large
+            - hybrid:      small is better than large
+        - sast
+            - page-level:  large is better than small
+            - hybrid:      large is better than small
+    random
+        - full associative
+            - page-level:  small=large (space is enough)
+            - hybrid:      small=large (space is enough)
+        - sast
+            - page-level:  large is better than small (no need to merge)
+            - hybrid:      large is better than small (no need to merge)
+    """
+
+    GB = 2**30
+    MB = 2**20
+    KB = 2**10
+
+    TRAFFIC = 1 * GB
+    WSIZE = 64 * KB
+    allresults = []
+
+    conf_table = []
+    for _ in range(2):
+        for filesize in [256 * MB]:
+            for pattern in ["random", "sequential"]:
+                para = [
+                  { 'file_size': filesize,
+                    'write_size': WSIZE,
+                    'n_writes': TRAFFIC / WSIZE,
+                    'pattern': pattern,
+                    'fsync': 1,
+                    'sync': 0,
+                    'file_path': '/dev/sdc1',
+                    'tag': 'mytag'
+                  }
+                ]
+                conf_table.append(para)
+
+    random.shuffle(conf_table)
+
+    for para in conf_table:
+        mw = WlRunner.multiwriters.MultiWriters("../wlgen/player-runtime",
+                para)
+        # use this to discard device
+        shcmd("sudo mkfs.f2fs /dev/sdc1")
+        results = mw.run()
+        allresults.extend(results)
+
+    table_to_file(allresults, "/tmp/smallnlarge.results.txt")
 
 
 def main(cmd_args):
