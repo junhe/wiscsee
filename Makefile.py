@@ -500,7 +500,7 @@ def test_dftl2_new_parallel_write():
     def run(fs, divider, syn_conf):
         conf["age_workload_class"] = "NoOp"
 
-        devsize_mb = 1024 / divider
+        devsize_mb = 2*1024 / divider
         entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
         conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         conf['interface_level'] =  'page'
@@ -521,8 +521,8 @@ def test_dftl2_new_parallel_write():
 
         workflow(conf)
 
-    FILESIZE = 256 * MB
-    NWRITES = 4 * FILESIZE / (64 * KB)
+    FILESIZE = 512 * MB
+    NWRITES = int(1.5 * GB / (64 * KB))
     confs = [
                 # single sequential
                 {
@@ -566,13 +566,30 @@ def test_dftl2_new_parallel_write():
                 }
             ]
 
+    confs = [
+                # single random
+                {
+                    "name"       : 'single-rand',
+                    "filesizes"  : [FILESIZE],
+                    "patterns"   : ['random'],
+                    "write_sizes": [64 * KB],
+                    "n_writes": [NWRITES]
+                }
+
+            ]
+
+
     new_confs = []
-    for _ in range(5):
-        for fs in ('ext4', 'f2fs'):
+    for _ in range(1):
+        for fs in ('f2fs',):
             for conf_update in confs:
-                c = copy.deepcopy(conf_update)
-                c['fs'] = fs
-                new_confs.append(c)
+                for filesize in range(506, 518):
+                    filesize *= MB
+
+                    c = copy.deepcopy(conf_update)
+                    c['fs'] = fs
+                    c['filesizes'][0] = filesize
+                    new_confs.append(c)
 
     random.shuffle(new_confs)
 
