@@ -285,7 +285,8 @@ class Timeline(object):
 
         for realrow in real_table:
             realpid = realrow['player_pid']
-            realrow.update(self.pid_timestamps[realpid])
+            if self.pid_timestamps.has_key(realpid):
+                realrow.update(self.pid_timestamps[realpid])
 
         return real_table
 
