@@ -205,7 +205,8 @@ def get_default_config():
         },
 
         ############# OS #####################
-        "linux_version": linux_kernel_version()
+        "linux_version": linux_kernel_version(),
+        "n_online_cpus": 1
     }
     return confdic
 

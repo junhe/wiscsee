@@ -3,6 +3,7 @@ import time
 
 import blocktrace
 import config
+import cpuhandler
 import filesystem
 import fshelper
 import ftrace
@@ -84,6 +85,9 @@ class WorkloadRunner(object):
 
     def run(self):
         try:
+            # Set number of CPUs
+            cpuhandler.enable_n_cpus(self.conf['n_online_cpus'])
+
             # Prepare file systems
             if self.conf['device_type'] == 'loop':
                 self.loopdev.create()
