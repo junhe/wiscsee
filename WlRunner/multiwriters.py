@@ -69,6 +69,10 @@ class MultiWriters(object):
 
         results = []
         for p in procs:
+            if p.returncode != 0:
+                raise RuntimeError("multiwriter process fails. PID={}".format(
+                    p.pid))
+
             lines = p.communicate()[0].split('\n')
             d = parse_player_runtime_out(lines)
             d['pid.python'] = p.pid
