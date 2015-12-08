@@ -1,3 +1,4 @@
+import utils
 
 class JobDescription(dict):
     def __init__(self):
@@ -46,8 +47,32 @@ class JobDescription(dict):
         return '\n'.join(table)
 
     def save(self, filepath):
+        utils.prepare_dir_for_path(filepath)
         with open(filepath, 'w') as f:
             f.write(str(self))
+
+def parse_results(d):
+    """
+    The input d is the json dictionary of FIO output.
+    All job perfs will be put into table and returned.
+    """
+    table = []
+    for job in d['jobs']:
+        my_dict = {
+                  'jobname':  job['jobname'],
+                  'read_bw':  job['read']['bw'],
+                  'read_iops': job['read']['iops'],
+                  'read_iobytes': job['read']['io_bytes'],
+                  'read_runtime': job['read']['runtime'],
+
+                  'write_bw':  job['write']['bw'],
+                  'write_iops': job['write']['iops'],
+                  'write_iobytes': job['write']['io_bytes'],
+                  'write_runtime': job['write']['runtime'],
+                }
+        table.append(my_dict)
+
+    return table
 
 def get_job_template():
     """

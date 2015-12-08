@@ -5,6 +5,7 @@ import random
 import time
 
 import config
+import fio
 import multiwriters
 import utils
 import workloadlist
@@ -45,6 +46,54 @@ class NoOp(Workload):
 
     def stop(self):
         pass
+
+class FIO(Workload):
+    """
+    """
+    def __init__(self, confobj, workload_conf = None):
+        super(FIO, self).__init__(confobj, workload_conf)
+
+        self.jobpath = os.path.join(self.conf['result_dir'],
+            'fio_job_description.ini')
+        self.resultpath = os.path.join(self.conf['result_dir'],
+            'fio.report.txt')
+
+        if not isinstance(workload_conf, fio.JobDescription):
+            raise TypeError(
+                "workload_conf({}({})) is not of type class JobDescription".
+                format(type(confobj).__name__))
+
+    def create_job_file(self):
+        """
+        self.workload_conf should have the format of:
+            [
+             {'global': { 'attr1':value1,
+                          'attr2':value2}},
+             {'section1': { 'attr1': value1,
+                            'attr2': value2},
+             ...
+            ]
+        """
+        job = self.workload_conf
+        job.save(self.jobpath)
+
+    def parse_results(self):
+        d = utils.load_json(self.resultpath)
+        table = fio.parse_results(d)
+        utils.table_to_file(table, self.resultpath + '.parsed')
+
+    def run(self):
+        self.create_job_file()
+
+        utils.prepare_dir_for_path(self.resultpath)
+        utils.shcmd("fio {} --output-format=json --output {}".format(self.jobpath,
+            self.resultpath))
+
+        self.parse_results()
+
+    def stop(self):
+        pass
+
 
 class WlMultiWriters(Workload):
     """

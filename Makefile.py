@@ -23,11 +23,15 @@ from utils import *
 
 KB, MB, GB = 2**10, 2**20, 2**30
 
-def workflow(conf):
-    # save config file for reference
+def save_conf(conf):
     confpath = os.path.join(conf['result_dir'], 'config.json')
     prepare_dir_for_path(confpath)
     conf.dump_to_file(confpath)
+
+
+def workflow(conf):
+    # save config file for reference
+    save_conf(conf)
 
     # run the workload
     workload_src = conf['workload_src']
@@ -427,10 +431,14 @@ def runtime_update(conf):
     """
     conf['time'] = time.strftime("%m-%d-%H-%M-%S", time.localtime())
     conf['hash'] = hash(str(conf))
+    if conf.has_key('filesystem'):
+        fs = str(conf['filesystem'])
+    else:
+        fs = 'nofs'
     conf['result_dir'] = "{targetdir}/{expname}/{subexpname}-{unique}".format(
         targetdir = conf['targetdir'], expname = conf['expname'],
         subexpname = conf['subexpname'],
-        unique = '-'.join((conf['filesystem'], conf['time'], str(conf['hash']))))
+        unique = '-'.join((fs, conf['time'], str(conf['hash']))))
 
 def test_dftl2_new():
     confdic = get_default_config()
@@ -639,6 +647,81 @@ def smallnlarge():
         allresults.extend(results)
 
     table_to_file(allresults, "/tmp/smallnlarge.results.txt")
+
+
+def test_fio():
+    def build_jobs(pattern_tuple, bs):
+        job = WlRunner.fio.JobDescription()
+        traffic_size = 1 * GB
+
+        global_sec =  {
+                        'global': {
+                            'ioengine'  : 'libaio',
+                            'size'      : traffic_size,
+                            'filename'  : '/dev/sdc',
+                            'direct'    : 1,
+                            'bs'        : bs
+                            }
+                }
+        job.add_section(global_sec)
+
+        for i, pat in enumerate(pattern_tuple):
+            # jobname = '-'.join(['JOB', "_".join(pattern_tuple), pat, str(i)])
+            d = { pat:
+                        {
+                         'rw': pat,
+                         'offset': i * traffic_size
+                         # 'write_iolog': 'joblog.'+str(i)
+                        }
+                }
+            job.add_section(d)
+
+        return job
+
+    confdic = get_default_config()
+    conf = config.Config(confdic)
+
+    metadata_dic = choose_exp_metadata(conf)
+    conf.update(metadata_dic)
+
+
+    # fio = WlRunner.workload.FIO(conf, conf['workload_conf'])
+    # fio.run()
+
+    patterns = ['read', 'write', 'randread', 'randwrite']
+    two_ways = list(itertools.combinations_with_replacement(patterns, 2))
+    patterns = [ (p, ) for p in patterns]
+    patterns.extend(two_ways)
+
+    parameters1 = [ {'pattern': p} for p in patterns ]
+    for para in parameters1:
+        para['bs'] = 4 * KB
+
+    parameters2 = copy.deepcopy(parameters1)
+    for para in parameters2:
+        para['bs'] = 64 * KB
+
+    parameters3 = copy.deepcopy(parameters1)
+    for para in parameters3:
+        para['bs'] = 256 * KB
+
+    parameters = parameters1 + parameters2 + parameters3
+    parameters = parameters * 2
+
+    random.shuffle( parameters )
+    pprint.pprint( parameters )
+
+    for para in parameters:
+        job_desc = build_jobs(para['pattern'], para['bs'])
+        conf['workload_conf'] = job_desc
+        conf['fio_para'] = para
+
+        runtime_update(conf)
+
+        fio = WlRunner.workload.FIO(conf, job_desc)
+
+        save_conf(conf)
+        fio.run()
 
 
 def main(cmd_args):
