@@ -11,7 +11,7 @@ import utils
 import workloadlist
 
 class Workload(object):
-    def __init__(self, confobj, workload_conf = None):
+    def __init__(self, confobj, workload_conf_key = None):
         """
         workload_conf is part of confobj. But we may need to run
         multiple workloads with different configurations in our
@@ -27,7 +27,9 @@ class Workload(object):
                 format(type(confobj).__name__))
 
         self.conf = confobj
-        self.workload_conf = workload_conf
+        print '>>>>>>>>>>>>>>>>',workload_conf_key
+        if workload_conf_key != None and workload_conf_key != 'None':
+            self.workload_conf = confobj[workload_conf_key]
 
     def run(self):
         raise NotImplementedError
@@ -50,15 +52,15 @@ class NoOp(Workload):
 class FIO(Workload):
     """
     """
-    def __init__(self, confobj, workload_conf = None):
-        super(FIO, self).__init__(confobj, workload_conf)
+    def __init__(self, confobj, workload_conf_key = None):
+        super(FIO, self).__init__(confobj, workload_conf_key)
 
         self.jobpath = os.path.join(self.conf['result_dir'],
             'fio_job_description.ini')
         self.resultpath = os.path.join(self.conf['result_dir'],
             'fio.report.txt')
 
-        if not isinstance(workload_conf, fio.JobDescription):
+        if not isinstance(self.workload_conf, fio.JobDescription):
             raise TypeError(
                 "workload_conf({}({})) is not of type class JobDescription".
                 format(type(confobj).__name__))
@@ -86,6 +88,7 @@ class FIO(Workload):
         self.create_job_file()
 
         utils.prepare_dir_for_path(self.resultpath)
+        print str(self.workload_conf)
         utils.shcmd("fio {} --output-format=json --output {}".format(self.jobpath,
             self.resultpath))
 
@@ -93,7 +96,6 @@ class FIO(Workload):
 
     def stop(self):
         pass
-
 
 class WlMultiWriters(Workload):
     """

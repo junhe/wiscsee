@@ -66,19 +66,20 @@ class WorkloadRunner(object):
 
         # create aging workload object
         self.aging_workload = eval("workload.{wlclass}(confobj = self.conf, " \
-            "workload_conf = {wlconf})".format(
+            "workload_conf_key = '{wlconf_key}')".format(
                 wlclass = self.conf["age_workload_class"],
-                wlconf = self.conf["aging_config"]
+                wlconf_key = self.conf["aging_config_key"]
                 ) #format
             ) #eval
 
         # create workload object
-        self.workload = eval("workload.{wlclass}(confobj = self.conf, " \
-            "workload_conf = {wlconf})".format(
+        workload_str = "workload.{wlclass}(confobj = self.conf, " \
+            "workload_conf_key = '{wlconf_key}')".format(
                 wlclass = self.conf["workload_class"],
-                wlconf = self.conf["workload_conf"]
+                wlconf_key = self.conf["workload_conf_key"]
                 ) #format
-            ) #eval
+        print workload_str
+        self.workload = eval(workload_str)
 
         # create Ftrace manager
         # self.ftrace = ftrace.Ftrace()

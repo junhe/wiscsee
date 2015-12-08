@@ -16,12 +16,13 @@ from time import localtime, strftime
 
 import config
 from config import WLRUNNER, LBAGENERATOR
+from environments import *
 import experiment
+import testfio
 import FtlSim
 import WlRunner
 from utils import *
 
-KB, MB, GB = 2**10, 2**20, 2**30
 
 def save_conf(conf):
     confpath = os.path.join(conf['result_dir'], 'config.json')
@@ -127,7 +128,7 @@ def get_default_config():
         # "device_path"           : "/dev/loop0", # or sth. like /dev/sdc1
         # "device_type"           : "loop", # loop, real
 
-        "enable_blktrace"       : True,
+        "enable_blktrace"       : False,
 
         "fs_mount_point"        : "/mnt/fsonloop",
         "mnt_opts" : {
@@ -171,6 +172,7 @@ def get_default_config():
         "age_workload_class"    : "NoOp",
 
         # the following config should match the age_workload_class you use
+        "aging_config_key"      :None,
         "aging_config" :{
             "generating_func": "self.generate_random_workload",
             # "chunk_count": 100*2**20/(8*1024),
@@ -185,6 +187,7 @@ def get_default_config():
         ############## workload.py on top of FS #########
         # "workload_class"        : "Simple",
         "workload_class"        : "Synthetic",
+        "workload_conf_key"     : "workload_conf",
         "workload_conf" :{
             # "generating_func": "self.generate_hotcold_workload",
             # "generating_func": "self.generate_sequential_workload",
@@ -657,78 +660,36 @@ def smallnlarge():
 
 
 def test_fio():
-    def build_jobs(pattern_tuple, bs):
-        job = WlRunner.fio.JobDescription()
-        traffic_size = 1 * GB
-
-        global_sec =  {
-                        'global': {
-                            'ioengine'  : 'libaio',
-                            'size'      : traffic_size,
-                            'filename'  : '/dev/sdc',
-                            'direct'    : 1,
-                            'bs'        : bs
-                            }
-                }
-        job.add_section(global_sec)
-
-        for i, pat in enumerate(pattern_tuple):
-            # jobname = '-'.join(['JOB', "_".join(pattern_tuple), pat, str(i)])
-            d = { pat:
-                        {
-                         'rw': pat,
-                         'offset': i * traffic_size
-                         # 'write_iolog': 'joblog.'+str(i)
-                        }
-                }
-            job.add_section(d)
-
-        return job
-
     confdic = get_default_config()
     conf = config.Config(confdic)
 
     metadata_dic = choose_exp_metadata(conf)
     conf.update(metadata_dic)
 
+    parameters = testfio.build_patterns()
 
-    # fio = WlRunner.workload.FIO(conf, conf['workload_conf'])
-    # fio.run()
-
-    patterns = ['read', 'write', 'randread', 'randwrite']
-    two_ways = list(itertools.combinations_with_replacement(patterns, 2))
-    patterns = [ (p, ) for p in patterns]
-    patterns.extend(two_ways)
-
-    parameters1 = [ {'pattern': p} for p in patterns ]
-    for para in parameters1:
-        para['bs'] = 4 * KB
-
-    parameters2 = copy.deepcopy(parameters1)
-    for para in parameters2:
-        para['bs'] = 64 * KB
-
-    parameters3 = copy.deepcopy(parameters1)
-    for para in parameters3:
-        para['bs'] = 256 * KB
-
-    parameters = parameters1 + parameters2 + parameters3
-    parameters = parameters * 2
-
-    random.shuffle( parameters )
-    pprint.pprint( parameters )
+    conf['use_fs'] = True
 
     for para in parameters:
-        job_desc = build_jobs(para['pattern'], para['bs'])
+        job_desc = testfio.build_jobs(pattern_tuple = para['pattern'],
+                bs = para['bs'], usefs = conf['use_fs'], conf = conf,
+                traffic_size = para['traffic_size']
+                )
         conf['workload_conf'] = job_desc
+        conf['workload_conf_key'] = 'workload_conf'
         conf['fio_para'] = para
 
         runtime_update(conf)
 
-        fio = WlRunner.workload.FIO(conf, job_desc)
-
-        save_conf(conf)
-        fio.run()
+        if conf['use_fs']:
+            conf['workload_class'] = 'FIO'
+            conf['filesystem'] = para['fs']
+            conf['loop_dev_size_mb'] = para['dev_mb']
+            workflow(conf)
+        else:
+            fio = WlRunner.workload.FIO(conf, job_desc)
+            save_conf(conf)
+            fio.run()
 
 
 def main(cmd_args):
