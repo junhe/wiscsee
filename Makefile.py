@@ -46,6 +46,9 @@ def workflow(conf):
         raise RuntimeError("{} is not a valid workload source"\
             .format(workload_src))
 
+    if not conf['enable_blktrace'] or not conf['enable_simulation']:
+        return
+
     # run the Ftl Simulator
     print "Start simulation.........."
     sim = FtlSim.simulator.Simulator(conf)
@@ -66,7 +69,9 @@ def get_default_config():
         "ftl_type"              : "nkftl2",
         "sector_size"           : 512,
 
+
         ############## For FtlSim ######
+        "enable_simulation"     : True,
         "flash_page_size"       : 4096,
         "flash_npage_per_block" : 4,
         "flash_num_blocks"      : None,
@@ -121,6 +126,8 @@ def get_default_config():
         "device_type"           : "real", # loop, real
         # "device_path"           : "/dev/loop0", # or sth. like /dev/sdc1
         # "device_type"           : "loop", # loop, real
+
+        "enable_blktrace"       : True,
 
         "fs_mount_point"        : "/mnt/fsonloop",
         "mnt_opts" : {

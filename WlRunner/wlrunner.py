@@ -83,35 +83,73 @@ class WorkloadRunner(object):
         # create Ftrace manager
         # self.ftrace = ftrace.Ftrace()
 
+    def prepare_fs(self):
+        # Prepare file systems
+        if self.conf['device_type'] == 'loop':
+            self.loopdev.create()
+        elif self.conf['device_type'] == 'real':
+            # umount file system if it is mounted
+            if fshelper.isMounted(self.conf['fs_mount_point']):
+                utils.shcmd(
+                    "sudo umount {}".format(self.conf['fs_mount_point']))
+            # partition the dev
+            base_dev_path = self.conf['device_path'].rstrip('0123456789')
+
+            mo = re.search(r'\d+$', self.conf['device_path'])
+            if mo == None:
+                raise RuntimeError("You have to specify a partition, not "
+                        "an entire disk: {}".format(
+                        self.conf['device_path']))
+            dev_id = int(mo.group())
+            # if dev_id = 3, we will have:
+            #    [0 0 0]
+            # sdc 1 2 3
+            part_sizes = [0 for i in range(dev_id)]
+            size = self.conf['loop_dev_size_mb'] * 2**20
+            part_sizes[dev_id - 1] = size
+            fshelper.partition_disk(base_dev_path, part_sizes)
+
+    def build_fs(self):
+        # Making and mounting file system
+        try:
+            mk_opt_dic = self.conf[self.conf['filesystem']].get('make_opts', None)
+        except KeyError:
+            mk_opt_dic = None
+        self.fs.make(opt_dic = mk_opt_dic)
+        self.fs.mount(opt_list =
+            self.conf['mnt_opts'][ self.conf['filesystem'] ])
+        utils.shcmd('sync')
+
+        # F2FS specific
+        if self.conf['filesystem'] == 'f2fs':
+            for opt_name, value in \
+                self.conf['f2fs'].get('sysfs', {}).items():
+                self.fs.sysfs_setup(opt_name, value)
+
     def run(self):
+        if self.conf['enable_blktrace'] == True:
+            return self.run_with_blktrace()
+        else:
+            return self.run_without_blktrace()
+
+    def run_without_blktrace(self):
+        cpuhandler.enable_n_cpus(self.conf['n_online_cpus'])
+
+        self.prepare_fs()
+        self.build_fs()
+
+        self.aging_workload.run()
+
+        self.workload.run()
+
+        return None
+
+    def run_with_blktrace(self):
         try:
             # Set number of CPUs
             cpuhandler.enable_n_cpus(self.conf['n_online_cpus'])
 
-            # Prepare file systems
-            if self.conf['device_type'] == 'loop':
-                self.loopdev.create()
-            elif self.conf['device_type'] == 'real':
-                # umount file system if it is mounted
-                if fshelper.isMounted(self.conf['fs_mount_point']):
-                    utils.shcmd(
-                        "sudo umount {}".format(self.conf['fs_mount_point']))
-                # partition the dev
-                base_dev_path = self.conf['device_path'].rstrip('0123456789')
-
-                mo = re.search(r'\d+$', self.conf['device_path'])
-                if mo == None:
-                    raise RuntimeError("You have to specify a partition, not "
-                            "an entire disk: {}".format(
-                            self.conf['device_path']))
-                dev_id = int(mo.group())
-                # if dev_id = 3, we will have:
-                #    [0 0 0]
-                # sdc 1 2 3
-                part_sizes = [0 for i in range(dev_id)]
-                size = self.conf['loop_dev_size_mb'] * 2**20
-                part_sizes[dev_id - 1] = size
-                fshelper.partition_disk(base_dev_path, part_sizes)
+            self.prepare_fs()
 
             # strat blktrace
             # This is only for making and mounting file system, because we
@@ -122,21 +160,7 @@ class WorkloadRunner(object):
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
 
-            # Making and mounting file system
-            try:
-                mk_opt_dic = self.conf[self.conf['filesystem']].get('make_opts', None)
-            except KeyError:
-                mk_opt_dic = None
-            self.fs.make(opt_dic = mk_opt_dic)
-            self.fs.mount(opt_list =
-                self.conf['mnt_opts'][ self.conf['filesystem'] ])
-            utils.shcmd('sync')
-
-            # F2FS specific
-            if self.conf['filesystem'] == 'f2fs':
-                for opt_name, value in \
-                    self.conf['f2fs'].get('sysfs', {}).items():
-                    self.fs.sysfs_setup(opt_name, value)
+            self.build_fs()
 
             # Age the file system
             self.aging_workload.run()
@@ -152,25 +176,8 @@ class WorkloadRunner(object):
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
 
-            # ftr = ftrace.Ftrace()
-            # ftr.clean_trace()
-            # ftr.set_tracer('function_graph')
-            # ftr.set_tracer('function')
-            # ftr.write_file('options/func_stack_trace', '1')
-            # ftr.set_filter('*ext4*')
-            # ftr.set_filter('f2fs_trace_ios')
-            # ftr.add_filter('write_checkpoint')
-            # ftr.add_filter('do_checkpoint')
-            # ftr.set_filter(':mod:f2fs')
-            # ftr.start_tracing()
-            # time.sleep(2)
-            # ftr.write_marker('JUNJun marked this beginning.')
-
             print 'Running workload ....'
             self.workload.run()
-
-            # ftr.write_marker('Jun marked this end.')
-            # ftr.stop_tracing()
 
         except Exception:
             raise
