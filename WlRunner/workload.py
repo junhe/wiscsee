@@ -115,8 +115,8 @@ class WlMultiWriters(Workload):
                     'sync': 1,
                     'file_path': os.path.join(self.conf['fs_mount_point'],
                         'multiwriter.file.' + str(i)),
-                    'tag': 'tag' + str(i),
-                    'markerfile': self.conf.get_blkparse_result_path()
+                    'tag': 'tag' + str(i)
+                    # 'markerfile': self.conf.get_blkparse_result_path()
                   }
             args_table.append(d)
 
@@ -124,6 +124,7 @@ class WlMultiWriters(Workload):
 
     def run(self):
         args_table = self.translate(self.workload_conf)
+        print args_table
         mw = multiwriters.MultiWriters("../wlgen/player-runtime",
                 args_table)
         results = mw.run()
