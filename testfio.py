@@ -86,7 +86,7 @@ def build_a_set(blocksize, traffic_size, fs, dev_mb, file_size):
 def build_patterns():
     parameters = []
     # for blocksize in [4*KB, 64*KB, 256*KB]:
-    for blocksize in [4*KB, 8*KB, 32*KB]:
+    for blocksize in [8*KB, 32*KB]:
         for fs in ['ext4', 'f2fs']:
             for dev_mb in [1024]:
                 for file_size in [256*MB]:
