@@ -33,7 +33,7 @@ def build_jobs(pattern_tuple, bs, usefs, conf, traffic_size, file_size):
                             'filesize'  : int(file_size),
                             'bs'        : int(bs),
                             'iodepth'   :1,
-                            'fsync'     :2
+                            'fsync'     :1
                             }
                 }
     job.add_section(global_sec)
