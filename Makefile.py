@@ -9,6 +9,7 @@ import os
 import profile
 import sys
 import shlex
+import socket
 import time
 import glob
 import pprint
@@ -659,6 +660,12 @@ def smallnlarge():
     table_to_file(allresults, "/tmp/smallnlarge.results.txt")
 
 
+def get_dev_by_hostname():
+    if 'susitna' in socket.gethostname():
+        return "/dev/sda1" # or sth. like /dev/sdc1
+    else:
+        return "/dev/sdc1" # or sth. like /dev/sdc1
+
 def test_fio():
     confdic = get_default_config()
     conf = config.Config(confdic)
@@ -680,6 +687,8 @@ def test_fio():
         conf['workload_conf'] = job_desc
         conf['workload_conf_key'] = 'workload_conf'
         conf['fio_para'] = para
+        conf['device_path'] = get_dev_by_hostname()
+        conf['device_type'] = "real" # loop, rea'
 
         runtime_update(conf)
 
