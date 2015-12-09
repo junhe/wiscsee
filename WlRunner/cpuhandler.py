@@ -61,6 +61,9 @@ def enable_n_cpus(n):
     """
     Enable n CPUs
     """
+    if n == 'NOOP':
+        return
+
     online_cpus = get_online_cpuids()
 
     n_online = len(online_cpus)

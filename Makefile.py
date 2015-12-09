@@ -669,11 +669,13 @@ def test_fio():
     parameters = testfio.build_patterns()
 
     conf['use_fs'] = True
+    conf["n_online_cpus"] = 16
 
     for para in parameters:
         job_desc = testfio.build_jobs(pattern_tuple = para['pattern'],
                 bs = para['bs'], usefs = conf['use_fs'], conf = conf,
-                traffic_size = para['traffic_size']
+                traffic_size = para['traffic_size'],
+                file_size = para['file_size']
                 )
         conf['workload_conf'] = job_desc
         conf['workload_conf_key'] = 'workload_conf'
@@ -717,7 +719,8 @@ def main(cmd_args):
     # test_experimental_design()
 
     # test_nkftl()
-    test_dftl2_new_parallel_write()
+    # test_dftl2_new_parallel_write()
+    test_fio()
 
 def _main():
     parser = argparse.ArgumentParser(
