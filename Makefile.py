@@ -696,15 +696,14 @@ def test_fio():
         job_desc = testfio.build_one_run(pattern_tuple = para['pattern'],
                 bs = para['bs'], usefs = conf['use_fs'], conf = conf,
                 traffic_size = para['traffic_size'],
-                file_size = para['file_size']
+                file_size = para['file_size'],
+                fdatasync = para['fdatasync']
                 )
         conf['workload_conf'] = job_desc
         conf['workload_conf_key'] = 'workload_conf'
         conf['fio_para'] = para
         conf['device_path'] = get_dev_by_hostname()
         conf['device_type'] = "real" # loop, rea'
-
-
 
         if conf['use_fs']:
             conf['workload_class'] = 'FIO'

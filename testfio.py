@@ -35,7 +35,7 @@ def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
                             'filesize'  : int(file_size),
                             'bs'        : int(bs),
                             'iodepth'   :1,
-                            'fdatasync'     :1
+                            'fdatasync'     :int(fdatasync)
                             # 'direct'    :1
                             }
                 }
@@ -66,7 +66,7 @@ def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
 
     return job
 
-def build_a_set(blocksize, traffic_size, fs, dev_mb, file_size):
+def build_a_set(blocksize, traffic_size, fs, dev_mb, file_size, fdatasync):
     patterns = ['read', 'write', 'randread', 'randwrite']
     two_ways = list(itertools.combinations_with_replacement(patterns, 2))
     patterns = [ (p, ) for p in patterns]
@@ -84,24 +84,27 @@ def build_a_set(blocksize, traffic_size, fs, dev_mb, file_size):
         para['fs'] = fs
         para['dev_mb'] = dev_mb
         para['file_size'] = file_size
+        para['fdatasync'] = fdatasync
 
     return parameters
 
 def build_patterns():
     parameters = []
     # for blocksize in [4*KB, 64*KB, 256*KB]:
-    for blocksize in [s*KB for s in range(16, 64+1, 16)]:
-        for fs in ['ext4']:
+    for blocksize in [8*KB]:
+        for fs in ['f2fs']:
             for dev_mb in [1024]:
                 for file_size in [256*MB]:
                     for traffic_size in [256*MB]:
-                        pattern_set = build_a_set(blocksize = blocksize,
-                                                  fs = fs,
-                                                  dev_mb = dev_mb,
-                                                  traffic_size = traffic_size,
-                                                  file_size = file_size
-                                                  )
-                        parameters.extend(pattern_set)
+                        for fdatasync in [1, 64, 512]:
+                            pattern_set = build_a_set(blocksize = blocksize,
+                                                      fs = fs,
+                                                      dev_mb = dev_mb,
+                                                      traffic_size = traffic_size,
+                                                      file_size = file_size,
+                                                      fdatasync = fdatasync
+                                                      )
+                            parameters.extend(pattern_set)
 
     parameters = parameters * 2
     random.shuffle( parameters )
