@@ -442,10 +442,10 @@ def runtime_update(conf):
     """
     conf['time'] = time.strftime("%m-%d-%H-%M-%S", time.localtime())
     conf['hash'] = hash(str(conf))
-    if conf.has_key('filesystem'):
+    if conf.has_key('filesystem') and conf['filesystem'] != None:
         fs = str(conf['filesystem'])
     else:
-        fs = 'nofs'
+        fs = 'fsnotset'
     conf['result_dir'] = "{targetdir}/{expname}/{subexpname}-{unique}".format(
         targetdir = conf['targetdir'], expname = conf['expname'],
         subexpname = conf['subexpname'],
