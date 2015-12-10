@@ -188,7 +188,20 @@ def partition_disk(dev, part_sizes):
     part_sizes = [1 * GB, 4 * GB, 8 * GB]
     """
     create_layout_file(part_sizes)
-    utils.shcmd("sudo sfdisk {} < my.layout".format(dev))
+
+    n_tries = 3
+    success = False
+    while n_tries > 0:
+        n_tries -= 1
+        ret = utils.shcmd("sudo sfdisk {} < my.layout".format(dev),
+                ignore_error = True)
+        if ret == 0:
+            success = True
+            break
+
+    if success == False:
+        raise RuntimeError("Fail when doing sfdisk")
+
     utils.shcmd("sudo partprobe -s {}".format(dev))
 
 
