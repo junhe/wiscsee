@@ -442,10 +442,10 @@ def runtime_update(conf):
     """
     conf['time'] = time.strftime("%m-%d-%H-%M-%S", time.localtime())
     conf['hash'] = hash(str(conf))
-    if conf.has_key('filesystem'):
+    if conf.has_key('filesystem') and conf['filesystem'] != None:
         fs = str(conf['filesystem'])
     else:
-        fs = 'nofs'
+        fs = 'fsnotset'
     conf['result_dir'] = "{targetdir}/{expname}/{subexpname}-{unique}".format(
         targetdir = conf['targetdir'], expname = conf['expname'],
         subexpname = conf['subexpname'],
@@ -666,6 +666,20 @@ def get_dev_by_hostname():
     else:
         return "/dev/sdc1" # or sth. like /dev/sdc1
 
+def disable_ext4_journal(conf):
+    if '^has_journal' in conf['ext4']['make_opts']['-O']:
+        conf['ext4']['make_opts']['-O'].remove('^has_journal')
+
+    if 'has_journal' in conf['ext4']['make_opts']['-O']:
+        conf['ext4']['make_opts']['-O'].remove('has_journal')
+
+    conf['ext4']['make_opts']['-O'].append('^has_journal')
+
+    try:
+        del conf['mnt_opts']['ext4']['data']
+    except KeyError:
+        pass
+
 def test_fio():
     confdic = get_default_config()
     conf = config.Config(confdic)
@@ -690,16 +704,28 @@ def test_fio():
         conf['device_path'] = get_dev_by_hostname()
         conf['device_type'] = "real" # loop, rea'
 
-        runtime_update(conf)
+
 
         if conf['use_fs']:
             conf['workload_class'] = 'FIO'
             conf['filesystem'] = para['fs']
+
+            if para['fs'] == 'ext4':
+                # disable journal
+                disable_ext4_journal(conf)
+
             conf['loop_dev_size_mb'] = para['dev_mb']
+            runtime_update(conf)
             workflow(conf)
         else:
-            fio = WlRunner.workload.FIO(conf, job_desc)
+            runtime_update(conf)
+            fio = WlRunner.workload.FIO(conf, 'workload_conf')
             save_conf(conf)
+
+            print '-------------------------'
+            print str(job_desc)
+            print '========================='
+
             fio.run()
 
 

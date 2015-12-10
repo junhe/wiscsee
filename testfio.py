@@ -18,9 +18,10 @@ def build_jobs(pattern_tuple, bs, usefs, conf, traffic_size, file_size):
                         'global': {
                             'ioengine'  : 'libaio',
                             'io_size'   : int(traffic_size),
-                            'filesize'  : int(file_size),
+                            'size'  : int(file_size),
                             'filename'  : '/dev/sdc',
                             'direct'    : 1,
+                            'iodepth'   :1,
                             'bs'        : int(bs)
                             }
                 }
@@ -28,12 +29,13 @@ def build_jobs(pattern_tuple, bs, usefs, conf, traffic_size, file_size):
         # with filesystem
         global_sec =  {
                         'global': {
-                            'ioengine'  : 'libaio',
+                            'ioengine'  : 'sync',
                             'io_size'   : int(traffic_size),
                             'filesize'  : int(file_size),
                             'bs'        : int(bs),
                             'iodepth'   :1,
-                            'fsync'     :1
+                            'fdatasync'     :1
+                            # 'direct'    :1
                             }
                 }
     job.add_section(global_sec)
@@ -70,7 +72,8 @@ def build_a_set(blocksize, traffic_size, fs, dev_mb, file_size):
     patterns.extend(two_ways)
 
     # override
-    patterns = [('randwrite', 'randwrite')]
+    patterns = [('randwrite', 'randwrite'), ('randwrite',)]
+    # patterns = [('randwrite', )]
 
     parameters = [ {'pattern': p} for p in patterns ]
 
@@ -86,17 +89,18 @@ def build_a_set(blocksize, traffic_size, fs, dev_mb, file_size):
 def build_patterns():
     parameters = []
     # for blocksize in [4*KB, 64*KB, 256*KB]:
-    for blocksize in [8*KB, 32*KB]:
-        for fs in ['ext4', 'f2fs']:
+    for blocksize in [s*KB for s in range(16, 64+1, 16)]:
+        for fs in ['ext4']:
             for dev_mb in [1024]:
                 for file_size in [256*MB]:
-                    pattern_set = build_a_set(blocksize = blocksize,
-                                              fs = fs,
-                                              dev_mb = dev_mb,
-                                              traffic_size = 1.5*GB,
-                                              file_size = file_size
-                                              )
-                    parameters.extend(pattern_set)
+                    for traffic_size in [256*MB]:
+                        pattern_set = build_a_set(blocksize = blocksize,
+                                                  fs = fs,
+                                                  dev_mb = dev_mb,
+                                                  traffic_size = traffic_size,
+                                                  file_size = file_size
+                                                  )
+                        parameters.extend(pattern_set)
 
     parameters = parameters * 2
     random.shuffle( parameters )
