@@ -7,6 +7,24 @@ import random
 
 import WlRunner
 
+def ParameterCombinations(parameter_dict):
+    """
+    Get all the cominbation of the values from each key
+    http://tinyurl.com/nnglcs9
+    Input: parameter_dict={
+                    p0:[x, y, z, ..],
+                    p1:[a, b, c, ..],
+                    ...}
+    Output: [
+             {p0:x, p1:a, ..},
+             {..},
+             ...
+            ]
+    """
+    d = parameter_dict
+    return [dict(zip(d, v)) for v in itertools.product(*d.values())]
+
+
 
 def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
         fdatasync):
@@ -89,26 +107,35 @@ def build_a_set(blocksize, traffic_size, fs, dev_mb, file_size, fdatasync):
     return parameters
 
 def build_patterns():
-    parameters = []
     # for blocksize in [4*KB, 64*KB, 256*KB]:
-    for blocksize in [8*KB]:
-        for fs in ['f2fs']:
-            for dev_mb in [1024]:
-                for file_size in [256*MB]:
-                    for traffic_size in [256*MB]:
-                        for fdatasync in [1, 64, 512]:
-                            pattern_set = build_a_set(blocksize = blocksize,
-                                                      fs = fs,
-                                                      dev_mb = dev_mb,
-                                                      traffic_size = traffic_size,
-                                                      file_size = file_size,
-                                                      fdatasync = fdatasync
-                                                      )
-                            parameters.extend(pattern_set)
+    para_dict = {
+            'blocksize'      : [8*KB],
+            'fs'             : ['f2fs'],
+            'dev_mb'         : [1024],
+            'file_size'      : [256*MB],
+            'traffic_size'   : [256*MB],
+            'fdatasync'      : [1, 64, 512]
+            }
+
+    parameter_combs = ParameterCombinations(para_dict)
+
+    parameters = []
+    for para in parameter_combs:
+        # para = copy.deepcopy(para_item)
+        pattern_set = build_a_set(blocksize = para['blocksize'],
+                                  fs        = para['fs'],
+                                  dev_mb    = para['dev_mb'],
+                                  traffic_size = para['traffic_size'],
+                                  file_size = para['file_size'],
+                                  fdatasync = para['fdatasync']
+                                  )
+        parameters.extend(pattern_set)
 
     parameters = parameters * 2
     random.shuffle( parameters )
     pprint.pprint( parameters )
+
+    exit(1)
 
     return parameters
 
