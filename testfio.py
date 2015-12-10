@@ -135,7 +135,6 @@ def build_patterns():
     random.shuffle( parameters )
     pprint.pprint( parameters )
 
-    exit(1)
 
     return parameters
 
