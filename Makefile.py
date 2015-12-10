@@ -693,7 +693,7 @@ def test_fio():
     conf["n_online_cpus"] = 16
 
     for para in parameters:
-        job_desc = testfio.build_jobs(pattern_tuple = para['pattern'],
+        job_desc = testfio.build_one_run(pattern_tuple = para['pattern'],
                 bs = para['bs'], usefs = conf['use_fs'], conf = conf,
                 traffic_size = para['traffic_size'],
                 file_size = para['file_size']

@@ -8,7 +8,8 @@ import random
 import WlRunner
 
 
-def build_jobs(pattern_tuple, bs, usefs, conf, traffic_size, file_size):
+def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
+        fdatasync):
     job = WlRunner.fio.JobDescription()
     # traffic_size = 1 * GB
     # traffic_size = 512 * KB
