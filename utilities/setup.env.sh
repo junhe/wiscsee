@@ -13,13 +13,18 @@ cd wlgen
 make
 cd $doradir
 
+# for FIO
+sudo apt-get install -y libaio-dev
+
 cd ../../
 wget https://github.com/axboe/fio/archive/fio-2.2.12.tar.gz
-cd fio-2.2.12
+tar xf fio-2.2.12.tar.gz
+cd fio-fio-2.2.12
 ./configure
 make
 sudo make install
 cd $doradir
+
 
 sudo apt-get install -y python-bitarray
 
