@@ -94,8 +94,8 @@ def build_runs_with_a_set_of_patterns(blocksize, traffic_size, fs, dev_mb, file_
     patterns.extend(two_ways)
 
     # override
-    patterns = [('randwrite', 'randwrite'), ('randwrite',)]
-    # patterns = [('randwrite', )]
+    # patterns = [('randwrite', 'randwrite'), ('randwrite',)]
+    patterns = [('randwrite', )]
 
     parameters = [ {'pattern': p} for p in patterns ]
 
@@ -113,8 +113,8 @@ def build_runs_with_a_set_of_patterns(blocksize, traffic_size, fs, dev_mb, file_
 def build_patterns():
     # for blocksize in [4*KB, 64*KB, 256*KB]:
     para_dict = {
-            'blocksize'      : [8*KB],
-            'fs'             : ['f2fs'],
+            'blocksize'      : [WlRunner.fio.HIDE_ATTR],
+            'fs'             : ['ext4'],
             'dev_mb'         : [1024],
             'file_size'      : [256*MB],
             'traffic_size'   : [256*MB],
@@ -141,7 +141,6 @@ def build_patterns():
     parameters = parameters * 2
     random.shuffle( parameters )
     pprint.pprint( parameters )
-
 
     return parameters
 

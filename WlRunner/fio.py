@@ -1,5 +1,7 @@
 import utils
 
+NOVALUE, HIDE_ATTR = 'NOVALUE', 'HIDE_ATTR'
+
 class JobDescription(dict):
     def __init__(self):
         """
@@ -37,9 +39,12 @@ class JobDescription(dict):
 
             for attr_name, attr_value in self.job_dict[section_name].items():
                 sep = '='
-                if attr_value == None:
+                if attr_value == NOVALUE:
                     sep = ''
                     attr_value = ''
+                elif attr_value == HIDE_ATTR:
+                    # omit this line
+                    continue
                 line = '{}{}{}'.format(attr_name, sep, attr_value)
                 table.append(line)
             table.append('') # empty line
