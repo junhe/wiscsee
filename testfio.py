@@ -27,7 +27,7 @@ def ParameterCombinations(parameter_dict):
 
 
 def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
-        fdatasync):
+        fdatasync, bssplit):
     job = WlRunner.fio.JobDescription()
     # traffic_size = 1 * GB
     # traffic_size = 512 * KB
@@ -41,7 +41,8 @@ def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
                             'filename'  : '/dev/sdc',
                             'direct'    : 1,
                             'iodepth'   :1,
-                            'bs'        : int(bs)
+                            'bs'        : bs,
+                            'bssplit'   : bssplit
                             }
                 }
     else:
@@ -51,10 +52,11 @@ def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
                             'ioengine'  : 'sync',
                             'io_size'   : int(traffic_size),
                             'filesize'  : int(file_size),
-                            'bs'        : int(bs),
+                            'bs'        : bs,
                             'iodepth'   :1,
-                            'fdatasync'     :int(fdatasync)
-                            # 'direct'    :1
+                            'fdatasync'     :fdatasync,
+                            'bssplit'   : bssplit,
+                            'direct'    :1
                             }
                 }
     job.add_section(global_sec)
@@ -84,7 +86,8 @@ def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
 
     return job
 
-def build_a_set(blocksize, traffic_size, fs, dev_mb, file_size, fdatasync):
+def build_runs_with_a_set_of_patterns(blocksize, traffic_size, fs, dev_mb, file_size, fdatasync,
+        bssplit):
     patterns = ['read', 'write', 'randread', 'randwrite']
     two_ways = list(itertools.combinations_with_replacement(patterns, 2))
     patterns = [ (p, ) for p in patterns]
@@ -103,6 +106,7 @@ def build_a_set(blocksize, traffic_size, fs, dev_mb, file_size, fdatasync):
         para['dev_mb'] = dev_mb
         para['file_size'] = file_size
         para['fdatasync'] = fdatasync
+        para['bssplit'] = bssplit
 
     return parameters
 
@@ -114,7 +118,9 @@ def build_patterns():
             'dev_mb'         : [1024],
             'file_size'      : [256*MB],
             'traffic_size'   : [256*MB],
-            'fdatasync'      : [1, 64, 512]
+            'fdatasync'      : [WlRunner.fio.HIDE_ATTR],
+            'bssplit'        : ['8kb/100', '8kb/95:64kb/5', '8kb/50:64kb/50',
+                                '8kb/5:64kb/95', '64kb/100']
             }
 
     parameter_combs = ParameterCombinations(para_dict)
@@ -122,12 +128,13 @@ def build_patterns():
     parameters = []
     for para in parameter_combs:
         # para = copy.deepcopy(para_item)
-        pattern_set = build_a_set(blocksize = para['blocksize'],
+        pattern_set = build_runs_with_a_set_of_patterns(blocksize = para['blocksize'],
                                   fs        = para['fs'],
                                   dev_mb    = para['dev_mb'],
                                   traffic_size = para['traffic_size'],
                                   file_size = para['file_size'],
-                                  fdatasync = para['fdatasync']
+                                  fdatasync = para['fdatasync'],
+                                  bssplit   = para['bssplit']
                                   )
         parameters.extend(pattern_set)
 

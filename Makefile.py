@@ -697,7 +697,8 @@ def test_fio():
                 bs = para['bs'], usefs = conf['use_fs'], conf = conf,
                 traffic_size = para['traffic_size'],
                 file_size = para['file_size'],
-                fdatasync = para['fdatasync']
+                fdatasync = para['fdatasync'],
+                bssplit = para['bssplit']
                 )
         conf['workload_conf'] = job_desc
         conf['workload_conf_key'] = 'workload_conf'
