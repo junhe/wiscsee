@@ -219,6 +219,13 @@ def get_default_config():
             }
         },
 
+        ############# PERF #####################
+        "wrap_by_perf" : False,
+        "perf" : {
+                "perf_path"         : "perf",
+                "flamegraph_dir"    : None
+                },
+
         ############# OS #####################
         "linux_version": linux_kernel_version(),
         "n_online_cpus": 1
@@ -705,6 +712,11 @@ def test_fio():
         conf['fio_para'] = para
         conf['device_path'] = get_dev_by_hostname()
         conf['device_type'] = "real" # loop, rea'
+
+        # perf
+        conf['wrap_by_perf'] = True
+        conf['perf']['perf_path'] = '/mnt/sdb1/linux-4.1.5/tools/perf/perf'
+        conf['perf']['flamegraph_dir'] = '/users/jhe/flamegraph'
 
         if conf['use_fs']:
             conf['workload_class'] = 'FIO'

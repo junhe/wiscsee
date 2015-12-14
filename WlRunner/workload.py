@@ -7,6 +7,7 @@ import time
 import config
 import fio
 import multiwriters
+import perf
 import utils
 import workloadlist
 
@@ -89,8 +90,17 @@ class FIO(Workload):
 
         utils.prepare_dir_for_path(self.resultpath)
         print str(self.workload_conf)
-        utils.shcmd("fio {} --output-format=json --output {}".format(self.jobpath,
-            self.resultpath))
+        fio_cmd = "fio {} --output-format=json --output {}".format(
+            self.jobpath, self.resultpath)
+
+        if self.conf['wrap_by_perf'] == True:
+            perf.flamegraph_wrap(perf_path = self.conf['perf']['perf_path'],
+                    cmd = fio_cmd,
+                    result_dir = self.conf['result_dir'],
+                    flamegraph_dir = self.conf['perf']['flamegraph_dir'])
+        else:
+            utils.shcmd("fio {} --output-format=json --output {}".format(self.jobpath,
+                self.resultpath))
 
         self.parse_results()
 
