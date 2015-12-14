@@ -3,6 +3,7 @@ import json
 import os
 import re
 import subprocess
+import time
 
 import utils
 
@@ -198,6 +199,8 @@ def partition_disk(dev, part_sizes):
         if ret == 0:
             success = True
             break
+        print 'parition failed', n_tries, 'left'
+        time.sleep(1)
 
     if success == False:
         raise RuntimeError("Fail when doing sfdisk")
