@@ -124,7 +124,7 @@ class WlMultiWriters(Workload):
                     'n_writes': conf['n_writes'][i],
                     'pattern': conf['patterns'][i],
                     'fsync': 1,
-                    'sync': 1,
+                    'sync': 0,
                     'file_path': os.path.join(self.conf['fs_mount_point'],
                         'multiwriter.file.' + str(i)),
                     'tag': 'tag' + str(i)

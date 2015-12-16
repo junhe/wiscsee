@@ -55,8 +55,8 @@ def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
                             'bs'        : bs,
                             'iodepth'   :1,
                             'fdatasync'     :fdatasync,
-                            'bssplit'   : bssplit,
-                            'direct'    :1
+                            'bssplit'   : bssplit
+                            # 'direct'    :1
                             }
                 }
     job.add_section(global_sec)
@@ -64,7 +64,7 @@ def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
     for i, pat in enumerate(pattern_tuple):
         # jobname = '-'.join(['JOB', "_".join(pattern_tuple), pat, str(i)])
         if not usefs:
-            d = { pat:
+            d = { 'job'+str(i)+pat:
                         {
                          'rw': pat,
                          'offset': i * traffic_size
@@ -73,11 +73,12 @@ def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
                 }
         else:
             # use file system
-            d = { pat:
+            d = { 'job'+str(i)+pat:
                         {
                          'rw': pat,
                          # 'write_iolog': 'joblog.'+str(i)
                          'filename': os.path.join(conf['fs_mount_point'],
+                         # 'filename': os.path.join('/mnt/ramdisk/',
                                         'fio.data.'+str(i))
                         }
                 }
@@ -95,7 +96,8 @@ def build_runs_with_a_set_of_patterns(blocksize, traffic_size, fs, dev_mb, file_
 
     # override
     # patterns = [('randwrite', 'randwrite'), ('randwrite',)]
-    patterns = [('randwrite', )]
+    # patterns = [('randwrite', )]
+    patterns = [('randwrite', 'randwrite'), ]
 
     parameters = [ {'pattern': p} for p in patterns ]
 
@@ -113,14 +115,13 @@ def build_runs_with_a_set_of_patterns(blocksize, traffic_size, fs, dev_mb, file_
 def build_patterns():
     # for blocksize in [4*KB, 64*KB, 256*KB]:
     para_dict = {
-            'blocksize'      : [WlRunner.fio.HIDE_ATTR],
+            'blocksize'      : [32*KB],
             'fs'             : ['ext4'],
             'dev_mb'         : [1024],
             'file_size'      : [256*MB],
             'traffic_size'   : [256*MB],
-            'fdatasync'      : [WlRunner.fio.HIDE_ATTR],
-            'bssplit'        : ['8kb/100', '8kb/95:64kb/5', '8kb/50:64kb/50',
-                                '8kb/5:64kb/95', '64kb/100']
+            'fdatasync'      : [1],
+            'bssplit'        : [WlRunner.fio.HIDE_ATTR]
             }
 
     parameter_combs = ParameterCombinations(para_dict)
@@ -138,7 +139,7 @@ def build_patterns():
                                   )
         parameters.extend(pattern_set)
 
-    parameters = parameters * 2
+    parameters = parameters * 1
     random.shuffle( parameters )
     pprint.pprint( parameters )
 

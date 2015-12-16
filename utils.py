@@ -20,10 +20,10 @@ def shcmd(cmd, ignore_error=False):
             cmd, ret))
     return ret
 
-def run_and_get_output(cmd):
+def run_and_get_output(cmd, shell = False):
     output = []
     cmd = shlex.split(cmd)
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE)
     p.wait()
 
     return p.stdout.readlines()
@@ -137,4 +137,8 @@ def breakpoint():
 def linux_kernel_version():
     kernel_ver = run_and_get_output('uname -r')[0].strip()
     return kernel_ver
+
+if __name__ == '__main__':
+    is_proc_running('blktrace')
+
 

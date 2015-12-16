@@ -420,9 +420,12 @@ def choose_exp_metadata(default_conf):
     later for each experiment.
     """
     conf = {}
-    toresult = raw_input('Save this experiments to /tmp/results? (y/n)')
+    result_dir = '/tmp/results'
+    # result_dir = '/users/jhe/results'
+    # result_dir = '/mnt/ramdisk/results'
+    toresult = raw_input('Save this experiments to {}? (y/n)'.format(result_dir))
     if toresult.lower() == 'y':
-        targetdir = '/tmp/results'
+        targetdir = result_dir
         expname = raw_input('Enter expname ({}):'.format(default_conf['expname']))
         if expname.strip() != '':
             conf['expname'] = expname
@@ -519,6 +522,8 @@ def test_dftl2_new_parallel_write():
     conf = config.Config(confdic)
     conf['ftl_type'] = 'dftl2'
     conf['enable_e2e_test'] = True
+    conf['enable_blktrace'] = True
+    conf['enable_simulation'] = False
 
     metadata_dic = choose_exp_metadata(conf)
     conf.update(metadata_dic)
@@ -543,12 +548,14 @@ def test_dftl2_new_parallel_write():
         conf["workload_conf"].update(syn_conf)
         print conf['workload_conf']
 
+        disable_ext4_journal(conf)
+
         runtime_update(conf)
 
         workflow(conf)
 
     FILESIZE = 256 * MB
-    NWRITES = int(1 * GB / (64 * KB))
+    NWRITES = int(256*MB / (64*KB))
     confs = [
                 # single sequential
                 {
@@ -592,9 +599,21 @@ def test_dftl2_new_parallel_write():
                 }
             ]
 
+    confs = [
+                # mixing random
+                {
+                    "name"       : 'mix-rand',
+                    "filesizes"  : [FILESIZE, FILESIZE],
+                    "patterns"   : ['random', 'random'],
+                    # "write_sizes": [32 * KB, 32 * KB],
+                    "write_sizes": [32 * KB, 32 * KB],
+                    "n_writes": [FILESIZE/(32*KB), FILESIZE/(32*KB)]
+                }
+            ]
+
     new_confs = []
-    for _ in range(3):
-        for fs in ('f2fs', 'ext4'):
+    for _ in range(1):
+        for fs in ['ext4']:
             for conf_update in confs:
                 c = copy.deepcopy(conf_update)
                 c['fs'] = fs
@@ -687,6 +706,20 @@ def disable_ext4_journal(conf):
     except KeyError:
         pass
 
+def enable_ext4_journal(conf):
+    if '^has_journal' in conf['ext4']['make_opts']['-O']:
+        conf['ext4']['make_opts']['-O'].remove('^has_journal')
+
+    if 'has_journal' in conf['ext4']['make_opts']['-O']:
+        conf['ext4']['make_opts']['-O'].remove('has_journal')
+
+    conf['ext4']['make_opts']['-O'].append('has_journal')
+
+    try:
+        del conf['mnt_opts']['ext4']['data']
+    except KeyError:
+        pass
+
 def test_fio():
     confdic = get_default_config()
     conf = config.Config(confdic)
@@ -697,7 +730,7 @@ def test_fio():
     parameters = testfio.build_patterns()
 
     conf['use_fs'] = True
-    conf["n_online_cpus"] = 16
+    conf["n_online_cpus"] = 1
 
     for para in parameters:
         job_desc = testfio.build_one_run(pattern_tuple = para['pattern'],
@@ -714,17 +747,20 @@ def test_fio():
         conf['device_type'] = "real" # loop, rea'
 
         # perf
-        conf['wrap_by_perf'] = True
+        conf['wrap_by_perf'] = False
         conf['perf']['perf_path'] = '/mnt/sdb1/linux-4.1.5/tools/perf/perf'
         conf['perf']['flamegraph_dir'] = '/users/jhe/flamegraph'
+
+        conf['enable_blktrace'] = True
+        conf['enable_simulation'] = False
 
         if conf['use_fs']:
             conf['workload_class'] = 'FIO'
             conf['filesystem'] = para['fs']
 
             if para['fs'] == 'ext4':
-                # disable journal
                 disable_ext4_journal(conf)
+                # enable_ext4_journal(conf)
 
             conf['loop_dev_size_mb'] = para['dev_mb']
             runtime_update(conf)
@@ -739,6 +775,23 @@ def test_fio():
             print '========================='
 
             fio.run()
+
+def reproduce_slowness():
+    try:
+        shcmd("umount /dev/sdc1")
+    except RuntimeError:
+        pass
+    shcmd("mkfs.ext4 -O ^has_journal /dev/sdc1")
+    #shcmd("mount -o discard /dev/sdc1 /mnt/fsonloop")
+    print 'fs made....'
+    time.sleep(2)
+
+    shcmd("mount /dev/sdc1 /mnt/fsonloop")
+
+    print 'mounted.........'
+    time.sleep(1)
+
+    shcmd("fio ./reproduce.ini")
 
 
 def main(cmd_args):
