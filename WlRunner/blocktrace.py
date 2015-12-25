@@ -38,7 +38,7 @@ def start_blktrace_on_bg(dev, resultpath):
     elif kernel_ver.startswith('3.1.6'):
         trace_filter = 'queue'
     else:
-        trace_filter = 'complete'
+        trace_filter = 'issue'
         print "WARNING: using blktrace filter {} for kernel {}".format(
             trace_filter, kernel_ver)
         time.sleep(5)
