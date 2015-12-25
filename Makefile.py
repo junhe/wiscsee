@@ -754,6 +754,11 @@ def test_fio():
         conf['enable_blktrace'] = True
         conf['enable_simulation'] = False
 
+        MOpt = WlRunner.filesystem.MountOption
+        conf["mnt_opts"]["ext4"]['discard'] = MOpt(opt_name = "discard",
+                                         value = "nodiscard",
+                                         include_name = False)
+
         if conf['use_fs']:
             conf['workload_class'] = 'FIO'
             conf['filesystem'] = para['fs']
@@ -786,12 +791,65 @@ def reproduce_slowness():
     print 'fs made....'
     time.sleep(2)
 
-    shcmd("mount /dev/sdc1 /mnt/fsonloop")
+    shcmd("mount -o nodiscard /dev/sdc1 /mnt/fsonloop")
 
     print 'mounted.........'
     time.sleep(1)
 
-    shcmd("fio ./reproduce.ini")
+    # shcmd("echo 0 > /sys/block/sdc/queue/discard_zeroes_data")
+    # shcmd("fio ./reproduce.ini")
+
+
+def reproduce_slowness_with_blktrace():
+    def prepare():
+        try:
+            shcmd("umount /dev/sdc1")
+        except RuntimeError:
+            pass
+        shcmd("mkfs.ext4 -O ^has_journal /dev/sdc1")
+        #shcmd("mount -o discard /dev/sdc1 /mnt/fsonloop")
+        print 'fs made....'
+        time.sleep(2)
+
+        shcmd("mount -o nodiscard /dev/sdc1 /mnt/fsonloop")
+
+        print 'mounted.........'
+        time.sleep(1)
+
+    def test_func_run():
+        shcmd("fio ./reproduce.ini")
+
+    def btt(dir_path, devname):
+        with cd(dir_path):
+            shcmd("blkrawverify {}".format(devname))
+            shcmd("cat {}.verify.out".format(devname))
+            shcmd("blkparse {devname} -d bp.{devname}.bin > /dev/null".format(
+                devname = devname))
+            shcmd("btt -A -i bp.{devname}.bin > bp.{devname}.txt"\
+                    .format(devname = devname))
+
+
+    # btt("/tmp/blk-recusing-existing", 'sdc1')
+    # return
+
+    prepare()
+    return
+
+    shcmd("strace fio ./reproduce.ini &> strace.log")
+    return
+
+    # shcmd("fio ./reproduce.ini")
+    suf = 'prepare002-withjournal3'
+    # suf = 'using-existing'
+    record_dir = '/tmp/blk-rec' + suf
+    replay_dir = '/tmp/blk-replay' + suf
+    fio_replay_dir = '/tmp/fio' + suf
+
+    wrapper = WlRunner.traceandreplay.BlktraceWrapper(
+            "/dev/sdc1", "", record_dir, "BlktraceRunnerAlone")
+    wrapper.wrapped_run(test_func_run)
+
+    btt(record_dir, 'sdc1')
 
 
 def main(cmd_args):

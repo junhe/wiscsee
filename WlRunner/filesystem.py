@@ -112,6 +112,17 @@ def mountoption_to_str(options):
            'include_name': False},
          ...
         }
+
+      If you want to override mount options from /etc/fstab  you  have
+      to use the -o option:
+
+             mount device|dir -o options
+
+      and  then  the  mount  options  from  the  command  line will be
+      appended to the list of  options  from  /etc/fstab.   The  usual
+      behavior  is  that the last option wins if there are conflicting
+      ones.
+
     """
     if options == None:
         return ''
