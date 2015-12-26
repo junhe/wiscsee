@@ -82,6 +82,8 @@ class BlockTestHelper3(object):
     def assert_true(self):
         return self.ret == self.values
 
+
+
 class BlockTestHelper4(object):
     def __init__(self):
         self.ret = []
@@ -103,6 +105,33 @@ class BlockTestHelper4(object):
 
     def assert_true(self):
         return self.ret == (self.values * 2)
+
+
+class BlockTestHelper5(object):
+    def __init__(self):
+        self.ret = []
+        self.endtime = None
+        self.block = None
+
+    def loopback(self, env, block):
+        """
+        append and read
+        """
+        self.block = block
+
+        yield env.process( block.append(value = 111) )
+        ret = yield env.process( block.read_page(page_offset = 0) )
+
+        self.endtime = env.now
+
+    def assert_true(self):
+        block = self.block
+
+        correct_time = block.conf['page_read_time'] + \
+            block.conf['page_prog_time']
+        print('correct_time', correct_time)
+
+        return correct_time == self.endtime
 
 
 class BlockTest(unittest.TestCase):
@@ -138,6 +167,18 @@ class BlockTest(unittest.TestCase):
         env.run()
 
         self.assertTrue( helper.assert_true() )
+
+    def test_time(self):
+        env = simpy.Environment()
+
+        block = package.Block(env = env, conf = flashConfig.flash_config)
+        helper = BlockTestHelper5()
+
+        env.process( helper.loopback(env, block) )
+        env.run()
+
+        self.assertTrue( helper.assert_true() )
+
 
 if __name__ == '__main__':
     unittest.main()
