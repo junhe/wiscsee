@@ -2,8 +2,11 @@ import unittest
 import package
 
 import simpy
+from commons import *
 
-class ReadWriteTester(object):
+import flashConfig
+
+class PageReadWriteTester(object):
     def __init__(self):
         self.values = []
         self.ret = None
@@ -28,12 +31,22 @@ class PageTest(unittest.TestCase):
     def test_write_and_read(self):
         env = simpy.Environment()
 
-        page = package.Page(env, read_latency = 1, write_latency = 3)
+        page = package.Page(env = env, conf = flashConfig.flash_config)
 
-        rwtester = ReadWriteTester()
+        rwtester = PageReadWriteTester()
         env.process(rwtester.accessor_proc(env, page))
         env.run()
         self.assertTrue( rwtester.equal() )
+
+class OOBATest(unittest.TestCase):
+    def test_set_get(self):
+        env = simpy.Environment()
+
+        page = package.Page(env = env, conf = flashConfig.flash_config)
+
+        page.set_state(ERASED)
+
+        self.assertTrue( page.get_state() == ERASED )
 
 if __name__ == '__main__':
     unittest.main()

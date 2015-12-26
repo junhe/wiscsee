@@ -1,8 +1,11 @@
 import simpy
+from commons import *
 
-SIM_DURATION = 20
-
-ERASED, VALID, INVALID = 'ERASED', 'VALID', 'INVALID'
+class OutOfBandArea(object):
+    def __init__(self, env, conf):
+        self.env = env
+        self.state = None #erased, valid, or invalid
+        self.conf = conf
 
 class Page(object):
     """
@@ -13,14 +16,20 @@ class Page(object):
     the second one should return failure (instead be-ing queued).
 
     TODO: check how the hardware handle race of the same page.
-    """
-    def __init__(self, env, read_latency, write_latency):
-        self.env = env
-        self.state = ERASED
-        self.value = None
 
-        self.read_latency = read_latency
-        self.write_latency = write_latency
+    To read a page:
+        ret = yield env.process(page.read())
+    To write a page:
+        yield env.process(page.write(datavalue))
+    """
+    def __init__(self, env, conf):
+        self.env = env
+        self.conf = conf
+        self.value = None
+        self.ooba = OutOfBandArea(env, conf)
+
+        self.read_latency = self.conf['page_read_time']
+        self.write_latency = self.conf['page_prog_time']
 
     def __read_latency_proc(self):
         yield self.env.timeout(self.read_latency)
@@ -38,30 +47,20 @@ class Page(object):
         yield self.env.process(self.__write_latency_proc(value))
 
     def set_state(self, state):
-        self.state = state
+        self.ooba.state = state
 
-def accessor_proc(env, page):
-    """
-    write and read page in serial
-    """
-    cnt = 0
-    while True:
-        print 'try to write at', env.now
-        yield env.process(page.write(cnt))
-        print 'try to read at', env.now
-        ret = yield env.process(page.read())
-        print 'read', ret
+    def get_state(self):
+        return self.ooba.state
 
-        cnt += 1
 
-def main():
-    print('Page Latency')
-    env = simpy.Environment()
+class Block(object):
+    def __init__(self, env, conf):
+        self.env = env
+        self.conf = conf
+        self.npages = self.conf['n_pages_per_block']
 
-    page = Page(env, read_latency = 1, write_latency = 3)
-    env.process(accessor_proc(env, page))
+        # self.pages = [Page(env
 
-    env.run(until=SIM_DURATION)
 
 if __name__ == '__main__':
     main()
