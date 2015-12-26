@@ -180,6 +180,43 @@ class BlockTest(unittest.TestCase):
         self.assertTrue( helper.assert_true() )
 
 
+class HelperPlaneLoopBack(object):
+    def loopback(self, env, plane):
+        nblocks = plane.conf['n_blocks_per_plane']
+        npages = plane.conf['n_pages_per_block']
+
+        self.write_values = []
+        for block_off in range(nblocks):
+            for page_off in range(npages):
+                value = page_off * 100
+                yield env.process(
+                        plane.write_page(block_off, page_off, value))
+                self.write_values.append(value)
+
+        self.read_values = []
+        for block_off in range(nblocks):
+            for page_off in range(npages):
+                value = page_off * 100
+                ret = yield env.process(
+                        plane.read_page(block_off, page_off))
+                self.read_values.append(ret)
+
+    def assert_true(self):
+        return self.write_values == self.read_values
+
+class PlaneTest(unittest.TestCase):
+    def test_loopback(self):
+        env = simpy.Environment()
+
+        block = package.Plane(env = env, conf = flashConfig.flash_config)
+        helper = HelperPlaneLoopBack()
+
+        env.process( helper.loopback(env, block) )
+        env.run()
+
+        self.assertTrue( helper.assert_true() )
+
+
 if __name__ == '__main__':
     unittest.main()
 

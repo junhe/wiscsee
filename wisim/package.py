@@ -111,10 +111,42 @@ class Block(object):
 
         self.last_programmed_off = -1
 
+
+class PageRegister(object):
+    def __init__(self, env, conf):
+        self.env = env
+        self.conf = conf
+        self.value = None
+
+
+class Plane(object):
+    def __init__(self, env, conf):
+        self.env = env
+        self.conf = conf
+        self.nblocks = self.conf['n_blocks_per_plane']
+
+        self.blocks = [ Block(env, self.conf) for i in range(self.nblocks) ]
+
+        self.page_reg = PageRegister(env, conf)
+
+    def get_block(self, block_off):
+        assert block_off < self.nblocks, \
+            "block_off: {}, nblocks: {}".format(block_off, self.nblocks)
+        return self.blocks[block_off]
+
+    def erase_block(self, block_off):
+        block = self.get_block(block_off)
+        yield self.env.process( block.erase_block() )
+
+    def write_page(self, block_off, page_off, value):
+        block = self.get_block(block_off)
+        yield self.env.process( block.write_page(page_off, value) )
+
+    def read_page(self, block_off, page_off):
+        block = self.get_block(block_off)
+        ret = yield self.env.process( block.read_page(page_off) )
+        return ret
+
 if __name__ == '__main__':
     main()
-
-
-
-
 

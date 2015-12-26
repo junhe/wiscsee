@@ -1,5 +1,11 @@
 from commons import *
 
+"""
+Rule of Thumb: when passing this config to class init,
+save all the values to be used to class attributes in the __init__().
+This way you can easily find out what is used in the class later.
+"""
+
 flash_config = {
     # layout info
     "page_size"                : 2*KB,
