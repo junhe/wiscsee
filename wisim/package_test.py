@@ -67,6 +67,25 @@ class BlockTestHelper(object):
     def assert_true(self):
         return self.ret == self.values
 
+
+class BlockTestHelper2(object):
+    def __init__(self):
+        self.ret = []
+
+    def loopback(self, env, block):
+        offsets = [0, block.npages - 1]
+        self.values = [off * 10 for off in offsets]
+        for i, off in enumerate(offsets):
+            yield env.process( block.write_page(page_offset = off,
+                value = self.values[i]) )
+            ret = yield env.process( block.read_page(page_offset = off) )
+            yield env.process( block.erase_block() )
+
+            self.ret.append(ret)
+
+    def assert_true(self):
+        return self.ret == self.values
+
 class BlockTest(unittest.TestCase):
     def test_block(self):
         env = simpy.Environment()
@@ -78,6 +97,18 @@ class BlockTest(unittest.TestCase):
         env.run()
 
         self.assertTrue( helper.assert_true() )
+
+    def test_offsets(self):
+        env = simpy.Environment()
+
+        block = package.Block(env = env, conf = flashConfig.flash_config)
+        helper = BlockTestHelper2()
+
+        env.process( helper.loopback(env, block) )
+        env.run()
+
+        self.assertTrue( helper.assert_true() )
+
 
 
 if __name__ == '__main__':
