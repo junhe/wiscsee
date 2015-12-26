@@ -61,6 +61,9 @@ class Page(object):
 
 
 class Block(object):
+    """
+    We enfore sequential programs in this class.
+    """
     def __init__(self, env, conf):
         self.env = env
         self.conf = conf
@@ -69,8 +72,11 @@ class Block(object):
 
         self.pages = [ Page(env, conf) for i in range(self.npages) ]
 
+        self.last_programmed_off = -1
+
     def get_page(self, page_offset):
-        assert page_offset < self.npages
+        assert page_offset < self.npages, \
+            "page_offset: {}, npages: {}".format(page_offset, self.npages)
         return self.pages[page_offset]
 
     def read_page(self, page_offset):
@@ -82,16 +88,28 @@ class Block(object):
         return ret
 
     def write_page(self, page_offset, value):
+        # print('write_page({}, {})'.format(page_offset, value))
+        if page_offset != self.last_programmed_off + 1:
+            raise RuntimeError("You are not writing sequentially in erasure "
+                    "block. last program: {}, tried: {}".format(
+                    self.last_programmed_off, page_offset))
+
         page = self.get_page(page_offset)
-        ret = yield self.env.process( page.write(value) )
-        return ret
+
+        yield self.env.process( page.write(value) )
+        # self.last_programmed_off = page_offset
+        self.last_programmed_off = page_offset
+
+    def append(self, value):
+        yield self.env.process(
+            self.write_page( self.last_programmed_off + 1, value ) )
 
     def erase_block(self):
         yield self.env.timeout( self.erase_time )
         for page in self.pages:
             page.set_state(PAGE_ERASED)
 
-
+        self.last_programmed_off = -1
 
 if __name__ == '__main__':
     main()

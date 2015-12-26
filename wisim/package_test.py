@@ -50,54 +50,62 @@ class OOBATest(unittest.TestCase):
 
         self.assertTrue( page.get_state() == ERASED )
 
-
-class BlockTestHelper(object):
-    def __init__(self):
-        self.ret = []
-        self.values = [0, 1]
-
-    def loopback(self, env, block):
-        for value in self.values:
-            yield env.process( block.write_page(page_offset = 0, value = value) )
-            ret = yield env.process( block.read_page(page_offset = 0) )
-            yield env.process( block.erase_block() )
-
-            self.ret.append(ret)
-
-    def assert_true(self):
-        return self.ret == self.values
-
-
 class BlockTestHelper2(object):
     def __init__(self):
         self.ret = []
 
     def loopback(self, env, block):
-        offsets = [0, block.npages - 1]
+        offsets = range(block.npages)
         self.values = [off * 10 for off in offsets]
         for i, off in enumerate(offsets):
             yield env.process( block.write_page(page_offset = off,
                 value = self.values[i]) )
             ret = yield env.process( block.read_page(page_offset = off) )
-            yield env.process( block.erase_block() )
 
             self.ret.append(ret)
 
     def assert_true(self):
         return self.ret == self.values
 
+class BlockTestHelper3(object):
+    def __init__(self):
+        self.ret = []
+
+    def loopback(self, env, block):
+        self.values = [off * 10 for off in range(block.npages)]
+        for off, value in enumerate(self.values):
+            yield env.process( block.append(value = value) )
+            ret = yield env.process( block.read_page(page_offset = off) )
+
+            self.ret.append(ret)
+
+    def assert_true(self):
+        return self.ret == self.values
+
+class BlockTestHelper4(object):
+    def __init__(self):
+        self.ret = []
+
+    def loopback(self, env, block):
+        self.values = [off * 10 for off in range(block.npages)]
+        for off, value in enumerate(self.values):
+            yield env.process( block.append(value = value) )
+            ret = yield env.process( block.read_page(page_offset = off) )
+            self.ret.append(ret)
+
+        yield env.process(block.erase_block())
+
+        self.values = [off * 10 for off in range(block.npages)]
+        for off, value in enumerate(self.values):
+            yield env.process( block.append(value = value) )
+            ret = yield env.process( block.read_page(page_offset = off) )
+            self.ret.append(ret)
+
+    def assert_true(self):
+        return self.ret == (self.values * 2)
+
+
 class BlockTest(unittest.TestCase):
-    def test_block(self):
-        env = simpy.Environment()
-
-        block = package.Block(env = env, conf = flashConfig.flash_config)
-        helper = BlockTestHelper()
-
-        env.process( helper.loopback(env, block) )
-        env.run()
-
-        self.assertTrue( helper.assert_true() )
-
     def test_offsets(self):
         env = simpy.Environment()
 
@@ -109,7 +117,27 @@ class BlockTest(unittest.TestCase):
 
         self.assertTrue( helper.assert_true() )
 
+    def test_appends(self):
+        env = simpy.Environment()
 
+        block = package.Block(env = env, conf = flashConfig.flash_config)
+        helper = BlockTestHelper3()
+
+        env.process( helper.loopback(env, block) )
+        env.run()
+
+        self.assertTrue( helper.assert_true() )
+
+    def test_erase(self):
+        env = simpy.Environment()
+
+        block = package.Block(env = env, conf = flashConfig.flash_config)
+        helper = BlockTestHelper4()
+
+        env.process( helper.loopback(env, block) )
+        env.run()
+
+        self.assertTrue( helper.assert_true() )
 
 if __name__ == '__main__':
     unittest.main()
