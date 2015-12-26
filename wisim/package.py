@@ -147,6 +147,36 @@ class Plane(object):
         ret = yield self.env.process( block.read_page(page_off) )
         return ret
 
+
+class Chip(object):
+    def __init__(self, env, conf):
+        self.env = env
+        self.conf = conf
+
+        self.nplanes = self.conf['n_planes_per_chip']
+
+        self.planes = [ Plane(env, self.conf) for i in range(self.nplanes) ]
+
+    def get_plane(self, plane_off):
+        assert plane_off < self.nplanes, \
+            "plane_off: {}, nplanes: {}".format(plane_off, nplanes)
+        return self.planes[plane_off]
+
+    def erase_block(self, plane_off, block_off):
+        plane = self.get_plane(plane_off)
+        yield self.env.process( plane.erase_block(block_off) )
+
+    def write_page(self, plane_off, block_off, page_off, value):
+        plane = self.get_plane(plane_off)
+        yield self.env.process( plane.write_page(block_off, page_off, value) )
+
+    def read_page(self, plane_off, block_off, page_off):
+        plane = self.get_plane(plane_off)
+        ret = yield self.env.process(
+            plane.read_page(block_off, page_off) )
+        return ret
+
+
 if __name__ == '__main__':
     main()
 

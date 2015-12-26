@@ -184,18 +184,20 @@ class HelperPlaneLoopBack(object):
     def loopback(self, env, plane):
         nblocks = plane.conf['n_blocks_per_plane']
         npages = plane.conf['n_pages_per_block']
+        blocks = [0, 3 % nblocks]
+        pages = [i for i in range(npages)]
 
         self.write_values = []
-        for block_off in range(nblocks):
-            for page_off in range(npages):
+        for block_off in blocks:
+            for page_off in pages:
                 value = page_off * 100
                 yield env.process(
                         plane.write_page(block_off, page_off, value))
                 self.write_values.append(value)
 
         self.read_values = []
-        for block_off in range(nblocks):
-            for page_off in range(npages):
+        for block_off in blocks:
+            for page_off in pages:
                 value = page_off * 100
                 ret = yield env.process(
                         plane.read_page(block_off, page_off))
@@ -208,14 +210,56 @@ class PlaneTest(unittest.TestCase):
     def test_loopback(self):
         env = simpy.Environment()
 
-        block = package.Plane(env = env, conf = flashConfig.flash_config)
+        plane = package.Plane(env = env, conf = flashConfig.flash_config)
         helper = HelperPlaneLoopBack()
 
-        env.process( helper.loopback(env, block) )
+        env.process( helper.loopback(env, plane) )
         env.run()
 
         self.assertTrue( helper.assert_true() )
 
+class HelperChipLoopBack(object):
+    def loopback(self, env, chip):
+        nplanes = chip.conf['n_planes_per_chip']
+        nblocks = chip.conf['n_blocks_per_plane']
+        npages = chip.conf['n_pages_per_block']
+
+        planes = [0, 1 % nplanes]
+        blocks = [0, 3 % nblocks]
+        pages = [i for i in range(npages)]
+
+        self.write_values = []
+        for plane_off in planes:
+            for block_off in blocks:
+                for page_off in pages:
+                    value = page_off * 100
+                    yield env.process(
+                        chip.write_page(plane_off, block_off, page_off, value))
+                    self.write_values.append(value)
+
+        self.read_values = []
+        for plane_off in planes:
+            for block_off in blocks:
+                for page_off in pages:
+                    value = page_off * 100
+                    ret = yield env.process(
+                            chip.read_page(plane_off, block_off, page_off))
+                    self.read_values.append(ret)
+
+    def assert_true(self):
+        return self.write_values == self.read_values
+
+class ChipTest(unittest.TestCase):
+    def test_loopback(self):
+        env = simpy.Environment()
+
+        chip = package.Chip(env = env, conf = flashConfig.flash_config)
+        helper = HelperChipLoopBack()
+
+        env.process( helper.loopback(env, chip) )
+        env.run()
+
+        self.assertTrue( helper.assert_true() )
 
 if __name__ == '__main__':
     unittest.main()
