@@ -14,7 +14,7 @@ flash_config = {
     "n_planes_per_chip"        : 4,
     "n_chips_per_package"      : 2,
     "n_packages_per_channel"   : 1,
-    "n_channels_per_dev"       : 1,
+    "n_channels_per_dev"       : 4,
 
     # time info
     # TODO: these are fixed numbers, but they are random in real world

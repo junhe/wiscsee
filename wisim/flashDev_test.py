@@ -33,6 +33,34 @@ class HelperDevLoopBackTime(object):
     def assert_true(self):
         return True
 
+class Helper_CompeteChannel(object):
+    def loopback(self, env, flashdev):
+        assert flashdev.conf['n_channels_per_dev'] > 1
+
+        # write to channel 0
+        env.process(
+            flashdev.write_page(channel_off = 0, page_off = 0, value = None))
+
+        # write to channel 1
+        env.process(
+            flashdev.write_page(channel_off = 1, page_off = 0, value = None))
+
+        assert env.now == 0
+
+        # write to channel 0
+        yield env.process(
+            flashdev.write_page(channel_off = 0, page_off = 0, value = None))
+
+        assert env.now == flashdev.page_prog_time * 2
+
+        # read from channel 0
+        yield env.process( flashdev.read_page(channel_off = 0, page_off = 0) )
+
+        assert env.now == flashdev.page_prog_time * 2 + flashdev.page_read_time
+
+    def assert_true(self):
+        return True
+
 class DevTest(unittest.TestCase):
     def test_loopback_time(self):
         env = simpy.Environment()
@@ -45,6 +73,19 @@ class DevTest(unittest.TestCase):
         env.run()
 
         self.assertTrue( helper.assert_true() )
+
+    def test_compete(self):
+        env = simpy.Environment()
+        helper = Helper_CompeteChannel()
+
+        env.process( helper.loopback(env,
+                     flashDev.FlashDevice(env = env,
+                         conf = flashConfig.flash_config)
+            ) )
+        env.run()
+
+        self.assertTrue( helper.assert_true() )
+
 
 if __name__ == '__main__':
     unittest.main()

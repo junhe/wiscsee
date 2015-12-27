@@ -1,7 +1,5 @@
 import simpy
 
-import flashConfig
-
 """
 This flashDev is what the FTL directly interacts with.
 It has multiple channels (serial buses), each of which connects to one or more
@@ -12,6 +10,23 @@ class FlashDevice:
     """
     This is a simplified SSD hardware device. We only consider the parallelism
     at channel level here.
+
+    Requirements:
+    1. The FTL should be able to write to two or more channels at the same
+    time. This means that writing channel#2 does not need to wait until
+    writing to channel#1 to finish. You cannot do:
+        yield env.process( dev.page_write(channel#1, pagenum, None) )
+        yield env.process( dev.page_write(channel#2, pagenum, None) )
+    because this enforces that writing to channel2 starts after writing to
+    channel1. How about
+        env.process( dev.page_write(channel#1, pagenum, None) )
+        env.process( dev.page_write(channel#2, pagenum, None) )
+    this will start two processes at the same time.
+        env.process( dev.page_write(channel#1, pagenum, None) )
+        env.process( dev.page_write(channel#2, pagenum, None) )
+        env.process( dev.page_write(channel#1, pagenum, None) )
+    the third write above will wait until the first process finishes.
+
     """
     def __init__(self, env, conf):
         self.env = env
