@@ -1,5 +1,5 @@
 import unittest
-import package
+import flashPackage
 
 import simpy
 from commons import *
@@ -33,22 +33,24 @@ class PageTest(unittest.TestCase):
     def test_write_and_read(self):
         env = simpy.Environment()
 
-        page = package.Page(env = env, conf = flashConfig.flash_config)
+        page = flashPackage.Page(env = env, conf = flashConfig.flash_config)
 
         rwtester = PageReadWriteTester()
         env.process(rwtester.accessor_proc(env, page))
         env.run()
         self.assertTrue( rwtester.equal() )
 
+
 class OOBATest(unittest.TestCase):
     def test_set_get(self):
         env = simpy.Environment()
 
-        page = package.Page(env = env, conf = flashConfig.flash_config)
+        page = flashPackage.Page(env = env, conf = flashConfig.flash_config)
 
         page.set_state(ERASED)
 
         self.assertTrue( page.get_state() == ERASED )
+
 
 class BlockTestHelper2(object):
     def __init__(self):
@@ -67,6 +69,7 @@ class BlockTestHelper2(object):
     def assert_true(self):
         return self.ret == self.values
 
+
 class BlockTestHelper3(object):
     def __init__(self):
         self.ret = []
@@ -81,7 +84,6 @@ class BlockTestHelper3(object):
 
     def assert_true(self):
         return self.ret == self.values
-
 
 
 class BlockTestHelper4(object):
@@ -138,7 +140,7 @@ class BlockTest(unittest.TestCase):
     def test_offsets(self):
         env = simpy.Environment()
 
-        block = package.Block(env = env, conf = flashConfig.flash_config)
+        block = flashPackage.Block(env = env, conf = flashConfig.flash_config)
         helper = BlockTestHelper2()
 
         env.process( helper.loopback(env, block) )
@@ -149,7 +151,7 @@ class BlockTest(unittest.TestCase):
     def test_appends(self):
         env = simpy.Environment()
 
-        block = package.Block(env = env, conf = flashConfig.flash_config)
+        block = flashPackage.Block(env = env, conf = flashConfig.flash_config)
         helper = BlockTestHelper3()
 
         env.process( helper.loopback(env, block) )
@@ -160,7 +162,7 @@ class BlockTest(unittest.TestCase):
     def test_erase(self):
         env = simpy.Environment()
 
-        block = package.Block(env = env, conf = flashConfig.flash_config)
+        block = flashPackage.Block(env = env, conf = flashConfig.flash_config)
         helper = BlockTestHelper4()
 
         env.process( helper.loopback(env, block) )
@@ -171,7 +173,7 @@ class BlockTest(unittest.TestCase):
     def test_time(self):
         env = simpy.Environment()
 
-        block = package.Block(env = env, conf = flashConfig.flash_config)
+        block = flashPackage.Block(env = env, conf = flashConfig.flash_config)
         helper = BlockTestHelper5()
 
         env.process( helper.loopback(env, block) )
@@ -206,17 +208,19 @@ class HelperPlaneLoopBack(object):
     def assert_true(self):
         return self.write_values == self.read_values
 
+
 class PlaneTest(unittest.TestCase):
     def test_loopback(self):
         env = simpy.Environment()
 
-        plane = package.Plane(env = env, conf = flashConfig.flash_config)
+        plane = flashPackage.Plane(env = env, conf = flashConfig.flash_config)
         helper = HelperPlaneLoopBack()
 
         env.process( helper.loopback(env, plane) )
         env.run()
 
         self.assertTrue( helper.assert_true() )
+
 
 class HelperChipLoopBack(object):
     def loopback(self, env, chip):
@@ -249,11 +253,12 @@ class HelperChipLoopBack(object):
     def assert_true(self):
         return self.write_values == self.read_values
 
+
 class ChipTest(unittest.TestCase):
     def test_loopback(self):
         env = simpy.Environment()
 
-        chip = package.Chip(env = env, conf = flashConfig.flash_config)
+        chip = flashPackage.Chip(env = env, conf = flashConfig.flash_config)
         helper = HelperChipLoopBack()
 
         env.process( helper.loopback(env, chip) )
@@ -261,12 +266,13 @@ class ChipTest(unittest.TestCase):
 
         self.assertTrue( helper.assert_true() )
 
+
 class HelperPackageLoopBack(object):
     def loopback(self, env, package):
-        nchips = chip.conf['n_chips_per_package']
-        nplanes = chip.conf['n_planes_per_chip']
-        nblocks = chip.conf['n_blocks_per_plane']
-        npages = chip.conf['n_pages_per_block']
+        nchips = package.conf['n_chips_per_package']
+        nplanes = package.conf['n_planes_per_chip']
+        nblocks = package.conf['n_blocks_per_plane']
+        npages = package.conf['n_pages_per_block']
 
         chips = [0, 1]
         planes = [0, 1 % nplanes]
@@ -274,7 +280,7 @@ class HelperPackageLoopBack(object):
         pages = [i for i in range(npages)]
 
         self.write_values = []
-        for chip in chips:
+        for chip_off in chips:
             for plane_off in planes:
                 for block_off in blocks:
                     for page_off in pages:
@@ -285,7 +291,7 @@ class HelperPackageLoopBack(object):
                         self.write_values.append(value)
 
         self.read_values = []
-        for chip in chips:
+        for chip_off in chips:
             for plane_off in planes:
                 for block_off in blocks:
                     for page_off in pages:
@@ -304,7 +310,7 @@ class PackageTest(unittest.TestCase):
         env = simpy.Environment()
 
         package = \
-                package.Package(env = env, conf = flashConfig.flash_config)
+                flashPackage.Package(env = env, conf = flashConfig.flash_config)
         helper = HelperPackageLoopBack()
 
         env.process( helper.loopback(env, package) )
