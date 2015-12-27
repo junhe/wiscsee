@@ -261,6 +261,58 @@ class ChipTest(unittest.TestCase):
 
         self.assertTrue( helper.assert_true() )
 
+class HelperPackageLoopBack(object):
+    def loopback(self, env, package):
+        nchips = chip.conf['n_chips_per_package']
+        nplanes = chip.conf['n_planes_per_chip']
+        nblocks = chip.conf['n_blocks_per_plane']
+        npages = chip.conf['n_pages_per_block']
+
+        chips = [0, 1]
+        planes = [0, 1 % nplanes]
+        blocks = [0, 3 % nblocks]
+        pages = [i for i in range(npages)]
+
+        self.write_values = []
+        for chip in chips:
+            for plane_off in planes:
+                for block_off in blocks:
+                    for page_off in pages:
+                        value = page_off * 100
+                        yield env.process(
+                            package.write_page(chip_off, plane_off,
+                                block_off, page_off, value))
+                        self.write_values.append(value)
+
+        self.read_values = []
+        for chip in chips:
+            for plane_off in planes:
+                for block_off in blocks:
+                    for page_off in pages:
+                        value = page_off * 100
+                        ret = yield env.process(
+                                package.read_page(chip_off, plane_off,
+                                    block_off, page_off))
+                        self.read_values.append(ret)
+
+    def assert_true(self):
+        return self.write_values == self.read_values
+
+
+class PackageTest(unittest.TestCase):
+    def test_loopback(self):
+        env = simpy.Environment()
+
+        package = \
+                package.Package(env = env, conf = flashConfig.flash_config)
+        helper = HelperPackageLoopBack()
+
+        env.process( helper.loopback(env, package) )
+        env.run()
+
+        self.assertTrue( helper.assert_true() )
+
+
 if __name__ == '__main__':
     unittest.main()
 

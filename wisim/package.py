@@ -176,6 +176,34 @@ class Chip(object):
             plane.read_page(block_off, page_off) )
         return ret
 
+class Package(object):
+    def __init__(self, env, conf):
+        self.env = env
+        self.conf = conf
+
+        self.nchips = self.conf['n_chips_per_package']
+
+        self.chips = [ Chip(env, self.conf) for i in range(self.nchips) ]
+
+    def get_chip(self, chip_off):
+        assert chip_off < self.nchips, \
+            "chip_off: {}, nchips: {}".format(chip_off, self.nchips)
+        return self.chips[chip_off]
+
+    def erase_block(self, chip_off, plane_off, block_off):
+        chip = self.get_chip(chip_off)
+        yield self.env.process( chip.erase_block(plane_off, block_off) )
+
+    def write_page(self, chip_off, plane_off, block_off, page_off, value):
+        chip = self.get_chip(chip_off)
+        yield self.env.process(
+            chip.write_page(plane_off, block_off, page_off, value) )
+
+    def read_page(self, chip_off, plane_off, block_off, page_off):
+        chip = self.get_chip(chip_off)
+        ret = yield self.env.process(
+            chip.read_page(plane_off, block_off, page_off) )
+        return ret
 
 if __name__ == '__main__':
     main()
