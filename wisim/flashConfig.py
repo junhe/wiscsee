@@ -22,3 +22,16 @@ flash_config = {
     "page_prog_time"        : 200*USEC, # Typical
     "block_erase_time"      : 1.6*MSEC, # Typical
     }
+
+def calc_and_cache(conf):
+    n_pages_per_plane = conf['n_pages_per_block'] * conf['n_blocks_per_plane']
+    n_pages_per_chip = n_pages_per_plane * conf['n_planes_per_chip']
+    n_pages_per_package = n_pages_per_chip * conf['n_chips_per_package']
+
+    conf['n_pages_per_plane'] = n_pages_per_plane
+    conf['n_pages_per_chip'] = n_pages_per_chip
+    conf['n_pages_per_package'] = n_pages_per_package
+
+calc_and_cache(flash_config)
+
+
