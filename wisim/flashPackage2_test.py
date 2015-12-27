@@ -1,4 +1,5 @@
 import unittest
+import cProfile
 
 import simpy
 
@@ -9,6 +10,7 @@ import flashPackage2
 class HelperPackageLoopBack(object):
     def loopback(self, env, package):
         pages = [0, 1 % package.n_pages_per_package]
+        # pages = [i for i in range(package.n_pages_per_package)]
         self.written_values = []
         for page_off in pages:
             value = page_off * 10
@@ -73,5 +75,6 @@ class PackageTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    # cProfile.run("unittest.main()")
     unittest.main()
 

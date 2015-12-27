@@ -277,6 +277,10 @@ class HelperPackageLoopBack(object):
         chips = [0, 1]
         planes = [0, 1 % nplanes]
         blocks = [0, 3 % nblocks]
+
+        # chips = [x for x in range(nchips)]
+        # planes = [x for x in range(nplanes)]
+        # blocks = [x for x in range(nblocks)]
         pages = [i for i in range(npages)]
 
         self.write_values = []
