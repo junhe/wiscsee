@@ -47,6 +47,9 @@ class FlashDevice:
         return self.channel_resources[channel_off]
 
     def read_page(self, channel_off, page_off):
+        """
+        page_off = 0 is the first page in channel_off
+        """
         res = self.get_channel_res(channel_off)
 
         request = res.request()
@@ -58,6 +61,9 @@ class FlashDevice:
         self.env.exit(None) # TODO: need to return a value
 
     def write_page(self, channel_off, page_off, value):
+        """
+        page_off = 0 is the first page in channel_off
+        """
         res = self.get_channel_res(channel_off)
 
         request = res.request()
@@ -67,6 +73,9 @@ class FlashDevice:
         res.release(request)
 
     def erase_block(self, channel_off, block_off):
+        """
+        block_off = 0 is the first block in channel_off
+        """
         res = self.get_channel_res(channel_off)
 
         request = res.request()
@@ -74,6 +83,15 @@ class FlashDevice:
         yield self.env.timeout( self.block_erase_time )
 
         res.release(request)
+
+    def read_page_simple(self, page_num):
+        """
+        This function provides a simple interface so the user does not
+        need to specify channel_off. This function has a mapping from
+        page_num to (channel_off, page_off) that may need to be changed.
+        """
+        pass
+
 
 
 

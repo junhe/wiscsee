@@ -86,7 +86,6 @@ class DevTest(unittest.TestCase):
 
         self.assertTrue( helper.assert_true() )
 
-
 if __name__ == '__main__':
     unittest.main()
 
