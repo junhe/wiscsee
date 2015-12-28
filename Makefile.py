@@ -14,6 +14,7 @@ import time
 import glob
 import pprint
 from time import localtime, strftime
+import simpy
 
 import config
 from config import WLRUNNER, LBAGENERATOR
@@ -34,7 +35,10 @@ def save_conf(conf):
 def workflow(conf):
     # save config file for reference
     save_conf(conf)
+    event_iter = run_workload(conf)
+    run_simulator(conf, event_iter)
 
+def run_workload(conf):
     # run the workload
     workload_src = conf['workload_src']
     if workload_src == WLRUNNER:
@@ -48,13 +52,25 @@ def workflow(conf):
         raise RuntimeError("{} is not a valid workload source"\
             .format(workload_src))
 
+    return event_iter
+
+def run_simulator(conf, event_iter):
     if not conf['enable_blktrace'] or not conf['enable_simulation']:
         return
 
+    if conf['use_DES_simulator'] == True:
+        run_des_simulator(conf, event_iter)
+    else:
+        run_non_des_simulator(conf, event_iter)
+
+def run_non_des_simulator(conf, event_iter):
     # run the Ftl Simulator
     print "Start simulation.........."
     sim = FtlSim.simulator.Simulator(conf)
     sim.run(event_iter)
+
+def run_des_simulator(conf):
+    sim = FtlSim.simulator.SimulatorDES(conf)
 
 def reproduce():
     conf = config.Config()
