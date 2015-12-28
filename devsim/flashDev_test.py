@@ -67,7 +67,7 @@ class DevTest(unittest.TestCase):
         helper = HelperDevLoopBackTime()
 
         env.process( helper.loopback(env,
-                     flashDev.FlashDevice(env = env,
+                     flashDev.DevChannelParallelOnly(env = env,
                          conf = flashConfig.flash_config)
             ) )
         env.run()
@@ -79,7 +79,7 @@ class DevTest(unittest.TestCase):
         helper = Helper_CompeteChannel()
 
         env.process( helper.loopback(env,
-                     flashDev.FlashDevice(env = env,
+                     flashDev.DevChannelParallelOnly(env = env,
                          conf = flashConfig.flash_config)
             ) )
         env.run()

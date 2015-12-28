@@ -6,7 +6,30 @@ It has multiple channels (serial buses), each of which connects to one or more
 flash packages.
 """
 
-class FlashDevice:
+class FlashDeviceAbs(object):
+    def __init__(self, env, conf):
+        raise NotImplementedError
+
+    def read_page(self, channel_off, page_off):
+        raise NotImplementedError
+
+    def write_page(self, channel_off, page_off, value):
+        raise NotImplementedError
+
+    def erase_block(self, channel_off, block_off):
+        raise NotImplementedError
+
+    def read_page_simple(self, page_num):
+        raise NotImplementedError
+
+    def write_page_simple(self, page_num, value):
+        raise NotImplementedError
+
+    def erase_block_simple(self, block_num):
+        raise NotImplementedError
+
+
+class DevChannelParallelOnly(FlashDeviceAbs):
     """
     This is a simplified SSD hardware device. We only consider the parallelism
     at channel level here.
@@ -92,6 +115,10 @@ class FlashDevice:
         """
         pass
 
+    def write_page_simple(self, page_num, value):
+        pass
 
+    def erase_block_simple(self, block_num):
+        pass
 
 
