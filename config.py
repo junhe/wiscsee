@@ -2,9 +2,18 @@ import json
 import math
 import os
 
+import utils
+import WlRunner
+
 WLRUNNER, LBAGENERATOR = ('WLRUNNER', 'LBAGENERATOR')
 
 class Config(dict):
+    def __init__(self, confdic = None):
+        if confdic == None:
+            self.update(self.get_default_config())
+        else:
+            self.update(confdic)
+
     def show(self):
         print self
 
@@ -189,4 +198,180 @@ class Config(dict):
             self['nkftl']['n_blocks_in_data_group']) + 2
         self['flash_num_blocks'] = n
         return n
+
+    def get_default_config(self):
+        MOpt = WlRunner.filesystem.MountOption
+
+        confdic = {
+            ############### Global #########
+            "result_dir"            : None,
+            "workload_src"          : WLRUNNER,
+            # "workload_src"          : LBAGENERATOR,
+            "expname"               : "default-expname",
+            "time"                  : None,
+            "subexpname"            : "default-subexp",
+            # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl, nkftl
+            "ftl_type"              : "nkftl2",
+            "sector_size"           : 512,
+
+
+            ############## For FtlSim ######
+            "enable_simulation"     : True,
+            "flash_page_size"       : 4096,
+            "flash_npage_per_block" : 4,
+            "flash_num_blocks"      : None,
+            "enable_e2e_test"       : False,
+
+            ############## Dftl ############
+            "dftl": {
+                # number of bytes per entry in global_mapping_table
+                "global_mapping_entry_bytes": 4, # 32 bits
+                "GC_threshold_ratio": 0.95,
+                "GC_low_threshold_ratio": 0.9,
+                "over_provisioning": 1.28,
+                "max_cmt_bytes": None, # cmt: cached mapping table
+                "tpftl": {
+                    "entry_node_bytes": 6, # page 8, TPFTL paper
+                    "page_node_bytes": 8,  # m_vpn, pointer to entrylist
+                    "selective_threshold": 3
+                }
+            },
+
+            ############## NKFTL (SAST) ############
+            "nkftl": {
+                'n_blocks_in_data_group': 4, # number of blocks in a data block group
+                'max_blocks_in_log_group': 2, # max number of blocks in a log block group
+
+                "GC_threshold_ratio": 0.8,
+                "GC_low_threshold_ratio": 0.7,
+
+                "provision_ratio": 1.5 # 1.5: 1GB user size, 1.5 flash size behind
+            },
+
+            ############## hybridmap ############
+            "high_log_block_ratio"       : 0.4,
+            "high_data_block_ratio"      : 0.4,
+            "hybridmapftl": {
+                "low_log_block_ratio": 0.32
+            },
+
+            ############## recorder #############
+            "verbose_level" : -1,
+            "output_target" : "file",
+            "print_when_finished": False,
+            # "output_target" : "stdout",
+            "record_bad_victim_block": False,
+
+            ############## For WlRunner ########
+            # for loop dev
+            "loop_dev_size_mb"      : None,
+            "tmpfs_mount_point"     : "/mnt/tmpfs",
+
+            # "device_path"           : "/dev/sdc1", # or sth. like /dev/sdc1
+            # "device_type"           : "real", # loop, real
+            "device_path"           : "/dev/loop0", # or sth. like /dev/sdc1
+            "device_type"           : "loop", # loop, real
+
+            "enable_blktrace"       : False,
+
+            "fs_mount_point"        : "/mnt/fsonloop",
+            "mnt_opts" : {
+                "ext4":   { 'discard': MOpt(opt_name = "discard",
+                                             value = "discard",
+                                             include_name = False),
+                            'data': MOpt(opt_name = "data",
+                                            value = "ordered",
+                                            include_name = True) },
+                "btrfs":  { "discard": MOpt(opt_name = "discard",
+                                             value = "discard",
+                                             include_name = False),
+                                             "ssd": MOpt(opt_name = 'ssd',
+                                                 value = 'ssd',
+                                         include_name = False),
+                            "autodefrag": MOpt(opt_name = 'autodefrag',
+                                                value = 'autodefrag',
+                                                include_name = False) },
+                "xfs":    {'discard': MOpt(opt_name = 'discard',
+                                            value = 'discard',
+                                            include_name = False)},
+                "f2fs":   {'discard': MOpt(opt_name = 'discard',
+                                            value = 'discard',
+                                            include_name = False)}
+            },
+            # "common_mnt_opts"       : ["discard", "nodatacow"],
+            "filesystem"            : None,
+
+            ############## FS ##################
+            "ext4" : {
+                "make_opts": {'-O':['^uninit_bg'], '-b':[4096]}
+            },
+            "f2fs"  : {"make_opts": {}, 'sysfs':{}},
+            "btrfs"  : {"make_opts": {}},
+
+
+            ############## workload.py workload to age FS ###
+            # This is run after mounting the file and before real workload
+            # Having this specific aging workload is because we don't want
+            # its performance statistics to be recorded.
+            "age_workload_class"    : "NoOp",
+
+            # the following config should match the age_workload_class you use
+            "aging_config_key"      :None,
+            "aging_config" :{
+                "generating_func": "self.generate_random_workload",
+                # "chunk_count": 100*2**20/(8*1024),
+                "chunk_count": 4 * 2**20 / (512 * 1024),
+                "chunk_size" : 512 * 1024,
+                "iterations" : 1,
+                "filename"   : "aging.file",
+                "n_col"      : 5   # only for hotcold workload
+            },
+
+
+            ############## workload.py on top of FS #########
+            # "workload_class"        : "Simple",
+            "workload_class"        : "Synthetic",
+            "workload_conf_key"     : "workload_conf",
+            "workload_conf" :{
+                # "generating_func": "self.generate_hotcold_workload",
+                # "generating_func": "self.generate_sequential_workload",
+                # "generating_func": "self.generate_backward_workload",
+                "generating_func": "self.generate_random_workload",
+                # "chunk_count": 100*2**20/(8*1024),
+                "chunk_count": 4 * 2**20 / (512 * 1024),
+                "chunk_size" : 512 * 1024,
+                "iterations" : 1,
+                "n_col"      : 5,   # only for hotcold workload
+                "filename"   : "test.file"
+            },
+
+            ############## LBAGENERATOR  #########
+            # if you choose LBAGENERATOR for workload_src, the following will
+            # be used
+            # "lba_workload_class"    : "Sequential",
+            # "lba_workload_class"    : "HotCold",
+            # "lba_workload_class"    : "Random",
+            "lba_workload_class"    : "Manual",
+            "LBA" : {
+                "lba_to_flash_size_ratio": 0.05,
+                "write_to_lba_ratio"     : 1,    #how many writes you want to have
+                "HotCold": {
+                    'chunk_bytes': 4096 * 1024,
+                    'chunk_count': 4,
+                    'n_col'      : 4
+                }
+            },
+
+            ############# PERF #####################
+            "wrap_by_perf" : False,
+            "perf" : {
+                    "perf_path"         : "perf",
+                    "flamegraph_dir"    : None
+                    },
+
+            ############# OS #####################
+            "linux_version": utils.linux_kernel_version(),
+            "n_online_cpus": 1
+        }
+        return confdic
 
