@@ -3,6 +3,7 @@
 import abc
 import argparse
 import random
+import simpy
 import sys
 
 import bmftl
@@ -16,6 +17,8 @@ import nkftl2
 import pmftl
 import recorder
 import tpftl
+
+from commons import *
 
 
 class Event(object):
@@ -39,6 +42,10 @@ class Simulator(object):
 
     @abc.abstractmethod
     def run(self):
+        return
+
+    @abc.abstractmethod
+    def get_sim_type(self):
         return
 
     def __init__(self, conf, event_iter):
@@ -211,6 +218,9 @@ class Simulator(object):
                 event.operation))
 
 class SimulatorNonDES(Simulator):
+    def get_sim_type(self):
+        return "NonDES"
+
     def run(self):
         """
         You must garantee that each item in event_iter is a class Event
@@ -226,10 +236,14 @@ class SimulatorNonDES(Simulator):
         self.ftl.post_processing()
 
 class SimulatorDES(Simulator):
-    def run(self, event_iter):
+    def get_sim_type(self):
+        return "DES"
+
+    def sim_proc(self):
         cnt = 0
-        for event in event_iter:
+        for event in self.event_iter:
             self.event_processor(event)
+            yield self.env.timeout(1 * MSEC)
             cnt += 1
             if cnt % 100 == 0:
                 print '|',
@@ -237,5 +251,15 @@ class SimulatorDES(Simulator):
 
         self.ftl.post_processing()
 
+        print self.env.now
+
+    def setup(self):
+        self.env = simpy.Environment()
+        self.env.process(self.sim_proc())
+
+    def run(self):
+        self.setup()
+        self.env.run()
+        print 'simulator type:', self.get_sim_type()
 
 
