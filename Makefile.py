@@ -58,7 +58,7 @@ def run_simulator(conf, event_iter):
     if not conf['enable_blktrace'] or not conf['enable_simulation']:
         return
 
-    if conf['use_DES_simulator'] == True:
+    if conf['simulator_type'] == 'DES':
         run_des_simulator(conf, event_iter)
     else:
         run_non_des_simulator(conf, event_iter)
