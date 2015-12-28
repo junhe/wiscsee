@@ -34,13 +34,14 @@ class Event(object):
     # return event
 
 class Simulator(object):
-    def __init__(self, conf):
+    def __init__(self, conf, event_iter):
         "conf is class Config"
         if not isinstance(conf, config.Config):
             raise TypeError("conf is not config.Config, it is {}".
                 format(type(conf).__name__))
 
         self.conf = conf
+        self.event_iter = event_iter
 
         # initialize recorder
         self.rec = recorder.Recorder(output_target = self.conf['output_target'],
@@ -202,10 +203,25 @@ class Simulator(object):
             raise RuntimeError("operation '{}' is not supported".format(
                 event.operation))
 
-    def run(self, event_iter):
+    def run(self):
         """
         You must garantee that each item in event_iter is a class Event
         """
+        cnt = 0
+        for event in self.event_iter:
+            self.event_processor(event)
+            cnt += 1
+            if cnt % 100 == 0:
+                print '|',
+                sys.stdout.flush()
+
+        self.ftl.post_processing()
+
+class SimulatorNonDES(Simulator):
+    pass
+
+class SimulatorDES(Simulator):
+    def run(self, event_iter):
         cnt = 0
         for event in event_iter:
             self.event_processor(event)

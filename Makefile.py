@@ -58,10 +58,20 @@ def run_simulator(conf, event_iter):
     if not conf['enable_blktrace'] or not conf['enable_simulation']:
         return
 
-    if conf['simulator_type'] == 'DES':
-        run_des_simulator(conf, event_iter)
+    simulator = create_simulatr( conf['simulator_type'], conf, event_iter )
+    simulator.run()
+
+def create_simulatr(simulator_type, conf, event_iter):
+
+    """
+    type: "DES", "NonDES"
+    """
+    if simulator_type == 'DES':
+        return FtlSim.simulator.SimulatorDES(conf, event_iter)
+    elif simulator_type == 'NonDES':
+        return FtlSim.simulator.SimulatorNonDES(conf, event_iter)
     else:
-        run_non_des_simulator(conf, event_iter)
+        raise NotImplementedError()
 
 def run_non_des_simulator(conf, event_iter):
     # run the Ftl Simulator
