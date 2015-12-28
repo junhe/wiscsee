@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import abc
 import argparse
 import random
 import sys
@@ -34,6 +35,12 @@ class Event(object):
     # return event
 
 class Simulator(object):
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def run(self):
+        return
+
     def __init__(self, conf, event_iter):
         "conf is class Config"
         if not isinstance(conf, config.Config):
@@ -203,6 +210,7 @@ class Simulator(object):
             raise RuntimeError("operation '{}' is not supported".format(
                 event.operation))
 
+class SimulatorNonDES(Simulator):
     def run(self):
         """
         You must garantee that each item in event_iter is a class Event
@@ -216,9 +224,6 @@ class Simulator(object):
                 sys.stdout.flush()
 
         self.ftl.post_processing()
-
-class SimulatorNonDES(Simulator):
-    pass
 
 class SimulatorDES(Simulator):
     def run(self, event_iter):
