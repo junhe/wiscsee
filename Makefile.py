@@ -230,7 +230,7 @@ def test_nkftl():
                         * conf["Synthetic"]["chunk_size"] / 2**20
                     workflow(conf)
 
-def choose_exp_metadata(default_conf):
+def choose_exp_metadata(default_conf, interactive = True):
     """
     This function will return a dictionary containing a few things relating
     to result dir. You can update the experiment configuration by
@@ -247,7 +247,10 @@ def choose_exp_metadata(default_conf):
     result_dir = '/tmp/results'
     # result_dir = '/users/jhe/results'
     # result_dir = '/mnt/ramdisk/results'
-    toresult = raw_input('Save this experiments to {}? (y/n)'.format(result_dir))
+    if interactive == True:
+        toresult = raw_input('Save this experiments to {}? (y/n)'.format(result_dir))
+    else:
+        toresult = 'n'
     if toresult.lower() == 'y':
         targetdir = result_dir
         expname = raw_input('Enter expname ({}):'.format(default_conf['expname']))
