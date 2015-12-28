@@ -279,6 +279,9 @@ class Timeline(object):
         real_time_path = os.path.join(self.conf['result_dir'],
             'multiwriters.results.txt')
 
+        if not os.path.exists(real_time_path):
+            return None
+
         with open(real_time_path, 'rb') as f:
             reader = csv.DictReader(f, delimiter = ';')
             real_table = [row for row in reader]
@@ -305,9 +308,10 @@ class Timeline(object):
         utils.table_to_file(table, pid_time_path)
 
         real_sim_proc_times_table = self.merge_sim_and_real()
-        real_sim_proc_times_path = os.path.join(self.conf['result_dir'],
-            'proc_times_sim_and_real.txt')
-        utils.table_to_file(real_sim_proc_times_table, real_sim_proc_times_path)
+        if real_sim_proc_times_table != None:
+            real_sim_proc_times_path = os.path.join(self.conf['result_dir'],
+                'proc_times_sim_and_real.txt')
+            utils.table_to_file(real_sim_proc_times_table, real_sim_proc_times_path)
 
 
 class OutOfBandAreas(object):
