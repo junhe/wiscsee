@@ -240,27 +240,4 @@ class FtlBuilder(object):
     def post_processing(self):
         raise NotImplementedError
 
-if __name__ == '__main__':
-    b = bitarray.bitarray(10)
-    print b
-    print b[0:2]
-    print b[0:2] == [False, False]
-    print b[0:2] & bitarray.bitarray('00')
-    print b[0:2] | bitarray.bitarray('10')
-    print b[0:2] == bitarray.bitarray('00')
-    print b[0:2] == bitarray.bitarray('10')
-    print b[0:2] == bitarray.bitarray('10')
-
-    print b[0:2]
-    print 'assign....'
-    b[0:2] = FlashBitmap.ERASED
-    print b[0:2]
-    b[0:2] = FlashBitmap.VALID
-    print b[0:2]
-    b[0:2] = FlashBitmap.INVALID
-    print b[0:2]
-    b[0:5] = 1
-    print b
-
-
 

@@ -41,8 +41,8 @@ class DftlExp(Experiment):
     def setup_ftl(self):
         self.conf['ftl_type'] = 'dftl2'
         self.conf["enable_e2e_test"] = True
-        # self.conf['simulator_type'] = 'NonDES'
-        self.conf['simulator_type'] = 'DES'
+        self.conf['simulator_type'] = 'NonDES'
+        # self.conf['simulator_type'] = 'DES'
 
         devsize_mb = 1024
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_page_size'])

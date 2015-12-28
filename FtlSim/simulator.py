@@ -65,43 +65,16 @@ class Simulator(object):
             print_when_finished = self.conf['print_when_finished']
             )
 
-        if self.conf['ftl_type'] == 'directmap':
-            ftl_class = dmftl.DirectMapFtl
-        elif self.conf['ftl_type'] == 'blockmap':
-            ftl_class = bmftl.BlockMapFtl
-        elif self.conf['ftl_type'] == 'pagemap':
-            ftl_class = pmftl.PageMapFtl
-        elif self.conf['ftl_type'] == 'hybridmap':
-            ftl_class = hmftl.HybridMapFtl
-        elif self.conf['ftl_type'] == 'dftl2':
-            ftl_class = dftl2.Dftl
-        elif self.conf['ftl_type'] == 'dftlDES':
-            ftl_class = dftlDES.Dftl
-        elif self.conf['ftl_type'] == 'tpftl':
-            ftl_class = tpftl.Tpftl
-        elif self.conf['ftl_type'] == 'nkftl':
-            raise DeprecationWarning("You are trying to use nkftl, which is a "
-                "deprecated version of nkftl. Please use nkftl2 instead.")
-            ftl_class = nkftl.Nkftl
-        elif self.conf['ftl_type'] == 'nkftl2':
-            ftl_class = nkftl2.Nkftl
-        else:
-            raise ValueError("ftl_type {} is not defined"\
-                .format(self.conf['ftl_type']))
-
-        self.ftl = ftl_class(self.conf, self.rec,
-            flash.Flash(recorder = self.rec, confobj = self.conf))
-
-        if self.conf['ftl_type'] == 'tpftl':
-            self.interface_level = 'range'
-        else:
-            self.interface_level = 'page'
-
         if self.conf['enable_e2e_test'] == True:
             self.event_processor = self.process_event_e2e_test
             self.lpn_to_data = {}
         else:
             self.event_processor = self.process_event
+
+        if self.conf['ftl_type'] == 'tpftl':
+            self.interface_level = 'range'
+        else:
+            self.interface_level = 'page'
 
     def process_event_e2e_test(self, event):
         if event.operation == 'read':
@@ -221,6 +194,34 @@ class Simulator(object):
                 event.operation))
 
 class SimulatorNonDES(Simulator):
+    def __init__(self, conf, event_iter):
+        super(SimulatorNonDES, self).__init__(conf, event_iter)
+
+        if self.conf['ftl_type'] == 'directmap':
+            ftl_class = dmftl.DirectMapFtl
+        elif self.conf['ftl_type'] == 'blockmap':
+            ftl_class = bmftl.BlockMapFtl
+        elif self.conf['ftl_type'] == 'pagemap':
+            ftl_class = pmftl.PageMapFtl
+        elif self.conf['ftl_type'] == 'hybridmap':
+            ftl_class = hmftl.HybridMapFtl
+        elif self.conf['ftl_type'] == 'dftl2':
+            ftl_class = dftl2.Dftl
+        elif self.conf['ftl_type'] == 'tpftl':
+            ftl_class = tpftl.Tpftl
+        elif self.conf['ftl_type'] == 'nkftl':
+            raise DeprecationWarning("You are trying to use nkftl, which is a "
+                "deprecated version of nkftl. Please use nkftl2 instead.")
+            ftl_class = nkftl.Nkftl
+        elif self.conf['ftl_type'] == 'nkftl2':
+            ftl_class = nkftl2.Nkftl
+        else:
+            raise ValueError("ftl_type {} is not defined"\
+                .format(self.conf['ftl_type']))
+
+        self.ftl = ftl_class(self.conf, self.rec,
+            flash.Flash(recorder = self.rec, confobj = self.conf))
+
     def get_sim_type(self):
         return "NonDES"
 
@@ -239,6 +240,18 @@ class SimulatorNonDES(Simulator):
         self.ftl.post_processing()
 
 class SimulatorDES(Simulator):
+    def __init__(self, conf, event_iter):
+        super(SimulatorDES, self).__init__(conf, event_iter)
+
+        if self.conf['ftl_type'] == 'dftlDES':
+            ftl_class = dftlDES.Dftl
+        else:
+            raise ValueError("ftl_type {} is not defined"\
+                .format(self.conf['ftl_type']))
+
+        self.ftl = ftl_class(self.conf, self.rec,
+            flash.Flash(recorder = self.rec, confobj = self.conf))
+
     def get_sim_type(self):
         return "DES"
 
