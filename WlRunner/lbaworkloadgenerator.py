@@ -3,6 +3,7 @@ import random
 
 import config
 import workload
+from FtlSim import simulator
 
 class LBAWorkloadGenerator(object):
     __metaclass__ = abc.ABCMeta
@@ -165,14 +166,14 @@ class Manual(LBAWorkloadGenerator):
         print "LBA span in blocks", lba_span/self.conf['flash_npage_per_block']
         print "flash_npage_per_block:", self.conf['flash_npage_per_block']
 
-        for i in range(lba_span * 4):
+        for i in range(10):
             op = random.choice(ops)
             page = int(random.random() * lba_span)
             if maxpage < page:
                 maxpage = page
             events.append( (op, page) )
 
-        for page in range(maxpage):
+        for page in range(10):
             events.append( (r, page) )
 
         return events
@@ -203,7 +204,7 @@ class Manual(LBAWorkloadGenerator):
         print "GC trigger blocks:", self.conf['flash_num_blocks'] * \
             self.conf['nkftl']['GC_threshold_ratio']
 
-        for i in range(lba_span * 4):
+        for i in range(int(lba_span * 4)):
             op = random.choice(ops)
             page = int(random.random() * lba_span)
             if maxpage < page:
@@ -216,7 +217,8 @@ class Manual(LBAWorkloadGenerator):
         return events
 
     def __iter__(self):
-        yield "enable_recorder 0 0"
+        yield simulator.Event(pid = 0, operation = 'enable_recorder',
+                offset = 0, size = 0)
 
         # events = self.test1410()
         # events = self.test3()
@@ -228,7 +230,8 @@ class Manual(LBAWorkloadGenerator):
         for op, lpn in events:
             offset = lpn * self.conf['flash_page_size']
             size = self.conf["flash_page_size"]
-            event = '{op} {off} {sz}'.format(op = op, off = offset, sz = size)
+            event = simulator.Event(pid = 0, operation = op, offset = offset,
+                    size = size)
             yield event
 
 
