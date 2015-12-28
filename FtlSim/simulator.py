@@ -249,8 +249,12 @@ class SimulatorDES(Simulator):
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))
 
+        self.env = simpy.Environment()
+
         self.ftl = ftl_class(self.conf, self.rec,
-            flash.Flash(recorder = self.rec, confobj = self.conf))
+            flash.Flash(recorder = self.rec, confobj = self.conf),
+            simpy_env = self.env
+            )
 
     def get_sim_type(self):
         return "DES"
@@ -269,12 +273,8 @@ class SimulatorDES(Simulator):
 
         print self.env.now
 
-    def setup(self):
-        self.env = simpy.Environment()
-        self.env.process(self.sim_proc())
-
     def run(self):
-        self.setup()
+        self.env.process(self.sim_proc())
         self.env.run()
         print 'simulator type:', self.get_sim_type()
 
