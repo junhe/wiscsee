@@ -5,7 +5,7 @@ import simpy
 
 from commons import *
 import flashDev
-import flashConfig
+import config
 
 class HelperDevLoopBackTime(object):
     def loopback(self, env, flashdev):
@@ -68,7 +68,7 @@ class DevTest(unittest.TestCase):
 
         env.process( helper.loopback(env,
                      flashDev.DevChannelParallelOnly(env = env,
-                         conf = flashConfig.flash_config)
+                         conf = config.Config()['flash_config'])
             ) )
         env.run()
 
@@ -80,7 +80,7 @@ class DevTest(unittest.TestCase):
 
         env.process( helper.loopback(env,
                      flashDev.DevChannelParallelOnly(env = env,
-                         conf = flashConfig.flash_config)
+                         conf = config.Config()['flash_config'])
             ) )
         env.run()
 
