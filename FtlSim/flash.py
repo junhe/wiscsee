@@ -55,10 +55,14 @@ class FlashDES(object):
         self.globalhelper = globalhelper
         self.env = simpy_env
 
+        self.page_read_time = self.conf['flash_config']['page_read_time']
+        self.page_write_time = self.conf['flash_config']['page_prog_time']
+        self.block_erase_time = self.conf['flash_config']['block_erase_time']
+
     def page_read(self, pagenum, cat):
         self.recorder.put('physical_read', pagenum, cat)
 
-        yield self.env.timeout( 100 )
+        yield self.env.timeout( self.page_read_time )
 
         self.globalhelper.timeline.incr_flash_op('flash.read')
 
@@ -69,7 +73,7 @@ class FlashDES(object):
     def page_write(self, pagenum, cat, data = None):
         self.recorder.put('physical_write', pagenum, cat)
 
-        yield self.env.timeout( 200 )
+        yield self.env.timeout( self.page_prog_time )
 
         self.globalhelper.timeline.incr_flash_op('flash.write')
 
@@ -82,7 +86,7 @@ class FlashDES(object):
         # print 'block_erase', blocknum, cat
         self.recorder.put('phy_block_erase', blocknum, cat)
 
-        yield self.env.timeout( 3000 )
+        yield self.env.timeout( self.block_erase_time )
 
         self.globalhelper.timeline.incr_flash_op('flash.erasure')
 
