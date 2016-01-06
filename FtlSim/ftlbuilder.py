@@ -221,6 +221,15 @@ class FtlBuilder(object):
     def lba_discard(self, page_num):
         raise NotImplementedError
 
+    def sec_read(self, sector, count):
+        raise NotImplementedError
+
+    def sec_write(self, sector, count, data):
+        raise NotImplementedError
+
+    def sec_erase(self, sector, count):
+        raise NotImplementedError
+
     def debug_info(self):
         raise NotImplementedError
 
