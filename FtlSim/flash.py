@@ -56,7 +56,7 @@ class FlashDES(object):
         self.env = simpy_env
 
         self.page_read_time = self.conf['flash_config']['page_read_time']
-        self.page_write_time = self.conf['flash_config']['page_prog_time']
+        self.page_prog_time = self.conf['flash_config']['page_prog_time']
         self.block_erase_time = self.conf['flash_config']['block_erase_time']
 
     def page_read(self, pagenum, cat):
