@@ -107,18 +107,4 @@ class DevChannelParallelOnly(FlashDeviceAbs):
 
         res.release(request)
 
-    def read_page_simple(self, page_num):
-        """
-        This function provides a simple interface so the user does not
-        need to specify channel_off. This function has a mapping from
-        page_num to (channel_off, page_off) that may need to be changed.
-        """
-        pass
-
-    def write_page_simple(self, page_num, value):
-        pass
-
-    def erase_block_simple(self, block_num):
-        pass
-
 
