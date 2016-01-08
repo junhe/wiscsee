@@ -12,10 +12,7 @@ import dftl2
 import dftlDES
 import dmftl
 import flash
-import hmftl
-import nkftl
 import nkftl2
-import pmftl
 import recorder
 import tpftl
 
