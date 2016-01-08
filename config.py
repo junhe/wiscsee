@@ -254,7 +254,8 @@ class Config(dict):
             "flash_page_size"       : 4096,
             "flash_npage_per_block" : 4,
             "flash_num_blocks"      : None,
-            "enable_e2e_test"       : False,
+            # "enable_e2e_test"       : False,
+            "simulation_processor"  : 'e2e', # regular, extent
 
             ############## Dftl ############
             "dftl": {

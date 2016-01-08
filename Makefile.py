@@ -113,7 +113,7 @@ def simple_lba_test():
     conf['nkftl']['provision_ratio'] = 1.5
     conf['nkftl']['GC_threshold_ratio'] = 0.8
     conf['nkftl']['GC_low_threshold_ratio'] = 0.7
-    conf['enable_e2e_test'] = True
+    conf['simulation_processor'] = 'e2e'
     conf.set_flash_num_blocks_by_bytes(
         int((loop_dev_mb * 2**20) * conf['nkftl']['provision_ratio']))
     # conf.nkftl_set_flash_num_blocks_by_data_block_bytes(4 * 2**20)
@@ -150,7 +150,7 @@ def simple_lba_test_dftl():
     devsize_mb = loop_dev_mb = 32
 
     conf['flash_npage_per_block'] = 32
-    conf['enable_e2e_test'] = True
+    conf['simulation_processor'] = 'e2e'
 
     # More DFTL
     entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_page_size'])
@@ -374,7 +374,7 @@ def test_dftl2_new_parallel_write():
     confdic = get_default_config()
     conf = config.Config(confdic)
     conf['ftl_type'] = 'dftl2'
-    conf['enable_e2e_test'] = True
+    conf['simulation_processor'] = 'e2e'
     conf['enable_blktrace'] = True
     conf['enable_simulation'] = False
 

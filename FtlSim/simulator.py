@@ -70,11 +70,20 @@ class Simulator(object):
             print_when_finished = self.conf['print_when_finished']
             )
 
-        if self.conf['enable_e2e_test'] == True:
+        if self.conf.has_key('enable_e2e_test'):
+            raise RuntimeError("enable_e2e_test is deprecated")
+
+        if self.conf['simulation_processor'] == 'e2e':
             self.event_processor = self.process_event_e2e_test
             self.lpn_to_data = {}
-        else:
+        elif self.conf['simulation_processor'] == 'regular':
             self.event_processor = self.process_event
+        elif self.conf['simulation_processor'] == 'extent':
+            self.event_processor = self.process_event_not_ready
+        else:
+            raise RuntimeError("simulation processor: {} is not " \
+                "supported.".format(
+                    self.conf['simulation_processor']))
 
         if self.conf['ftl_type'] == 'tpftl':
             self.interface_level = 'range'

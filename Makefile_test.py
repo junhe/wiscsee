@@ -40,7 +40,7 @@ class DftlExp(Experiment):
 
     def setup_ftl(self):
         self.conf['ftl_type'] = 'dftl2'
-        self.conf["enable_e2e_test"] = True
+        self.conf['simulation_processor'] = 'e2e'
         self.conf['simulator_type'] = 'NonDES'
         # self.conf['simulator_type'] = 'DES'
 
@@ -68,7 +68,7 @@ class DftlDESExp(Experiment):
 
     def setup_ftl(self):
         self.conf['ftl_type'] = 'dftlDES'
-        self.conf["enable_e2e_test"] = True
+        self.conf['simulation_processor'] = 'e2e'
         # self.conf['simulator_type'] = 'NonDES'
         self.conf['simulator_type'] = 'DES'
 
