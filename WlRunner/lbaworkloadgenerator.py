@@ -49,6 +49,8 @@ class Manual(LBAWorkloadGenerator):
                 format(type(confobj).__name__))
         self.conf = confobj
 
+        self.sector_size = self.conf['sector_size']
+
     def test1(self):
         w = 'write'
         r = 'read'
@@ -217,7 +219,8 @@ class Manual(LBAWorkloadGenerator):
         return events
 
     def __iter__(self):
-        yield simulator.Event(pid = 0, operation = 'enable_recorder',
+        yield simulator.Event(sector_size = self.sector_size,
+                pid = 0, operation = 'enable_recorder',
                 offset = 0, size = 0)
 
         # events = self.test1410()
@@ -230,7 +233,8 @@ class Manual(LBAWorkloadGenerator):
         for op, lpn in events:
             offset = lpn * self.conf['flash_page_size']
             size = self.conf["flash_page_size"]
-            event = simulator.Event(pid = 0, operation = op, offset = offset,
+            event = simulator.Event(sector_size = self.sector_size,
+                    pid = 0, operation = op, offset = offset,
                     size = size)
             yield event
 

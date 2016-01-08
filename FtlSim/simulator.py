@@ -20,11 +20,19 @@ from commons import *
 
 
 class Event(object):
-    def __init__(self, pid, operation, offset, size):
-        self.pid = pid
+    def __init__(self, sector_size, pid, operation, offset, size):
+        self.pid = int(pid)
         self.operation = operation
-        self.offset = offset
-        self.size = size
+        self.offset = int(offset)
+        self.size = int(size)
+
+        assert offset % sector_size == 0, \
+            "offset is not aligned with sector size"
+        self.sector = offset / sector_size
+
+        assert size % sector_size == 0, \
+            "size is not multiple of sector size"
+        self.sector_count = size
 
 # Convert before comming here
 # def event_line_to_event(line):
