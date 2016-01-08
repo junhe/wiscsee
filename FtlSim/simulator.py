@@ -250,6 +250,8 @@ class SimulatorDES(Simulator):
 
         if self.conf['ftl_type'] == 'dftlDES':
             ftl_class = dftlDES.Dftl
+        elif self.conf['ftl_type'] == 'dmftlDES':
+            ftl_class = dmftlDES.DmftlDES
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))
