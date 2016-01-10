@@ -11,6 +11,7 @@ import config
 import dftl2
 import dftlDES
 import dmftl
+import dmftlDES
 import flash
 import nkftl2
 import recorder
