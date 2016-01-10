@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import abc
 import argparse
 import random

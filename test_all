@@ -1,2 +1,2 @@
 python ./config_test.py
-sudo python ./Makefile_test.py
+sudo python ./Makefile_test.py -v
