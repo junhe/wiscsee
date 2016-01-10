@@ -135,6 +135,18 @@ class Config(dict):
         n_entries_per_page = self.dftl_n_mapping_entries_per_page()
         return lpn / n_entries_per_page
 
+    def sec_ext_to_page_ext(self, sector, count):
+        """
+        The sector extent has to be aligned with page
+        return page_start, page_count
+        """
+        page = (sector * self['sector_size']) / self['flash_page_size']
+        assert (sector * self['sector_size']) % self['flash_page_size'] == 0,\
+                "starting sector ({}) is not aligned with page size {}"\
+                .format(sector, self['flash_page_size'])
+        page_count = (count * self['sector_size']) / self['flash_page_size']
+        return page, page_count
+
     def nkftl_data_group_number_of_lpn(self, lpn):
         """
         Given lpn, return its data group number
