@@ -50,17 +50,19 @@ class DevChannelParallelOnly(FlashDeviceAbs):
         env.process( dev.page_write(channel#1, pagenum, None) )
     the third write above will wait until the first process finishes.
 
+    The FTL should decide how the logical address is mapped to
+    channels.
     """
     def __init__(self, env, conf):
         self.env = env
         self.conf = conf
 
-        self.n_channels_per_dev = self.conf['n_channels_per_dev']
+        self.n_channels_per_dev = self.conf['flash_config']['n_channels_per_dev']
 
         # time
-        self.page_read_time = self.conf['page_read_time']
-        self.page_prog_time = self.conf['page_prog_time']
-        self.block_erase_time = self.conf['block_erase_time']
+        self.page_read_time = self.conf['flash_config']['page_read_time']
+        self.page_prog_time = self.conf['flash_config']['page_prog_time']
+        self.block_erase_time = self.conf['flash_config']['block_erase_time']
 
         # used to coordinate access to each channel
         self.channel_resources = [ simpy.Resource(env, capacity = 1) \

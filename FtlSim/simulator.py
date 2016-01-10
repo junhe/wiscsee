@@ -79,7 +79,7 @@ class Simulator(object):
         elif self.conf['simulation_processor'] == 'regular':
             self.event_processor = self.process_event
         elif self.conf['simulation_processor'] == 'extent':
-            self.event_processor = self.process_event_not_ready
+            self.event_processor = self.process_event_extent
         else:
             raise RuntimeError("simulation processor: {} is not " \
                 "supported.".format(
@@ -353,5 +353,32 @@ class SimulatorDES(Simulator):
             print event
             raise RuntimeError("operation '{}' is not supported".format(
                 event.operation))
+
+    def process_event_extent(self, event):
+        if event.operation == 'read':
+            yield self.env.process(
+                    self.ftl.sec_read( sector = event.sector,
+                    count = event.sector_count ) )
+        elif event.operation == 'write':
+            yield self.env.process(
+                    self.ftl.sec_write( sector = event.sector,
+                    count = event.sector_count, data = None ) )
+        elif event.operation == 'discard':
+            yield self.env.process(
+                    self.ftl.sec_discard( sector = event.sector,
+                    count = event.sector_count ) )
+        elif event.operation == 'enable_recorder':
+            self.ftl.enable_recording()
+        elif event.operation == 'disable_recorder':
+            self.ftl.disable_recording()
+        elif event.operation == 'workloadstart':
+            self.ftl.pre_workload()
+        elif event.operation == 'finish':
+            # ignore this
+            pass
+        else:
+            raise RuntimeError("operation '{}' is not supported".format(
+                event.operation))
+
 
 
