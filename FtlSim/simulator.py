@@ -8,6 +8,7 @@ import sys
 import bmftl
 import config
 import dftl2
+import dftlext
 import dftlDES
 import dmftl
 import dmftlDES
@@ -221,6 +222,8 @@ class SimulatorNonDES(Simulator):
             ftl_class = hmftl.HybridMapFtl
         elif self.conf['ftl_type'] == 'dftl2':
             ftl_class = dftl2.Dftl
+        elif self.conf['ftl_type'] == 'dftlext':
+            ftl_class = dftlext.Dftl
         elif self.conf['ftl_type'] == 'tpftl':
             ftl_class = tpftl.Tpftl
         elif self.conf['ftl_type'] == 'nkftl':
