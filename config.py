@@ -147,6 +147,20 @@ class Config(dict):
         page_count = (count * self['sector_size']) / self['flash_page_size']
         return page, page_count
 
+    def off_size_to_sec_count(self, offset, size):
+        """
+        offset and size in byte -> sector and count
+        """
+        sector_size = self['sector_size']
+
+        assert offset % sector_size == 0
+        sector = offset / sector_size
+
+        assert size % sector_size == 0
+        count = size / sector_size
+
+        return sector, count
+
     def nkftl_data_group_number_of_lpn(self, lpn):
         """
         Given lpn, return its data group number

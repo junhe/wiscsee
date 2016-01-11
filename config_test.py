@@ -25,6 +25,16 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(page, 3)
         self.assertEqual(cnt, 2)
 
+    def test_offset_size_translation(self):
+        conf = config.Config()
+
+        secsize = conf['sector_size']
+        sec, count = conf.off_size_to_sec_count(
+                offset = secsize * 10,
+                size = secsize * 31)
+
+        self.assertEqual(sec, 10)
+        self.assertEqual(count, 31)
 
 if __name__ == '__main__':
     unittest.main()
