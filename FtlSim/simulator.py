@@ -81,6 +81,8 @@ class Simulator(object):
             self.event_processor = self.process_event
         elif self.conf['simulation_processor'] == 'extent':
             self.event_processor = self.process_event_extent
+        elif self.conf['simulation_processor'] == 'extent_e2e':
+            self.event_processor = self.process_event_extent_e2e
         else:
             raise RuntimeError("simulation processor: {} is not " \
                 "supported.".format(
@@ -283,7 +285,35 @@ class SimulatorNonDES(Simulator):
             raise RuntimeError("operation '{}' is not supported".format(
                 event.operation))
 
-
+    def process_event_extent_e2e(self, event):
+        assert self.interface_level != 'page', \
+                "current interface level: {}".format(self.interface_level)
+        if event.operation == 'read':
+            data = self.ftl.sec_read(
+                sector = event.sector,
+                count = event.sector_count)
+        elif event.operation == 'write':
+            self.ftl.sec_write(
+                sector = event.sector,
+                count = event.sector_count,
+                data = None)
+        elif event.operation == 'discard':
+            self.ftl.sec_discard(
+                sector = event.sector,
+                count = event.sector_count)
+        elif event.operation == 'enable_recorder':
+            self.ftl.enable_recording()
+        elif event.operation == 'disable_recorder':
+            self.ftl.disable_recording()
+        elif event.operation == 'workloadstart':
+            self.ftl.pre_workload()
+        elif event.operation == 'finish':
+            # ignore this
+            pass
+        else:
+            print event
+            raise RuntimeError("operation '{}' is not supported".format(
+                event.operation))
 
 
 class SimulatorDES(Simulator):
