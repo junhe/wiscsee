@@ -64,6 +64,7 @@ class DftlextExp(Experiment):
 
     def setup_workload(self):
         self.conf["workload_src"] = LBAGENERATOR
+        self.conf["lba_workload_class"] = "TestWorkload"
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
