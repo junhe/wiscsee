@@ -294,6 +294,64 @@ class TestWorkload(LBAWorkloadGenerator):
             yield event
 
 
+class ExtentTestWorkload(LBAWorkloadGenerator):
+    def __init__(self, confobj):
+        if not isinstance(confobj, config.Config):
+            raise TypeError("confobj is not config.Config. It is {}".
+                format(type(confobj).__name__))
+        self.conf = confobj
+
+        self.sector_size = self.conf['sector_size']
+        self.ftl_type = self.conf['ftl_type']
+        if self.ftl_type == 'dftl' or self.ftl_type == 'dftlext':
+            self.over_provisioning = self.conf['dftl']['over_provisioning']
+        elif self.ftl_type == 'nkftl':
+            self.over_provisioning = self.conf['nkftl']['provision_ratio']
+        else:
+            raise RuntimeError("FTL type {} is not supported".format(
+                self.ftl_type))
+
+    def test_random(self):
+        w = 'write'
+        r = 'read'
+        d = 'discard'
+        ops = [w, r, d]
+
+        events = []
+        maxpage = 0
+
+        lba_span = int(self.conf.total_num_pages() / self.over_provisioning)
+
+        max_access_pages = 16
+        for i in range(10):
+            op = random.choice(ops)
+            page = int(random.random() * (lba_span - max_access_pages))
+            npages = random.randint(1, max_access_pages)
+            if maxpage < page:
+                maxpage = page
+            events.append( (op, page, npages) )
+
+        for page in range(maxpage):
+            events.append( (r, page, 1) )
+
+        return events
+
+    def __iter__(self):
+        yield simulator.Event(sector_size = self.sector_size,
+                pid = 0, operation = 'enable_recorder',
+                offset = 0, size = 0)
+
+        events = self.test_random()
+
+        for op, lpn, npages in events:
+            offset = lpn * self.conf['flash_page_size']
+            size = self.conf["flash_page_size"] * npages
+            event = simulator.Event(sector_size = self.sector_size,
+                    pid = 0, operation = op, offset = offset,
+                    size = size)
+            yield event
+
+
 class Random(LBAWorkloadGenerator):
     def __init__(self, confobj):
         if not isinstance(confobj, config.Config):

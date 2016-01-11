@@ -227,7 +227,7 @@ class FtlBuilder(object):
     def sec_write(self, sector, count, data):
         raise NotImplementedError
 
-    def sec_erase(self, sector, count):
+    def sec_discard(self, sector, count):
         raise NotImplementedError
 
     def debug_info(self):

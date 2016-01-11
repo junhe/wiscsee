@@ -86,10 +86,7 @@ class Simulator(object):
                 "supported.".format(
                     self.conf['simulation_processor']))
 
-        if self.conf['ftl_type'] == 'tpftl':
-            self.interface_level = 'range'
-        else:
-            self.interface_level = 'page'
+        self.interface_level = self.conf['interface_level']
 
     def process_event_e2e_test(self, event):
         if event.operation == 'read':
@@ -255,6 +252,39 @@ class SimulatorNonDES(Simulator):
                 sys.stdout.flush()
 
         self.ftl.post_processing()
+
+    def process_event_extent(self, event):
+        assert self.interface_level != 'page', \
+                "current interface level: {}".format(self.interface_level)
+        if event.operation == 'read':
+            data = self.ftl.sec_read(
+                sector = event.sector,
+                count = event.sector_count)
+        elif event.operation == 'write':
+            self.ftl.sec_write(
+                sector = event.sector,
+                count = event.sector_count,
+                data = None)
+        elif event.operation == 'discard':
+            self.ftl.sec_discard(
+                sector = event.sector,
+                count = event.sector_count)
+        elif event.operation == 'enable_recorder':
+            self.ftl.enable_recording()
+        elif event.operation == 'disable_recorder':
+            self.ftl.disable_recording()
+        elif event.operation == 'workloadstart':
+            self.ftl.pre_workload()
+        elif event.operation == 'finish':
+            # ignore this
+            pass
+        else:
+            print event
+            raise RuntimeError("operation '{}' is not supported".format(
+                event.operation))
+
+
+
 
 class SimulatorDES(Simulator):
     def __init__(self, conf, event_iter):

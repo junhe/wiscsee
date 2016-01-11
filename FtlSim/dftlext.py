@@ -1759,6 +1759,29 @@ class Dftl(ftlbuilder.FtlBuilder):
         # garbage collection checking and possibly doing
         # self.garbage_collector.try_gc()
 
+    def sec_read(self, sector, count):
+        """
+        There are two parts here.
+        1. Translation all LPN to PPN
+        2. Read the PPNs in parallel
+
+        Note that the tranlation may incur GC
+        It returns an array of data.
+        """
+        page_start, page_count = self.conf.sec_ext_to_page_ext(sector, count)
+        return
+
+        ppns = []
+        for lpn in range(page_start, page_start + page_count):
+            ppn = self.mapping_manager.lpn_to_ppn(lpn)
+
+
+    def sec_write(self, sector, count, data = None):
+        page_start, page_count = self.conf.sec_ext_to_page_ext(sector, count)
+
+    def sec_discard(self, sector, count):
+        page_start, page_count = self.conf.sec_ext_to_page_ext(sector, count)
+
     def pre_workload(self):
         self.global_helper.timeline.turn_on()
 
