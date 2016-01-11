@@ -299,7 +299,6 @@ class SimulatorDES(Simulator):
         print 'simulator type:', self.ftl.get_ftl_name()
 
     def process_event_e2e_test(self, event):
-        print 'using e2e.....................', event.operation
         if event.operation == 'read':
             event.offset = int(event.offset)
             event.size = int(event.size)

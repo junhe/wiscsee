@@ -156,7 +156,6 @@ class DftlDESTest(unittest.TestCase):
         exp = DftlDESExp()
         exp.main()
 
-
 class DmftlDESTest(unittest.TestCase):
     def test_Dmftl(self):
         exp = DmftlDESExp()
