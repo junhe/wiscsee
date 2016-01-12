@@ -83,6 +83,8 @@ class Simulator(object):
             self.event_processor = self.process_event_extent
         elif self.conf['simulation_processor'] == 'extent_e2e':
             self.event_processor = self.process_event_extent_e2e
+            # logical sector number -> data
+            self.lsn_to_data = {}
         else:
             raise RuntimeError("simulation processor: {} is not " \
                 "supported.".format(
@@ -285,22 +287,69 @@ class SimulatorNonDES(Simulator):
             raise RuntimeError("operation '{}' is not supported".format(
                 event.operation))
 
+    def random_data(self, sector):
+        randnum = random.randint(0, 10000)
+        content = "{}.{}".format(sector, randnum)
+        return content
+
+    def write_extent(self, event):
+        self.ftl.sec_write(
+                sector = event.sector,
+                count = event.sector_count,
+                data = None)
+
+    def read_extent(self, event):
+        """
+        read extent from flash and check if the data is correct.
+        """
+        self.ftl.sec_read(
+                sector = event.sector,
+                count = event.sector_count)
+
+    def discard_extent(self, event):
+        self.ftl.sec_discard(
+            sector = event.sector,
+            count = event.sector_count)
+
+    def write_extent_e2e(self, event):
+        """
+        1. Generate random data
+        2. Copy random data to lsn_to_data
+        3. Write data by ftl
+        """
+        data = []
+        for sec in range(event.sector, event.sector + event.sector_count):
+            content = self.random_data(sec)
+            self.lsn_to_data[sec] = content
+            data.append(content)
+
+        self.ftl.sec_write(
+                sector = event.sector,
+                count = event.sector_count,
+                data = data)
+
+    def read_extent_e2e(self, event):
+        """
+        read extent from flash and check if the data is correct.
+        """
+        data = self.ftl.sec_read(
+                sector = event.sector,
+                count = event.sector_count)
+
+    def discard_extent_e2e(self, event):
+        self.ftl.sec_discard(
+            sector = event.sector,
+            count = event.sector_count)
+
     def process_event_extent_e2e(self, event):
         assert self.interface_level != 'page', \
                 "current interface level: {}".format(self.interface_level)
         if event.operation == 'read':
-            data = self.ftl.sec_read(
-                sector = event.sector,
-                count = event.sector_count)
+            self.read_extent_e2e(event)
         elif event.operation == 'write':
-            self.ftl.sec_write(
-                sector = event.sector,
-                count = event.sector_count,
-                data = None)
+            self.write_extent_e2e(event)
         elif event.operation == 'discard':
-            self.ftl.sec_discard(
-                sector = event.sector,
-                count = event.sector_count)
+            self.discard_extent_e2e(event)
         elif event.operation == 'enable_recorder':
             self.ftl.enable_recording()
         elif event.operation == 'disable_recorder':
