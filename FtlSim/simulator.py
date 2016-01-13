@@ -156,9 +156,9 @@ class SimulatorNonDES(Simulator):
 
         self.ftl.post_processing()
 
-    def random_data(self, sector):
+    def random_data(self, addr):
         randnum = random.randint(0, 10000)
-        content = "{}.{}".format(sector, randnum)
+        content = "{}.{}".format(addr, randnum)
         return content
 
 class SimulatorNonDESSpeed(SimulatorNonDES):
