@@ -248,9 +248,7 @@ class SimulatorNonDESe2elba(SimulatorNonDES):
         pages = self.conf.off_size_to_page_list(event.offset,
             event.size)
         for page in pages:
-            # generate random content
-            content = random.randint(0, 10000)
-            content = "{}.{}".format(page, content)
+            content = self.random_data(page)
             self.ftl.lba_write(page, data = content, pid = event.pid)
             self.lpn_to_data[page] = content
 
