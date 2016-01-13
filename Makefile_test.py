@@ -68,7 +68,7 @@ class DftlextExp(Experiment):
         self.conf['ftl_type'] = 'dftlext'
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
-        devsize_mb = 1024
+        devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_page_size'])
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
@@ -97,7 +97,7 @@ class DftlextExp2(Experiment):
         self.conf['ftl_type'] = 'dftlext'
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
-        devsize_mb = 1024
+        devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_page_size'])
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
@@ -126,7 +126,7 @@ class DftlextExpE2e(Experiment):
         self.conf['ftl_type'] = 'dftlext'
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
-        devsize_mb = 1024
+        devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_page_size'])
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
