@@ -227,6 +227,18 @@ class SimulatorNonDESe2e(SimulatorNonDES):
                 sector = event.sector,
                 count = event.sector_count)
 
+        self.check_read(event, data)
+
+    def check_read(self, event, data):
+        for i, sec in enumerate(range(event.sector,
+            event.sector + event.sector_count)):
+            if self.lsn_to_data.get(sec, None) != data[i]:
+                raise RuntimeError("Data is not correct. Got: {read}, "\
+                        "Correct: {correct}. sector={sec}".format(
+                        read = data[i],
+                        correct = self.lsn_to_data.get(sec, None),
+                        sec = sec))
+
     def discard(self, event):
         self.ftl.sec_discard(
             sector = event.sector,
