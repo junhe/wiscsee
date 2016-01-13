@@ -55,6 +55,18 @@ class Simulator(object):
     def get_sim_type(self):
         return
 
+    @abc.abstractmethod
+    def write(self):
+        return
+
+    @abc.abstractmethod
+    def read(self):
+        return
+
+    @abc.abstractmethod
+    def discard(self):
+        return
+
     def __init__(self, conf, event_iter):
         "conf is class Config"
         if not isinstance(conf, config.Config):
@@ -74,65 +86,13 @@ class Simulator(object):
         if self.conf.has_key('enable_e2e_test'):
             raise RuntimeError("enable_e2e_test is deprecated")
 
-        if self.conf['simulation_processor'] == 'e2e':
-            self.event_processor = self.process_event_e2e_test
-            self.lpn_to_data = {}
-        elif self.conf['simulation_processor'] == 'regular':
-            self.event_processor = self.process_event
-        elif self.conf['simulation_processor'] == 'extent':
-            self.event_processor = self.process_event_extent
-        elif self.conf['simulation_processor'] == 'extent_e2e':
-            self.event_processor = self.process_event_extent_e2e
-            # logical sector number -> data
-            self.lsn_to_data = {}
-        else:
-            raise RuntimeError("simulation processor: {} is not " \
-                "supported.".format(
-                    self.conf['simulation_processor']))
-
-        self.interface_level = self.conf['interface_level']
-
-    def process_event_e2e_test(self, event):
+    def process_event(self, event):
         if event.operation == 'read':
-            event.offset = int(event.offset)
-            event.size = int(event.size)
-            assert self.interface_level == 'page'
-            pages = self.conf.off_size_to_page_list(event.offset,
-                event.size, force_alignment = False)
-            for page in pages:
-                data = self.ftl.lba_read(page, pid = event.pid)
-                correct = self.lpn_to_data.get(page, None)
-                if data != correct:
-                    print "!!!!!!!!!! Correct: {}, Got: {}".format(
-                    self.lpn_to_data.get(page, None), data)
-                    raise RuntimeError()
-
+            self.read(event)
         elif event.operation == 'write':
-            event.offset = int(event.offset)
-            event.size = int(event.size)
-            assert self.interface_level == 'page'
-            pages = self.conf.off_size_to_page_list(event.offset,
-                event.size)
-            for page in pages:
-                # generate random content
-                content = random.randint(0, 10000)
-                content = "{}.{}".format(page, content)
-                self.ftl.lba_write(page, data = content, pid = event.pid)
-                self.lpn_to_data[page] = content
-
+            self.write(event)
         elif event.operation == 'discard':
-            event.offset = int(event.offset)
-            event.size = int(event.size)
-            assert self.interface_level == 'page'
-            pages = self.conf.off_size_to_page_list(event.offset,
-                event.size)
-            for page in pages:
-                self.ftl.lba_discard(page, pid = event.pid)
-                try:
-                    del self.lpn_to_data[page]
-                except KeyError:
-                    pass
-
+            self.discard(event)
         elif event.operation == 'enable_recorder':
             self.ftl.enable_recording()
         elif event.operation == 'disable_recorder':
@@ -147,69 +107,11 @@ class Simulator(object):
             raise RuntimeError("operation '{}' is not supported".format(
                 event.operation))
 
-    def process_event(self, event):
-        if event.operation == 'read':
-            event.offset = int(event.offset)
-            event.size = int(event.size)
-            if self.interface_level == 'page':
-                pages = self.conf.off_size_to_page_list(event.offset,
-                    event.size, force_alignment = False)
-                for page in pages:
-                    self.ftl.lba_read(page, pid = event.pid)
-            elif self.interface_level == 'range':
-                start_page, npages = self.conf.off_size_to_page_range(
-                    event.offset, event.size, force_alignment = False)
-                self.ftl.read_range(start_page, npages)
-            else:
-                raise RuntimeError("interface_level {} not supported".format(
-                    self.interface_level))
 
-        elif event.operation == 'write':
-            event.offset = int(event.offset)
-            event.size = int(event.size)
-            if self.interface_level == 'page':
-                pages = self.conf.off_size_to_page_list(event.offset,
-                    event.size)
-                for page in pages:
-                    self.ftl.lba_write(page, pid = event.pid)
-            elif self.interface_level == 'range':
-                start_page, npages = self.conf.off_size_to_page_range(
-                    event.offset, event.size)
-                self.ftl.write_range(start_page, npages)
-            else:
-                raise RuntimeError("interface_level {} not supported".format(
-                    self.interface_level))
-
-        elif event.operation == 'discard':
-            event.offset = int(event.offset)
-            event.size = int(event.size)
-            if self.interface_level == 'page':
-                pages = self.conf.off_size_to_page_list(event.offset,
-                    event.size)
-                for page in pages:
-                    self.ftl.lba_discard(page, pid = event.pid)
-            elif self.interface_level == 'range':
-                start_page, npages = self.conf.off_size_to_page_range(
-                    event.offset, event.size)
-                self.ftl.discard_range(start_page, npages)
-            else:
-                raise RuntimeError("interface_level {} not supported".format(
-                    self.interface_level))
-
-        elif event.operation == 'enable_recorder':
-            self.ftl.enable_recording()
-        elif event.operation == 'disable_recorder':
-            self.ftl.disable_recording()
-        elif event.operation == 'workloadstart':
-            self.ftl.pre_workload()
-        elif event.operation == 'finish':
-            # ignore this
-            pass
-        else:
-            raise RuntimeError("operation '{}' is not supported".format(
-                event.operation))
 
 class SimulatorNonDES(Simulator):
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self, conf, event_iter):
         super(SimulatorNonDES, self).__init__(conf, event_iter)
 
@@ -240,16 +142,13 @@ class SimulatorNonDES(Simulator):
         self.ftl = ftl_class(self.conf, self.rec,
             flash.Flash(recorder = self.rec, confobj = self.conf))
 
-    def get_sim_type(self):
-        return "NonDES"
-
     def run(self):
         """
         You must garantee that each item in event_iter is a class Event
         """
         cnt = 0
         for event in self.event_iter:
-            self.event_processor(event)
+            self.process_event(event)
             cnt += 1
             if cnt % 100 == 0:
                 print '|',
@@ -257,48 +156,26 @@ class SimulatorNonDES(Simulator):
 
         self.ftl.post_processing()
 
-    def process_event_extent(self, event):
-        assert self.interface_level != 'page', \
-                "current interface level: {}".format(self.interface_level)
-        if event.operation == 'read':
-            data = self.ftl.sec_read(
-                sector = event.sector,
-                count = event.sector_count)
-        elif event.operation == 'write':
-            self.ftl.sec_write(
-                sector = event.sector,
-                count = event.sector_count,
-                data = None)
-        elif event.operation == 'discard':
-            self.ftl.sec_discard(
-                sector = event.sector,
-                count = event.sector_count)
-        elif event.operation == 'enable_recorder':
-            self.ftl.enable_recording()
-        elif event.operation == 'disable_recorder':
-            self.ftl.disable_recording()
-        elif event.operation == 'workloadstart':
-            self.ftl.pre_workload()
-        elif event.operation == 'finish':
-            # ignore this
-            pass
-        else:
-            print event
-            raise RuntimeError("operation '{}' is not supported".format(
-                event.operation))
-
     def random_data(self, sector):
         randnum = random.randint(0, 10000)
         content = "{}.{}".format(sector, randnum)
         return content
 
-    def write_extent(self, event):
+class SimulatorNonDESSpeed(SimulatorNonDES):
+    """
+    This one does not do e2e test
+    It uses extents
+    """
+    def get_sim_type(self):
+        return "NonDESSpeed"
+
+    def write(self, event):
         self.ftl.sec_write(
                 sector = event.sector,
                 count = event.sector_count,
                 data = None)
 
-    def read_extent(self, event):
+    def read(self, event):
         """
         read extent from flash and check if the data is correct.
         """
@@ -306,12 +183,26 @@ class SimulatorNonDES(Simulator):
                 sector = event.sector,
                 count = event.sector_count)
 
-    def discard_extent(self, event):
+    def discard(self, event):
         self.ftl.sec_discard(
             sector = event.sector,
             count = event.sector_count)
 
-    def write_extent_e2e(self, event):
+
+class SimulatorNonDESe2e(SimulatorNonDES):
+    """
+    This one does not do e2e test
+    It uses extents
+    """
+    def __init__(self, conf, event_iter):
+        super(SimulatorNonDESe2e, self).__init__(conf, event_iter)
+
+        self.lsn_to_data = {}
+
+    def get_sim_type(self):
+        return "NonDESe2e"
+
+    def write(self, event):
         """
         1. Generate random data
         2. Copy random data to lsn_to_data
@@ -328,7 +219,7 @@ class SimulatorNonDES(Simulator):
                 count = event.sector_count,
                 data = data)
 
-    def read_extent_e2e(self, event):
+    def read(self, event):
         """
         read extent from flash and check if the data is correct.
         """
@@ -336,160 +227,51 @@ class SimulatorNonDES(Simulator):
                 sector = event.sector,
                 count = event.sector_count)
 
-    def discard_extent_e2e(self, event):
+    def discard(self, event):
         self.ftl.sec_discard(
             sector = event.sector,
             count = event.sector_count)
 
-    def process_event_extent_e2e(self, event):
-        assert self.interface_level != 'page', \
-                "current interface level: {}".format(self.interface_level)
-        if event.operation == 'read':
-            self.read_extent_e2e(event)
-        elif event.operation == 'write':
-            self.write_extent_e2e(event)
-        elif event.operation == 'discard':
-            self.discard_extent_e2e(event)
-        elif event.operation == 'enable_recorder':
-            self.ftl.enable_recording()
-        elif event.operation == 'disable_recorder':
-            self.ftl.disable_recording()
-        elif event.operation == 'workloadstart':
-            self.ftl.pre_workload()
-        elif event.operation == 'finish':
-            # ignore this
-            pass
-        else:
-            print event
-            raise RuntimeError("operation '{}' is not supported".format(
-                event.operation))
-
-
-class SimulatorDES(Simulator):
+class SimulatorNonDESe2elba(SimulatorNonDES):
+    """
+    This one is e2e and use lba interface
+    """
     def __init__(self, conf, event_iter):
-        super(SimulatorDES, self).__init__(conf, event_iter)
+        super(SimulatorNonDESe2elba, self).__init__(conf, event_iter)
 
-        if self.conf['ftl_type'] == 'dftlDES':
-            ftl_class = dftlDES.Dftl
-        elif self.conf['ftl_type'] == 'dmftlDES':
-            ftl_class = dmftlDES.DmftlDES
-        else:
-            raise ValueError("ftl_type {} is not defined"\
-                .format(self.conf['ftl_type']))
-
-        self.env = simpy.Environment()
-
-        self.ftl = ftl_class(self.conf, self.rec,
-            flash.Flash(recorder = self.rec, confobj = self.conf),
-            simpy_env = self.env
-            )
+        self.lpn_to_data = {}
 
     def get_sim_type(self):
-        return "DES"
+        return "NonDESe2elba"
 
-    def sim_proc(self):
-        cnt = 0
-        for event in self.event_iter:
-            yield self.env.process( self.event_processor(event) )
-            yield self.env.timeout(1 * MSEC)
-            cnt += 1
-            if cnt % 100 == 0:
-                print '|',
-                sys.stdout.flush()
+    def write(self, event):
+        pages = self.conf.off_size_to_page_list(event.offset,
+            event.size)
+        for page in pages:
+            # generate random content
+            content = random.randint(0, 10000)
+            content = "{}.{}".format(page, content)
+            self.ftl.lba_write(page, data = content, pid = event.pid)
+            self.lpn_to_data[page] = content
 
-        self.ftl.post_processing()
+    def read(self, event):
+        pages = self.conf.off_size_to_page_list(event.offset,
+            event.size, force_alignment = False)
+        for page in pages:
+            data = self.ftl.lba_read(page, pid = event.pid)
+            correct = self.lpn_to_data.get(page, None)
+            if data != correct:
+                print "!!!!!!!!!! Correct: {}, Got: {}".format(
+                self.lpn_to_data.get(page, None), data)
+                raise RuntimeError()
 
-        print 'time of finishing', self.env.now
-
-    def run(self):
-        self.env.process(self.sim_proc())
-        self.env.run()
-        print 'simulator type:', self.get_sim_type()
-        print 'simulator type:', self.ftl.get_ftl_name()
-
-    def process_event_e2e_test(self, event):
-        if event.operation == 'read':
-            event.offset = int(event.offset)
-            event.size = int(event.size)
-            assert self.interface_level == 'page'
-            pages = self.conf.off_size_to_page_list(event.offset,
-                event.size, force_alignment = False)
-            for page in pages:
-                data = yield self.env.process(
-                        self.ftl.lba_read(page, pid = event.pid))
-                correct = self.lpn_to_data.get(page, None)
-                if data != correct:
-                    print "!!!!!!!!!! Correct: {}, Got: {}".format(
-                    self.lpn_to_data.get(page, None), data)
-                    raise RuntimeError()
-
-        elif event.operation == 'write':
-            event.offset = int(event.offset)
-            event.size = int(event.size)
-            assert self.interface_level == 'page'
-            pages = self.conf.off_size_to_page_list(event.offset,
-                event.size)
-            for page in pages:
-                # generate random content
-                content = random.randint(0, 10000)
-                content = "{}.{}".format(page, content)
-                yield self.env.process(
-                    self.ftl.lba_write(page, data = content, pid = event.pid))
-                self.lpn_to_data[page] = content
-
-        elif event.operation == 'discard':
-            event.offset = int(event.offset)
-            event.size = int(event.size)
-            assert self.interface_level == 'page'
-            pages = self.conf.off_size_to_page_list(event.offset,
-                event.size)
-            for page in pages:
-                yield self.env.process(
-                    self.ftl.lba_discard(page, pid = event.pid))
-                try:
-                    del self.lpn_to_data[page]
-                except KeyError:
-                    pass
-
-        elif event.operation == 'enable_recorder':
-            self.ftl.enable_recording()
-        elif event.operation == 'disable_recorder':
-            self.ftl.disable_recording()
-        elif event.operation == 'workloadstart':
-            self.ftl.pre_workload()
-        elif event.operation == 'finish':
-            # ignore this
-            pass
-        else:
-            print event
-            raise RuntimeError("operation '{}' is not supported".format(
-                event.operation))
-
-    def process_event_extent(self, event):
-        if event.operation == 'read':
-            yield self.env.process(
-                    self.ftl.sec_read( sector = event.sector,
-                    count = event.sector_count ) )
-        elif event.operation == 'write':
-            yield self.env.process(
-                    self.ftl.sec_write( sector = event.sector,
-                    count = event.sector_count, data = None ) )
-        elif event.operation == 'discard':
-            yield self.env.process(
-                    self.ftl.sec_discard( sector = event.sector,
-                    count = event.sector_count ) )
-        elif event.operation == 'enable_recorder':
-            self.ftl.enable_recording()
-        elif event.operation == 'disable_recorder':
-            self.ftl.disable_recording()
-        elif event.operation == 'workloadstart':
-            self.ftl.pre_workload()
-        elif event.operation == 'finish':
-            # ignore this
-            pass
-        else:
-            raise RuntimeError("operation '{}' is not supported".format(
-                event.operation))
-
-
+    def discard(self, event):
+        pages = self.conf.off_size_to_page_list(event.offset,
+            event.size)
+        for page in pages:
+            self.ftl.lba_discard(page, pid = event.pid)
+            try:
+                del self.lpn_to_data[page]
+            except KeyError:
+                pass
 
