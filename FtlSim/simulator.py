@@ -33,7 +33,7 @@ class Event(object):
 
         assert size % sector_size == 0, \
             "size is not multiple of sector size"
-        self.sector_count = size
+        self.sector_count = size / sector_size
 
 # Convert before comming here
 # def event_line_to_event(line):
@@ -214,6 +214,7 @@ class SimulatorNonDESe2e(SimulatorNonDES):
             self.lsn_to_data[sec] = content
             data.append(content)
 
+        print 'EVVVVVVVVVENT', event.sector, event.sector_count
         self.ftl.sec_write(
                 sector = event.sector,
                 count = event.sector_count,

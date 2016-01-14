@@ -135,6 +135,44 @@ class DftlextExpE2e(Experiment):
         runtime_update(self.conf)
         workflow(self.conf)
 
+class DftlextExpFTLONLY(Experiment):
+    """
+    This one is for testing the new extent interface with e2e data test
+    """
+    def setup_environment(self):
+        metadata_dic = choose_exp_metadata(self.conf, interactive = False)
+        self.conf.update(metadata_dic)
+
+    def setup_workload(self):
+        pass
+
+    def setup_ftl(self):
+        self.conf['ftl_type'] = 'dftlext'
+        self.conf['simulator_class'] = 'SimulatorNonDESe2e'
+
+        devsize_mb = 16
+        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_page_size'])
+        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+
+        runtime_update(self.conf)
+
+        self.rec = FtlSim.recorder.Recorder(
+            output_target = self.conf['output_target'],
+            path = self.conf.get_output_file_path(),
+            verbose_level = self.conf['verbose_level'],
+            print_when_finished = self.conf['print_when_finished']
+            )
+
+        self.ftl = FtlSim.dftlext.Dftl(self.conf, self.rec,
+            FtlSim.flash.Flash(recorder = self.rec, confobj = self.conf))
+
+    def run(self):
+        # print 'rrrrrrrrread', self.ftl.sec_read(0, 3)
+        n = 512 * 8
+        print 'wrrrrrrrrrite', self.ftl.sec_write(0, n, data = list(range(n)))
+        # print 'flash data', self.ftl.flash.data
+        self.ftl.sec_read(0, n)
 
 class DftlTest(unittest.TestCase):
     def test_Dftl(self):
@@ -147,12 +185,20 @@ class DftlextTest(unittest.TestCase):
         exp = DftlextExp()
         exp.main()
 
+class DftlextTest2(unittest.TestCase):
     def test_extent(self):
         exp = DftlextExp2()
         exp.main()
 
+class DftlextTest3(unittest.TestCase):
     def test_extent_e2e(self):
         exp = DftlextExpE2e()
+        exp.main()
+
+
+class DftlextTestFTLONLY(unittest.TestCase):
+    def test_ftl_only(self):
+        exp = DftlextExpFTLONLY()
         exp.main()
 
 

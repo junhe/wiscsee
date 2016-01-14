@@ -145,6 +145,9 @@ class Config(dict):
                 "starting sector ({}) is not aligned with page size {}"\
                 .format(sector, self['flash_page_size'])
         page_count = (count * self['sector_size']) / self['flash_page_size']
+        assert (count * self['sector_size']) % self['flash_page_size'] == 0, \
+                "total size {} bytes is not multiple of page size {} bytes."\
+                .format(count * self['sector_size'], self['flash_page_size'])
         return page, page_count
 
     def off_size_to_sec_count(self, offset, size):

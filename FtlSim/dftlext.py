@@ -804,6 +804,37 @@ class MappingManager(object):
     def __del__(self):
         print self.flash.recorder.count_counter
 
+    def ppns_for_writing(self, lpns):
+        """
+        This function returns ppns that can be written.
+
+        The ppns returned are mapped by lpns, one to one
+        """
+        ppns = []
+        for lpn in lpns:
+            old_ppn = self.lpn_to_ppn(lpn)
+            new_ppn = self.block_pool.next_data_page_to_program()
+            ppns.append(new_ppn)
+            # CMT
+            # lpn must be in cache thanks to self.mapping_manager.lpn_to_ppn()
+            self.cached_mapping_table.overwrite_entry(
+                lpn = lpn, ppn = new_ppn, dirty = True)
+            # OOB
+            self.oob.new_lba_write(lpn = lpn, old_ppn = old_ppn,
+                new_ppn = new_ppn)
+
+        return ppns
+
+    def ppns_for_reading(self, lpns):
+        """
+        """
+        ppns = []
+        for lpn in lpns:
+            ppn = self.lpn_to_ppn(lpn)
+            ppns.append(ppn)
+
+        return ppns
+
     def lpn_to_ppn(self, lpn):
         """
         This method does not fail. It will try everything to find the ppn of
@@ -1641,6 +1672,9 @@ class Dftl(ftlbuilder.FtlBuilder):
         # We should initialize Globaltranslationdirectory in Dftl
         self.mapping_manager.initialize_mappings()
 
+        self.n_sec_per_page = self.conf['flash_page_size'] \
+                / self.conf['sector_size']
+
     # FTL APIs
     def lba_read(self, lpn, pid = None):
         """
@@ -1769,15 +1803,59 @@ class Dftl(ftlbuilder.FtlBuilder):
         It returns an array of data.
         """
         page_start, page_count = self.conf.sec_ext_to_page_ext(sector, count)
-        return
 
-        ppns = []
-        for lpn in range(page_start, page_start + page_count):
-            ppn = self.mapping_manager.lpn_to_ppn(lpn)
+        ppns_to_read = self.mapping_manager.ppns_for_reading(
+            range(page_start, page_start + page_count))
 
+        if self.flash.store_data == True:
+            data = []
+            for ppn in ppns_to_read:
+                data.append( self.flash.page_read(ppn, DATA_USER) )
+            data = self.page_to_sec_items(data)
+            return data
+        else:
+            for ppn in ppns_to_read:
+                self.flash.page_read(ppn, DATA_USER)
+
+    def page_to_sec_items(self, data):
+        ret = []
+        for page_data in data:
+            if page_data == None:
+                page_data = [None] * self.n_sec_per_page
+            for item in page_data:
+                ret.append(item)
+
+        return ret
+
+    def sec_to_page_items(self, data):
+        sec_per_page = self.conf['flash_page_size'] / self.conf['sector_size']
+        n_pages = len(data) / sec_per_page
+        print sec_per_page, n_pages
+
+        new_data = []
+        for page in range(n_pages):
+            page_items = []
+            for sec in range(sec_per_page):
+                page_items.append(data[page * sec_per_page + sec])
+            new_data.append(page_items)
+
+        return new_data
 
     def sec_write(self, sector, count, data = None):
         page_start, page_count = self.conf.sec_ext_to_page_ext(sector, count)
+        print '............................................................sec_write', sector, count, 'pages', page_start, page_count
+
+        ppns_to_write = self.mapping_manager.ppns_for_writing(
+            range(page_start, page_start + page_count))
+        print 'ppns_to_write', ppns_to_write
+
+        if data == None:
+            for ppn in ppns_to_write:
+                self.flash.page_write(ppn, DATA_USER)
+        else:
+            data = self.sec_to_page_items(data)
+            for ppn, item in zip(ppns_to_write, data):
+                self.flash.page_write(ppn, DATA_USER, data = item)
 
     def sec_discard(self, sector, count):
         page_start, page_count = self.conf.sec_ext_to_page_ext(sector, count)
@@ -1790,11 +1868,4 @@ class Dftl(ftlbuilder.FtlBuilder):
         This function is called after the simulation.
         """
         self.global_helper.timeline.save()
-
-
-def main():
-    pass
-
-if __name__ == '__main__':
-    main()
 
