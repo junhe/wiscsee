@@ -35,14 +35,6 @@ class Event(object):
             "size is not multiple of sector size"
         self.sector_count = size / sector_size
 
-# Convert before comming here
-# def event_line_to_event(line):
-    # keys = ['pid', 'operation', 'offset', 'size']
-    # items = line.strip('\n').split()
-    # # items[1] = eval(items[1]) # offset
-    # # items[2] = eval(items[2]) # size
-    # event = dict(zip(keys, items))
-    # return event
 
 class Simulator(object):
     __metaclass__ = abc.ABCMeta
