@@ -323,7 +323,7 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
         lba_span = int(self.conf.total_num_pages() / self.over_provisioning)
 
         max_access_pages = 16
-        for i in range(10):
+        for i in range(100):
             op = random.choice(ops)
             page = int(random.random() * (lba_span - max_access_pages))
             npages = random.randint(1, max_access_pages)

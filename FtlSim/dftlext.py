@@ -1860,6 +1860,9 @@ class Dftl(ftlbuilder.FtlBuilder):
     def sec_discard(self, sector, count):
         page_start, page_count = self.conf.sec_ext_to_page_ext(sector, count)
 
+        for lpn in range(page_start, page_start + page_count):
+            self.lba_discard(lpn)
+
     def pre_workload(self):
         self.global_helper.timeline.turn_on()
 

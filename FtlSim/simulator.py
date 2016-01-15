@@ -237,6 +237,13 @@ class SimulatorNonDESe2e(SimulatorNonDES):
             sector = event.sector,
             count = event.sector_count)
 
+        for sec in range(event.sector, event.sector + event.sector_count):
+            try:
+                del self.lsn_to_data[sec]
+            except KeyError:
+                pass
+
+
 class SimulatorNonDESe2elba(SimulatorNonDES):
     """
     This one is e2e and use lba interface
