@@ -1817,6 +1817,8 @@ class Dftl(ftlbuilder.FtlBuilder):
             for ppn in ppns_to_read:
                 self.flash.page_read(ppn, DATA_USER)
 
+        self.garbage_collector.try_gc()
+
     def page_to_sec_items(self, data):
         ret = []
         for page_data in data:
@@ -1856,6 +1858,8 @@ class Dftl(ftlbuilder.FtlBuilder):
             data = self.sec_to_page_items(data)
             for ppn, item in zip(ppns_to_write, data):
                 self.flash.page_write(ppn, DATA_USER, data = item)
+
+        self.garbage_collector.try_gc()
 
     def sec_discard(self, sector, count):
         page_start, page_count = self.conf.sec_ext_to_page_ext(sector, count)
