@@ -238,17 +238,22 @@ class Config(dict):
         conf['n_pages_per_chip'] = n_pages_per_chip
         conf['n_pages_per_package'] = n_pages_per_package
 
+        conf['n_blocks_per_channel'] = conf['n_blocks_per_plane'] * \
+                conf['n_planes_per_chip'] * conf['n_chips_per_package'] * \
+                conf['n_packages_per_channel']
+        conf['n_blocks_per_dev'] = conf['n_blocks_per_channel'] * \
+                conf['n_channels_per_dev']
 
     def flash_default(self):
         flash_config = {
             # layout info
             "page_size"                : 2*KB,
-            "n_pages_per_block"        : 64,
+            "n_pages_per_block"        : 2,
             "n_blocks_per_plane"       : 2048,
-            "n_planes_per_chip"        : 4,
+            "n_planes_per_chip"        : 2,
             "n_chips_per_package"      : 2,
             "n_packages_per_channel"   : 1,
-            "n_channels_per_dev"       : 4,
+            "n_channels_per_dev"       : 2,
 
             # time info
             # TODO: these are fixed numbers, but they are random in real world
@@ -263,6 +268,8 @@ class Config(dict):
     def get_default_config(self):
         MOpt = WlRunner.filesystem.MountOption
 
+        flash_config = self.flash_default()
+
         confdic = {
             ############### Global #########
             "result_dir"            : None,
@@ -276,13 +283,13 @@ class Config(dict):
             "sector_size"           : 512,
 
             ########### For flash device ###
-            "flash_config"          : self.flash_default(),
+            "flash_config"          : flash_config,
 
             ############## For FtlSim ######
             "enable_simulation"     : True,
-            "flash_page_size"       : 4096,
-            "flash_npage_per_block" : 4,
-            "flash_num_blocks"      : None,
+            "flash_page_size"       : flash_config['page_size'],
+            "flash_npage_per_block" : flash_config['n_pages_per_block'],
+            "flash_num_blocks"      : flash_config['n_blocks_per_dev'],
             # "enable_e2e_test"       : False,
             "simulation_processor"  : 'e2e', # regular, extent
 

@@ -314,6 +314,16 @@ class Timeline(object):
             utils.table_to_file(real_sim_proc_times_table, real_sim_proc_times_path)
 
 
+def block_to_channel_block(conf, blocknum):
+    n_blocks_per_channel = conf['flash_config']['n_blocks_per_channel']
+    channel = blocknum / n_blocks_per_channel
+    block_off = blocknum % n_blocks_per_channel
+    return channel, block_off
+
+def channel_block_to_block(conf, channel, block_off):
+    n_blocks_per_channel = conf['flash_config']['n_blocks_per_channel']
+    return channel * n_blocks_per_channel + block_off
+
 class OutOfBandAreas(object):
     """
     It is used to hold page state and logical page number of a page.
@@ -432,7 +442,8 @@ class OutOfBandAreas(object):
 
         return lpns
 
-class BlockPool(object):
+
+class BlockPool_old(object):
     def __init__(self, confobj):
         self.conf = confobj
 
@@ -448,6 +459,247 @@ class BlockPool(object):
         else:
             # nobody has free block
             raise RuntimeError('No free blocks in device!!!!')
+
+        return blocknum
+
+    def pop_a_free_block_to_trans(self):
+        "take one block from freelist and add it to translation block list"
+        blocknum = self.pop_a_free_block()
+        self.trans_usedblocks.append(blocknum)
+        return blocknum
+
+    def pop_a_free_block_to_data(self):
+        "take one block from freelist and add it to data block list"
+        blocknum = self.pop_a_free_block()
+        self.data_usedblocks.append(blocknum)
+        return blocknum
+
+    def move_used_data_block_to_free(self, blocknum):
+        self.data_usedblocks.remove(blocknum)
+        self.freeblocks.append(blocknum)
+
+    def move_used_trans_block_to_free(self, blocknum):
+        self.trans_usedblocks.remove(blocknum)
+        self.freeblocks.append(blocknum)
+
+    def total_used_blocks(self):
+        return len(self.trans_usedblocks) + len(self.data_usedblocks)
+
+    def used_blocks(self):
+        return self.trans_usedblocks + self.data_usedblocks
+
+    def next_page_to_program(self, log_end_name_str, pop_free_block_func):
+        """
+        The following comment uses next_data_page_to_program() as a example.
+
+        it finds out the next available page to program
+        usually it is the page after log_end_pagenum.
+
+        If next=log_end_pagenum + 1 is in the same block with
+        log_end_pagenum, simply return log_end_pagenum + 1
+        If next=log_end_pagenum + 1 is out of the block of
+        log_end_pagenum, we need to pick a new block from self.freeblocks
+
+        This function is stateful, every time you call it, it will advance by
+        one.
+        """
+
+        if not hasattr(self, log_end_name_str):
+           # This is only executed for the first time
+           cur_block = pop_free_block_func()
+           # use the first page of this block to be the
+           next_page = self.conf.block_off_to_page(cur_block, 0)
+           # log_end_name_str is the page that is currently being operated on
+           setattr(self, log_end_name_str, next_page)
+
+           return next_page
+
+        cur_page = getattr(self, log_end_name_str)
+        cur_block, cur_off = self.conf.page_to_block_off(cur_page)
+
+        next_page = (cur_page + 1) % self.conf.total_num_pages()
+        next_block, next_off = self.conf.page_to_block_off(next_page)
+
+        if cur_block == next_block:
+            ret = next_page
+        else:
+            # get a new block
+            block = pop_free_block_func()
+            start, _ = self.conf.block_to_page_range(block)
+            ret = start
+
+        setattr(self, log_end_name_str, ret)
+        return ret
+
+    def next_data_page_to_program(self):
+        return self.next_page_to_program('data_log_end_ppn',
+            self.pop_a_free_block_to_data)
+
+    def next_translation_page_to_program(self):
+        return self.next_page_to_program('trans_log_end_ppn',
+            self.pop_a_free_block_to_trans)
+
+    def next_gc_data_page_to_program(self):
+        return self.next_page_to_program('gc_data_log_end_ppn',
+            self.pop_a_free_block_to_data)
+
+    def next_gc_translation_page_to_program(self):
+        return self.next_page_to_program('gc_trans_log_end_ppn',
+            self.pop_a_free_block_to_trans)
+
+    def current_blocks(self):
+        try:
+            cur_data_block, _ = self.conf.page_to_block_off(
+                self.data_log_end_ppn)
+        except AttributeError:
+            cur_data_block = None
+
+        try:
+            cur_trans_block, _ = self.conf.page_to_block_off(
+                self.trans_log_end_ppn)
+        except AttributeError:
+            cur_trans_block = None
+
+        try:
+            cur_gc_data_block, _ = self.conf.page_to_block_off(
+                self.gc_data_log_end_ppn)
+        except AttributeError:
+            cur_gc_data_block = None
+
+        try:
+            cur_gc_trans_block, _ = self.conf.page_to_block_off(
+                self.gc_trans_log_end_ppn)
+        except AttributeError:
+            cur_gc_trans_block = None
+
+        return (cur_data_block, cur_trans_block, cur_gc_data_block,
+            cur_gc_trans_block)
+
+    def __repr__(self):
+        ret = ' '.join(['freeblocks', repr(self.freeblocks)]) + '\n' + \
+            ' '.join(['trans_usedblocks', repr(self.trans_usedblocks)]) + \
+            '\n' + \
+            ' '.join(['data_usedblocks', repr(self.data_usedblocks)])
+        return ret
+
+    def visual(self):
+        block_states = [ 'O' if block in self.freeblocks else 'X'
+                for block in range(self.conf['flash_num_blocks'])]
+        return ''.join(block_states)
+
+    def used_ratio(self):
+        return (len(self.trans_usedblocks) + len(self.data_usedblocks))\
+            / float(self.conf['flash_num_blocks'])
+
+
+class BlockPool(object):
+    def __init__(self, confobj):
+        self.conf = confobj
+        self.n_channels = self.conf['flash_config']['n_channels_per_dev']
+        self.channel_pools = [ChannelBlockPool(self.conf)
+                for i in range(self.n_channels)]
+
+        self.cur_channel = 0
+
+    def iter_channels(self, funcname):
+        n = self.n_channels
+        while n > 0:
+            n -= 1
+            try:
+                block_off = eval("self.channel_pools[self.cur_channel].{}()"\
+                        .format(funcname))
+            except OutOfSpaceError:
+                pass
+            else:
+                return channel_block_to_block(self.conf, self.cur_channel,
+                        block_off)
+            finally:
+                self.cur_channel = (self.cur_channel + 1) % self.n_channels
+
+        raise OutOfSpaceError("Tried all channels. Out of Space")
+
+    def pop_a_free_block(self):
+        return self.iter_channels("pop_a_free_block")
+
+    def pop_a_free_block_to_trans(self):
+        return self.iter_channels("pop_a_free_block_to_trans")
+
+    def pop_a_free_block_to_data(self):
+        return self.iter_channels("pop_a_free_block_to_data")
+
+    def move_used_data_block_to_free(self, blocknum):
+        channel, block_off = block_to_channel_block(self.conf, blocknum)
+        self.channel_pools[channel].move_used_data_block_to_free(block_off)
+
+    def move_used_trans_block_to_free(self, blocknum):
+        channel, block_off = block_to_channel_block(self.conf, blocknum)
+        self.channel_pools[channel].move_used_trans_block_to_free(block_off)
+
+    def next_data_page_to_program(self):
+        return self.iter_channels("next_data_page_to_program")
+
+    def next_translation_page_to_program(self):
+        return self.iter_channels("next_translation_page_to_program")
+
+    def next_gc_data_page_to_program(self):
+        return self.iter_channels("next_gc_data_page_to_program")
+
+    def next_gc_translation_page_to_program(self):
+        return self.iter_channels("next_gc_translation_page_to_program")
+
+    def current_blocks(self):
+        cur_blocks = []
+        for channel in self.channel_pools:
+            cur_blocks.extend( channel.current_blocks() )
+
+        return current_blocks
+
+    def used_ratio(self):
+        n_used = 0
+        for channel in self.channel_pools:
+            n_used += channel.total_used_blocks()
+
+        return float(n_used) / (self.n_channels * \
+                self.conf['flash_config']['n_blocks_per_channel'])
+
+    def total_used_blocks(self):
+        total = 0
+        for channel in self.channel_pools:
+            total += channel.total_used_blocks()
+        return total
+
+    def used_blocks(self):
+        used = []
+        for channel in self.channel_pools:
+            used.append( channel.used_blocks() )
+        return used
+
+class OutOfSpaceError(RuntimeError):
+    pass
+
+
+class ChannelBlockPool(object):
+    """
+    This class maintains the free blocks and used blocks of a
+    flash channel.
+    The block number of each channel starts from 0.
+    """
+    def __init__(self, confobj):
+        self.conf = confobj
+
+        self.freeblocks = deque(
+            range(self.conf['flash_config']['n_blocks_per_channel']))
+
+        # initialize usedblocks
+        self.trans_usedblocks = []
+        self.data_usedblocks  = []
+
+    def pop_a_free_block(self):
+        if self.freeblocks:
+            blocknum = self.freeblocks.popleft()
+        else:
+            # nobody has free block
+            raise OutOfSpaceError('No free blocks in device!!!!')
 
         return blocknum
 
