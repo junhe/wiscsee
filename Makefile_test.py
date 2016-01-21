@@ -69,7 +69,7 @@ class DftlExp(Experiment):
         self.conf['simulator_class'] = 'SimulatorNonDESe2elba'
 
         devsize_mb = 1024
-        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_page_size'])
+        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf.page_size)
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
@@ -99,7 +99,7 @@ class DftlextExp(Experiment):
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
         devsize_mb = 16
-        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_page_size'])
+        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf.page_size)
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
@@ -134,7 +134,7 @@ class DftlextExp2(Experiment):
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
         devsize_mb = 16
-        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_page_size'])
+        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf.page_size)
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
@@ -169,7 +169,7 @@ class DftlextExpE2e(Experiment):
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
         devsize_mb = 16
-        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_page_size'])
+        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
@@ -197,7 +197,7 @@ class DftlextExpFTLONLY(Experiment):
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
         devsize_mb = 16
-        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_page_size'])
+        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
@@ -526,7 +526,7 @@ class TestDftextGC(unittest.TestCase):
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
         devsize_mb = 16
-        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_page_size'])
+        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 

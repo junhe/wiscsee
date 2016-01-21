@@ -30,15 +30,15 @@ class Sequential(LBAWorkloadGenerator):
             page = i % n_lba_pages # restrict to lba space
             if maxpage < page:
                 maxpage = page
-            offset = page * self.conf['flash_page_size']
-            size = self.conf["flash_page_size"]
+            offset = page * self.conf.page_size
+            size = self.conf.page_size
             event = 'write {} {}'.format(offset, size)
             yield event
 
         for i in range(maxpage):
             page = i
-            offset = page * self.conf['flash_page_size']
-            size = self.conf["flash_page_size"]
+            offset = page * self.conf.page_size
+            size = self.conf.page_size
             event = 'read {} {}'.format(offset, size)
             yield event
 
@@ -164,7 +164,7 @@ class Manual(LBAWorkloadGenerator):
         print "Number of flash blocks:", self.conf['flash_num_blocks']
         print "Number of pages:", self.conf.total_num_pages()
         print "LBA span of lba:", lba_span
-        print "LBA span of lba (MB):", lba_span * self.conf['flash_page_size'] / float(2**20)
+        print "LBA span of lba (MB):", lba_span * self.conf.page_size / float(2**20)
         print "LBA span in blocks", lba_span/self.conf['flash_npage_per_block']
         print "flash_npage_per_block:", self.conf['flash_npage_per_block']
 
@@ -231,8 +231,8 @@ class Manual(LBAWorkloadGenerator):
         events = self.test_random_dftl()
 
         for op, lpn in events:
-            offset = lpn * self.conf['flash_page_size']
-            size = self.conf["flash_page_size"]
+            offset = lpn * self.conf.page_size
+            size = self.conf.page_size
             event = simulator.Event(sector_size = self.sector_size,
                     pid = 0, operation = op, offset = offset,
                     size = size)
@@ -286,8 +286,8 @@ class TestWorkload(LBAWorkloadGenerator):
         events = self.test_random()
 
         for op, lpn in events:
-            offset = lpn * self.conf['flash_page_size']
-            size = self.conf["flash_page_size"]
+            offset = lpn * self.conf.page_size
+            size = self.conf.page_size
             event = simulator.Event(sector_size = self.sector_size,
                     pid = 0, operation = op, offset = offset,
                     size = size)
@@ -313,6 +313,10 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
 
         self.op_count = self.conf['lba_workload_configs']\
             ['ExtentTestWorkload']['op_count']
+        if isinstance(self.conf, config.ConfigNewFlash):
+            self.page_size = self.conf['flash_config']['page_size']
+        else:
+            self.page_size = self.conf.page_size
 
     def test_random(self):
         w = 'write'
@@ -326,7 +330,6 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
         lba_span = int(self.conf.total_num_pages() / self.over_provisioning)
         print 'total num pages', self.conf.total_num_pages()
         print 'lba_span', lba_span
-        print 'flash num blocks', self.conf['flash_num_blocks']
 
         max_access_pages = 16
         for i in range(self.op_count):
@@ -350,8 +353,8 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
         events = self.test_random()
 
         for op, lpn, npages in events:
-            offset = lpn * self.conf['flash_page_size']
-            size = self.conf["flash_page_size"] * npages
+            offset = lpn * self.page_size
+            size = self.page_size * npages
             event = simulator.Event(sector_size = self.sector_size,
                     pid = 0, operation = op, offset = offset,
                     size = size)
@@ -381,15 +384,15 @@ class Random(LBAWorkloadGenerator):
             page = int(random.random() * 10*2**20/4096) # restrict to lba space
             if maxpage < page:
                 maxpage = page
-            offset = page * self.conf['flash_page_size']
-            size = self.conf["flash_page_size"]
+            offset = page * self.conf.page_size
+            size = self.conf.page_size
             event = 'write {} {}'.format(offset, size)
             yield event
 
         for i in range(maxpage):
             page = i
-            offset = page * self.conf['flash_page_size']
-            size = self.conf["flash_page_size"]
+            offset = page * self.conf.page_size
+            size = self.conf.page_size
             event = 'read {} {}'.format(offset, size)
             yield event
 
@@ -416,8 +419,8 @@ class SeqWithRandomStart(LBAWorkloadGenerator):
             if  page + size_in_page > n_lba_pages:
                 size_in_page = n_lba_pages - page
 
-            offset = page * self.conf['flash_page_size']
-            size = self.conf["flash_page_size"] * size_in_page
+            offset = page * self.conf.page_size
+            size = self.conf.page_size * size_in_page
             event = 'write {} {}'.format(offset, size)
             print event
             yield event

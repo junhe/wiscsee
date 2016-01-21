@@ -37,12 +37,12 @@ class FlashBitmap1(object):
     def block_invalid_ratio(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
         return self.bitmap[start:end].count(self.INVALID) / \
-            float(self.conf['flash_npage_per_block'])
+            float(self.conf.n_pages_per_block)
 
     def block_valid_ratio(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
         return self.bitmap[start:end].count(self.VALID) / \
-            float(self.conf['flash_npage_per_block'])
+            float(self.conf.n_pages_per_block)
 
     def is_page_valid(self, pagenum):
         return self.bitmap[pagenum]
@@ -127,7 +127,7 @@ class FlashBitmap2(object):
             if not self.is_page_valid(pg):
                 cnt += 1
 
-        return cnt / float(self.conf['flash_npage_per_block'])
+        return cnt / float(self.conf.n_pages_per_block)
 
     def block_valid_ratio(self, blocknum):
         start, end = self.conf.block_to_page_range(blocknum)
@@ -136,7 +136,7 @@ class FlashBitmap2(object):
             if self.is_page_valid(pg):
                 cnt += 1
 
-        ret = cnt / float(self.conf['flash_npage_per_block'])
+        ret = cnt / float(self.conf.n_pages_per_block)
         return ret
 
     def is_page_valid(self, pagenum):

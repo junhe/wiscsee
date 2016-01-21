@@ -398,6 +398,19 @@ class Config(dict):
 
         return confdic
 
+    @property
+    def n_pages_per_block(self):
+        return self['flash_npage_per_block']
+
+    @property
+    def page_size(self):
+        return self['flash_page_size']
+
+    @property
+    def n_blocks_per_dev(self):
+        return self['flash_num_blocks']
+
+
 class ConfigNewFlash(Config):
     """
     This config class uses more complex flash configuration with channels,
@@ -409,9 +422,10 @@ class ConfigNewFlash(Config):
         flash_config = self.flash_default()
         self['flash_config'] = flash_config
 
-        self["flash_page_size"] = flash_config['page_size']
-        self["flash_npage_per_block"] = flash_config['n_pages_per_block']
-        self["flash_num_blocks"] = flash_config['n_blocks_per_dev']
+        # remove duplication
+        del self["flash_page_size"]
+        del self["flash_npage_per_block"]
+        del self["flash_num_blocks"]
 
     def calc_and_cache(self, conf):
         n_pages_per_plane = conf['n_pages_per_block'] * conf['n_blocks_per_plane']
@@ -450,15 +464,14 @@ class ConfigNewFlash(Config):
         return flash_config
 
     def set_flash_num_blocks_by_bytes(self, size_byte):
-        nblocks = size_byte / \
-            (self['flash_page_size'] * self['flash_npage_per_block'])
+        pagesize = self['flash_config']['page_size']
+        n_pages_per_block = self['flash_config']['n_pages_per_block']
 
-        rem = size_byte % \
-            (self['flash_page_size'] * self['flash_npage_per_block'])
-
-        print 'WARNING: set_flash_num_blocks_by_bytes() cannot set to '\
-            'exact bytes. rem:', rem
-        self['flash_num_blocks'] = nblocks
+        nblocks = size_byte / (pagesize * n_pages_per_block)
+        rem = size_byte % (pagesize * n_pages_per_block)
+        if rem != 0:
+            print 'WARNING: set_flash_num_blocks_by_bytes() cannot set to '\
+                'exact bytes. rem:', rem
 
         # change only n_blocks_per_plane
         fconf = self['flash_config']
@@ -468,4 +481,121 @@ class ConfigNewFlash(Config):
         assert n_blocks_per_plane > 0, 'n_blocks_per_plane must be larger' \
             'than zero. Not it is {}'.format(n_blocks_per_plane)
         fconf['n_blocks_per_plane'] = n_blocks_per_plane
+
+    def byte_to_pagenum(self, offset, force_alignment = True):
+        "offset to page number"
+        if force_alignment and offset % self['flash_config']['page_size'] != 0:
+            raise RuntimeError('offset: {off}, page_size: {ps}'.format(
+                off=offset, ps = self['flash_config']['page_size']))
+        return offset / self['flash_config']['page_size']
+
+    def total_flash_bytes(self):
+        return self['flash_config']['n_pages_per_block'] * \
+            self['flash_config']['n_blocks_per_dev'] * \
+            self['flash_config']['page_size']
+
+    def off_size_to_page_list(self, off, size, force_alignment = True):
+        if force_alignment:
+            assert size % self['flash_config']['page_size'] == 0, \
+                'size:{}, page_size:{}'.format(size,
+                self['flash_config']['page_size'])
+            npages = size / self['flash_config']['page_size']
+            start_page = self.byte_to_pagenum(off)
+
+            return range(start_page, start_page+npages)
+        else:
+            start_page = self.byte_to_pagenum(off, force_alignment = False)
+            npages = int(math.ceil(float(size) / \
+                    self['flash_config']['page_size']))
+
+            return range(start_page, start_page+npages)
+
+    def off_size_to_page_range(self, off, size, force_alignment = True):
+        "The input is in bytes"
+        if force_alignment:
+            assert size % self['flash_config']['page_size'] == 0, \
+                'size:{}, page_size:{}'.format(size,
+                self['flash_config']['page_size'])
+            npages = size / self['flash_config']['page_size']
+            start_page = self.byte_to_pagenum(off)
+
+            return start_page, npages
+        else:
+            start_page = self.byte_to_pagenum(off, force_alignment = False)
+            npages = int(math.ceil(float(size) /
+                self['flash_config']['page_size']))
+
+            return start_page, npages
+
+    def dftl_n_mapping_entries_per_page(self):
+        "used by dftl, return the number of mapping entries in a page"
+        return self['flash_config']['page_size'] \
+            / self['dftl']['global_mapping_entry_bytes']
+
+    def sec_ext_to_page_ext(self, sector, count):
+        """
+        The sector extent has to be aligned with page
+        return page_start, page_count
+        """
+        page = (sector * self['sector_size']) \
+            / self['flash_config']['page_size']
+        assert (sector * self['sector_size']) % \
+                self['flash_config']['page_size'] == 0,\
+                "starting sector ({}) is not aligned with page size {}"\
+                .format(sector, self['flash_config']['page_size'])
+        page_count = (count * self['sector_size']) / \
+            self['flash_config']['page_size']
+        assert (count * self['sector_size']) % \
+                self['flash_config']['page_size'] == 0, \
+                "total size {} bytes is not multiple of page size {} bytes."\
+                .format(count * self['sector_size'],
+                        self['flash_config']['page_size'])
+        return page, page_count
+
+    def total_num_pages(self):
+        return self['flash_config']['n_pages_per_block'] *\
+            self['flash_config']['n_blocks_per_dev']
+
+    def block_off_to_page(self, blocknum, pageoff):
+        "convert block number and page offset to page number"
+        return blocknum * self['flash_config']['n_pages_per_block'] + pageoff
+
+    def page_to_block(self, pagenum):
+        d = {}
+        d['blocknum'] = pagenum / self['flash_config']['n_pages_per_block']
+        d['pageoffset'] = pagenum % self['flash_config']['n_pages_per_block']
+        return d
+
+    def page_to_block_off(self, pagenum):
+        "return block, page_offset"
+        return pagenum / self['flash_config']['n_pages_per_block'], \
+                pagenum % self['flash_config']['n_pages_per_block']
+
+    def block_off_to_page(self, blocknum, pageoff):
+        "convert block number and page offset to page number"
+        return blocknum * self['flash_config']['n_pages_per_block'] + pageoff
+
+    def block_to_page_range(self, blocknum):
+        return blocknum * self['flash_config']['n_pages_per_block'], \
+                (blocknum + 1) * self['flash_config']['n_pages_per_block']
+
+    def total_flash_bytes(self):
+        return self['flash_config']['n_pages_per_block'] * \
+                self['flash_num_blocks'] * self['flash_page_size']
+
+    @property
+    def n_pages_per_block(self):
+        return self['flash_config']['n_pages_per_block']
+
+    @property
+    def page_size(self):
+        return self['flash_config']['page_size']
+
+    @property
+    def n_blocks_per_dev(self):
+        return self['flash_config']['n_blocks_per_dev']
+
+
+
+
 
