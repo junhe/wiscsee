@@ -337,9 +337,8 @@ class OutOfBandAreas(object):
     def __init__(self, confobj):
         self.conf = confobj
 
-        self.flash_num_blocks = confobj['flash_config']['n_blocks_per_dev']
-        self.flash_npage_per_block = \
-            confobj['flash_config']['n_pages_per_block']
+        self.flash_num_blocks = confobj.n_blocks_per_dev
+        self.flash_npage_per_block = confobj.n_pages_per_block
         self.total_pages = self.flash_num_blocks * self.flash_npage_per_block
 
         # Key data structures
@@ -558,7 +557,7 @@ class BlockPool_old(object):
     def __init__(self, confobj):
         self.conf = confobj
 
-        self.freeblocks = deque(range(self.conf['flash_config']['n_blocks_per_dev']))
+        self.freeblocks = deque(range(self.conf.n_blocks_per_dev))
 
         # initialize usedblocks
         self.trans_usedblocks = []
@@ -695,12 +694,12 @@ class BlockPool_old(object):
 
     def visual(self):
         block_states = [ 'O' if block in self.freeblocks else 'X'
-                for block in range(self.conf['flash_config']['n_blocks_per_dev'])]
+                for block in range(self.conf.n_blocks_per_dev)]
         return ''.join(block_states)
 
     def used_ratio(self):
         return (len(self.trans_usedblocks) + len(self.data_usedblocks))\
-            / float(self.conf['flash_config']['n_blocks_per_dev'])
+            / float(self.conf.n_blocks_per_dev)
 
 
 class OutOfSpaceError(RuntimeError):
@@ -992,7 +991,7 @@ class GlobalMappingTable(object):
         """
         entries = self.total_entries()
         entry_bytes = self.conf['dftl']['global_mapping_entry_bytes']
-        flash_page_size = self.conf['flash_config']['page_size']
+        flash_page_size = self.conf.page_size
         # play the ceiling trick
         return (entries * entry_bytes + (flash_page_size -1))/flash_page_size
 
@@ -1019,9 +1018,9 @@ class GlobalTranslationDirectory(object):
     def __init__(self, confobj):
         self.conf = confobj
 
-        self.flash_npage_per_block = self.conf['flash_config']['n_pages_per_block']
-        self.flash_num_blocks = self.conf['flash_config']['n_blocks_per_dev']
-        self.flash_page_size = self.conf['flash_config']['page_size']
+        self.flash_npage_per_block = self.conf.n_pages_per_block
+        self.flash_num_blocks = self.conf.n_blocks_per_dev
+        self.flash_page_size = self.conf.page_size
         self.total_pages = self.conf.total_num_pages()
 
         self.n_entries_per_page = self.conf.dftl_n_mapping_entries_per_page()
@@ -1340,7 +1339,7 @@ class GcDecider(object):
             print 'Using user defined high watermark', hi_watermark_ratio
 
         self.high_watermark = hi_watermark_ratio * \
-            self.conf['flash_config']['n_blocks_per_dev']
+            self.conf.n_blocks_per_dev
 
         min_low = 0.8 * 1 / self.conf['dftl']['over_provisioning']
         if self.conf['dftl']['GC_low_threshold_ratio'] < min_low:
@@ -1352,7 +1351,7 @@ class GcDecider(object):
             print 'Using user defined low watermark', low_watermark_ratio
 
         self.low_watermark = low_watermark_ratio * \
-            self.conf['flash_config']['n_blocks_per_dev']
+            self.conf.n_blocks_per_dev
 
         print 'High watermark', self.high_watermark
         print 'Low watermark', self.low_watermark
@@ -1412,7 +1411,7 @@ class GcDecider(object):
         return
 
         self.high_watermark = min(self.high_watermark * 1.01,
-            self.conf['flash_config']['n_blocks_per_dev'] * 0.95)
+            self.conf.n_blocks_per_dev * 0.95)
 
     def lower_high_watermark(self):
         """
@@ -1443,7 +1442,7 @@ class GcDecider(object):
         else:
             self.freeze_count += 1
 
-            if self.freeze_count > 2 * self.conf['flash_config']['n_pages_per_block']:
+            if self.freeze_count > 2 * self.conf.n_pages_per_block:
                 ret = True
             else:
                 ret = False
@@ -1928,7 +1927,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         # We should initialize Globaltranslationdirectory in Dftl
         self.mapping_manager.initialize_mappings()
 
-        self.n_sec_per_page = self.conf['flash_config']['page_size'] \
+        self.n_sec_per_page = self.conf.page_size \
                 / self.conf['sector_size']
 
     # FTL APIs
@@ -2089,7 +2088,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         if data == None:
             return None
 
-        sec_per_page = self.conf['flash_config']['page_size'] / self.conf['sector_size']
+        sec_per_page = self.conf.page_size / self.conf['sector_size']
         n_pages = len(data) / sec_per_page
 
         new_data = []

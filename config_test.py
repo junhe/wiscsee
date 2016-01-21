@@ -37,13 +37,6 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(count, 31)
 
 class TestConfigNewFlash(unittest.TestCase):
-    def test_nblocks(self):
-        conf = config.ConfigNewFlash()
-
-        nblocks1 = conf['flash_num_blocks']
-        nblocks2 = conf['flash_config']['n_blocks_per_dev']
-        self.assertEqual(nblocks1, nblocks2)
-
     def test_npages(self):
         conf = config.ConfigNewFlash()
 
