@@ -503,6 +503,46 @@ class TestBlockPool_next_gc_data(unittest.TestCase):
         self.my_run()
 
 
+class TestDftextGC(unittest.TestCase):
+    def setup_config(self):
+        self.conf = config.ConfigNewFlash()
+
+    def setup_environment(self):
+        metadata_dic = choose_exp_metadata(self.conf, interactive = False)
+        self.conf.update(metadata_dic)
+
+        self.conf['enable_blktrace'] = True
+        self.conf['enable_simulation'] = True
+
+    def setup_workload(self):
+        self.conf["workload_src"] = LBAGENERATOR
+        self.conf["lba_workload_class"] = "ExtentTestWorkload"
+        self.conf["lba_workload_configs"]["ExtentTestWorkload"] = {
+            "op_count": 10000}
+        self.conf["age_workload_class"] = "NoOp"
+
+    def setup_ftl(self):
+        self.conf['ftl_type'] = 'dftlext'
+        self.conf['simulator_class'] = 'SimulatorNonDESe2e'
+
+        devsize_mb = 16
+        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_page_size'])
+        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+
+    def my_run(self):
+        runtime_update(self.conf)
+        workflow(self.conf)
+
+    def test_main(self):
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run()
+
+
+
 def main():
     unittest.main()
 
