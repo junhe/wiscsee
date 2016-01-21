@@ -502,18 +502,6 @@ class TestBlockPool_next_gc_data(unittest.TestCase):
         self.my_run()
 
 
-# class DftlDESTest(unittest.TestCase):
-    # def test_DftlDES(self):
-        # exp = DftlDESExp()
-        # exp.main()
-
-
-# class DmftlDESTest(unittest.TestCase):
-    # def test_Dmftl(self):
-        # exp = DmftlDESExp()
-        # exp.main()
-
-
 def main():
     unittest.main()
 

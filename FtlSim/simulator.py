@@ -206,7 +206,6 @@ class SimulatorNonDESe2e(SimulatorNonDES):
             self.lsn_to_data[sec] = content
             data.append(content)
 
-        print 'EVVVVVVVVVENT', event.sector, event.sector_count
         self.ftl.sec_write(
                 sector = event.sector,
                 count = event.sector_count,

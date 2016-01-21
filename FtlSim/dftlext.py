@@ -1,10 +1,11 @@
 import bitarray
-from collections import deque
+from collections import deque, Counter
 import csv
 import datetime
 import random
 import os
 import Queue
+import sys
 
 import bidict
 
@@ -443,6 +444,115 @@ class OutOfBandAreas(object):
         return lpns
 
 
+class BlockPool(object):
+    def __init__(self, confobj):
+        self.conf = confobj
+        self.n_channels = self.conf['flash_config']['n_channels_per_dev']
+        self.channel_pools = [ChannelBlockPool(self.conf)
+                for i in range(self.n_channels)]
+
+        self.cur_channel = 0
+
+    @property
+    def freeblocks(self):
+        free = []
+        for channel in self.channel_pools:
+            free.extend( channel.freeblocks )
+        return free
+
+    @property
+    def data_usedblocks(self):
+        used = []
+        for channel in self.channel_pools:
+            used.extend( channel.data_usedblocks )
+        return used
+
+    @property
+    def trans_usedblocks(self):
+        used = []
+        for channel in self.channel_pools:
+            used.extend( channel.trans_usedblocks )
+        return used
+
+    def iter_channels(self, funcname):
+        n = self.n_channels
+        while n > 0:
+            n -= 1
+            try:
+                block_off = eval("self.channel_pools[self.cur_channel].{}()"\
+                        .format(funcname))
+            except OutOfSpaceError:
+                pass
+            else:
+                return channel_block_to_block(self.conf, self.cur_channel,
+                        block_off)
+            finally:
+                self.cur_channel = (self.cur_channel + 1) % self.n_channels
+
+        raise OutOfSpaceError("Tried all channels. Out of Space")
+
+    def pop_a_free_block(self):
+        return self.iter_channels("pop_a_free_block")
+
+    def pop_a_free_block_to_trans(self):
+        return self.iter_channels("pop_a_free_block_to_trans")
+
+    def pop_a_free_block_to_data(self):
+        return self.iter_channels("pop_a_free_block_to_data")
+
+    def move_used_data_block_to_free(self, blocknum):
+        channel, block_off = block_to_channel_block(self.conf, blocknum)
+        self.channel_pools[channel].move_used_data_block_to_free(block_off)
+
+    def move_used_trans_block_to_free(self, blocknum):
+        channel, block_off = block_to_channel_block(self.conf, blocknum)
+        self.channel_pools[channel].move_used_trans_block_to_free(block_off)
+
+    def next_data_page_to_program(self):
+        return self.iter_channels("next_data_page_to_program")
+
+    def next_translation_page_to_program(self):
+        return self.iter_channels("next_translation_page_to_program")
+
+    def next_gc_data_page_to_program(self):
+        return self.iter_channels("next_gc_data_page_to_program")
+
+    def next_gc_translation_page_to_program(self):
+        return self.iter_channels("next_gc_translation_page_to_program")
+
+    def current_blocks(self):
+        cur_blocks = []
+        for channel in self.channel_pools:
+            cur_blocks.extend( channel.current_blocks() )
+
+        return cur_blocks
+
+    def used_ratio(self):
+        n_used = 0
+        for channel in self.channel_pools:
+            n_used += channel.total_used_blocks()
+
+        return float(n_used) / (self.n_channels * \
+                self.conf['flash_config']['n_blocks_per_channel'])
+
+    def total_used_blocks(self):
+        total = 0
+        for channel in self.channel_pools:
+            total += channel.total_used_blocks()
+        return total
+
+    def used_blocks(self):
+        used = []
+        for channel in self.channel_pools:
+            used.extend( channel.used_blocks() )
+        return used
+
+    def num_freeblocks(self):
+        total = 0
+        for channel in self.channel_pools:
+            total += len( channel.freeblocks )
+        return total
+
 class BlockPool_old(object):
     def __init__(self, confobj):
         self.conf = confobj
@@ -592,88 +702,6 @@ class BlockPool_old(object):
             / float(self.conf['flash_num_blocks'])
 
 
-class BlockPool(object):
-    def __init__(self, confobj):
-        self.conf = confobj
-        self.n_channels = self.conf['flash_config']['n_channels_per_dev']
-        self.channel_pools = [ChannelBlockPool(self.conf)
-                for i in range(self.n_channels)]
-
-        self.cur_channel = 0
-
-    def iter_channels(self, funcname):
-        n = self.n_channels
-        while n > 0:
-            n -= 1
-            try:
-                block_off = eval("self.channel_pools[self.cur_channel].{}()"\
-                        .format(funcname))
-            except OutOfSpaceError:
-                pass
-            else:
-                return channel_block_to_block(self.conf, self.cur_channel,
-                        block_off)
-            finally:
-                self.cur_channel = (self.cur_channel + 1) % self.n_channels
-
-        raise OutOfSpaceError("Tried all channels. Out of Space")
-
-    def pop_a_free_block(self):
-        return self.iter_channels("pop_a_free_block")
-
-    def pop_a_free_block_to_trans(self):
-        return self.iter_channels("pop_a_free_block_to_trans")
-
-    def pop_a_free_block_to_data(self):
-        return self.iter_channels("pop_a_free_block_to_data")
-
-    def move_used_data_block_to_free(self, blocknum):
-        channel, block_off = block_to_channel_block(self.conf, blocknum)
-        self.channel_pools[channel].move_used_data_block_to_free(block_off)
-
-    def move_used_trans_block_to_free(self, blocknum):
-        channel, block_off = block_to_channel_block(self.conf, blocknum)
-        self.channel_pools[channel].move_used_trans_block_to_free(block_off)
-
-    def next_data_page_to_program(self):
-        return self.iter_channels("next_data_page_to_program")
-
-    def next_translation_page_to_program(self):
-        return self.iter_channels("next_translation_page_to_program")
-
-    def next_gc_data_page_to_program(self):
-        return self.iter_channels("next_gc_data_page_to_program")
-
-    def next_gc_translation_page_to_program(self):
-        return self.iter_channels("next_gc_translation_page_to_program")
-
-    def current_blocks(self):
-        cur_blocks = []
-        for channel in self.channel_pools:
-            cur_blocks.extend( channel.current_blocks() )
-
-        return current_blocks
-
-    def used_ratio(self):
-        n_used = 0
-        for channel in self.channel_pools:
-            n_used += channel.total_used_blocks()
-
-        return float(n_used) / (self.n_channels * \
-                self.conf['flash_config']['n_blocks_per_channel'])
-
-    def total_used_blocks(self):
-        total = 0
-        for channel in self.channel_pools:
-            total += channel.total_used_blocks()
-        return total
-
-    def used_blocks(self):
-        used = []
-        for channel in self.channel_pools:
-            used.append( channel.used_blocks() )
-        return used
-
 class OutOfSpaceError(RuntimeError):
     pass
 
@@ -720,7 +748,11 @@ class ChannelBlockPool(object):
         self.freeblocks.append(blocknum)
 
     def move_used_trans_block_to_free(self, blocknum):
-        self.trans_usedblocks.remove(blocknum)
+        try:
+            self.trans_usedblocks.remove(blocknum)
+        except ValueError:
+            sys.stderr.write( 'blocknum:' + str(blocknum) )
+            raise
         self.freeblocks.append(blocknum)
 
     def total_used_blocks(self):
@@ -1460,9 +1492,6 @@ class GarbageCollector(object):
                     'freeblocks:', len(self.block_pool.freeblocks)
                 block_iter = self.victim_blocks_iter()
                 blk_cnt = 0
-            # victim_type, victim_block, valid_ratio = self.next_victim_block()
-            # victim_type, victim_block, valid_ratio = \
-                # self.next_victim_block_benefit_cost()
             try:
                 blockinfo = block_iter.next()
             except StopIteration:
@@ -1696,6 +1725,7 @@ class GarbageCollector(object):
         This follows the DFTL paper
         """
         valid_ratio = self.oob.states.block_valid_ratio(blocknum)
+
         if valid_ratio == 0:
             # empty block is always the best deal
             return float("inf"), valid_ratio
@@ -1709,6 +1739,10 @@ class GarbageCollector(object):
         last_inv_time = self.oob.last_inv_time_of_block.get(blocknum, None)
         if last_inv_time == None:
             print blocknum
+            raise RuntimeError(
+                "blocknum {} has never been invalidated."\
+                "valid ratio:{}."
+                .format(blocknum, valid_ratio))
 
         age = current_time - self.oob.last_inv_time_of_block[blocknum]
         age = age.total_seconds()
@@ -2082,9 +2116,11 @@ class Dftl(ftlbuilder.FtlBuilder):
         return ret
 
     def sec_to_page_items(self, data):
+        if data == None:
+            return None
+
         sec_per_page = self.conf['flash_page_size'] / self.conf['sector_size']
         n_pages = len(data) / sec_per_page
-        print sec_per_page, n_pages
 
         new_data = []
         for page in range(n_pages):
@@ -2097,19 +2133,12 @@ class Dftl(ftlbuilder.FtlBuilder):
 
     def sec_write(self, sector, count, data = None):
         page_start, page_count = self.conf.sec_ext_to_page_ext(sector, count)
-        print '............................................................sec_write', sector, count, 'pages', page_start, page_count
 
         ppns_to_write = self.mapping_manager.ppns_for_writing(
             range(page_start, page_start + page_count))
-        print 'ppns_to_write', ppns_to_write
 
-        if data == None:
-            for ppn in ppns_to_write:
-                self.flash.page_write(ppn, DATA_USER)
-        else:
-            data = self.sec_to_page_items(data)
-            for ppn, item in zip(ppns_to_write, data):
-                self.flash.page_write(ppn, DATA_USER, data = item)
+        ppn_data = self.sec_to_page_items(data)
+        self.write_flash(ppns_to_write, ppn_data)
 
         self.garbage_collector.try_gc()
 
@@ -2118,6 +2147,58 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         for lpn in range(page_start, page_start + page_count):
             self.lba_discard(lpn)
+
+    def get_max_channel_count(self, ppns):
+        """
+        Find the max count of the channels
+        """
+        channel_counter = Counter()
+        for ppn in ppns:
+            block, _ = self.conf.page_to_block_off(ppn)
+            channel, _ = block_to_channel_block(self.conf, block)
+            channel_counter[channel] += 1
+
+        # find the channel with the largest number of blocks
+        max_channel, max_count = channel_counter.most_common(1)[0]
+
+        return max_count
+
+    def read_flash(self, ppns):
+        """
+        Read ppns in batch and calculate time
+        """
+        max_count = self.get_max_channel_count(ppns)
+        time = max_count * self.conf['flash_config']['page_read_time']
+
+        if self.flash.store_data == True:
+            data = []
+            for ppn in ppns:
+                data.append( self.flash.page_read(ppn, DATA_USER) )
+            data = self.page_to_sec_items(data)
+            return data
+        else:
+            for ppn in ppns:
+                self.flash.page_read(ppn, DATA_USER)
+            return None
+
+    def write_flash(self, ppns, ppn_data):
+        """
+        This function will store ppn_data to flash and calculate the time
+        it takes to do it with real flash.
+
+        The access time is determined by the channel with the longest request
+        queue.
+        """
+        max_count = self.get_max_channel_count(ppns)
+        time = max_count * self.conf['flash_config']['page_prog_time']
+
+        # save the data to flash
+        if ppn_data == None:
+            for ppn in ppns:
+                self.flash.page_write(ppn, DATA_USER)
+        else:
+            for ppn, item in zip(ppns, ppn_data):
+                self.flash.page_write(ppn, DATA_USER, data = item)
 
     def pre_workload(self):
         self.global_helper.timeline.turn_on()

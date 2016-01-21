@@ -321,6 +321,9 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
         maxpage = 0
 
         lba_span = int(self.conf.total_num_pages() / self.over_provisioning)
+        print 'total num pages', self.conf.total_num_pages()
+        print 'lba_span', lba_span
+        print 'flash num blocks', self.conf['flash_num_blocks']
 
         max_access_pages = 16
         for i in range(1000):

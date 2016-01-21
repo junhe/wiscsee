@@ -36,6 +36,25 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(sec, 10)
         self.assertEqual(count, 31)
 
+class TestConfigNewFlash(unittest.TestCase):
+    def test_nblocks(self):
+        conf = config.ConfigNewFlash()
+
+        nblocks1 = conf['flash_num_blocks']
+        nblocks2 = conf['flash_config']['n_blocks_per_dev']
+        self.assertEqual(nblocks1, nblocks2)
+
+    def test_npages(self):
+        conf = config.ConfigNewFlash()
+
+        npages1 = conf.total_num_pages()
+        npages2 = conf['flash_config']['n_pages_per_block'] \
+            * conf['flash_config']['n_blocks_per_dev']
+        print 'npages1', npages1
+        print 'npages2', npages2
+        self.assertEqual(npages1, npages2)
+
+
 if __name__ == '__main__':
     unittest.main()
 
