@@ -229,46 +229,8 @@ class Config(dict):
         self['flash_num_blocks'] = n
         return n
 
-    def calc_and_cache(self, conf):
-        n_pages_per_plane = conf['n_pages_per_block'] * conf['n_blocks_per_plane']
-        n_pages_per_chip = n_pages_per_plane * conf['n_planes_per_chip']
-        n_pages_per_package = n_pages_per_chip * conf['n_chips_per_package']
-
-        conf['n_pages_per_plane'] = n_pages_per_plane
-        conf['n_pages_per_chip'] = n_pages_per_chip
-        conf['n_pages_per_package'] = n_pages_per_package
-
-        conf['n_blocks_per_channel'] = conf['n_blocks_per_plane'] * \
-                conf['n_planes_per_chip'] * conf['n_chips_per_package'] * \
-                conf['n_packages_per_channel']
-        conf['n_blocks_per_dev'] = conf['n_blocks_per_channel'] * \
-                conf['n_channels_per_dev']
-
-    def flash_default(self):
-        flash_config = {
-            # layout info
-            "page_size"                : 2*KB,
-            "n_pages_per_block"        : 2,
-            "n_blocks_per_plane"       : 2048,
-            "n_planes_per_chip"        : 2,
-            "n_chips_per_package"      : 2,
-            "n_packages_per_channel"   : 1,
-            "n_channels_per_dev"       : 2,
-
-            # time info
-            # TODO: these are fixed numbers, but they are random in real world
-            # TODO: Note that the SSD time is different than the flash package time
-            "page_read_time"        : 25*USEC,  # Max
-            "page_prog_time"        : 200*USEC, # Typical
-            "block_erase_time"      : 1.6*MSEC, # Typical
-            }
-        self.calc_and_cache(flash_config)
-        return flash_config
-
     def get_default_config(self):
         MOpt = WlRunner.filesystem.MountOption
-
-        flash_config = self.flash_default()
 
         confdic = {
             ############### Global #########
@@ -282,14 +244,11 @@ class Config(dict):
             "ftl_type"              : "nkftl2",
             "sector_size"           : 512,
 
-            ########### For flash device ###
-            "flash_config"          : flash_config,
-
             ############## For FtlSim ######
             "enable_simulation"     : True,
-            "flash_page_size"       : flash_config['page_size'],
-            "flash_npage_per_block" : flash_config['n_pages_per_block'],
-            "flash_num_blocks"      : flash_config['n_blocks_per_dev'],
+            "flash_page_size"       : 4096,
+            "flash_npage_per_block" : 4,
+            "flash_num_blocks"      : 64,
             # "enable_e2e_test"       : False,
             "simulation_processor"  : 'e2e', # regular, extent
 
@@ -444,5 +403,77 @@ class Config(dict):
             "linux_version": utils.linux_kernel_version(),
             "n_online_cpus": 1
         }
+
         return confdic
+
+class ConfigNewFlash(Config):
+    """
+    This config class uses more complex flash configuration with channels,
+    chips, packages...
+    """
+    def __init__(self, confdic = None):
+        super(ConfigNewFlash, self).__init__(confdic)
+
+        flash_config = self.flash_default()
+        self['flash_config'] = flash_config
+
+        self["flash_page_size"] = flash_config['page_size']
+        self["flash_npage_per_block"] = flash_config['n_pages_per_block']
+        self["flash_num_blocks"] = flash_config['n_blocks_per_dev']
+
+    def calc_and_cache(self, conf):
+        n_pages_per_plane = conf['n_pages_per_block'] * conf['n_blocks_per_plane']
+        n_pages_per_chip = n_pages_per_plane * conf['n_planes_per_chip']
+        n_pages_per_package = n_pages_per_chip * conf['n_chips_per_package']
+
+        conf['n_pages_per_plane'] = n_pages_per_plane
+        conf['n_pages_per_chip'] = n_pages_per_chip
+        conf['n_pages_per_package'] = n_pages_per_package
+
+        conf['n_blocks_per_channel'] = conf['n_blocks_per_plane'] * \
+                conf['n_planes_per_chip'] * conf['n_chips_per_package'] * \
+                conf['n_packages_per_channel']
+        conf['n_blocks_per_dev'] = conf['n_blocks_per_channel'] * \
+                conf['n_channels_per_dev']
+
+    def flash_default(self):
+        flash_config = {
+            # layout info
+            "page_size"                : 2*KB,
+            "n_pages_per_block"        : 2,
+            "n_blocks_per_plane"       : 2048,
+            "n_planes_per_chip"        : 2,
+            "n_chips_per_package"      : 2,
+            "n_packages_per_channel"   : 1,
+            "n_channels_per_dev"       : 1,
+
+            # time info
+            # TODO: these are fixed numbers, but they are random in real world
+            # TODO: Note that the SSD time is different than the flash package time
+            "page_read_time"        : 25*USEC,  # Max
+            "page_prog_time"        : 200*USEC, # Typical
+            "block_erase_time"      : 1.6*MSEC, # Typical
+            }
+        self.calc_and_cache(flash_config)
+        return flash_config
+
+    def set_flash_num_blocks_by_bytes(self, size_byte):
+        nblocks = size_byte / \
+            (self['flash_page_size'] * self['flash_npage_per_block'])
+
+        rem = size_byte % \
+            (self['flash_page_size'] * self['flash_npage_per_block'])
+
+        print 'WARNING: set_flash_num_blocks_by_bytes() cannot set to '\
+            'exact bytes. rem:', rem
+        self['flash_num_blocks'] = nblocks
+
+        # change only n_blocks_per_plane
+        fconf = self['flash_config']
+        n_blocks_per_plane = nblocks / (fconf['n_planes_per_chip'] * \
+            fconf['n_chips_per_package'] * fconf['n_packages_per_channel'] * \
+            fconf['n_packages_per_channel'] * fconf['n_channels_per_dev'])
+        assert n_blocks_per_plane > 0, 'n_blocks_per_plane must be larger' \
+            'than zero. Not it is {}'.format(n_blocks_per_plane)
+        fconf['n_blocks_per_plane'] = n_blocks_per_plane
 

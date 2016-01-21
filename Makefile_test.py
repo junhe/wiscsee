@@ -78,6 +78,10 @@ class DftlExp(Experiment):
         workflow(self.conf)
 
 class DftlextExp(Experiment):
+    def __init__(self):
+        # Get default setting
+        self.conf = config.ConfigNewFlash()
+
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
         self.conf.update(metadata_dic)
@@ -107,6 +111,10 @@ class DftlextExp2(Experiment):
     """
     This one is for testing the new extent interface
     """
+    def __init__(self):
+        # Get default setting
+        self.conf = config.ConfigNewFlash()
+
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
         self.conf.update(metadata_dic)
@@ -136,6 +144,10 @@ class DftlextExpE2e(Experiment):
     """
     This one is for testing the new extent interface with e2e data test
     """
+    def __init__(self):
+        # Get default setting
+        self.conf = config.ConfigNewFlash()
+
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
         self.conf.update(metadata_dic)
@@ -165,6 +177,10 @@ class DftlextExpFTLONLY(Experiment):
     """
     This one is for testing the new extent interface with e2e data test
     """
+    def __init__(self):
+        # Get default setting
+        self.conf = config.ConfigNewFlash()
+
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
         self.conf.update(metadata_dic)
@@ -231,7 +247,7 @@ class DftlextTestFTLONLY(unittest.TestCase):
 
 class TestChannelBlockPool(unittest.TestCase):
     def setup_config(self):
-        self.conf = config.Config()
+        self.conf = config.ConfigNewFlash()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -262,7 +278,7 @@ class TestBlockPool_freeblocks(unittest.TestCase):
     Test pop_a_free_block
     """
     def setup_config(self):
-        self.conf = config.Config()
+        self.conf = config.ConfigNewFlash()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -303,7 +319,7 @@ class TestBlockPool_data(unittest.TestCase):
     Test pop_a_free_block_data
     """
     def setup_config(self):
-        self.conf = config.Config()
+        self.conf = config.ConfigNewFlash()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -358,7 +374,7 @@ class TestBlockPool_trans(unittest.TestCase):
     Test pop_a_free_block_data
     """
     def setup_config(self):
-        self.conf = config.Config()
+        self.conf = config.ConfigNewFlash()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -395,12 +411,13 @@ class TestBlockPool_trans(unittest.TestCase):
         self.setup_ftl()
         self.my_run()
 
+
 class TestBlockPool_next_data(unittest.TestCase):
     """
     Test pop_a_free_block_data
     """
     def setup_config(self):
-        self.conf = config.Config()
+        self.conf = config.ConfigNewFlash()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -444,7 +461,7 @@ class TestBlockPool_next_gc_data(unittest.TestCase):
     Test pop_a_free_block_data
     """
     def setup_config(self):
-        self.conf = config.Config()
+        self.conf = config.ConfigNewFlash()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
