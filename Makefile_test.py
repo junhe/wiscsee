@@ -160,6 +160,8 @@ class DftlextExpE2e(Experiment):
     def setup_workload(self):
         self.conf["workload_src"] = LBAGENERATOR
         self.conf["lba_workload_class"] = "ExtentTestWorkload"
+        self.conf["lba_workload_configs"]["ExtentTestWorkload"] = {
+            "op_count": 1000}
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
