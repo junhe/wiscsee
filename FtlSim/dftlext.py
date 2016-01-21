@@ -1750,37 +1750,6 @@ class GarbageCollector(object):
 
         return bene_cost, valid_ratio
 
-    def next_victim_block_benefit_cost(self):
-        """
-        TODO: to improve, maintain a bene cost priority queue, so you
-        don't need to compute repeatly
-        """
-        highest_bene_cost = -1
-        ret_block = None
-        block_type = None
-
-        current_blocks = self.block_pool.current_blocks()
-
-        current_time = datetime.datetime.now()
-
-        for usedblocks, block_type in (
-            (self.block_pool.data_usedblocks, DATA_BLOCK),
-            (self.block_pool.trans_usedblocks, TRANS_BLOCK)):
-            for blocknum in usedblocks:
-                if blocknum in current_blocks:
-                    continue
-
-                bene_cost = self.bene_cost(blocknum, current_time)
-                if bene_cost > highest_bene_cost:
-                    ret_block = blocknum
-                    highest_bene_cost = bene_cost
-                    ret_valid_ratio = valid_ratio
-
-        if ret_block == None:
-            self.recorder.debug("no block is used yet.")
-
-        return block_type, ret_block, ret_valid_ratio
-
     def victim_blocks_iter(self):
         """
         Calculate benefit/cost and put it to a priority queue
