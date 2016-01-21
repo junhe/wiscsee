@@ -125,6 +125,8 @@ class DftlextExp2(Experiment):
     def setup_workload(self):
         self.conf["workload_src"] = LBAGENERATOR
         self.conf["lba_workload_class"] = "ExtentTestWorkload"
+        self.conf["lba_workload_configs"]["ExtentTestWorkload"] = {
+            "op_count": 1000}
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
@@ -216,13 +218,10 @@ class DftlextExpFTLONLY(Experiment):
         # print 'flash data', self.ftl.flash.data
         self.ftl.sec_read(0, n)
 
-
-
 class DftlTest(unittest.TestCase):
     def test_Dftl(self):
         exp = DftlExp()
         exp.main()
-
 
 class DftlextTest(unittest.TestCase):
     def test_Dftl(self):

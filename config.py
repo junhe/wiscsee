@@ -382,15 +382,7 @@ class Config(dict):
             # "lba_workload_class"    : "HotCold",
             # "lba_workload_class"    : "Random",
             "lba_workload_class"    : "Manual",
-            "LBA" : {
-                "lba_to_flash_size_ratio": 0.05,
-                "write_to_lba_ratio"     : 1,    #how many writes you want to have
-                "HotCold": {
-                    'chunk_bytes': 4096 * 1024,
-                    'chunk_count': 4,
-                    'n_col'      : 4
-                }
-            },
+            "lba_workload_configs"  : {},
 
             ############# PERF #####################
             "wrap_by_perf" : False,

@@ -311,6 +311,9 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
             raise RuntimeError("FTL type {} is not supported".format(
                 self.ftl_type))
 
+        self.op_count = self.conf['lba_workload_configs']\
+            ['ExtentTestWorkload']['op_count']
+
     def test_random(self):
         w = 'write'
         r = 'read'
@@ -326,7 +329,7 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
         print 'flash num blocks', self.conf['flash_num_blocks']
 
         max_access_pages = 16
-        for i in range(1000):
+        for i in range(self.op_count):
             op = random.choice(ops)
             page = int(random.random() * (lba_span - max_access_pages))
             npages = random.randint(1, max_access_pages)
