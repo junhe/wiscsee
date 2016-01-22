@@ -1515,15 +1515,12 @@ class GarbageCollector(object):
             # raise RuntimeError("intentional exit")
 
     def clean_data_block(self, flash_block):
-        # old stuff
-        # self.move_valid_pages(flash_block, self.move_data_page_to_new_location)
-
         start, end = self.conf.block_to_page_range(flash_block)
 
         changes = []
         for ppn in range(start, end):
             if self.oob.states.is_page_valid(ppn):
-                change = self.move_data_page_to_new_location_2(ppn)
+                change = self.move_data_page_to_new_location(ppn)
                 changes.append(change)
 
         # change the mappings
@@ -1562,45 +1559,6 @@ class GarbageCollector(object):
                 mover_func(ppn)
 
     def move_data_page_to_new_location(self, ppn):
-        """
-        ****** Currently This Function is not in Use ******
-
-        Page ppn must be valid.
-        This function is for garbage collection. The difference between this
-        one and the lba_write is that the input of this function is ppn, while
-        lba_write's is lpn. Because of this, we don't need to consult mapping
-        table to find the mapping. The lpn->ppn mapping is stored in OOB.
-        Another difference is that, if the mapping exists in cache, update the
-        entry in cache. If not, update the entry in GMT (and thus GTD).
-        """
-        # for my damaged brain
-        old_ppn = ppn
-
-        # read the the data page
-        pagedata = self.flash.page_read(old_ppn, DATA_CLEANING)
-
-        # find the mapping
-        lpn = self.oob.translate_ppn_to_lpn(old_ppn)
-
-        # write to new page
-        new_ppn = self.block_pool.next_gc_data_page_to_program()
-        self.flash.page_write(new_ppn, DATA_CLEANING, data = pagedata)
-
-        # update new page and old page's OOB
-        self.oob.new_write(lpn, old_ppn, new_ppn)
-
-        cached_ppn = self.mapping_manager.cached_mapping_table.lpn_to_ppn(lpn)
-        if cached_ppn == MISS:
-            # This will not add mapping to cache
-            self.mapping_manager.update_entry(lpn = lpn, new_ppn = new_ppn,
-                tag = TRANS_UPDATE_FOR_DATA_GC)
-        else:
-            # lpn is in cache, update it
-            # This is a design from the original Dftl paper
-            self.mapping_manager.cached_mapping_table.overwrite_entry(lpn = lpn,
-                ppn = new_ppn, dirty = True)
-
-    def move_data_page_to_new_location_2(self, ppn):
         """
         This function only moves data pages, but it does not update mappings.
         It will return the mappings changes to so another function can update
