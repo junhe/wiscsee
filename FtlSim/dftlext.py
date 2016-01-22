@@ -532,8 +532,7 @@ class BlockPool(object):
         for channel in self.channel_pools:
             n_used += channel.total_used_blocks()
 
-        return float(n_used) / (self.n_channels * \
-                self.conf['flash_config']['n_blocks_per_channel'])
+        return float(n_used) / self.conf['flash_config']['n_blocks_per_dev']
 
     def total_used_blocks(self):
         total = 0
