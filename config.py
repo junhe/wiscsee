@@ -1,6 +1,7 @@
 import json
 import math
 import os
+import pprint
 
 from commons import *
 import utils
@@ -442,6 +443,51 @@ class ConfigNewFlash(Config):
         conf['n_blocks_per_dev'] = conf['n_blocks_per_channel'] * \
                 conf['n_channels_per_dev']
 
+
+    @property
+    def n_pages_per_plane(self):
+        return self['flash_config']['n_pages_per_block'] * \
+                self['flash_config']['n_blocks_per_plane']
+
+    @property
+    def n_pages_per_chip(self):
+        return self.n_pages_per_plane * self['flash_config']['n_planes_per_chip']
+
+    @property
+    def n_pages_per_package(self):
+        return self.n_pages_per_chip * \
+            self['flash_config']['n_chips_per_package']
+
+    @property
+    def n_blocks_per_channel(self):
+        return self['flash_config']['n_blocks_per_plane'] * \
+                self['flash_config']['n_planes_per_chip'] * \
+                self['flash_config']['n_chips_per_package'] * \
+                self['flash_config']['n_packages_per_channel']
+
+    @property
+    def n_blocks_per_dev(self):
+        a = self['flash_config']['n_blocks_per_dev']
+        b = self.n_blocks_per_channel * \
+            self['flash_config']['n_channels_per_dev']
+        if a != b:
+            print 'old', a
+            print 'new', b
+            print 'n_channels_per_dev', self['flash_config']['n_channels_per_dev']
+            pprint.pprint(self['flash_config'])
+            exit(1)
+        return a
+
+        return self['flash_config']['n_blocks_per_plane'] * \
+                self['flash_config']['n_planes_per_chip'] * \
+                self['flash_config']['n_chips_per_package'] * \
+                self['flash_config']['n_packages_per_channel'] * \
+                self['flash_config']['n_channels_per_dev']
+
+    # @property
+    # def n_blocks_per_dev(self):
+        # return self['flash_config']['n_blocks_per_dev']
+
     def flash_default(self):
         flash_config = {
             # layout info
@@ -481,6 +527,7 @@ class ConfigNewFlash(Config):
         assert n_blocks_per_plane > 0, 'n_blocks_per_plane must be larger' \
             'than zero. Not it is {}'.format(n_blocks_per_plane)
         fconf['n_blocks_per_plane'] = n_blocks_per_plane
+        self.calc_and_cache(fconf)
 
     def byte_to_pagenum(self, offset, force_alignment = True):
         "offset to page number"
@@ -491,7 +538,7 @@ class ConfigNewFlash(Config):
 
     def total_flash_bytes(self):
         return self['flash_config']['n_pages_per_block'] * \
-            self['flash_config']['n_blocks_per_dev'] * \
+            self.n_blocks_per_dev * \
             self['flash_config']['page_size']
 
     def off_size_to_page_list(self, off, size, force_alignment = True):
@@ -551,7 +598,7 @@ class ConfigNewFlash(Config):
 
     def total_num_pages(self):
         return self['flash_config']['n_pages_per_block'] *\
-            self['flash_config']['n_blocks_per_dev']
+            self.n_blocks_per_dev
 
     def block_off_to_page(self, blocknum, pageoff):
         "convert block number and page offset to page number"
@@ -587,10 +634,6 @@ class ConfigNewFlash(Config):
     @property
     def page_size(self):
         return self['flash_config']['page_size']
-
-    @property
-    def n_blocks_per_dev(self):
-        return self['flash_config']['n_blocks_per_dev']
 
     @property
     def n_secs_per_page(self):
