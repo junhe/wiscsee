@@ -1582,6 +1582,27 @@ class GarbageCollector(object):
 
         return {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn}
 
+    def group_changes(self, changes):
+        """
+        ret groups:
+            { m_vpn_1: [
+                      {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
+                      {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
+                      ...],
+              m_vpn_2: [
+                      {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
+                      {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
+                      ...],
+        """
+        # Put the mapping changes into groups, each group belongs to one mvpn
+        groups = {}
+        for change in changes:
+            m_vpn = self.mapping_manager.directory.m_vpn_of_lpn(change['lpn'])
+            group = groups.setdefault(m_vpn, [])
+            group.append(change)
+
+        return groups
+
     def update_mapping_in_batch(self, changes):
         """
         changes is a table in the form of:
@@ -1601,11 +1622,7 @@ class GarbageCollector(object):
         If a MVPN has only entries on flash, we will only update flash.
         """
         # Put the mapping changes into groups, each group belongs to one mvpn
-        groups = {}
-        for change in changes:
-            m_vpn = self.mapping_manager.directory.m_vpn_of_lpn(change['lpn'])
-            group = groups.setdefault(m_vpn, [])
-            group.append(change)
+        groups = self.group_changes(changes)
 
         for m_vpn, changes_list in groups.items():
             some_in_cache = False
