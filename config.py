@@ -537,20 +537,17 @@ class ConfigNewFlash(Config):
         The sector extent has to be aligned with page
         return page_start, page_count
         """
-        page = (sector * self['sector_size']) \
-            / self['flash_config']['page_size']
-        assert (sector * self['sector_size']) % \
-                self['flash_config']['page_size'] == 0,\
-                "starting sector ({}) is not aligned with page size {}"\
-                .format(sector, self['flash_config']['page_size'])
-        page_count = (count * self['sector_size']) / \
-            self['flash_config']['page_size']
-        assert (count * self['sector_size']) % \
-                self['flash_config']['page_size'] == 0, \
-                "total size {} bytes is not multiple of page size {} bytes."\
-                .format(count * self['sector_size'],
-                        self['flash_config']['page_size'])
+        page = sector / self.n_secs_per_page
+        assert sector % self.n_secs_per_page == 0
+        page_count = count / self.n_secs_per_page
+        assert count % self.n_secs_per_page == 0
         return page, page_count
+
+    def page_ext_to_sec_ext(self, page, count):
+        sec = page * self.n_secs_per_page
+        sec_count = count * self.n_secs_per_page
+
+        return sec, sec_count
 
     def total_num_pages(self):
         return self['flash_config']['n_pages_per_block'] *\
@@ -595,7 +592,18 @@ class ConfigNewFlash(Config):
     def n_blocks_per_dev(self):
         return self['flash_config']['n_blocks_per_dev']
 
+    @property
+    def n_secs_per_page(self):
+        return self['flash_config']['page_size'] / self['sector_size']
 
+    @property
+    def n_channels_per_dev(self):
+        return self['flash_config']['n_channels_per_dev']
+
+    @n_channels_per_dev.setter
+    def n_channels_per_dev(self, value):
+        self['flash_config']['n_channels_per_dev'] = value
+        self.calc_and_cache( self['flash_config'] )
 
 
 
