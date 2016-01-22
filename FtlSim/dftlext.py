@@ -2187,8 +2187,8 @@ def check_data_lpn(conf, flash, oob, ppn, req_lpn = None):
         return
 
     oob_lpn = oob.translate_ppn_to_lpn(ppn)
-    assert oob_lpn == req_lpn, "oob_lpn {oob_lpn} != req_lpn {req_lpn}"\
-        .format(oob_lpn = oob_lpn, req_lpn = req_lpn)
+    # assert oob_lpn == req_lpn, "oob_lpn {oob_lpn} != req_lpn {req_lpn}"\
+        # .format(oob_lpn = oob_lpn, req_lpn = req_lpn)
 
     sec, sec_count = conf.page_ext_to_sec_ext(oob_lpn, 1)
     for sec_num, data in zip(range(sec, sec+sec_count), flash.data[ppn]):
