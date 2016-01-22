@@ -316,13 +316,13 @@ class Timeline(object):
 
 
 def block_to_channel_block(conf, blocknum):
-    n_blocks_per_channel = conf['flash_config']['n_blocks_per_channel']
+    n_blocks_per_channel = conf.n_blocks_per_channel
     channel = blocknum / n_blocks_per_channel
     block_off = blocknum % n_blocks_per_channel
     return channel, block_off
 
 def channel_block_to_block(conf, channel, block_off):
-    n_blocks_per_channel = conf['flash_config']['n_blocks_per_channel']
+    n_blocks_per_channel = conf.n_blocks_per_channel
     return channel * n_blocks_per_channel + block_off
 
 class OutOfBandAreas(object):
@@ -532,7 +532,7 @@ class BlockPool(object):
         for channel in self.channel_pools:
             n_used += channel.total_used_blocks()
 
-        return float(n_used) / self.conf['flash_config']['n_blocks_per_dev']
+        return float(n_used) / self.conf.n_blocks_per_dev
 
     def total_used_blocks(self):
         total = 0
@@ -715,7 +715,7 @@ class ChannelBlockPool(object):
         self.conf = confobj
 
         self.freeblocks = deque(
-            range(self.conf['flash_config']['n_blocks_per_channel']))
+            range(self.conf.n_blocks_per_channel))
 
         # initialize usedblocks
         self.trans_usedblocks = []
@@ -856,12 +856,12 @@ class ChannelBlockPool(object):
 
     def visual(self):
         block_states = [ 'O' if block in self.freeblocks else 'X'
-            for block in range(self.conf['flash_config']['n_blocks_per_channel'])]
+            for block in range(self.conf.n_blocks_per_channel)]
         return ''.join(block_states)
 
     def used_ratio(self):
         return (len(self.trans_usedblocks) + len(self.data_usedblocks))\
-            / float(self.conf['flash_config']['n_blocks_per_channel'])
+            / float(self.conf.n_blocks_per_channel)
 
 class CacheEntryData(object):
     """

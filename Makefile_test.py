@@ -295,7 +295,7 @@ class TestBlockPool_freeblocks(unittest.TestCase):
         runtime_update(self.conf)
         block_pool = FtlSim.dftlext.BlockPool(self.conf)
         n_channels = block_pool.n_channels
-        n_blocks_per_channel = self.conf['flash_config']['n_blocks_per_channel']
+        n_blocks_per_channel = self.conf.n_blocks_per_channel
 
         # pop two block from each channel
         k = 2
@@ -336,7 +336,7 @@ class TestBlockPool_data(unittest.TestCase):
         runtime_update(self.conf)
         block_pool = FtlSim.dftlext.BlockPool(self.conf)
         n_channels = block_pool.n_channels
-        n_blocks_per_channel = self.conf['flash_config']['n_blocks_per_channel']
+        n_blocks_per_channel = self.conf.n_blocks_per_channel
 
         # pop two block from each channel
         k = 2
@@ -391,7 +391,7 @@ class TestBlockPool_trans(unittest.TestCase):
         runtime_update(self.conf)
         block_pool = FtlSim.dftlext.BlockPool(self.conf)
         n_channels = block_pool.n_channels
-        n_blocks_per_channel = self.conf['flash_config']['n_blocks_per_channel']
+        n_blocks_per_channel = self.conf.n_blocks_per_channel
 
         # pop two block from each channel
         k = 2
@@ -434,7 +434,7 @@ class TestBlockPool_next_data(unittest.TestCase):
         runtime_update(self.conf)
         block_pool = FtlSim.dftlext.BlockPool(self.conf)
         n_channels = block_pool.n_channels
-        n_blocks_per_channel = self.conf['flash_config']['n_blocks_per_channel']
+        n_blocks_per_channel = self.conf.n_blocks_per_channel
 
         k = 2
         for i in range(n_channels * k):
@@ -478,7 +478,7 @@ class TestBlockPool_next_gc_data(unittest.TestCase):
         runtime_update(self.conf)
         block_pool = FtlSim.dftlext.BlockPool(self.conf)
         n_channels = block_pool.n_channels
-        n_blocks_per_channel = self.conf['flash_config']['n_blocks_per_channel']
+        n_blocks_per_channel = self.conf.n_blocks_per_channel
 
         k = 2
         for i in range(n_channels * k):
@@ -546,8 +546,8 @@ class TestDftextGC(unittest.TestCase):
 class TestDftextGCSingleChannel(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNewFlash()
-        self.conf.n_channels_per_dev = 1
-        print self.conf['flash_config']
+
+        print '1', self.conf.n_blocks_per_dev
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
