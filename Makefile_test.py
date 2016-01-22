@@ -506,6 +506,7 @@ class TestBlockPool_next_gc_data(unittest.TestCase):
 class TestDftextGC(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNewFlash()
+        self.conf.n_channels_per_dev = 2
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
