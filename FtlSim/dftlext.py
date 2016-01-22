@@ -1611,6 +1611,64 @@ class GarbageCollector(object):
 
         return groups
 
+    def update_flash_mappings(self, m_vpn, changes_list):
+        # update translation page on flash
+        new_mappings = {change['lpn']:change['new_ppn']
+                for change in changes_list}
+        self.mapping_manager.update_translation_page_on_flash(
+                m_vpn, new_mappings, TRANS_UPDATE_FOR_DATA_GC)
+
+    def update_cache_mappings(self, changes_in_cache):
+        # some mappings are in flash and some in cache
+        # we can set mappings in cache as dirty=False since
+        # they are consistent with flash
+        for change in changes_in_cache:
+            lpn = change['lpn']
+            old_ppn = change['old_ppn']
+            new_ppn = change['new_ppn']
+            self.mapping_manager.cached_mapping_table\
+                .overwrite_entry(
+                lpn = lpn, ppn = new_ppn, dirty = False)
+
+    def apply_mvpn_changes(self, m_vpn, changes_list):
+        """
+        changes
+          [
+              {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
+              {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
+          ...]
+        """
+        changes_in_cache = []
+        some_in_cache = False
+        some_in_flash = False
+        for change in changes_list:
+            lpn = change['lpn']
+            old_ppn = change['old_ppn']
+            new_ppn = change['new_ppn']
+
+            cached_ppn = self.mapping_manager\
+                .cached_mapping_table.lpn_to_ppn(lpn)
+            if cached_ppn != MISS:
+                # lpn is in cache
+                # if some mappings are in cache and some are in flash, you
+                # can set dirty=False since both cache and flash will be
+                # updated.
+                # if all mappings are in cache you need to set dirty=True
+                # since flash will not be updated
+                # if all mappings are in flash you do nothing with cache
+                some_in_cache = True
+                self.mapping_manager.cached_mapping_table.overwrite_entry(
+                    lpn = lpn, ppn = new_ppn, dirty = True)
+                changes_in_cache.append(change)
+            else:
+                # lpn is not in cache, mark it and update later in batch
+                some_in_flash = True
+
+        if some_in_flash == True:
+            self.update_flash_mappings(m_vpn, changes_list)
+            if some_in_cache == True:
+                self.update_cache_mappings(changes_in_cache)
+
     def update_mapping_in_batch(self, changes):
         """
         changes is a table in the form of:
@@ -1633,51 +1691,7 @@ class GarbageCollector(object):
         groups = self.group_changes(changes)
 
         for m_vpn, changes_list in groups.items():
-            some_in_cache = False
-            changes_in_cache = []
-            some_in_flash = False
-            for change in changes_list:
-                lpn = change['lpn']
-                old_ppn = change['old_ppn']
-                new_ppn = change['new_ppn']
-
-                cached_ppn = self.mapping_manager\
-                    .cached_mapping_table.lpn_to_ppn(lpn)
-                if cached_ppn != MISS:
-                    # lpn is in cache
-                    # if some mappings are in cache and some are in flash, you
-                    # can set dirty=False since both cache and flash will be
-                    # updated.
-                    # if all mappings are in cache you need to set dirty=True
-                    # since flash will not be updated
-                    # if all mappings are in flash you do nothing with cache
-                    some_in_cache = True
-                    self.mapping_manager.cached_mapping_table.overwrite_entry(
-                        lpn = lpn, ppn = new_ppn, dirty = True)
-                    changes_in_cache.append(change)
-                else:
-                    # lpn is not in cache, mark it and update later in batch
-                    some_in_flash = True
-
-            if some_in_flash == True:
-                # update translation page on flash
-                new_mappings = {change['lpn']:change['new_ppn']
-                        for change in changes_list}
-                self.mapping_manager.update_translation_page_on_flash(
-                        m_vpn, new_mappings, TRANS_UPDATE_FOR_DATA_GC)
-
-                if some_in_cache == True:
-                    # some mappings are in flash and some in cache
-                    # we can set mappings in cache as dirty=False since
-                    # they are consistent with flash
-                    for change in changes_in_cache:
-                        lpn = change['lpn']
-                        old_ppn = change['old_ppn']
-                        new_ppn = change['new_ppn']
-                        self.mapping_manager.cached_mapping_table\
-                            .overwrite_entry(
-                            lpn = lpn, ppn = new_ppn, dirty = False)
-
+            self.apply_mvpn_changes(m_vpn, changes_list)
     def move_trans_page_to_new_location(self, m_ppn):
         """
         1. read the trans page
