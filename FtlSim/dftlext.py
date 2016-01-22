@@ -1114,6 +1114,11 @@ class MappingManager(object):
         ppns = []
         for lpn in lpns:
             ppn = self.lpn_to_ppn(lpn)
+            # request lpn must match oob[ppn].lpn
+            if ppn != 'UNINIT':
+                assert lpn == self.oob.translate_ppn_to_lpn(ppn), \
+                    "Request LPN {} does not match LPN in OOB {} for PPN {}"\
+                    .format(lpn, self.oob.translate_ppn_to_lpn(ppn), ppn)
             ppns.append(ppn)
 
         return ppns
@@ -1569,6 +1574,7 @@ class GarbageCollector(object):
 
         # read the the data page
         pagedata = self.flash.page_read(old_ppn, DATA_CLEANING)
+        check_data_lpn(self.conf, self.flash, self.oob, old_ppn)
 
         # find the mapping
         lpn = self.oob.translate_ppn_to_lpn(old_ppn)
@@ -1579,6 +1585,8 @@ class GarbageCollector(object):
 
         # update new page and old page's OOB
         self.oob.data_page_move(lpn, old_ppn, new_ppn)
+
+        check_data_lpn(self.conf, self.flash, self.oob, new_ppn)
 
         return {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn}
 
@@ -2031,22 +2039,31 @@ class Dftl(ftlbuilder.FtlBuilder):
         Note that the tranlation may incur GC
         It returns an array of data.
         """
-        page_start, page_count = self.conf.sec_ext_to_page_ext(sector, count)
+        lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
 
         ppns_to_read = self.mapping_manager.ppns_for_reading(
-            range(page_start, page_start + page_count))
+            range(lpn_start, lpn_start + lpn_count))
 
-        if self.flash.store_data == True:
-            data = []
-            for ppn in ppns_to_read:
-                data.append( self.flash.page_read(ppn, DATA_USER) )
-            data = self.page_to_sec_items(data)
-            return data
-        else:
-            for ppn in ppns_to_read:
-                self.flash.page_read(ppn, DATA_USER)
+        data = self.read_flash(ppns_to_read,
+                range(lpn_start, lpn_start + lpn_count))
 
-        self.garbage_collector.try_gc()
+        self.check_read(sector, count, data)
+
+        return data
+
+    def check_read(self, sector, sector_count, data):
+        for sec, sec_data in zip(
+                range(sector, sector + sector_count), data):
+            if sec_data == None:
+                continue
+            if not sec_data.startswith(str(sec)):
+                msg = "request: sec {} count {}\n".format(sector, sector_count)
+                msg += "INFTL: Data is not correct. Got: {read}, "\
+                        "sector={sec}".format(
+                        read = sec_data,
+                        sec = sec)
+                # print msg
+                raise RuntimeError(msg)
 
     def page_to_sec_items(self, data):
         ret = []
@@ -2075,10 +2092,10 @@ class Dftl(ftlbuilder.FtlBuilder):
         return new_data
 
     def sec_write(self, sector, count, data = None):
-        page_start, page_count = self.conf.sec_ext_to_page_ext(sector, count)
+        lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
 
         ppns_to_write = self.mapping_manager.ppns_for_writing(
-            range(page_start, page_start + page_count))
+            range(lpn_start, lpn_start + lpn_count))
 
         ppn_data = self.sec_to_page_items(data)
         self.write_flash(ppns_to_write, ppn_data)
@@ -2086,9 +2103,9 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.garbage_collector.try_gc()
 
     def sec_discard(self, sector, count):
-        page_start, page_count = self.conf.sec_ext_to_page_ext(sector, count)
+        lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
 
-        for lpn in range(page_start, page_start + page_count):
+        for lpn in range(lpn_start, lpn_start + lpn_count):
             self.lba_discard(lpn)
 
     def get_max_channel_count(self, ppns):
@@ -2097,25 +2114,32 @@ class Dftl(ftlbuilder.FtlBuilder):
         """
         channel_counter = Counter()
         for ppn in ppns:
+            if ppn == 'UNINIT':
+                # skip it so unitialized ppn does not involve flash op
+                continue
             block, _ = self.conf.page_to_block_off(ppn)
             channel, _ = block_to_channel_block(self.conf, block)
             channel_counter[channel] += 1
 
-        # find the channel with the largest number of blocks
-        max_channel, max_count = channel_counter.most_common(1)[0]
+        if len(channel_counter) == 0:
+            return 0
+        else:
+            # find the channel with the largest number of blocks
+            max_channel, max_count = channel_counter.most_common(1)[0]
+            return max_count
 
-        return max_count
-
-    def read_flash(self, ppns):
+    def read_flash(self, ppns, lpns):
         """
         Read ppns in batch and calculate time
+        lpns are the corresponding lpns of ppns, we pass them in for checking
         """
         max_count = self.get_max_channel_count(ppns)
         time = max_count * self.conf['flash_config']['page_read_time']
 
         if self.flash.store_data == True:
             data = []
-            for ppn in ppns:
+            for ppn, lpn in zip(ppns, lpns):
+                check_data_lpn(self.conf, self.flash, self.oob, ppn, lpn)
                 data.append( self.flash.page_read(ppn, DATA_USER) )
             data = self.page_to_sec_items(data)
             return data
@@ -2151,4 +2175,29 @@ class Dftl(ftlbuilder.FtlBuilder):
         This function is called after the simulation.
         """
         self.global_helper.timeline.save()
+
+
+def check_data_lpn(conf, flash, oob, ppn, req_lpn = None):
+    """
+    ppn: where data is stored in flash
+    lpn: the lpn of data
+    the data stored in flash.data[ppn] must be 'lpn.xxx'
+    """
+    if ppn == 'UNINIT':
+        return
+
+    oob_lpn = oob.translate_ppn_to_lpn(ppn)
+    assert oob_lpn == req_lpn, "oob_lpn {oob_lpn} != req_lpn {req_lpn}"\
+        .format(oob_lpn = oob_lpn, req_lpn = req_lpn)
+
+    sec, sec_count = conf.page_ext_to_sec_ext(oob_lpn, 1)
+    for sec_num, data in zip(range(sec, sec+sec_count), flash.data[ppn]):
+        if not data.startswith(str(sec_num)):
+            msg = "Flash data does not match its stored sec num"\
+                "flash data: {}, ppn: {}. req_lpn:{}, oob_lpn: {} sec:{}".format(
+                flash.data[ppn], ppn, req_lpn, oob_lpn,
+                list(range(sec, sec+sec_count)) )
+            print msg
+            raise RuntimeError(msg)
+
 
