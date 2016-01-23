@@ -472,21 +472,21 @@ class BlockPool(object):
     def freeblocks(self):
         free = []
         for channel in self.channel_pools:
-            free.extend( channel.freeblocks )
+            free.extend( channel.freeblocks_global )
         return free
 
     @property
     def data_usedblocks(self):
         used = []
         for channel in self.channel_pools:
-            used.extend( channel.data_usedblocks )
+            used.extend( channel.data_usedblocks_global )
         return used
 
     @property
     def trans_usedblocks(self):
         used = []
         for channel in self.channel_pools:
-            used.extend( channel.trans_usedblocks )
+            used.extend( channel.trans_usedblocks_global )
         return used
 
     def iter_channels(self, funcname, addr_type):
@@ -552,7 +552,7 @@ class BlockPool(object):
     def current_blocks(self):
         cur_blocks = []
         for channel in self.channel_pools:
-            cur_blocks.extend( channel.current_blocks() )
+            cur_blocks.extend( channel.current_blocks_global )
 
         return cur_blocks
 
@@ -568,12 +568,6 @@ class BlockPool(object):
         for channel in self.channel_pools:
             total += channel.total_used_blocks()
         return total
-
-    def used_blocks(self):
-        used = []
-        for channel in self.channel_pools:
-            used.extend( channel.used_blocks() )
-        return used
 
     def num_freeblocks(self):
         total = 0
@@ -603,6 +597,39 @@ class ChannelBlockPool(object):
         self.data_usedblocks  = []
 
         self.channel_no = channel_no
+
+    def shift_to_global(self, blocks):
+        """
+        calculate the block num in global namespace for blocks
+        """
+        return [ channel_block_to_block(self.conf, self.channel_no, block_off)
+            for block_off in blocks ]
+
+    @property
+    def freeblocks_global(self):
+        return self.shift_to_global(self.freeblocks)
+
+    @property
+    def trans_usedblocks_global(self):
+        return self.shift_to_global(self.trans_usedblocks)
+
+    @property
+    def data_usedblocks_global(self):
+        return self.shift_to_global(self.data_usedblocks)
+
+    @property
+    def current_blocks_global(self):
+        local_cur_blocks = self.current_blocks()
+
+        global_cur_blocks = []
+        for block in local_cur_blocks:
+            if block == None:
+                global_cur_blocks.append(block)
+            else:
+                global_cur_blocks.append(
+                    channel_block_to_block(self.conf, self.channel_no, block) )
+
+        return global_cur_blocks
 
     def pop_a_free_block(self):
         if self.freeblocks:
@@ -639,9 +666,6 @@ class ChannelBlockPool(object):
 
     def total_used_blocks(self):
         return len(self.trans_usedblocks) + len(self.data_usedblocks)
-
-    def used_blocks(self):
-        return self.trans_usedblocks + self.data_usedblocks
 
     def next_page_to_program(self, log_end_name_str, pop_free_block_func):
         """
