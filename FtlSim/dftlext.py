@@ -1454,7 +1454,6 @@ class GarbageCollector(object):
 
         # read the the data page
         pagedata = self.flash.page_read(old_ppn, DATA_CLEANING)
-        check_data_lpn(self.conf, self.flash, self.oob, old_ppn)
 
         # find the mapping
         lpn = self.oob.translate_ppn_to_lpn(old_ppn)
