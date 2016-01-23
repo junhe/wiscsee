@@ -463,7 +463,7 @@ class BlockPool(object):
     def __init__(self, confobj):
         self.conf = confobj
         self.n_channels = self.conf['flash_config']['n_channels_per_dev']
-        self.channel_pools = [ChannelBlockPool(self.conf)
+        self.channel_pools = [ChannelBlockPool(self.conf, i)
                 for i in range(self.n_channels)]
 
         self.cur_channel = 0
@@ -592,7 +592,7 @@ class ChannelBlockPool(object):
     flash channel.
     The block number of each channel starts from 0.
     """
-    def __init__(self, confobj):
+    def __init__(self, confobj, channel_no):
         self.conf = confobj
 
         self.freeblocks = deque(
@@ -601,6 +601,8 @@ class ChannelBlockPool(object):
         # initialize usedblocks
         self.trans_usedblocks = []
         self.data_usedblocks  = []
+
+        self.channel_no = channel_no
 
     def pop_a_free_block(self):
         if self.freeblocks:
