@@ -450,9 +450,34 @@ class ConfigNewFlash(Config):
                 self['flash_config']['n_packages_per_channel']
 
     @property
+    def n_pages_per_channel(self):
+        return self.n_blocks_per_channel * \
+            self['flash_config']['n_pages_per_block']
+
+    @property
     def n_blocks_per_dev(self):
         return self.n_blocks_per_channel * \
             self['flash_config']['n_channels_per_dev']
+
+    @property
+    def n_pages_per_block(self):
+        return self['flash_config']['n_pages_per_block']
+
+    @property
+    def page_size(self):
+        return self['flash_config']['page_size']
+
+    @property
+    def n_secs_per_page(self):
+        return self['flash_config']['page_size'] / self['sector_size']
+
+    @property
+    def n_channels_per_dev(self):
+        return self['flash_config']['n_channels_per_dev']
+
+    @n_channels_per_dev.setter
+    def n_channels_per_dev(self, value):
+        self['flash_config']['n_channels_per_dev'] = value
 
     def flash_default(self):
         flash_config = {
@@ -590,26 +615,6 @@ class ConfigNewFlash(Config):
     def total_flash_bytes(self):
         return self['flash_config']['n_pages_per_block'] * \
                 self['flash_num_blocks'] * self['flash_page_size']
-
-    @property
-    def n_pages_per_block(self):
-        return self['flash_config']['n_pages_per_block']
-
-    @property
-    def page_size(self):
-        return self['flash_config']['page_size']
-
-    @property
-    def n_secs_per_page(self):
-        return self['flash_config']['page_size'] / self['sector_size']
-
-    @property
-    def n_channels_per_dev(self):
-        return self['flash_config']['n_channels_per_dev']
-
-    @n_channels_per_dev.setter
-    def n_channels_per_dev(self, value):
-        self['flash_config']['n_channels_per_dev'] = value
 
 
 
