@@ -325,6 +325,21 @@ def channel_block_to_block(conf, channel, block_off):
     n_blocks_per_channel = conf.n_blocks_per_channel
     return channel * n_blocks_per_channel + block_off
 
+def page_to_channel_page(conf, pagenum):
+    """
+    pagenum is in the context of device
+    """
+    n_pages_per_channel = conf.n_pages_per_channel
+    channel = pagenum / n_pages_per_channel
+    page_off = pagenum % n_pages_per_channel
+    return channel, page_off
+
+def channel_page_to_page(conf, channel, page_off):
+    """
+    Translate channel, page_off to pagenum in context of device
+    """
+    return channel * conf.n_pages_per_channel + page_off
+
 class OutOfBandAreas(object):
     """
     It is used to hold page state and logical page number of a page.
@@ -474,31 +489,41 @@ class BlockPool(object):
             used.extend( channel.trans_usedblocks )
         return used
 
-    def iter_channels(self, funcname):
+    def iter_channels(self, funcname, addr_type):
         n = self.n_channels
         while n > 0:
             n -= 1
             try:
-                block_off = eval("self.channel_pools[self.cur_channel].{}()"\
+                in_channel_offset = eval("self.channel_pools[self.cur_channel].{}()"\
                         .format(funcname))
             except OutOfSpaceError:
                 pass
             else:
-                return channel_block_to_block(self.conf, self.cur_channel,
-                        block_off)
+                if addr_type == 'block':
+                    ret = channel_block_to_block(self.conf, self.cur_channel,
+                            in_channel_offset)
+                elif addr_type == 'page':
+                    ret = channel_page_to_page(self.conf, self.cur_channel,
+                            in_channel_offset)
+                else:
+                    raise RuntimeError("addr_type {} is not supported."\
+                        .format(addr_type))
+                return ret
             finally:
                 self.cur_channel = (self.cur_channel + 1) % self.n_channels
 
         raise OutOfSpaceError("Tried all channels. Out of Space")
 
     def pop_a_free_block(self):
-        return self.iter_channels("pop_a_free_block")
+        return self.iter_channels("pop_a_free_block", addr_type = 'block')
 
     def pop_a_free_block_to_trans(self):
-        return self.iter_channels("pop_a_free_block_to_trans")
+        return self.iter_channels("pop_a_free_block_to_trans",
+            addr_type = 'block')
 
     def pop_a_free_block_to_data(self):
-        return self.iter_channels("pop_a_free_block_to_data")
+        return self.iter_channels("pop_a_free_block_to_data",
+            addr_type = 'block')
 
     def move_used_data_block_to_free(self, blocknum):
         channel, block_off = block_to_channel_block(self.conf, blocknum)
@@ -509,16 +534,20 @@ class BlockPool(object):
         self.channel_pools[channel].move_used_trans_block_to_free(block_off)
 
     def next_data_page_to_program(self):
-        return self.iter_channels("next_data_page_to_program")
+        return self.iter_channels("next_data_page_to_program",
+            addr_type = 'page')
 
     def next_translation_page_to_program(self):
-        return self.iter_channels("next_translation_page_to_program")
+        return self.iter_channels("next_translation_page_to_program",
+            addr_type = 'page')
 
     def next_gc_data_page_to_program(self):
-        return self.iter_channels("next_gc_data_page_to_program")
+        return self.iter_channels("next_gc_data_page_to_program",
+            addr_type = 'page')
 
     def next_gc_translation_page_to_program(self):
-        return self.iter_channels("next_gc_translation_page_to_program")
+        return self.iter_channels("next_gc_translation_page_to_program",
+            addr_type = 'page')
 
     def current_blocks(self):
         cur_blocks = []
