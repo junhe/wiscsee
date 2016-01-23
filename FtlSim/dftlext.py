@@ -2036,7 +2036,8 @@ class Dftl(ftlbuilder.FtlBuilder):
         if self.flash.store_data == True:
             data = []
             for ppn, lpn in zip(ppns, lpns):
-                check_data_lpn(self.conf, self.flash, self.oob, ppn, lpn)
+                assert_oob_lpn_eq_req_lpn(self.mapping_manager,
+                        self.oob, ppn, lpn)
                 data.append( self.flash.page_read(ppn, DATA_USER) )
             data = self.page_to_sec_items(data)
             return data
@@ -2074,27 +2075,45 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.global_helper.timeline.save()
 
 
-def check_data_lpn(conf, flash, oob, ppn, req_lpn = None):
-    """
-    ppn: where data is stored in flash
-    lpn: the lpn of data
-    the data stored in flash.data[ppn] must be 'lpn.xxx'
-    """
+def assert_oob_lpn_eq_req_lpn(mapping_manager, oob, ppn, req_lpn):
+    if ppn == 'UNINIT':
+        return
+
+    if ppn == None:
+        return
+
+    oob_lpn = oob.translate_ppn_to_lpn(ppn)
+    if oob_lpn != req_lpn:
+        msg = "oob_lpn {oob_lpn} != req_lpn {req_lpn}. PPN={ppn}\n"\
+            .format(oob_lpn = oob_lpn, req_lpn = req_lpn, ppn = ppn)
+        msg += "Mapping: lpn {} -> ppn {}.\n".format(
+            5434, mapping_manager.lpn_to_ppn(5434))
+        msg += "Mapping: lpn {} -> ppn {}.\n".format(
+            6127, mapping_manager.lpn_to_ppn(6127))
+
+        raise RuntimeError(msg)
+
+
+def assert_flash_data_startswith_oob_lpn(conf, flash, oob, ppn):
+    if ppn == None:
+        return
+
     if ppn == 'UNINIT':
         return
 
     oob_lpn = oob.translate_ppn_to_lpn(ppn)
-    # assert oob_lpn == req_lpn, "oob_lpn {oob_lpn} != req_lpn {req_lpn}"\
-        # .format(oob_lpn = oob_lpn, req_lpn = req_lpn)
-
     sec, sec_count = conf.page_ext_to_sec_ext(oob_lpn, 1)
     for sec_num, data in zip(range(sec, sec+sec_count), flash.data[ppn]):
         if not data.startswith(str(sec_num)):
             msg = "Flash data does not match its stored sec num"\
-                "flash data: {}, ppn: {}. req_lpn:{}, oob_lpn: {} sec:{}".format(
-                flash.data[ppn], ppn, req_lpn, oob_lpn,
+                "flash data: {}, ppn: {}. oob_lpn: {} sec:{}".format(
+                flash.data[ppn], ppn, oob_lpn,
                 list(range(sec, sec+sec_count)) )
             print msg
             raise RuntimeError(msg)
 
+
+def check_data(mapping_manager, conf, flash, oob, ppn, req_lpn = None):
+    assert_oob_lpn_eq_req_lpn(mapping_manager, oob, ppn, req_lpn)
+    assert_flash_data_startswith_oob_lpn(conf, flash, oob, ppn)
 
