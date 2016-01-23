@@ -581,154 +581,6 @@ class BlockPool(object):
             total += len( channel.freeblocks )
         return total
 
-class BlockPool_old(object):
-    def __init__(self, confobj):
-        self.conf = confobj
-
-        self.freeblocks = deque(range(self.conf.n_blocks_per_dev))
-
-        # initialize usedblocks
-        self.trans_usedblocks = []
-        self.data_usedblocks  = []
-
-    def pop_a_free_block(self):
-        if self.freeblocks:
-            blocknum = self.freeblocks.popleft()
-        else:
-            # nobody has free block
-            raise RuntimeError('No free blocks in device!!!!')
-
-        return blocknum
-
-    def pop_a_free_block_to_trans(self):
-        "take one block from freelist and add it to translation block list"
-        blocknum = self.pop_a_free_block()
-        self.trans_usedblocks.append(blocknum)
-        return blocknum
-
-    def pop_a_free_block_to_data(self):
-        "take one block from freelist and add it to data block list"
-        blocknum = self.pop_a_free_block()
-        self.data_usedblocks.append(blocknum)
-        return blocknum
-
-    def move_used_data_block_to_free(self, blocknum):
-        self.data_usedblocks.remove(blocknum)
-        self.freeblocks.append(blocknum)
-
-    def move_used_trans_block_to_free(self, blocknum):
-        self.trans_usedblocks.remove(blocknum)
-        self.freeblocks.append(blocknum)
-
-    def total_used_blocks(self):
-        return len(self.trans_usedblocks) + len(self.data_usedblocks)
-
-    def used_blocks(self):
-        return self.trans_usedblocks + self.data_usedblocks
-
-    def next_page_to_program(self, log_end_name_str, pop_free_block_func):
-        """
-        The following comment uses next_data_page_to_program() as a example.
-
-        it finds out the next available page to program
-        usually it is the page after log_end_pagenum.
-
-        If next=log_end_pagenum + 1 is in the same block with
-        log_end_pagenum, simply return log_end_pagenum + 1
-        If next=log_end_pagenum + 1 is out of the block of
-        log_end_pagenum, we need to pick a new block from self.freeblocks
-
-        This function is stateful, every time you call it, it will advance by
-        one.
-        """
-
-        if not hasattr(self, log_end_name_str):
-           # This is only executed for the first time
-           cur_block = pop_free_block_func()
-           # use the first page of this block to be the
-           next_page = self.conf.block_off_to_page(cur_block, 0)
-           # log_end_name_str is the page that is currently being operated on
-           setattr(self, log_end_name_str, next_page)
-
-           return next_page
-
-        cur_page = getattr(self, log_end_name_str)
-        cur_block, cur_off = self.conf.page_to_block_off(cur_page)
-
-        next_page = (cur_page + 1) % self.conf.total_num_pages()
-        next_block, next_off = self.conf.page_to_block_off(next_page)
-
-        if cur_block == next_block:
-            ret = next_page
-        else:
-            # get a new block
-            block = pop_free_block_func()
-            start, _ = self.conf.block_to_page_range(block)
-            ret = start
-
-        setattr(self, log_end_name_str, ret)
-        return ret
-
-    def next_data_page_to_program(self):
-        return self.next_page_to_program('data_log_end_ppn',
-            self.pop_a_free_block_to_data)
-
-    def next_translation_page_to_program(self):
-        return self.next_page_to_program('trans_log_end_ppn',
-            self.pop_a_free_block_to_trans)
-
-    def next_gc_data_page_to_program(self):
-        return self.next_page_to_program('gc_data_log_end_ppn',
-            self.pop_a_free_block_to_data)
-
-    def next_gc_translation_page_to_program(self):
-        return self.next_page_to_program('gc_trans_log_end_ppn',
-            self.pop_a_free_block_to_trans)
-
-    def current_blocks(self):
-        try:
-            cur_data_block, _ = self.conf.page_to_block_off(
-                self.data_log_end_ppn)
-        except AttributeError:
-            cur_data_block = None
-
-        try:
-            cur_trans_block, _ = self.conf.page_to_block_off(
-                self.trans_log_end_ppn)
-        except AttributeError:
-            cur_trans_block = None
-
-        try:
-            cur_gc_data_block, _ = self.conf.page_to_block_off(
-                self.gc_data_log_end_ppn)
-        except AttributeError:
-            cur_gc_data_block = None
-
-        try:
-            cur_gc_trans_block, _ = self.conf.page_to_block_off(
-                self.gc_trans_log_end_ppn)
-        except AttributeError:
-            cur_gc_trans_block = None
-
-        return (cur_data_block, cur_trans_block, cur_gc_data_block,
-            cur_gc_trans_block)
-
-    def __repr__(self):
-        ret = ' '.join(['freeblocks', repr(self.freeblocks)]) + '\n' + \
-            ' '.join(['trans_usedblocks', repr(self.trans_usedblocks)]) + \
-            '\n' + \
-            ' '.join(['data_usedblocks', repr(self.data_usedblocks)])
-        return ret
-
-    def visual(self):
-        block_states = [ 'O' if block in self.freeblocks else 'X'
-                for block in range(self.conf.n_blocks_per_dev)]
-        return ''.join(block_states)
-
-    def used_ratio(self):
-        return (len(self.trans_usedblocks) + len(self.data_usedblocks))\
-            / float(self.conf.n_blocks_per_dev)
-
 
 class OutOfSpaceError(RuntimeError):
     pass
@@ -1145,9 +997,8 @@ class MappingManager(object):
             ppn = self.lpn_to_ppn(lpn)
             # request lpn must match oob[ppn].lpn
             if ppn != 'UNINIT':
-                assert lpn == self.oob.translate_ppn_to_lpn(ppn), \
-                    "Request LPN {} does not match LPN in OOB {} for PPN {}"\
-                    .format(lpn, self.oob.translate_ppn_to_lpn(ppn), ppn)
+                assert_flash_data_startswith_oob_lpn(self.conf, self.flash,
+                        self.oob, ppn)
             ppns.append(ppn)
 
         return ppns
@@ -1615,7 +1466,9 @@ class GarbageCollector(object):
         # update new page and old page's OOB
         self.oob.data_page_move(lpn, old_ppn, new_ppn)
 
-        check_data_lpn(self.conf, self.flash, self.oob, new_ppn)
+        if lpn == 6127:
+            print 'we will move 6127'
+            exit(1)
 
         return {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn}
 
