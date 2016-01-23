@@ -42,7 +42,7 @@ class TestConfigNewFlash(unittest.TestCase):
 
         npages1 = conf.total_num_pages()
         npages2 = conf['flash_config']['n_pages_per_block'] \
-            * conf['flash_config']['n_blocks_per_dev']
+            * conf.n_blocks_per_dev
         print 'npages1', npages1
         print 'npages2', npages2
         self.assertEqual(npages1, npages2)
