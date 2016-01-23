@@ -997,8 +997,10 @@ class MappingManager(object):
             ppn = self.lpn_to_ppn(lpn)
             # request lpn must match oob[ppn].lpn
             if ppn != 'UNINIT':
-                assert_flash_data_startswith_oob_lpn(self.conf, self.flash,
-                        self.oob, ppn)
+                # assert_flash_data_startswith_oob_lpn(self.conf, self.flash,
+                        # self.oob, ppn)
+                check_data(self, self.conf, self.flash, self.oob, ppn,
+                        lpn)
             ppns.append(ppn)
 
         return ppns
