@@ -1519,6 +1519,13 @@ class GarbageCollector(object):
               {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
               {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn},
           ...]
+
+        # if some mappings are in cache and some are in flash, you
+        # can set dirty=False since both cache and flash will be
+        # updated.
+        # if all mappings are in cache you need to set dirty=True
+        # since flash will not be updated
+        # if all mappings are in flash you do nothing with cache
         """
         changes_in_cache = []
         some_in_cache = False
@@ -1532,12 +1539,6 @@ class GarbageCollector(object):
                 .cached_mapping_table.lpn_to_ppn(lpn)
             if cached_ppn != MISS:
                 # lpn is in cache
-                # if some mappings are in cache and some are in flash, you
-                # can set dirty=False since both cache and flash will be
-                # updated.
-                # if all mappings are in cache you need to set dirty=True
-                # since flash will not be updated
-                # if all mappings are in flash you do nothing with cache
                 some_in_cache = True
                 self.mapping_manager.cached_mapping_table.overwrite_entry(
                     lpn = lpn, ppn = new_ppn, dirty = True)
