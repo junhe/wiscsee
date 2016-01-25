@@ -1,4 +1,5 @@
 import unittest
+import pprint
 
 from Makefile import *
 
@@ -196,12 +197,6 @@ class DftlextTest3(unittest.TestCase):
     def test_extent_e2e(self):
         exp = DftlextExpE2e()
         exp.main()
-
-class DftlextTestFTLONLY(unittest.TestCase):
-    def test_ftl_only(self):
-        exp = DftlextExpFTLONLY()
-        exp.main()
-
 
 class TestChannelBlockPool(unittest.TestCase):
     def setup_config(self):
@@ -476,7 +471,7 @@ class TestDftextGC(unittest.TestCase):
         self.conf["workload_src"] = LBAGENERATOR
         self.conf["lba_workload_class"] = "ExtentTestWorkload"
         self.conf["lba_workload_configs"]["ExtentTestWorkload"] = {
-            "op_count": 10000}
+            "op_count": 1000}
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
@@ -517,7 +512,7 @@ class TestDftextGCSingleChannel(unittest.TestCase):
         self.conf["workload_src"] = LBAGENERATOR
         self.conf["lba_workload_class"] = "ExtentTestWorkload"
         self.conf["lba_workload_configs"]["ExtentTestWorkload"] = {
-            "op_count": 10000}
+            "op_count": 1000}
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
@@ -541,6 +536,37 @@ class TestDftextGCSingleChannel(unittest.TestCase):
         self.my_run()
 
 
+class TestDftlextTimeline(unittest.TestCase):
+    def setup_config(self):
+        self.conf = config.Config()
+
+    def setup_environment(self):
+        pass
+
+    def setup_workload(self):
+        pass
+
+    def setup_ftl(self):
+        pass
+
+    def my_run(self):
+        tl = FtlSim.dftlext.Timeline(self.conf)
+        tl.turn_on()
+        tl.add_logical_op(0, 100, FtlSim.dftlext.LOGICAL_READ)
+        tl.incr_time_stamp('flash.read', 3)
+        self.assertEqual(tl.table[-1]['end_timestamp'],
+            tl.op_time['flash.read'] * 3)
+        tl.add_logical_op(200, 100, FtlSim.dftlext.LOGICAL_READ)
+        self.assertEqual(tl.table[-1]['start_timestamp'],
+            tl.op_time['flash.read'] * 3)
+
+    def test_main(self):
+        "Remove prefix _"
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run()
 
 
 def main():
