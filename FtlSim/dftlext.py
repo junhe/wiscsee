@@ -194,10 +194,6 @@ UNINITIATED, MISS = ('UNINIT', 'MISS')
 DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
 random.seed(0)
 
-# debugrec = recorder.Recorder(recorder.STDOUT_TARGET, verbose_level = 3)
-# def db(*args):
-    # debugrec.debug(*args)
-
 class GlobalHelper(object):
     """
     In case you need some global variables. We put all global stuff here so
