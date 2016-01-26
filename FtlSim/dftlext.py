@@ -227,10 +227,11 @@ class Timeline(object):
         self.conf = confobj
         self.ON = False
         self.timestamp = 0
+
         self.op_time = {
-            'flash.read':   0.050,     # milli sec
-            'flash.write':  0.750,     # milli sec
-            'flash.erasure':3.000  # milli sec
+            'flash.read':   self.conf['flash_config']['page_read_time'],     # milli sec
+            'flash.write':  self.conf['flash_config']['page_prog_time'],     # milli sec
+            'flash.erasure': self.conf['flash_config']['block_erase_time']  # milli sec
         }
 
     def turn_on(self):
@@ -1839,6 +1840,8 @@ class Dftl(ftlbuilder.FtlBuilder):
         It returns an array of data.
         """
         lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
+        self.global_helper.timeline.add_logical_op(sector = sector, count = count,
+                op = 'LOGICAL_READ')
 
         ppns_to_read = self.mapping_manager.ppns_for_reading(
             range(lpn_start, lpn_start + lpn_count))
@@ -1893,6 +1896,9 @@ class Dftl(ftlbuilder.FtlBuilder):
     def sec_write(self, sector, count, data = None):
         lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
 
+        self.global_helper.timeline.add_logical_op(sector = sector, count = count,
+                op = 'LOGICAL_WRITE')
+
         ppns_to_write = self.mapping_manager.ppns_for_writing(
             range(lpn_start, lpn_start + lpn_count))
 
@@ -1904,6 +1910,9 @@ class Dftl(ftlbuilder.FtlBuilder):
 
     def sec_discard(self, sector, count):
         lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
+
+        self.global_helper.timeline.add_logical_op(sector = sector, count = count,
+                op = 'LOGICAL_DISCARD')
 
         for lpn in range(lpn_start, lpn_start + lpn_count):
             self.lba_discard(lpn)
@@ -1965,7 +1974,7 @@ class ParallelFlash(object):
     def __init__(self, confobj, recorderobj, globalhelper = None):
         self.conf = confobj
         self.recorder = recorderobj
-        self.globalhelper = globalhelper
+        self.global_helper = globalhelper
         self.flash_backend = flash.SimpleFlash(recorderobj, confobj)
 
     def get_max_channel_page_count(self, ppns):
@@ -2003,7 +2012,8 @@ class ParallelFlash(object):
         lpns are the corresponding lpns of ppns, we pass them in for checking
         """
         max_count = self.get_max_channel_page_count(ppns)
-        time = max_count * self.conf['flash_config']['page_read_time']
+        self.global_helper.timeline.incr_time_stamp('flash.read',
+                max_count)
 
         data = []
         for ppn in ppns:
@@ -2019,7 +2029,8 @@ class ParallelFlash(object):
         queue.
         """
         max_count = self.get_max_channel_page_count(ppns)
-        time = max_count * self.conf['flash_config']['page_prog_time']
+        self.global_helper.timeline.incr_time_stamp('flash.write',
+                max_count)
 
         # save the data to flash
         if ppn_data == None:
@@ -2031,7 +2042,8 @@ class ParallelFlash(object):
 
     def erase_blocks(self, pbns, tag):
         max_count = self.get_max_channel_block_count(pbns)
-        time = max_count * self.conf['flash_config']['block_erase_time']
+        self.global_helper.timeline.incr_time_stamp('flash.erasure',
+                max_count)
 
         for block in pbns:
             self.flash_backend.block_erase(block, cat = tag)

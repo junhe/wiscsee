@@ -538,7 +538,7 @@ class TestDftextGCSingleChannel(unittest.TestCase):
 
 class TestDftlextTimeline(unittest.TestCase):
     def setup_config(self):
-        self.conf = config.Config()
+        self.conf = config.ConfigNewFlash()
 
     def setup_environment(self):
         pass
@@ -598,7 +598,8 @@ class TestDftlextParallelFlash(unittest.TestCase):
             print_when_finished = self.conf['print_when_finished']
             )
         rec.disable()
-        fc = FtlSim.dftlext.ParallelFlash(self.conf, rec, None)
+        fc = FtlSim.dftlext.ParallelFlash(self.conf, rec,
+                FtlSim.dftlext.GlobalHelper(self.conf))
 
         self.assertEqual(fc.get_max_channel_page_count(ppns = [0]), 1)
         self.assertEqual(fc.get_max_channel_page_count(ppns = [0, 1, 2, 3]), 4)
