@@ -1,6 +1,37 @@
 import simpy
 
 
+class SimpleFlash(object):
+    def __init__(self, recorder, confobj = None):
+        self.recorder = recorder
+        self.conf = confobj
+
+        self.data = {} # ppn -> contents stored in a flash page
+
+    def page_read(self, pagenum, cat):
+        self.recorder.put('physical_read', pagenum, cat)
+
+        content = self.data.get(pagenum, None)
+        return content
+
+    def page_write(self, pagenum, cat, data = None):
+        self.recorder.put('physical_write', pagenum, cat)
+
+        if data != None:
+            self.data[pagenum] = data
+
+    def block_erase(self, blocknum, cat):
+        # print 'block_erase', blocknum, cat
+        self.recorder.put('phy_block_erase', blocknum, cat)
+
+        ppn_start, ppn_end = self.conf.block_to_page_range(blocknum)
+        for ppn in range(ppn_start, ppn_end):
+            try:
+                del self.data[ppn]
+            except KeyError:
+                # ignore key error
+                pass
+
 class Flash(object):
     def __init__(self, recorder, confobj = None, globalhelper = None):
         self.recorder = recorder
@@ -42,6 +73,10 @@ class Flash(object):
                 except KeyError:
                     # ignore key error
                     pass
+
+
+
+
 
 
 class FlashDES(object):
