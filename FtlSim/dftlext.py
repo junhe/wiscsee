@@ -1014,7 +1014,7 @@ class MappingManager(object):
         m_ppn = self.directory.m_ppn_of_lpn(lpn)
 
         # read it up, this operation is just for statistics
-        self.flash.page_read(m_ppn, TRANS_CACHE)
+        self.flash.read_pages(ppns = [m_ppn], tag = TRANS_CACHE)
 
         # Now we have all the entries of m_ppn in memory, we need to put
         # the mapping of lpn->ppn to CMT
@@ -1153,7 +1153,7 @@ class MappingManager(object):
         # update GMT on flash
         if len(new_mappings) < self.conf.dftl_n_mapping_entries_per_page():
             # need to read some mappings
-            self.flash.page_read(old_m_ppn, tag)
+            self.flash.read_pages(ppns = [old_m_ppn], tag = tag)
         else:
             self.recorder.count_me('cache', 'saved.1.read')
 
@@ -1161,7 +1161,7 @@ class MappingManager(object):
         new_m_ppn = self.block_pool.next_translation_page_to_program()
 
         # update flash
-        self.flash.page_write(new_m_ppn, tag)
+        self.flash.write_pages(ppns = [new_m_ppn], ppn_data = None, tag = tag)
         # update our fake 'on-flash' GMT
         for lpn, new_ppn in new_mappings.items():
             self.global_mapping_table.update(lpn = lpn, ppn = new_ppn)
@@ -1432,14 +1432,16 @@ class GarbageCollector(object):
         old_ppn = ppn
 
         # read the the data page
-        pagedata = self.flash.page_read(old_ppn, DATA_CLEANING)
+        pagedata = self.flash.read_pages(ppns = [old_ppn],
+                tag = DATA_CLEANING)[0]
 
         # find the mapping
         lpn = self.oob.translate_ppn_to_lpn(old_ppn)
 
         # write to new page
         new_ppn = self.block_pool.next_gc_data_page_to_program()
-        self.flash.page_write(new_ppn, DATA_CLEANING, data = pagedata)
+        self.flash.write_pages(ppns = [new_ppn], ppn_data = [pagedata],
+                tag = DATA_CLEANING)
 
         # update new page and old page's OOB
         self.oob.data_page_move(lpn, old_ppn, new_ppn)
@@ -1564,11 +1566,12 @@ class GarbageCollector(object):
 
         m_vpn = self.oob.translate_ppn_to_lpn(old_m_ppn)
 
-        self.flash.page_read(old_m_ppn, TRANS_CLEAN)
+        self.flash.read_pages(ppns = [old_m_ppn], tag = TRANS_CLEAN)
 
         # write to new page
         new_m_ppn = self.block_pool.next_gc_translation_page_to_program()
-        self.flash.page_write(new_m_ppn, TRANS_CLEAN)
+        self.flash.write_pages(ppns = [new_m_ppn], ppn_data = None,
+                tag = TRANS_CLEAN)
 
         # update new page and old page's OOB
         self.oob.new_write(m_vpn, old_m_ppn, new_m_ppn)
@@ -1694,7 +1697,7 @@ class GarbageCollector(object):
         # set page states to ERASED and in-OOB lpn to nothing
         self.oob.erase_block(blocknum)
 
-        self.flash.block_erase(blocknum, tag)
+        self.flash.erase_blocks(pbns = [blocknum], tag = tag)
 
 def dec_debug(function):
     def wrapper(self, lpn):
@@ -1757,8 +1760,7 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.global_helper = GlobalHelper(confobj)
 
         # Replace the flash object with a new one, which has global helper
-        flashobj = flash.Flash(recorderobj, confobj, self.global_helper)
-        self.flash = flashobj
+        self.flash = ParallelFlash(self.conf, self.recorder, self.global_helper)
 
         self.block_pool = BlockPool(confobj)
         self.oob = OutOfBandAreas(confobj)
@@ -1767,14 +1769,14 @@ class Dftl(ftlbuilder.FtlBuilder):
         self.mapping_manager = MappingManager(
             confobj = self.conf,
             block_pool = self.block_pool,
-            flashobj = flashobj,
+            flashobj = self.flash,
             oobobj=self.oob,
             recorderobj = recorderobj
             )
 
         self.garbage_collector = GarbageCollector(
             confobj = self.conf,
-            flashobj = flashobj,
+            flashobj = self.flash,
             oobobj=self.oob,
             block_pool = self.block_pool,
             mapping_manager = self.mapping_manager,
@@ -1786,81 +1788,6 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         self.n_sec_per_page = self.conf.page_size \
                 / self.conf['sector_size']
-
-    # FTL APIs
-    def lba_read(self, lpn, pid = None):
-        """
-        ppn = translate(pagenum))
-        flash.read(ppn)
-        """
-        self.recorder.put('logical_read', lpn, 'user')
-
-        ppn = self.mapping_manager.lpn_to_ppn(lpn)
-        data = self.flash.page_read(ppn, DATA_USER)
-
-        # self.recorder.write_file('lba.trace.txt',
-            # timestamp = self.oob.timestamp(),
-            # operation = 'read',
-            # lpn =  lpn
-        # )
-
-        self.garbage_collector.try_gc()
-
-        return data
-
-    def lba_write(self, lpn, data = None, pid = None):
-        """
-        This is the interface for higher level to call, do NOT use it for
-        internal use. If you need, create new one and refactor the code.
-
-        block_pool
-            no need to update
-        CMT
-            if lpn's mapping entry is in cache, update it and mark it as
-            dirty. If it is not in cache, add such entry and mark as dirty
-        GMT
-            no need to update, it will be updated when we write back CMT
-        OOB
-            mark the new_ppn as valid
-            update the LPN to lpn
-            invalidate the old_ppn, go cleaner can GC it
-            TODO: should the DFtl paper have considered the operation in OOB
-        GTD
-            No need to update, because GMT does not change
-        Garbage collector
-            We need to check if we need to do garbage collection
-        Appending point
-            It is automatically updated by next_data_page_to_program
-        Flash
-        """
-        self.recorder.put('logical_write', lpn, 'user')
-
-        old_ppn = self.mapping_manager.lpn_to_ppn(lpn)
-
-        # appending point
-        new_ppn = self.block_pool.next_data_page_to_program()
-
-        # CMT
-        # lpn must be in cache thanks to self.mapping_manager.lpn_to_ppn()
-        self.mapping_manager.cached_mapping_table.overwrite_entry(
-            lpn = lpn, ppn = new_ppn, dirty = True)
-
-        # OOB
-        self.oob.new_lba_write(lpn = lpn, old_ppn = old_ppn,
-            new_ppn = new_ppn)
-
-        # The LBA trace to file
-        # self.recorder.write_file('lba.trace.txt',
-            # timestamp = self.oob.timestamp_table[new_ppn],
-            # operation = 'write',
-            # lpn =  lpn
-        # )
-
-        # Flash
-        self.flash.page_write(new_ppn, DATA_USER, data = data)
-
-        # garbage collection
-        self.garbage_collector.try_gc()
 
     def lba_discard(self, lpn, pid = None):
         """
@@ -1916,8 +1843,8 @@ class Dftl(ftlbuilder.FtlBuilder):
         ppns_to_read = self.mapping_manager.ppns_for_reading(
             range(lpn_start, lpn_start + lpn_count))
 
-        data = self.read_flash(ppns_to_read,
-                range(lpn_start, lpn_start + lpn_count))
+        data = self.flash.read_pages(ppns = ppns_to_read, tag = DATA_USER)
+        data = self.page_to_sec_items(data)
 
         self.check_read(sector, count, data)
 
@@ -1970,7 +1897,8 @@ class Dftl(ftlbuilder.FtlBuilder):
             range(lpn_start, lpn_start + lpn_count))
 
         ppn_data = self.sec_to_page_items(data)
-        self.write_flash(ppns_to_write, ppn_data)
+        self.flash.write_pages(ppns = ppns_to_write, ppn_data = ppn_data,
+                tag = DATA_USER)
 
         self.garbage_collector.try_gc()
 
@@ -1979,66 +1907,6 @@ class Dftl(ftlbuilder.FtlBuilder):
 
         for lpn in range(lpn_start, lpn_start + lpn_count):
             self.lba_discard(lpn)
-
-    def get_max_channel_count(self, ppns):
-        """
-        Find the max count of the channels
-        """
-        channel_counter = Counter()
-        for ppn in ppns:
-            if ppn == 'UNINIT':
-                # skip it so unitialized ppn does not involve flash op
-                continue
-            block, _ = self.conf.page_to_block_off(ppn)
-            channel, _ = block_to_channel_block(self.conf, block)
-            channel_counter[channel] += 1
-
-        if len(channel_counter) == 0:
-            return 0
-        else:
-            # find the channel with the largest number of blocks
-            max_channel, max_count = channel_counter.most_common(1)[0]
-            return max_count
-
-    def read_flash(self, ppns, lpns):
-        """
-        Read ppns in batch and calculate time
-        lpns are the corresponding lpns of ppns, we pass them in for checking
-        """
-        max_count = self.get_max_channel_count(ppns)
-        time = max_count * self.conf['flash_config']['page_read_time']
-
-        if self.flash.store_data == True:
-            data = []
-            for ppn, lpn in zip(ppns, lpns):
-                assert_oob_lpn_eq_req_lpn(self.mapping_manager,
-                        self.oob, ppn, lpn)
-                data.append( self.flash.page_read(ppn, DATA_USER) )
-            data = self.page_to_sec_items(data)
-            return data
-        else:
-            for ppn in ppns:
-                self.flash.page_read(ppn, DATA_USER)
-            return None
-
-    def write_flash(self, ppns, ppn_data):
-        """
-        This function will store ppn_data to flash and calculate the time
-        it takes to do it with real flash.
-
-        The access time is determined by the channel with the longest request
-        queue.
-        """
-        max_count = self.get_max_channel_count(ppns)
-        time = max_count * self.conf['flash_config']['page_prog_time']
-
-        # save the data to flash
-        if ppn_data == None:
-            for ppn in ppns:
-                self.flash.page_write(ppn, DATA_USER)
-        else:
-            for ppn, item in zip(ppns, ppn_data):
-                self.flash.page_write(ppn, DATA_USER, data = item)
 
     def pre_workload(self):
         self.global_helper.timeline.turn_on()
@@ -2076,19 +1944,96 @@ def assert_flash_data_startswith_oob_lpn(conf, flash, oob, ppn):
     if ppn == 'UNINIT':
         return
 
+    flashdata = flash.flash_backend.data
     oob_lpn = oob.translate_ppn_to_lpn(ppn)
     sec, sec_count = conf.page_ext_to_sec_ext(oob_lpn, 1)
-    for sec_num, data in zip(range(sec, sec+sec_count), flash.data[ppn]):
+    for sec_num, data in zip(range(sec, sec+sec_count), flashdata[ppn]):
         if not data.startswith(str(sec_num)):
             msg = "Flash data does not match its stored sec num"\
                 "flash data: {}, ppn: {}. oob_lpn: {} sec:{}".format(
-                flash.data[ppn], ppn, oob_lpn,
+                flashdata[ppn], ppn, oob_lpn,
                 list(range(sec, sec+sec_count)) )
             print msg
             raise RuntimeError(msg)
 
-
 def check_data(mapping_manager, conf, flash, oob, ppn, req_lpn = None):
     assert_oob_lpn_eq_req_lpn(mapping_manager, oob, ppn, req_lpn)
     assert_flash_data_startswith_oob_lpn(conf, flash, oob, ppn)
+
+
+class ParallelFlash(object):
+    def __init__(self, confobj, recorderobj, globalhelper = None):
+        self.conf = confobj
+        self.recorder = recorderobj
+        self.globalhelper = globalhelper
+        self.flash_backend = flash.SimpleFlash(recorderobj, confobj)
+
+    def get_max_channel_page_count(self, ppns):
+        """
+        Find the max count of the channels
+        """
+        pbns = []
+        for ppn in ppns:
+            if ppn == 'UNINIT':
+                # skip it so unitialized ppn does not involve flash op
+                continue
+            block, _ = self.conf.page_to_block_off(ppn)
+            pbns.append(block)
+
+        return self.get_max_channel_block_count(pbns)
+
+    def get_max_channel_block_count(self, pbns):
+        channel_counter = Counter()
+        for pbn in pbns:
+            channel, _ = block_to_channel_block(self.conf, pbn)
+            channel_counter[channel] += 1
+
+        return self.find_max_count(channel_counter)
+
+    def find_max_count(self, channel_counter):
+        if len(channel_counter) == 0:
+            return 0
+        else:
+            max_channel, max_count = channel_counter.most_common(1)[0]
+            return max_count
+
+    def read_pages(self, ppns, tag):
+        """
+        Read ppns in batch and calculate time
+        lpns are the corresponding lpns of ppns, we pass them in for checking
+        """
+        max_count = self.get_max_channel_page_count(ppns)
+        time = max_count * self.conf['flash_config']['page_read_time']
+
+        data = []
+        for ppn in ppns:
+            data.append( self.flash_backend.page_read(ppn, tag) )
+        return data
+
+    def write_pages(self, ppns, ppn_data, tag):
+        """
+        This function will store ppn_data to flash and calculate the time
+        it takes to do it with real flash.
+
+        The access time is determined by the channel with the longest request
+        queue.
+        """
+        max_count = self.get_max_channel_page_count(ppns)
+        time = max_count * self.conf['flash_config']['page_prog_time']
+
+        # save the data to flash
+        if ppn_data == None:
+            for ppn in ppns:
+                self.flash_backend.page_write(ppn, tag)
+        else:
+            for ppn, item in zip(ppns, ppn_data):
+                self.flash_backend.page_write(ppn, tag, data = item)
+
+    def erase_blocks(self, pbns, tag):
+        max_count = self.get_max_channel_block_count(pbns)
+        time = max_count * self.conf['flash_config']['block_erase_time']
+
+        for block in pbns:
+            self.flash_backend.block_erase(block, cat = tag)
+
 

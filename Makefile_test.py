@@ -561,7 +561,61 @@ class TestDftlextTimeline(unittest.TestCase):
             tl.op_time['flash.read'] * 3)
 
     def test_main(self):
-        "Remove prefix _"
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run()
+
+
+class TestDftlextParallelFlash(unittest.TestCase):
+    def setup_config(self):
+        self.conf = config.ConfigNewFlash()
+        self.conf.n_channels_per_dev = 1
+        # 2 pages per block, 2 blocks per channel, 2 channels in total
+        self.conf['flash_config']['n_pages_per_block'] = 2
+        self.conf['flash_config']['n_blocks_per_plane'] = 2
+        self.conf['flash_config']['n_planes_per_chip'] = 1
+        self.conf['flash_config']['n_chips_per_package'] = 1
+        self.conf['flash_config']['n_packages_per_channel'] = 1
+        self.conf['flash_config']['n_channels_per_dev'] = 2
+
+    def setup_environment(self):
+        metadata_dic = choose_exp_metadata(self.conf, interactive = False)
+        self.conf.update(metadata_dic)
+
+    def setup_workload(self):
+        pass
+
+    def setup_ftl(self):
+        pass
+
+    def my_run(self):
+        runtime_update(self.conf)
+        rec = FtlSim.recorder.Recorder(output_target = self.conf['output_target'],
+            path = self.conf.get_output_file_path(),
+            verbose_level = self.conf['verbose_level'],
+            print_when_finished = self.conf['print_when_finished']
+            )
+        rec.disable()
+        fc = FtlSim.dftlext.ParallelFlash(self.conf, rec, None)
+
+        self.assertEqual(fc.get_max_channel_page_count(ppns = [0]), 1)
+        self.assertEqual(fc.get_max_channel_page_count(ppns = [0, 1, 2, 3]), 4)
+        self.assertEqual(fc.get_max_channel_page_count(ppns = [0, 1, 2, 3, 4]), 4)
+
+        ppns = [0, 1, 99]
+        data = [100 * ppn for ppn in ppns]
+
+        fc.write_pages(ppns, data, tag = None)
+        data_read = fc.read_pages(ppns, tag = None)
+        self.assertListEqual(data, data_read)
+
+        fc.erase_blocks([0], tag = None)
+        data_read = fc.read_pages(ppns, tag = None)
+        self.assertListEqual(data_read, [None, None, 9900])
+
+    def test_main(self):
         self.setup_config()
         self.setup_environment()
         self.setup_workload()
