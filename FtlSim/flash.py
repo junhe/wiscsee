@@ -1,5 +1,6 @@
 import simpy
 
+
 class Flash(object):
     def __init__(self, recorder, confobj = None, globalhelper = None):
         self.recorder = recorder
@@ -13,12 +14,15 @@ class Flash(object):
     def page_read(self, pagenum, cat):
         self.recorder.put('physical_read', pagenum, cat)
 
+        self.globalhelper.timeline.incr_flash_op('flash.read')
+
         if self.store_data == True:
             content = self.data.get(pagenum, None)
             return content
 
     def page_write(self, pagenum, cat, data = None):
         self.recorder.put('physical_write', pagenum, cat)
+        self.globalhelper.timeline.incr_flash_op('flash.write')
 
         # we only put data to self.data when the caller specify data
         if self.store_data == True:
@@ -28,6 +32,7 @@ class Flash(object):
     def block_erase(self, blocknum, cat):
         # print 'block_erase', blocknum, cat
         self.recorder.put('phy_block_erase', blocknum, cat)
+        self.globalhelper.timeline.incr_flash_op('flash.erasure')
 
         if self.store_data == True:
             ppn_start, ppn_end = self.conf.block_to_page_range(blocknum)
