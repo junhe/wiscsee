@@ -100,6 +100,11 @@ class Simulator(object):
                 event.operation))
 
 
+def random_data(addr):
+    randnum = random.randint(0, 10000)
+    content = "{}.{}".format(addr, randnum)
+    return content
+
 
 class SimulatorNonDES(Simulator):
     __metaclass__ = abc.ABCMeta
@@ -148,10 +153,6 @@ class SimulatorNonDES(Simulator):
 
         self.ftl.post_processing()
 
-    def random_data(self, addr):
-        randnum = random.randint(0, 10000)
-        content = "{}.{}".format(addr, randnum)
-        return content
 
 class SimulatorNonDESSpeed(SimulatorNonDES):
     """
@@ -202,7 +203,7 @@ class SimulatorNonDESe2e(SimulatorNonDES):
         """
         data = []
         for sec in range(event.sector, event.sector + event.sector_count):
-            content = self.random_data(sec)
+            content = random_data(sec)
             self.lsn_to_data[sec] = content
             data.append(content)
 
@@ -261,7 +262,7 @@ class SimulatorNonDESe2elba(SimulatorNonDES):
         pages = self.conf.off_size_to_page_list(event.offset,
             event.size)
         for page in pages:
-            content = self.random_data(page)
+            content = random_data(page)
             self.ftl.lba_write(page, data = content, pid = event.pid)
             self.lpn_to_data[page] = content
 
