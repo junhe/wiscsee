@@ -571,7 +571,6 @@ class TestDftlextTimeline(unittest.TestCase):
 class TestDftlextParallelFlash(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNewFlash()
-        self.conf.n_channels_per_dev = 1
         # 2 pages per block, 2 blocks per channel, 2 channels in total
         self.conf['flash_config']['n_pages_per_block'] = 2
         self.conf['flash_config']['n_blocks_per_plane'] = 2

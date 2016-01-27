@@ -205,6 +205,7 @@ class GlobalHelper(object):
 LOGICAL_READ, LOGICAL_WRITE, LOGICAL_DISCARD = ('LOGICAL_READ', \
         'LOGICAL_WRITE', 'LOGICAL_DISCARD')
 
+
 class Timeline(object):
     """
     This is intended for global use. It maintains a table like:
@@ -228,10 +229,10 @@ class Timeline(object):
         self.ON = False
         self.timestamp = 0
 
-        self.op_time = {
-            'flash.read':   self.conf['flash_config']['page_read_time'],     # milli sec
-            'flash.write':  self.conf['flash_config']['page_prog_time'],     # milli sec
-            'flash.erasure': self.conf['flash_config']['block_erase_time']  # milli sec
+        self.name_map = {
+            'flash.read':     'page_read_time',     # milli sec
+            'flash.write':    'page_prog_time',     # milli sec
+            'flash.erasure':  'block_erase_time'    # milli sec
         }
 
     def turn_on(self):
@@ -256,11 +257,12 @@ class Timeline(object):
         if not self.ON:
             return
 
-        time = self.op_time[op] * count
+        opname = self.name_map[op]
+        time = self.conf['flash_config'][opname] * count
         self.timestamp += time
 
         last_row = self.table[-1]
-        last_row['end_timestamp'] += self.timestamp
+        last_row['end_timestamp'] = self.timestamp
 
     def save(self):
         path = os.path.join(self.conf['result_dir'], 'timeline.txt')
