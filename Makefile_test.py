@@ -555,10 +555,10 @@ class TestDftlextTimeline(unittest.TestCase):
         tl.add_logical_op(0, 100, FtlSim.dftlext.LOGICAL_READ)
         tl.incr_time_stamp('flash.read', 3)
         self.assertEqual(tl.table[-1]['end_timestamp'],
-            tl.op_time['flash.read'] * 3)
+            tl.conf['flash_config']['page_read_time'] * 3)
         tl.add_logical_op(200, 100, FtlSim.dftlext.LOGICAL_READ)
         self.assertEqual(tl.table[-1]['start_timestamp'],
-            tl.op_time['flash.read'] * 3)
+            tl.conf['flash_config']['page_read_time'] * 3)
 
     def test_main(self):
         self.setup_config()
@@ -614,6 +614,74 @@ class TestDftlextParallelFlash(unittest.TestCase):
         fc.erase_blocks([0], tag = None)
         data_read = fc.read_pages(ppns, tag = None)
         self.assertListEqual(data_read, [None, None, 9900])
+
+    def test_main(self):
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run()
+
+
+class TestTimelineAndFlash(unittest.TestCase):
+    def setup_config(self):
+        self.conf = config.ConfigNewFlash()
+        # 2 pages per block, 2 blocks per channel, 2 channels in total
+        self.conf['sector_size'] = self.conf['flash_config']['page_size']
+        self.conf['flash_config']['n_pages_per_block'] = 2
+        self.conf['flash_config']['n_blocks_per_plane'] = 2
+        self.conf['flash_config']['n_planes_per_chip'] = 1
+        self.conf['flash_config']['n_chips_per_package'] = 1
+        self.conf['flash_config']['n_packages_per_channel'] = 1
+        self.conf['flash_config']['n_channels_per_dev'] = 2
+
+        self.conf['flash_config']['page_read_time'] = 1
+        self.conf['flash_config']['page_prog_time'] = 1
+        self.conf['flash_config']['block_erase_time'] = 1
+
+    def setup_environment(self):
+        metadata_dic = choose_exp_metadata(self.conf, interactive = False)
+        self.conf.update(metadata_dic)
+
+    def setup_workload(self):
+        pass
+
+    def setup_ftl(self):
+        self.conf['ftl_type'] = 'dftlext'
+        self.conf['simulator_class'] = 'SimulatorNonDESe2e'
+
+        devsize_mb = 16
+        entries_need = int(devsize_mb * 2**20 * 0.03 / \
+                self.conf['flash_config']['page_size'])
+        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+
+        runtime_update(self.conf)
+
+        self.rec = FtlSim.recorder.Recorder(
+            output_target = self.conf['output_target'],
+            path = self.conf.get_output_file_path(),
+            verbose_level = self.conf['verbose_level'],
+            print_when_finished = self.conf['print_when_finished']
+            )
+
+        self.ftl = FtlSim.dftlext.Dftl(self.conf, self.rec,
+            FtlSim.flash.Flash(recorder = self.rec, confobj = self.conf))
+
+    def my_run(self):
+        self.ftl.global_helper.timeline.turn_on()
+        n = 1
+        sectors = list(range(n))
+        data = [FtlSim.simulator.random_data(sec) for sec in sectors]
+        self.ftl.sec_write(0, n, data = data)
+
+        # a write involve a tranlation page read and data page write
+        self.assertEqual(self.ftl.global_helper.timeline.table[-1]\
+                ['end_timestamp'], 2)
+        self.ftl.sec_read(0, n)
+        # a read involve a tranlation page read and data page write
+        self.assertEqual(self.ftl.global_helper.timeline.table[-1]\
+                ['end_timestamp'], 3)
 
     def test_main(self):
         self.setup_config()
