@@ -20,20 +20,29 @@ import tpftl
 from commons import *
 
 
-class Event(object):
+class EventSimple(object):
+    def __init__(self, pid, operation):
+        self.pid = int(pid)
+        self.operation = operation
+
+
+class Event(EventSimple):
     def __init__(self, sector_size, pid, operation, offset, size):
         self.pid = int(pid)
         self.operation = operation
         self.offset = int(offset)
         self.size = int(size)
 
-        assert offset % sector_size == 0, \
-            "offset is not aligned with sector size"
-        self.sector = offset / sector_size
+        assert self.offset % sector_size == 0,\
+            "offset {} is not aligned with sector size {}.".format(
+            self.offset, sector_size)
+        self.sector = self.offset / sector_size
 
-        assert size % sector_size == 0, \
-            "size is not multiple of sector size"
-        self.sector_count = size / sector_size
+        assert self.size % sector_size == 0, \
+            "size {} is not multiple of sector size {}".format(
+            self.size, sector_size)
+
+        self.sector_count = self.size / sector_size
 
 
 class Simulator(object):
