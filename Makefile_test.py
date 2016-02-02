@@ -4,29 +4,6 @@ import pprint
 from Makefile import *
 
 
-class Experiment(object):
-    def __init__(self):
-        # Get default setting
-        self.conf = config.Config()
-
-    def setup_environment(self):
-        raise NotImplementedError
-
-    def setup_workload(self):
-        raise NotImplementedError
-
-    def setup_ftl(self):
-        raise NotImplementedError
-
-    def run(self):
-        raise NotImplementedError
-
-    def main(self):
-        self.setup_environment()
-        self.setup_workload()
-        self.setup_ftl()
-        self.run()
-
 
 class TestTemplate(unittest.TestCase):
     def setup_config(self):

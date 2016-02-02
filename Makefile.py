@@ -25,6 +25,29 @@ import FtlSim
 import WlRunner
 from utils import *
 
+class Experiment(object):
+    def __init__(self):
+        # Get default setting
+        self.conf = config.Config()
+
+    def setup_environment(self):
+        raise NotImplementedError
+
+    def setup_workload(self):
+        raise NotImplementedError
+
+    def setup_ftl(self):
+        raise NotImplementedError
+
+    def run(self):
+        raise NotImplementedError
+
+    def main(self):
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.run()
+
 
 def save_conf(conf):
     confpath = os.path.join(conf['result_dir'], 'config.json')
