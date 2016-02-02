@@ -574,9 +574,13 @@ class ConfigNewFlash(Config):
         return page_start, page_count
         """
         page = sector / self.n_secs_per_page
-        assert sector % self.n_secs_per_page == 0
+        assert sector % self.n_secs_per_page == 0,\
+            "sector {} is not multiple of n_secs_per_page {}"\
+            .format(sector, self.n_secs_per_page)
         page_count = count / self.n_secs_per_page
-        assert count % self.n_secs_per_page == 0
+        assert count % self.n_secs_per_page == 0, \
+            "count {} is not multiple of n_secs_per_page {}"\
+            .format(count, self.n_secs_per_page)
         return page, page_count
 
     def page_ext_to_sec_ext(self, page, count):
