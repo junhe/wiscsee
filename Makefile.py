@@ -599,9 +599,9 @@ def enable_ext4_journal(conf):
     except KeyError:
         pass
 
+
 def test_fio():
-    confdic = get_default_config()
-    conf = config.Config(confdic)
+    conf = config.ConfigNewFlash()
 
     metadata_dic = choose_exp_metadata(conf)
     conf.update(metadata_dic)
@@ -622,8 +622,18 @@ def test_fio():
         conf['workload_conf'] = job_desc
         conf['workload_conf_key'] = 'workload_conf'
         conf['fio_para'] = para
-        conf['device_path'] = get_dev_by_hostname()
-        conf['device_type'] = "real" # loop, rea'
+        # conf['device_path'] = get_dev_by_hostname()
+        conf['device_path'] = "/dev/loop0"
+        conf['device_type'] = "loop" # loop, rea'
+
+        conf['simulator_class'] = 'SimulatorNonDESe2e'
+        conf['ftl_type'] = "dftlext"
+
+        conf['flash_config']['page_size'] = 1024
+        devsize_mb = 1024
+        entries_need = int(devsize_mb * 2**20 * 0.03 / conf.page_size)
+        conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
         # perf
         conf['wrap_by_perf'] = False
@@ -631,7 +641,7 @@ def test_fio():
         conf['perf']['flamegraph_dir'] = '/users/jhe/flamegraph'
 
         conf['enable_blktrace'] = True
-        conf['enable_simulation'] = False
+        conf['enable_simulation'] = True
 
         MOpt = WlRunner.filesystem.MountOption
         conf["mnt_opts"]["ext4"]['discard'] = MOpt(opt_name = "discard",
@@ -729,6 +739,69 @@ def reproduce_slowness_with_blktrace():
     wrapper.wrapped_run(test_func_run)
 
     btt(record_dir, 'sdc1')
+
+
+class DftlextExp001(Experiment):
+    def __init__(self):
+        # Get default setting
+        self.conf = config.ConfigNewFlash()
+        self.devsize_mb = 128
+
+    def setup_environment(self):
+        metadata_dic = choose_exp_metadata(self.conf, interactive = True)
+        self.conf.update(metadata_dic)
+
+        self.conf['enable_blktrace'] = True
+        self.conf['enable_simulation'] = True
+
+        self.conf['filesystem'] = 'ext4'
+        self.conf['loop_dev_size_mb'] = self.devsize_mb
+
+        self.conf['device_path'] = "/dev/loop0"
+        self.conf['device_type'] = "loop" # loop, rea'
+
+        self.conf['flash_config']['page_size'] = 1024
+
+        self.conf['enable_blktrace'] = True
+        self.conf['enable_simulation'] = True
+
+    def setup_workload(self):
+        filesize = 32*MB
+        job_desc = testfio.build_one_run(pattern_tuple = ['randwrite'],
+                bs = 32*KB, usefs = True, conf = self.conf,
+                traffic_size = 32*MB,
+                file_size = filesize,
+                fdatasync = 1,
+                bssplit = WlRunner.fio.HIDE_ATTR
+                )
+        assert filesize < self.devsize_mb * MB
+
+        self.conf['workload_conf'] = job_desc
+        self.conf['workload_conf_key'] = 'workload_conf'
+        # self.conf['fio_para'] = para
+
+        self.conf["workload_src"] = WLRUNNER
+        self.conf["workload_class"] = "FIO"
+        self.conf["age_workload_class"] = "NoOp"
+
+
+        self.conf['wrap_by_perf'] = False
+
+    def setup_ftl(self):
+        self.conf['ftl_type'] = 'dftlext'
+        self.conf['simulator_class'] = 'SimulatorNonDESe2e'
+
+        entries_need = int(self.devsize_mb * 2**20 * 0.03 / self.conf.page_size)
+        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.set_flash_num_blocks_by_bytes(int(self.devsize_mb * 2**20 * 1.28))
+
+    def run(self):
+        runtime_update(self.conf)
+        workflow(self.conf)
+
+def DftlextExp001_run():
+    obj = DftlextExp001()
+    obj.main()
 
 
 def main(cmd_args):
