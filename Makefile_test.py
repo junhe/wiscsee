@@ -670,6 +670,23 @@ class TestTimelineAndFlash(unittest.TestCase):
         self.my_run()
 
 
+class TestEventIter(unittest.TestCase):
+    def test_main(self):
+        events = list(WlRunner.wlrunner.SimpleEventIterator(["1123 write 0 100"]))
+        e = events[0]
+        self.assertEqual(e.pid, 1123)
+        self.assertEqual(e.operation, 'write')
+
+    def test_main2(self):
+        events = list(WlRunner.wlrunner.EventIterator(512,
+            ["1123 write 0 4096", "13 write 40960 4096"]))
+        e = events[0]
+        self.assertEqual(e.pid, 1123)
+        self.assertEqual(e.operation, 'write')
+        self.assertEqual(e.offset, 0)
+        self.assertEqual(e.size, 4096)
+
+
 def main():
     unittest.main()
 

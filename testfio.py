@@ -25,12 +25,9 @@ def ParameterCombinations(parameter_dict):
     return [dict(zip(d, v)) for v in itertools.product(*d.values())]
 
 
-
 def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
         fdatasync, bssplit):
     job = WlRunner.fio.JobDescription()
-    # traffic_size = 1 * GB
-    # traffic_size = 512 * KB
 
     if not usefs:
         global_sec =  {

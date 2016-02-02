@@ -7,6 +7,7 @@ import cpuhandler
 import filesystem
 import fshelper
 import ftrace
+from FtlSim import simulator
 import utils
 import workload
 
@@ -19,6 +20,43 @@ class FileLineIterator(object):
             for line in f:
                 line = line.strip()
                 yield line
+
+
+class SimpleEventIterator(object):
+    def __init__(self, filelineiter):
+        self.filelineiter = filelineiter
+
+    def str_to_event(self, line):
+        """
+        PID OPERATION OFFSET SIZE
+        """
+        items = line.split()
+        return simulator.EventSimple(pid = items[0], operation = items[1])
+
+    def __iter__(self):
+        for line in self.filelineiter:
+            yield self.str_to_event(line)
+
+
+class EventIterator(object):
+    def __init__(self, sector_size, filelineiter):
+        self.sector_size = sector_size
+        self.filelineiter = filelineiter
+
+    def str_to_event(self, line):
+        """
+        PID OPERATION OFFSET SIZE
+        """
+        items = line.split()
+        return simulator.Event(sector_size = self.sector_size,
+                pid = items[0], operation = items[1], offset = items[2],
+                size = items[3])
+
+    def __iter__(self):
+        for line in self.filelineiter:
+            yield self.str_to_event(line)
+
+
 
 class WorkloadRunner(object):
     def __init__(self, confobj):
@@ -193,22 +231,32 @@ class WorkloadRunner(object):
             self.blktracer.stop_tracing_and_collecting()
 
     def get_event_iterator(self):
-        yield "NA disable_recorder 0 0"
+        yield simulator.Event(sector_size = self.conf['sector_size'],
+            pid = 0, operation = 'disable_recorder',
+            offset = 0, size = 0)
 
         mkfs_iter = FileLineIterator(
             self.conf.get_ftlsim_events_output_path_mkfs())
+        event_mkfs_iter = EventIterator(self.conf['sector_size'],
+                mkfs_iter)
 
-        for event in mkfs_iter:
+        for event in event_mkfs_iter:
             yield event
 
         # special event indicates the start of workload
-        yield "NA enable_recorder 0 0"
-        yield "NA workloadstart 0 0"
+        yield simulator.Event(sector_size = self.conf['sector_size'],
+            pid = 0, operation = 'enable_recorder',
+            offset = 0, size = 0)
+        yield simulator.Event(sector_size = self.conf['sector_size'],
+            pid = 0, operation = 'workloadstart',
+            offset = 0, size = 0)
 
         workload_iter = FileLineIterator(
             self.conf.get_ftlsim_events_output_path())
+        event_workload_iter = EventIterator(self.conf['sector_size'],
+            workload_iter)
 
-        for event in workload_iter:
+        for event in event_workload_iter:
             yield event
 
 
