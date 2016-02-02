@@ -249,4 +249,7 @@ class FtlBuilder(object):
     def post_processing(self):
         raise NotImplementedError
 
+    def get_type(self):
+        return "FtlBuilder"
+
 

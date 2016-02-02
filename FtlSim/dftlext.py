@@ -1928,6 +1928,9 @@ class Dftl(ftlbuilder.FtlBuilder):
         """
         self.global_helper.timeline.save()
 
+    def get_type(self):
+        return "dftlext"
+
 
 def assert_oob_lpn_eq_req_lpn(mapping_manager, oob, ppn, req_lpn):
     if ppn == 'UNINIT':
