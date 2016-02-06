@@ -22,3 +22,12 @@ Remeber, exp.snapshot can be messy. dev and master should be clean.
 Try to use only one dev and exp.snapshot for this project. It will be easier.
 
 **Make it beautiful to make it useful!**
+
+
+
+## Branch introduction
+
+- dev.dftlExt: development branch for extent based dftl, which support 
+`sec_write()` and etc.
+
+
