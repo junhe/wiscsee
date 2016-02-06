@@ -493,13 +493,16 @@ class ConfigNewFlash(Config):
             # time info
             # TODO: these are fixed numbers, but they are random in real world
             # TODO: Note that the SSD time is different than the flash package time
-            "page_read_time"        : 25*USEC,  # Max
+            "page_read_time"        : 20*USEC,  # Max
             "page_prog_time"        : 200*USEC, # Typical
             "block_erase_time"      : 1.6*MSEC, # Typical
             }
         return flash_config
 
     def set_flash_num_blocks_by_bytes(self, size_byte):
+        """
+        This function will only change n_blocks_per_channel.
+        """
         pagesize = self['flash_config']['page_size']
         n_pages_per_block = self['flash_config']['n_pages_per_block']
 
@@ -619,6 +622,20 @@ class ConfigNewFlash(Config):
     def total_flash_bytes(self):
         return self['flash_config']['n_pages_per_block'] * \
                 self['flash_num_blocks'] * self['flash_page_size']
+
+
+class ConfigNotForceAlign(ConfigNewFlash):
+    def sec_ext_to_page_ext(self, sector, count):
+        """
+        The sector extent has to be aligned with page
+        return page_start, page_count
+        """
+        page = sector / self.n_secs_per_page
+        page_end = (sector + count) / self.n_secs_per_page
+        page_count = page_end - page
+        if (sector + count) % self.n_secs_per_page != 0:
+            page_count += 1
+        return page, page_count
 
 
 
