@@ -4,3 +4,7 @@ python ./config_test.py
 echo 
 echo ======= Makefile_test =======
 sudo python ./Makefile_test.py -v
+
+echo 
+echo ======= flashcontroller_test =======
+sudo python ./flashcontroller_test.py -v
