@@ -638,4 +638,12 @@ class ConfigNotForceAlign(ConfigNewFlash):
         return page, page_count
 
 
+class ConfigAsyncFTL(ConfigNewFlash):
+    def __init__(self, confdic = None):
+        super(ConfigAsyncFTL, self).__init__(confdic)
+
+        self['dftlasync'] = {'ncq_depth': 32}
+
+
+
 
