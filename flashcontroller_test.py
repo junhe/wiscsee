@@ -105,6 +105,68 @@ class TestController(unittest.TestCase):
         self.my_run()
 
 
+class TestControllerRequest(unittest.TestCase):
+    def setup_config(self):
+        self.conf = config.ConfigNewFlash()
+        self.conf.n_channels_per_dev = 3
+
+    def setup_environment(self):
+        pass
+
+    def setup_workload(self):
+        pass
+
+    def setup_ftl(self):
+        pass
+
+    def create_request(self, channel, op):
+        req = flashcontroller.controller.FlashRequest()
+        req.addr.channel = channel
+        if op == 'read':
+            req.operation = flashcontroller.controller.FlashRequest.OP_READ
+        elif op == 'write':
+            req.operation = flashcontroller.controller.FlashRequest.OP_WRITE
+        elif op == 'erase':
+            req.operation = flashcontroller.controller.FlashRequest.OP_ERASE
+        else:
+            raise RuntimeError()
+
+        return req
+
+    def access(self, env,  controller):
+
+        channel = controller.channels[1]
+        yield env.process( controller.execute_request(
+            self.create_request(1, 'read') ) )
+        self.assertEqual( env.now, channel.read_time )
+
+        yield env.process( controller.execute_request(
+            self.create_request(1, 'read') ) )
+        self.assertEqual( env.now, channel.read_time * 2 )
+
+        yield env.process( controller.execute_request(
+            self.create_request(1, 'write') ) )
+        self.assertEqual( env.now, channel.read_time * 2 + channel.program_time)
+
+        yield env.process( controller.execute_request(
+            self.create_request(1, 'erase') ) )
+        self.assertEqual( env.now, channel.read_time * 2
+                + channel.program_time + channel.erase_time)
+
+    def my_run(self):
+        env = simpy.Environment()
+        controller = flashcontroller.controller.Controller(env, self.conf)
+        env.process(self.access(env, controller))
+        env.run()
+
+    def test_main(self):
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run()
+
+
 def main():
     unittest.main()
 

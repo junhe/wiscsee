@@ -12,6 +12,7 @@ import bidict
 
 import config
 import flash
+import flashcontroller
 import ftlbuilder
 import lrulist
 import recorder
@@ -28,73 +29,20 @@ class NCQSingleQueue(object):
         self.env = simpy_env
         self.queue = simpy.Store(self.env)
 
-class NativeCommandQueue(object):
-    """
-    The NCQ is implemented as the tail of several queues.
 
-                        NCQ
-    Q1: ****************#
-    Q2:      ***********#
-    Q3:   **************#
+def create_request(channel, op):
+    req = flashcontroller.controller.FlashRequest()
+    req.addr.channel = channel
+    if op == 'read':
+        req.operation = flashcontroller.controller.FlashRequest.OP_READ
+    elif op == 'write':
+        req.operation = flashcontroller.controller.FlashRequest.OP_WRITE
+    elif op == 'erase':
+        req.operation = flashcontroller.controller.FlashRequest.OP_ERASE
+    else:
+        raise RuntimeError()
 
-    The trace replayer puts requests to the Q1, Q2, and Q3.
-    The FTL takes requests out from the other end (#).
-    """
-    def __init__(self, ncq_depth, simpy_env):
-        self.ncq_depth = ncq_depth
-        self.env = simpy_env
-        self.queues = [ deque() for _ in range(self.ncq_depth) ]
-        self.req_container = simpy.Container(self.env)
-
-    def pop(self, index):
-        """
-        Pop from the right of one of the subqueues.
-        You have to make sure queues[index] is not empty before calling.
-        """
-        self.req_container.get(1)
-        return self.queues[index].pop()
-
-    def peek_tail(self, index):
-        """
-        Return the last element of queues[index] without modifying the queues
-        """
-        return self.queues[index][-1]
-
-    def push(self, element, index):
-        """
-        Put one element to queue of index.
-        """
-        self.req_container.put(1)
-        self.queues[index].appendleft(element)
-
-    def is_empty(self, index):
-        return len(self.queues[index]) == 0
-
-
-class FTLNCQ(NativeCommandQueue):
-    """
-    This class has additional functions for FTL operations
-    """
-    def __init__(self, ncq_depth, simpy_env):
-        super(FTLNCQ, self).__init__(ncq_depth, simpy_env)
-
-        self.next_queue = 0
-        self.requests_coming = True
-
-    def next_request(self):
-        """
-        iterate the ncq to get the next request.
-        it can be more sophisticated later
-        """
-        for i in range(self.ncq_depth):
-            # Try each queue once and only once
-            queue_i = (i + self.ncq_depth) % self.ncq_depth
-            if self.is_empty(index = queue_i):
-                continue
-            else:
-                self.next_queue = (queue_i + 1) % self.ncq_depth
-                return self.queues[queue_i].pop()
-        return None
+    return req
 
 
 class FTL(ftlbuilder.FtlBuilder):
@@ -112,11 +60,36 @@ class FTL(ftlbuilder.FtlBuilder):
                 ncq_depth = self.conf['dftlasync']['ncq_depth'],
                 simpy_env = self.env)
 
+        self.flash_controller = flashcontroller.controller.Controller(
+                self.env, self.conf)
+
     def process(self):
         req_index = 0
         while True:
             io_req = yield self.ncq.queue.get()
             print io_req.operation, ', request index', req_index
+            print 'Got request (', req_index, ') at time', self.env.now
             req_index += 1
+
+            # create a bunch of requests to the flash here
+            sub_reqs = []
+            for i in range(3):
+                sub_reqs.append(
+                        create_request(channel = i, op = 'read'))
+
+            # send flash requests to flash controller
+            ctrl_procs = []
+            for sub_req in sub_reqs:
+                p = self.env.process(
+                        self.flash_controller.execute_request(sub_req))
+                ctrl_procs.append(p)
+
+            all_ctrl_procs = simpy.events.AllOf(self.env, ctrl_procs)
+            yield all_ctrl_procs
+            print 'Finish request (', req_index, ') at time', self.env.now
+
+
+
+
 
 

@@ -3,18 +3,18 @@ import simpy
 
 class FlashAddress(object):
     def __init__(self):
-        self.page = None
-        self.block = None
-        self.plane = None
-        self.chip = None
-        self.package = None
-        self.channel = None
+        self.page = 0
+        self.block = 0
+        self.plane = 0
+        self.chip = 0
+        self.package = 0
+        self.channel = 0
 
 
 class FlashRequest(object):
     OP_READ, OP_WRITE, OP_ERASE = 'OP_READ', 'OP_WRITE', 'OP_ERASE'
     def __init__(self):
-        self.addr = None
+        self.addr = FlashAddress()
         self.operation = None
 
 
@@ -61,6 +61,20 @@ class Controller(object):
     def erase_block(self, addr):
         yield self.env.process(
             self.channels[addr.channel].erase_block(None))
+
+    def execute_request(self, flash_request):
+        if flash_request.operation == FlashRequest.OP_READ:
+            yield self.env.process(
+                    self.read_page(flash_request.addr))
+        elif flash_request.operation == FlashRequest.OP_WRITE:
+            yield self.env.process(
+                self.write_page(flash_request.addr))
+        elif flash_request.operation == FlashRequest.OP_ERASE:
+            yield self.env.process(
+                self.erase_block(flash_request.addr))
+        else:
+            raise RuntimeError("operation {} is not supported".format(
+                flash_request.operation))
 
 
 class Channel(object):
