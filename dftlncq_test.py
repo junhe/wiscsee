@@ -4,9 +4,9 @@ import simpy
 
 from Makefile import *
 
-class TestDftlasync(unittest.TestCase):
+class TestDftlncq(unittest.TestCase):
     def setup_config(self):
-        self.conf = config.ConfigAsyncFTL()
+        self.conf = config.ConfigNCQFTL()
         self.conf.n_channels_per_dev = 4
 
     def setup_environment(self):
@@ -24,7 +24,7 @@ class TestDftlasync(unittest.TestCase):
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
-        self.conf['ftl_type'] = 'dftlasync'
+        self.conf['ftl_type'] = 'dftlncq'
         self.conf['simulator_class'] = 'SimulatorDES'
 
         devsize_mb = 1

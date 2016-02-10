@@ -8,7 +8,7 @@ import sys
 import bmftl
 import config
 import dftl2
-import dftlasync
+import dftlncq
 import dftlext
 import dftlDES
 import dmftl
@@ -302,8 +302,8 @@ class SimulatorDES(Simulator):
     def __init__(self, conf, event_iter):
         super(SimulatorDES, self).__init__(conf, event_iter)
 
-        if self.conf['ftl_type'] == 'dftlasync':
-            ftl_class = dftlasync.FTL
+        if self.conf['ftl_type'] == 'dftlncq':
+            ftl_class = dftlncq.FTL
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))

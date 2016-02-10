@@ -57,11 +57,36 @@ class FTL(ftlbuilder.FtlBuilder):
         self.env = simpy_env
 
         self.ncq = NCQSingleQueue(
-                ncq_depth = self.conf['dftlasync']['ncq_depth'],
+                ncq_depth = self.conf['dftlncq']['ncq_depth'],
                 simpy_env = self.env)
 
         self.flash_controller = flashcontroller.controller.Controller(
                 self.env, self.conf)
+
+    def get_flash_requests(self, io_req):
+        """
+        io_req is a request from the host. Here we translate
+        the logical address of io_req and return the flash requests
+        """
+        flash_reqs = []
+        for i in range(3):
+            flash_reqs.append(
+                    create_request(channel = i, op = 'read'))
+        return flash_reqs
+
+    def access_flash(self, flash_reqs):
+        """
+        This simpy process spawn multiple processes to access flash
+        Some processes may be stalled if channel is busy
+        """
+        ctrl_procs = []
+        for flash_req in flash_reqs:
+            p = self.env.process(
+                    self.flash_controller.execute_request(flash_req))
+            ctrl_procs.append(p)
+
+        all_ctrl_procs = simpy.events.AllOf(self.env, ctrl_procs)
+        yield all_ctrl_procs
 
     def process(self):
         req_index = 0
@@ -71,24 +96,10 @@ class FTL(ftlbuilder.FtlBuilder):
             print 'Got request (', req_index, ') at time', self.env.now
             req_index += 1
 
-            # create a bunch of requests to the flash here
-            sub_reqs = []
-            for i in range(3):
-                sub_reqs.append(
-                        create_request(channel = i, op = 'read'))
-
-            # send flash requests to flash controller
-            ctrl_procs = []
-            for sub_req in sub_reqs:
-                p = self.env.process(
-                        self.flash_controller.execute_request(sub_req))
-                ctrl_procs.append(p)
-
-            all_ctrl_procs = simpy.events.AllOf(self.env, ctrl_procs)
-            yield all_ctrl_procs
+            flash_reqs = self.get_flash_requests(io_req)
+            yield self.env.process(
+                    self.access_flash(flash_reqs))
             print 'Finish request (', req_index, ') at time', self.env.now
-
-
 
 
 

@@ -304,7 +304,7 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
         self.sector_size = self.conf['sector_size']
         self.ftl_type = self.conf['ftl_type']
         if self.ftl_type == 'dftl' or self.ftl_type == 'dftlext' \
-                or self.ftl_type == 'dftlasync':
+                or self.ftl_type == 'dftlncq':
             self.over_provisioning = self.conf['dftl']['over_provisioning']
         elif self.ftl_type == 'nkftl':
             self.over_provisioning = self.conf['nkftl']['provision_ratio']
