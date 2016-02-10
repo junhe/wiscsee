@@ -8,6 +8,7 @@ import sys
 import bmftl
 import config
 import dftl2
+import dftlasync
 import dftlext
 import dftlDES
 import dmftl
@@ -87,27 +88,6 @@ class Simulator(object):
         if self.conf.has_key('enable_e2e_test'):
             raise RuntimeError("enable_e2e_test is deprecated")
 
-    def process_event(self, event):
-        if event.operation == 'read':
-            self.read(event)
-        elif event.operation == 'write':
-            self.write(event)
-        elif event.operation == 'discard':
-            self.discard(event)
-        elif event.operation == 'enable_recorder':
-            self.ftl.enable_recording()
-        elif event.operation == 'disable_recorder':
-            self.ftl.disable_recording()
-        elif event.operation == 'workloadstart':
-            self.ftl.pre_workload()
-        elif event.operation == 'finish':
-            # ignore this
-            pass
-        else:
-            print event
-            raise RuntimeError("operation '{}' is not supported".format(
-                event.operation))
-
 
 def random_data(addr):
     randnum = random.randint(0, 10000)
@@ -161,6 +141,27 @@ class SimulatorNonDES(Simulator):
                 sys.stdout.flush()
 
         self.ftl.post_processing()
+
+    def process_event(self, event):
+        if event.operation == 'read':
+            self.read(event)
+        elif event.operation == 'write':
+            self.write(event)
+        elif event.operation == 'discard':
+            self.discard(event)
+        elif event.operation == 'enable_recorder':
+            self.ftl.enable_recording()
+        elif event.operation == 'disable_recorder':
+            self.ftl.disable_recording()
+        elif event.operation == 'workloadstart':
+            self.ftl.pre_workload()
+        elif event.operation == 'finish':
+            # ignore this
+            pass
+        else:
+            print event
+            raise RuntimeError("operation '{}' is not supported".format(
+                event.operation))
 
 
 class SimulatorNonDESSpeed(SimulatorNonDES):
@@ -295,4 +296,50 @@ class SimulatorNonDESe2elba(SimulatorNonDES):
                 del self.lpn_to_data[page]
             except KeyError:
                 pass
+
+
+class SimulatorDES(Simulator):
+    def __init__(self, conf, event_iter):
+        super(SimulatorDES, self).__init__(conf, event_iter)
+
+        if self.conf['ftl_type'] == 'dftlasync':
+            ftl_class = dftlasync.FTL
+        else:
+            raise ValueError("ftl_type {} is not defined"\
+                .format(self.conf['ftl_type']))
+
+        self.env = simpy.Environment()
+
+        self.ftl = ftl_class(self.conf, self.rec,
+            flash.Flash(recorder = self.rec, confobj = self.conf), self.env)
+
+    def host_proc(self):
+        """
+        This process acts like a producer, putting requests to ncq
+        """
+        i = 0
+        for event in self.event_iter:
+            yield self.ftl.ncq.queue.put(event)
+            yield self.env.timeout(3) # interval between request
+            i += 1
+
+    def run(self):
+        self.env.process(self.host_proc())
+        self.env.process(self.ftl.process())
+        self.env.run()
+
+    def get_sim_type(self):
+        return "SimulatorDES"
+
+    def write(self):
+        raise NotImplementedError()
+
+    def read(self):
+        raise NotImplementedError()
+
+    def discard(self):
+        raise NotImplementedError()
+
+
+
 
