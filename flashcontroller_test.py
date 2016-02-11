@@ -93,6 +93,12 @@ class TestController(unittest.TestCase):
         self.assertEqual(env.now, channel.program_time + channel.read_time +
                 channel.erase_time)
 
+        e1 = env.process( controller.read_page(addr) )
+        e2 = env.process( controller.read_page(addr) )
+        yield e1 & e2
+        self.assertEqual(env.now, channel.program_time + channel.read_time +
+                channel.erase_time + 2 * channel.read_time)
+
     def my_run(self):
         env = simpy.Environment()
         controller = flashcontroller.controller.Controller(env, self.conf)
