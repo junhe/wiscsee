@@ -117,18 +117,24 @@ class FTL(ftlbuilder.FtlBuilder):
         all_ctrl_procs = simpy.events.AllOf(self.env, ctrl_procs)
         yield all_ctrl_procs
 
-    def process(self):
+    def process(self, pid):
         req_index = 0
         while True:
             io_req = yield self.ncq.queue.get()
-            print 'Got request (', req_index, ') at time', self.env.now
-            req_index += 1
+            print pid, 'Got request (', req_index, io_req.operation, ') at time', self.env.now
 
             flash_reqs = self.get_direct_mapped_flash_requests(io_req)
+
             yield self.env.process(
                     self.access_flash(flash_reqs))
-            print 'Finish request (', req_index, ') at time', self.env.now
+            print pid, 'Finish request (', req_index, io_req.operation, ') at time', self.env.now
 
+            req_index += 1
 
+    def run(self):
+        for i in range(self.conf['dftlncq']['ncq_depth']):
+            self.env.process( self.process(i) )
+        # no need to wait for all processes to finish here because
+        # this function is not a simpy process
 
 

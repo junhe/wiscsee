@@ -320,12 +320,14 @@ class SimulatorDES(Simulator):
         i = 0
         for event in self.event_iter:
             yield self.ftl.ncq.queue.put(event)
-            yield self.env.timeout(3) # interval between request
+            yield self.env.timeout(1) # interval between request
             i += 1
 
     def run(self):
         self.env.process(self.host_proc())
-        self.env.process(self.ftl.process())
+        # not need use env.process() because ftl.run() is not a generator
+        self.ftl.run()
+
         self.env.run()
 
     def get_sim_type(self):

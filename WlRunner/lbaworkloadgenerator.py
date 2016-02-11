@@ -380,7 +380,7 @@ class ExtentTestWorkloadMANUAL(LBAWorkloadGenerator):
                 self.ftl_type))
 
         self.op_count = self.conf['lba_workload_configs']\
-            ['ExtentTestWorkload']['op_count']
+            ['ExtentTestWorkloadMANUAL']['op_count']
         if isinstance(self.conf, config.ConfigNewFlash):
             self.page_size = self.conf['flash_config']['page_size']
         else:
@@ -399,14 +399,9 @@ class ExtentTestWorkloadMANUAL(LBAWorkloadGenerator):
         # print 'total num pages', self.conf.total_num_pages()
         # print 'lba_span', lba_span
 
-        max_access_pages = 16
-        for i in range(self.op_count):
-            op = random.choice(ops)
-            page = int(random.random() * (lba_span - max_access_pages))
-            npages = random.randint(1, max_access_pages)
-            if maxpage < page:
-                maxpage = page
-            events.append( (op, page, npages) )
+        # events.append( (op, page, npages) )
+        events.append( (r, 0, 8) )
+        events.append( (r, 0, 8) )
 
         return events
 
@@ -424,7 +419,6 @@ class ExtentTestWorkloadMANUAL(LBAWorkloadGenerator):
                     pid = 0, operation = op, offset = offset,
                     size = size)
             yield event
-
 
 
 class Random(LBAWorkloadGenerator):

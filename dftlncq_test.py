@@ -44,6 +44,48 @@ class TestDftlncq(unittest.TestCase):
         self.my_run()
 
 
+class TestDftlncq2(unittest.TestCase):
+    def setup_config(self):
+        self.conf = config.ConfigNCQFTL()
+
+        # 4 pages per channel, 2 channels in total
+        self.conf['flash_config']['n_pages_per_block'] = 2
+        self.conf['flash_config']['n_blocks_per_plane'] = 2
+        self.conf['flash_config']['n_planes_per_chip'] = 1
+        self.conf['flash_config']['n_chips_per_package'] = 1
+        self.conf['flash_config']['n_packages_per_channel'] = 1
+        self.conf['flash_config']['n_channels_per_dev'] = 2
+
+    def setup_environment(self):
+        metadata_dic = choose_exp_metadata(self.conf, interactive = False)
+        self.conf.update(metadata_dic)
+
+        self.conf['enable_blktrace'] = True
+        self.conf['enable_simulation'] = True
+
+    def setup_workload(self):
+        self.conf["workload_src"] = LBAGENERATOR
+        self.conf["lba_workload_class"] = "ExtentTestWorkloadMANUAL"
+        self.conf["lba_workload_configs"]["ExtentTestWorkloadMANUAL"] = {
+            "op_count": 100}
+        self.conf["age_workload_class"] = "NoOp"
+
+    def setup_ftl(self):
+        self.conf['ftl_type'] = 'dftlncq'
+        self.conf['simulator_class'] = 'SimulatorDES'
+
+    def my_run(self):
+        runtime_update(self.conf)
+        workflow(self.conf)
+
+    def test_main(self):
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run()
+
+
 class TestDftlncqPhyMachTranslation(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNCQFTL()
@@ -97,7 +139,6 @@ class TestDftlncqPhyMachTranslation(unittest.TestCase):
         flash_reqs = ftl.get_direct_mapped_flash_requests(io_req)
         self.assertEqual(len(flash_reqs), 5)
         for req in flash_reqs:
-            print str(req)
             self.assertEqual(req.operation, 'OP_READ')
         self.assertEqual(flash_reqs[0].addr.channel, 0)
         self.assertEqual(flash_reqs[4].addr.channel, 1)
