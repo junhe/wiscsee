@@ -121,8 +121,8 @@ class Controller(object):
                                 self.n_pages_per_plane,
                                 self.n_pages_per_block]
 
-        self.channels = [Channel(self.env, conf)
-                for _ in range( self.n_channels_per_dev)]
+        self.channels = [Channel(self.env, conf, i)
+                for i in range( self.n_channels_per_dev)]
 
     def physical_to_machine_page(self, page):
         addr = FlashAddress()
@@ -205,10 +205,11 @@ class Channel(object):
     write:
         7*t_wc + nbytes*t_wc + t_prog
     """
-    def __init__(self, simpy_env, conf):
+    def __init__(self, simpy_env, conf, channel_id = None):
         self.env = simpy_env
         self.conf = conf
         self.resource = simpy.Resource(self.env, capacity = 1)
+        self.channel_id = channel_id
 
         t_wc = 1
         t_r = 1
@@ -232,14 +233,17 @@ class Channel(object):
         the operation.
         """
         with self.resource.request() as request:
+            yield request
             yield self.env.timeout( self.program_time )
 
     def read_page(self, addr = None):
         with self.resource.request() as request:
+            yield request
             yield self.env.timeout( self.read_time )
 
     def erase_block(self, addr = None):
         with self.resource.request() as request:
+            yield request
             yield self.env.timeout( self.erase_time )
 
 
