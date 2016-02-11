@@ -32,6 +32,8 @@ class NCQSingleQueue(object):
 
 def create_request(channel, op):
     req = flashcontroller.controller.FlashRequest()
+
+    req.addr = flashcontroller.controller.FlashAddress()
     req.addr.channel = channel
     if op == 'read':
         req.operation = flashcontroller.controller.FlashRequest.OP_READ
@@ -52,8 +54,7 @@ class FTL(ftlbuilder.FtlBuilder):
     blktrace.
     """
     def __init__(self, confobj, recorderobj, flashobj, simpy_env):
-        super(FTL, self).__init__(confobj, recorderobj, flashobj)
-
+        self.conf = confobj
         self.env = simpy_env
 
         self.ncq = NCQSingleQueue(
@@ -63,16 +64,44 @@ class FTL(ftlbuilder.FtlBuilder):
         self.flash_controller = flashcontroller.controller.Controller(
                 self.env, self.conf)
 
-    def get_flash_requests(self, io_req):
+    def get_direct_mapped_flash_requests(self, io_req):
+        page_start, page_count = self.conf.sec_ext_to_page_ext(io_req.sector,
+                io_req.sector_count)
+        if io_req.operation == 'discard':
+            return []
+        elif io_req.operation in ('read', 'write'):
+            return self.get_flash_requests_for_page(page_start, page_count,
+                    op = io_req.operation)
+        elif io_req.operation in ('enable_recorder', 'disable_recorder'):
+            return []
+        else:
+            raise RuntimeError("operation {} is not supported".format(
+                io_req.operation))
+
+    def get_flash_requests_for_block(self, block_start, block_count, op):
+        ret_requests = []
+        for block in range(block_start, block_start + block_count):
+            machine_block_addr = \
+                    self.flash_controller.physical_to_machine_block(block)
+            flash_req = flashcontroller.controller.create_flashrequest(
+                    machine_block_addr, op = op)
+            ret_requests.append(flash_req)
+
+        return ret_requests
+
+    def get_flash_requests_for_page(self, page_start, page_count, op):
         """
-        io_req is a request from the host. Here we translate
-        the logical address of io_req and return the flash requests
+        op can be 'read', 'write', and 'erase'
         """
-        flash_reqs = []
-        for i in range(3):
-            flash_reqs.append(
-                    create_request(channel = i, op = 'read'))
-        return flash_reqs
+        ret_requests = []
+        for page in range(page_start, page_start + page_count):
+            machine_page_addr = \
+                self.flash_controller.physical_to_machine_page(page)
+            flash_req = flashcontroller.controller.create_flashrequest(
+                    machine_page_addr, op = op)
+            ret_requests.append(flash_req)
+
+        return ret_requests
 
     def access_flash(self, flash_reqs):
         """
@@ -92,11 +121,10 @@ class FTL(ftlbuilder.FtlBuilder):
         req_index = 0
         while True:
             io_req = yield self.ncq.queue.get()
-            print io_req.operation, ', request index', req_index
             print 'Got request (', req_index, ') at time', self.env.now
             req_index += 1
 
-            flash_reqs = self.get_flash_requests(io_req)
+            flash_reqs = self.get_direct_mapped_flash_requests(io_req)
             yield self.env.process(
                     self.access_flash(flash_reqs))
             print 'Finish request (', req_index, ') at time', self.env.now

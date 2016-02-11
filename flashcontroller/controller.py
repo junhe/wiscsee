@@ -3,19 +3,97 @@ import simpy
 
 class FlashAddress(object):
     def __init__(self):
-        self.page = 0
-        self.block = 0
-        self.plane = 0
-        self.chip = 0
-        self.package = 0
-        self.channel = 0
+        self.page_index = 5
+        self.block_index = 4
+        self.plane_index = 3
+        self.chip_index = 2
+        self.package_index = 1
+        self.channel_index = 0
+
+        self.names = ['channel', 'package', 'chip', 'plane', 'block', 'page']
+        self.location = [0 for _ in self.names]
+
+    def __str__(self):
+        lines = []
+        for name, no in zip(self.names, self.location):
+            lines.append(name.ljust(8) + str(no))
+        return '\n'.join(lines)
+
+    @property
+    def page(self):
+        return self.location[self.page_index]
+    @page.setter
+    def page(self, value):
+        self.location[self.page_index] = value
+
+    @property
+    def block(self):
+        return self.location[self.block_index]
+    @block.setter
+    def block(self, value):
+        self.location[self.block_index] = value
+
+    @property
+    def plane(self):
+        return self.location[self.plane_index]
+    @plane.setter
+    def plane(self, value):
+        self.location[self.plane_index] = value
+
+    @property
+    def chip(self):
+        return self.location[self.chip_index]
+    @chip.setter
+    def chip(self, value):
+        self.location[self.chip_index] = value
+
+    @property
+    def package(self):
+        return self.location[self.package_index]
+    @package.setter
+    def package(self, value):
+        self.location[self.package_index] = value
+
+    @property
+    def channel(self):
+        return self.location[self.channel_index]
+    @channel.setter
+    def channel(self, value):
+        self.location[self.channel_index] = value
 
 
 class FlashRequest(object):
     OP_READ, OP_WRITE, OP_ERASE = 'OP_READ', 'OP_WRITE', 'OP_ERASE'
     def __init__(self):
-        self.addr = FlashAddress()
+        self.addr = None
         self.operation = None
+
+    def __str__(self):
+        lines = []
+        lines.append( "OPERATION " + str(self.operation) )
+        lines.append( str(self.addr) )
+        return '\n'.join(lines)
+
+
+def display_flash_requests(requests):
+    reqs = [str(req) for req in requests]
+    print '\n'.join(reqs)
+
+
+def create_flashrequest(addr, op):
+    req = FlashRequest()
+    req.addr = addr
+
+    if op == 'read':
+        req.operation = FlashRequest.OP_READ
+    elif op == 'write':
+        req.operation = FlashRequest.OP_WRITE
+    elif op == 'erase':
+        req.operation = FlashRequest.OP_ERASE
+    else:
+        raise RuntimeError()
+
+    return req
 
 
 class Controller(object):
@@ -31,8 +109,45 @@ class Controller(object):
         self.n_packages_per_channel = self.conf['flash_config']['n_packages_per_channel']
         self.n_channels_per_dev = self.conf['flash_config']['n_channels_per_dev']
 
+        self.n_pages_per_plane = self.n_pages_per_block * self.n_blocks_per_plane
+        self.n_pages_per_chip = self.n_pages_per_plane * self.n_planes_per_chip
+        self.n_pages_per_package = self.n_pages_per_chip * self.n_chips_per_package
+        self.n_pages_per_channel = self.n_pages_per_package * self.n_packages_per_channel
+        self.n_pages_per_dev = self.n_pages_per_channel * self.n_channels_per_dev
+
+        self.page_hierarchy = [self.n_pages_per_channel,
+                                self.n_pages_per_package,
+                                self.n_pages_per_chip,
+                                self.n_pages_per_plane,
+                                self.n_pages_per_block]
+
         self.channels = [Channel(self.env, conf)
                 for _ in range( self.n_channels_per_dev)]
+
+    def physical_to_machine_page(self, page):
+        addr = FlashAddress()
+
+        no = page
+        # page_hierarchy has [channel, package, ..., block]
+        # location has       [channel, package, ..., block, page]
+        for i, count in enumerate(self.page_hierarchy):
+            addr.location[i] = no / count
+            no = no % count
+        addr.location[-1] = no
+
+        return addr
+
+    def physical_to_machine_block(self, block):
+        """
+        We first translate block to the page number of its first page,
+        so we can use the existing physical_to_machine_page
+        """
+        page = block * self.n_pages_per_block
+
+        addr = self.physical_to_machine_page(page)
+        addr.page = None # so we dont' mistakely use it for other purposes
+
+        return addr
 
     def write_page(self, addr, data = None):
         """
@@ -102,9 +217,13 @@ class Channel(object):
         t_erase = 1
         page_size = self.conf['flash_config']['page_size']
 
-        self.read_time = 7 * t_wc + t_r + page_size * t_rc
-        self.program_time = 7 * t_wc + page_size * t_wc + t_prog
-        self.erase_time = 5 * t_wc + t_erase
+        # self.read_time = 7 * t_wc + t_r + page_size * t_rc
+        # self.program_time = 7 * t_wc + page_size * t_wc + t_prog
+        # self.erase_time = 5 * t_wc + t_erase
+
+        self.read_time = 1
+        self.program_time = 2
+        self.erase_time = 3
 
     def write_page(self, addr = None , data = None):
         """

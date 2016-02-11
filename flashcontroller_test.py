@@ -4,21 +4,22 @@ import simpy
 
 import flashcontroller
 
+
 class TestTemplate(unittest.TestCase):
     def setup_config(self):
         self.conf = config.Config()
 
     def setup_environment(self):
-        raise NotImplementedError
+        pass
 
     def setup_workload(self):
-        raise NotImplementedError
+        pass
 
     def setup_ftl(self):
-        raise NotImplementedError
+        pass
 
     def my_run(self):
-        raise NotImplementedError
+        pass
 
     def _test_main(self):
         "Remove prefix _"
@@ -27,6 +28,7 @@ class TestTemplate(unittest.TestCase):
         self.setup_workload()
         self.setup_ftl()
         self.my_run()
+
 
 class TestChannel(unittest.TestCase):
     def setup_config(self):
@@ -105,6 +107,39 @@ class TestController(unittest.TestCase):
         self.my_run()
 
 
+class TestControllerTranslation(unittest.TestCase):
+    def setup_config(self):
+        self.conf = config.ConfigNewFlash()
+        self.conf.n_channels_per_dev = 3
+
+    def setup_environment(self):
+        pass
+
+    def setup_workload(self):
+        pass
+
+    def setup_ftl(self):
+        pass
+
+    def my_run(self):
+        env = simpy.Environment()
+        controller = flashcontroller.controller.Controller(env, self.conf)
+        addr = controller.physical_to_machine_page(0)
+        for n in addr.location:
+            self.assertEqual(n, 0)
+
+        addr = controller.physical_to_machine_page(1)
+        if self.conf['flash_config']['n_pages_per_block'] > 1:
+            self.assertEqual(addr.page, 1)
+
+    def test_main(self):
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run()
+
+
 class TestControllerRequest(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNewFlash()
@@ -121,6 +156,7 @@ class TestControllerRequest(unittest.TestCase):
 
     def create_request(self, channel, op):
         req = flashcontroller.controller.FlashRequest()
+        req.addr = flashcontroller.controller.FlashAddress()
         req.addr.channel = channel
         if op == 'read':
             req.operation = flashcontroller.controller.FlashRequest.OP_READ
@@ -160,6 +196,35 @@ class TestControllerRequest(unittest.TestCase):
         env.run()
 
     def test_main(self):
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run()
+
+
+class TestFlashAddress(unittest.TestCase):
+    def setup_config(self):
+        self.conf = config.Config()
+
+    def setup_environment(self):
+        pass
+
+    def setup_workload(self):
+        pass
+
+    def setup_ftl(self):
+        pass
+
+    def my_run(self):
+        addr = flashcontroller.controller.FlashAddress()
+        addr.page = 3
+        addr.channel = 5
+        self.assertEqual(addr.page, 3)
+        self.assertEqual(addr.channel, 5)
+
+    def test_main(self):
+        "Remove prefix _"
         self.setup_config()
         self.setup_environment()
         self.setup_workload()

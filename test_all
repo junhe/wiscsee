@@ -8,3 +8,9 @@ sudo python ./Makefile_test.py -v
 echo 
 echo ======= flashcontroller_test =======
 sudo python ./flashcontroller_test.py -v
+
+
+echo 
+echo ======= dftlncq_test =======
+sudo python ./dftlncq_test.py -v
+
