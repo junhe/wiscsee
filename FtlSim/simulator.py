@@ -302,16 +302,14 @@ class SimulatorDES(Simulator):
     def __init__(self, conf, event_iter):
         super(SimulatorDES, self).__init__(conf, event_iter)
 
+        self.env = simpy.Environment()
+
         if self.conf['ftl_type'] == 'dftlncq':
             ftl_class = dftlncq.FTL
+            self.ftl = dftlncq.FTL(self.conf, self.rec, self.env)
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))
-
-        self.env = simpy.Environment()
-
-        self.ftl = ftl_class(self.conf, self.rec,
-            flash.Flash(recorder = self.rec, confobj = self.conf), self.env)
 
     def host_proc(self):
         """

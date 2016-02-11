@@ -47,14 +47,15 @@ def create_request(channel, op):
     return req
 
 
-class FTL(ftlbuilder.FtlBuilder):
+class FTL(object):
     """
     The interface of this FTL for the host is a queue (NCQ). The host puts
     requests to the queue with certain time intervals according to the
     blktrace.
     """
-    def __init__(self, confobj, recorderobj, flashobj, simpy_env):
+    def __init__(self, confobj, recorderobj, simpy_env):
         self.conf = confobj
+        self.recorder = recorderobj
         self.env = simpy_env
 
         self.ncq = NCQSingleQueue(

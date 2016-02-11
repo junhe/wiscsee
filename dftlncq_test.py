@@ -116,7 +116,7 @@ class TestDftlncqPhyMachTranslation(unittest.TestCase):
             print_when_finished = self.conf['print_when_finished']
             )
         rec.disable()
-        ftl = FtlSim.dftlncq.FTL(self.conf, rec, None, None)
+        ftl = FtlSim.dftlncq.FTL(self.conf, rec, None)
 
         flash_reqs = ftl.get_flash_requests_for_page(0, 5, 'read')
         self.assertEqual(len(flash_reqs), 5)
