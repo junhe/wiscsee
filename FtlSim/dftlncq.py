@@ -111,6 +111,7 @@ class FTL(object):
         """
         ctrl_procs = []
         for flash_req in flash_reqs:
+            # This will have the requests automatically queued at channel
             p = self.env.process(
                     self.flash_controller.execute_request(flash_req))
             ctrl_procs.append(p)
@@ -122,13 +123,13 @@ class FTL(object):
         req_index = 0
         while True:
             io_req = yield self.ncq.queue.get()
-            print pid, 'Got request (', req_index, io_req.operation, ') at time', self.env.now
+            # print pid, 'Got request (', req_index, io_req.operation, ') at time', self.env.now
 
             flash_reqs = self.get_direct_mapped_flash_requests(io_req)
 
             yield self.env.process(
                     self.access_flash(flash_reqs))
-            print pid, 'Finish request (', req_index, io_req.operation, ') at time', self.env.now
+            # print pid, 'Finish request (', req_index, io_req.operation, ') at time', self.env.now
 
             req_index += 1
 
