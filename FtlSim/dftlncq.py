@@ -17,6 +17,7 @@ import ftlbuilder
 import lrulist
 import recorder
 import utils
+import dftldes
 
 
 class NCQSingleQueue(object):
@@ -64,6 +65,7 @@ class FTL(object):
 
         self.flash_controller = flashcontroller.controller.Controller(
                 self.env, self.conf)
+
 
     def get_direct_mapped_flash_requests(self, io_req):
         page_start, page_count = self.conf.sec_ext_to_page_ext(io_req.sector,
@@ -127,6 +129,82 @@ class FTL(object):
 
             flash_reqs = self.get_direct_mapped_flash_requests(io_req)
 
+            yield self.env.process(
+                    self.access_flash(flash_reqs))
+            # print pid, 'Finish request (', req_index, io_req.operation, ') at time', self.env.now
+
+            req_index += 1
+
+    def run(self):
+        for i in range(self.conf['dftlncq']['ncq_depth']):
+            self.env.process( self.process(i) )
+        # no need to wait for all processes to finish here because
+        # this function is not a simpy process
+
+
+class FTLwDFTL(object):
+    """
+    The interface of this FTL for the host is a queue (NCQ). The host puts
+    requests to the queue with certain time intervals according to the
+    blktrace.
+    """
+    def __init__(self, confobj, recorderobj, simpy_env):
+        self.conf = confobj
+        self.recorder = recorderobj
+        self.env = simpy_env
+
+        self.ncq = NCQSingleQueue(
+                ncq_depth = self.conf['dftlncq']['ncq_depth'],
+                simpy_env = self.env)
+
+        self.flash_controller = flashcontroller.controller.Controller(
+                self.env, self.conf)
+
+        self.realftl = dftldes.Dftl(self.conf, self.recorder,
+                self.flash_controller, self.env)
+
+        self.realftl.recorder.enable()
+
+    def get_direct_mapped_flash_requests(self, io_req):
+        page_start, page_count = self.conf.sec_ext_to_page_ext(io_req.sector,
+                io_req.sector_count)
+        if io_req.operation == 'discard':
+            return []
+        elif io_req.operation in ('read', 'write'):
+            return self.flash_controller.get_flash_requests_for_ppn(
+                    page_start, page_count, op = io_req.operation)
+        elif io_req.operation in ('enable_recorder', 'disable_recorder'):
+            return []
+        else:
+            raise RuntimeError("operation {} is not supported".format(
+                io_req.operation))
+
+    def access_flash(self, flash_reqs):
+        """
+        This simpy process spawn multiple processes to access flash
+        Some processes may be stalled if channel is busy
+        """
+        ctrl_procs = []
+        for flash_req in flash_reqs:
+            # This will have the requests automatically queued at channel
+            p = self.env.process(
+                    self.flash_controller.execute_request(flash_req))
+            ctrl_procs.append(p)
+
+        all_ctrl_procs = simpy.events.AllOf(self.env, ctrl_procs)
+        yield all_ctrl_procs
+
+    def process(self, pid):
+        req_index = 0
+        while True:
+            io_req = yield self.ncq.queue.get()
+            # print pid, 'Got request (', req_index, io_req.operation, ') at time', self.env.now
+
+            print pid, 'before translation', self.env.now
+            yield self.env.process( self.realftl.translate(io_req) )
+            print pid, 'after translation', self.env.now
+
+            flash_reqs = self.get_direct_mapped_flash_requests(io_req) # for debug
             yield self.env.process(
                     self.access_flash(flash_reqs))
             # print pid, 'Finish request (', req_index, io_req.operation, ') at time', self.env.now
