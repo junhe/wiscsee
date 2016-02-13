@@ -740,12 +740,6 @@ class MappingManager(object):
         ppns = []
         for lpn in lpns:
             ppn = self.lpn_to_ppn(lpn)
-            # request lpn must match oob[ppn].lpn
-            if ppn != 'UNINIT':
-                # assert_flash_data_startswith_oob_lpn(self.conf, self.flash,
-                        # self.oob, ppn)
-                check_data(self, self.conf, self.flash, self.oob, ppn,
-                        lpn)
             ppns.append(ppn)
 
         return ppns
@@ -1785,11 +1779,6 @@ def assert_flash_data_startswith_oob_lpn(conf, flash, oob, ppn):
                 list(range(sec, sec+sec_count)) )
             print msg
             raise RuntimeError(msg)
-
-def check_data(mapping_manager, conf, flash, oob, ppn, req_lpn = None):
-    return
-    assert_oob_lpn_eq_req_lpn(mapping_manager, oob, ppn, req_lpn)
-    assert_flash_data_startswith_oob_lpn(conf, flash, oob, ppn)
 
 
 class ParallelFlash(object):
