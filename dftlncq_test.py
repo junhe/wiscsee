@@ -155,7 +155,7 @@ class TestFTLwithDFTL(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNCQFTL()
         self.conf.n_channels_per_dev = 4
-        self.conf['dftlncq']['ncq_depth'] = 8
+        self.conf['dftlncq']['ncq_depth'] = 2
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)

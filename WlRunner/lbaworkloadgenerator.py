@@ -399,8 +399,8 @@ class ExtentTestWorkloadMANUAL(LBAWorkloadGenerator):
         # print 'lba_span', lba_span
 
         # events.append( (op, page, npages) )
-        events.append( (r, 0, 8) )
         events.append( (w, 0, 8) )
+        events.append( (r, 0, 8) )
 
         return events
 
