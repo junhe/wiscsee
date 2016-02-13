@@ -1742,45 +1742,6 @@ class Dftl(object):
         return "dftlext"
 
 
-def assert_oob_lpn_eq_req_lpn(mapping_manager, oob, ppn, req_lpn):
-    if ppn == 'UNINIT':
-        return
-
-    if ppn == None:
-        return
-
-    oob_lpn = oob.translate_ppn_to_lpn(ppn)
-    if oob_lpn != req_lpn:
-        msg = "oob_lpn {oob_lpn} != req_lpn {req_lpn}. PPN={ppn}\n"\
-            .format(oob_lpn = oob_lpn, req_lpn = req_lpn, ppn = ppn)
-        msg += "Mapping: lpn {} -> ppn {}.\n".format(
-            5434, mapping_manager.lpn_to_ppn(5434))
-        msg += "Mapping: lpn {} -> ppn {}.\n".format(
-            6127, mapping_manager.lpn_to_ppn(6127))
-
-        raise RuntimeError(msg)
-
-
-def assert_flash_data_startswith_oob_lpn(conf, flash, oob, ppn):
-    if ppn == None:
-        return
-
-    if ppn == 'UNINIT':
-        return
-
-    flashdata = flash.flash_backend.data
-    oob_lpn = oob.translate_ppn_to_lpn(ppn)
-    sec, sec_count = conf.page_ext_to_sec_ext(oob_lpn, 1)
-    for sec_num, data in zip(range(sec, sec+sec_count), flashdata[ppn]):
-        if not data.startswith(str(sec_num)):
-            msg = "Flash data does not match its stored sec num"\
-                "flash data: {}, ppn: {}. oob_lpn: {} sec:{}".format(
-                flashdata[ppn], ppn, oob_lpn,
-                list(range(sec, sec+sec_count)) )
-            print msg
-            raise RuntimeError(msg)
-
-
 class ParallelFlash(object):
     def __init__(self, confobj, recorderobj, globalhelper = None):
         self.conf = confobj
