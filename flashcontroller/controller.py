@@ -212,6 +212,13 @@ class Controller(object):
             raise RuntimeError("operation {} is not supported".format(
                 flash_request.operation))
 
+class Controller2(Controller):
+    """
+    This controller has a recorder
+    """
+    def __init__(self, simpy_env, conf, recorderobj):
+        super(Controller2, self).__init__(simpy_env, conf)
+        self.recorder = recorderobj
 
 class Channel(object):
     """

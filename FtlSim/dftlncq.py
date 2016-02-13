@@ -157,8 +157,8 @@ class FTLwDFTL(object):
                 ncq_depth = self.conf['dftlncq']['ncq_depth'],
                 simpy_env = self.env)
 
-        self.flash_controller = flashcontroller.controller.Controller(
-                self.env, self.conf)
+        self.flash_controller = flashcontroller.controller.Controller2(
+                self.env, self.conf, self.recorder)
 
         self.realftl = dftldes.Dftl(self.conf, self.recorder,
                 self.flash_controller, self.env)
