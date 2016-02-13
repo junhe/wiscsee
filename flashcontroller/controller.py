@@ -1,7 +1,7 @@
 import simpy
 import FtlSim
 from collections import Counter
-
+from commons import *
 
 class FlashAddress(object):
     def __init__(self):
@@ -65,7 +65,7 @@ class FlashAddress(object):
 
 
 class FlashRequest(object):
-    OP_READ, OP_WRITE, OP_ERASE = 'OP_READ', 'OP_WRITE', 'OP_ERASE'
+    # OP_READ, OP_WRITE, OP_ERASE = 'OP_READ', 'OP_WRITE', 'OP_ERASE'
     def __init__(self):
         self.addr = None
         self.operation = None
@@ -75,6 +75,32 @@ class FlashRequest(object):
         lines.append( "OPERATION " + str(self.operation) )
         lines.append( str(self.addr) )
         return '\n'.join(lines)
+
+class FlatFlashPageRequest(object):
+    def __init__(self, page_start, page_count, op):
+        """
+        op is one of OP_READ, OP_WRITE
+        """
+        assert op != OP_ERASE
+        self.page_start = page_start
+        self.page_count = page_count
+        self.op = op
+
+    def get_range(self):
+        return self.page_start, self, page_count
+
+class FlatFlashBlockRequest(object):
+    def __init__(self, block_start, block_count, op):
+        """
+        op is one of OP_ERASE
+        """
+        assert op == OP_ERASE
+        self.block_start = block_start
+        self.block_count = block_count
+        self.op = op
+
+    def get_range(self):
+        return self.block_start, self, block_count
 
 
 def display_flash_requests(requests):
@@ -87,11 +113,11 @@ def create_flashrequest(addr, op):
     req.addr = addr
 
     if op == 'read':
-        req.operation = FlashRequest.OP_READ
+        req.operation = OP_READ
     elif op == 'write':
-        req.operation = FlashRequest.OP_WRITE
+        req.operation = OP_WRITE
     elif op == 'erase':
-        req.operation = FlashRequest.OP_ERASE
+        req.operation = OP_ERASE
     else:
         raise RuntimeError()
 
@@ -201,13 +227,13 @@ class Controller(object):
             self.channels[addr.channel].erase_block(None))
 
     def execute_request(self, flash_request):
-        if flash_request.operation == FlashRequest.OP_READ:
+        if flash_request.operation == OP_READ:
             yield self.env.process(
                     self.read_page(flash_request.addr))
-        elif flash_request.operation == FlashRequest.OP_WRITE:
+        elif flash_request.operation == OP_WRITE:
             yield self.env.process(
                 self.write_page(flash_request.addr))
-        elif flash_request.operation == FlashRequest.OP_ERASE:
+        elif flash_request.operation == OP_ERASE:
             yield self.env.process(
                 self.erase_block(flash_request.addr))
         else:

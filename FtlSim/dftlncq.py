@@ -11,6 +11,7 @@ import simpy
 import bidict
 
 import config
+from commons import *
 import flash
 import flashcontroller
 import ftlbuilder
@@ -29,23 +30,6 @@ class NCQSingleQueue(object):
         self.ncq_depth = ncq_depth
         self.env = simpy_env
         self.queue = simpy.Store(self.env)
-
-
-def create_request(channel, op):
-    req = flashcontroller.controller.FlashRequest()
-
-    req.addr = flashcontroller.controller.FlashAddress()
-    req.addr.channel = channel
-    if op == 'read':
-        req.operation = flashcontroller.controller.FlashRequest.OP_READ
-    elif op == 'write':
-        req.operation = flashcontroller.controller.FlashRequest.OP_WRITE
-    elif op == 'erase':
-        req.operation = flashcontroller.controller.FlashRequest.OP_ERASE
-    else:
-        raise RuntimeError()
-
-    return req
 
 
 class FTL(object):

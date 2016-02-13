@@ -3,6 +3,7 @@ import unittest
 import simpy
 
 import flashcontroller
+from commons import *
 
 
 class TestTemplate(unittest.TestCase):
@@ -165,11 +166,11 @@ class TestControllerRequest(unittest.TestCase):
         req.addr = flashcontroller.controller.FlashAddress()
         req.addr.channel = channel
         if op == 'read':
-            req.operation = flashcontroller.controller.FlashRequest.OP_READ
+            req.operation = OP_READ
         elif op == 'write':
-            req.operation = flashcontroller.controller.FlashRequest.OP_WRITE
+            req.operation = OP_WRITE
         elif op == 'erase':
-            req.operation = flashcontroller.controller.FlashRequest.OP_ERASE
+            req.operation = OP_ERASE
         else:
             raise RuntimeError()
 

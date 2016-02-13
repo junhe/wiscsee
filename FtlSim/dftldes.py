@@ -777,6 +777,7 @@ class MappingManager(object):
 
         # read it up, this operation is just for statistics
         self.flash.read_pages(ppns = [m_ppn], tag = TRANS_CACHE)
+        # self.flash
 
         # Now we have all the entries of m_ppn in memory, we need to put
         # the mapping of lpn->ppn to CMT
