@@ -1514,7 +1514,7 @@ class Dftl(object):
     def __init__(self, confobj, recorderobj, flashcontrollerobj, env):
         self.conf = confobj
         self.recorder = recorderobj
-        self.flash_controller = flashcontrollerobj
+        self.flash = flashcontrollerobj
         self.env = env
 
         # bitmap has been created parent class
@@ -1525,7 +1525,7 @@ class Dftl(object):
         self.global_helper = GlobalHelper(confobj)
 
         # Replace the flash object with a new one, which has global helper
-        self.flash = ParallelFlash(self.conf, self.recorder, self.global_helper)
+        # self.flash = ParallelFlash(self.conf, self.recorder, self.global_helper)
 
         self.block_pool = BlockPool(confobj)
         self.oob = OutOfBandAreas(confobj)
@@ -1604,7 +1604,7 @@ class Dftl(object):
             if ppn == 'UNINIT':
                 continue
 
-            req = self.flash_controller.get_flash_requests_for_ppn(ppn, 1,
+            req = self.flash.get_flash_requests_for_ppn(ppn, 1,
                     op = io_req.operation)
             flash_reqs.extend(req)
 
