@@ -26,6 +26,9 @@ class EventSimple(object):
         self.pid = int(pid)
         self.operation = operation
 
+    def __str__(self):
+        return "EventSimple PID:{} OP:{}".format(self.pid, self.operation)
+
 
 class Event(EventSimple):
     def __init__(self, sector_size, pid, operation, offset, size):
@@ -44,6 +47,13 @@ class Event(EventSimple):
             self.size, sector_size)
 
         self.sector_count = self.size / sector_size
+
+    def __str__(self):
+        return "Event pid:{pid}, operation:{operation}, offset:{offset},"\
+                "size:{size}, sector:{sector}, sector_count:{sector_count}"\
+                .format(pid = self.pid, operation = self.operation,
+                        offset = self.offset, size = self.size,
+                        sector = self.sector, sector_count = self.sector_count)
 
 
 class Simulator(object):
