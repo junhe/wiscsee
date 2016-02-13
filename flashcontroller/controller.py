@@ -198,6 +198,19 @@ class Controller(object):
 
         return addr
 
+    def rw_ppn_extent(self, ppn_start, ppn_count, op):
+        """
+        op is 'read' or 'write'
+        """
+        flash_reqs = self.get_flash_requests_for_ppns(ppn_start, ppn_count,
+            op = op)
+        yield self.env.process( self.execute_request_list(flash_reqs) )
+
+    def erase_pbn_extent(self, pbn_start, pbn_count):
+        flash_reqs = self.get_flash_requests_for_pbns(pbn_start, pbn_count,
+                op = 'erase')
+        yield self.env.process( self.execute_request_list(flash_reqs) )
+
     def write_page(self, addr, data = None):
         """
         Usage:
@@ -239,6 +252,15 @@ class Controller(object):
         else:
             raise RuntimeError("operation {} is not supported".format(
                 flash_request.operation))
+
+    def execute_request_list(self, flash_request_list):
+        procs = []
+        for request in flash_request_list:
+            p = self.env.process(self.execute_request(request))
+            procs.append(p)
+        event = simpy.events.AllOf(self.env, procs)
+        yield event
+
 
 class Controller2(Controller):
     """

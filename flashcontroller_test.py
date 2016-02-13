@@ -239,6 +239,76 @@ class TestFlashAddress(unittest.TestCase):
         self.my_run()
 
 
+class TestControllerRequest2(unittest.TestCase):
+    def setup_config(self):
+        self.conf = config.ConfigNewFlash()
+
+        # 2 pages per block, 2 blocks per channel, 2 channels in total
+        self.conf['flash_config']['n_pages_per_block'] = 2
+        self.conf['flash_config']['n_blocks_per_plane'] = 2
+        self.conf['flash_config']['n_planes_per_chip'] = 1
+        self.conf['flash_config']['n_chips_per_package'] = 1
+        self.conf['flash_config']['n_packages_per_channel'] = 1
+        self.conf['flash_config']['n_channels_per_dev'] = 2
+
+    def setup_environment(self):
+        pass
+
+    def setup_workload(self):
+        pass
+
+    def setup_ftl(self):
+        pass
+
+    def create_request(self, channel, op):
+        req = flashcontroller.controller.FlashRequest()
+        req.addr = flashcontroller.controller.FlashAddress()
+        req.addr.channel = channel
+        if op == 'read':
+            req.operation = OP_READ
+        elif op == 'write':
+            req.operation = OP_WRITE
+        elif op == 'erase':
+            req.operation = OP_ERASE
+        else:
+            raise RuntimeError()
+
+        return req
+
+    def access(self, env,  controller):
+        channel = controller.channels[1]
+        rt = channel.read_time
+        wt = channel.program_time
+        et = channel.erase_time
+
+        yield env.process( controller.rw_ppn_extent(0, 2, 'read') )
+        self.assertEqual( env.now, rt *2 ) # two pages go to the same channel
+
+        yield env.process( controller.rw_ppn_extent(4, 2, 'write') )
+        self.assertEqual( env.now, rt *2 + wt*2 ) # two pages go to the same channel
+
+        yield env.process( controller.rw_ppn_extent(0, 8, 'write') )
+        # 4 pages go to one channel
+        self.assertEqual( env.now, rt *2 + wt*2 + wt*4 )
+
+        # one req goes to channel 1, another one goes to channel 2
+        yield env.process( controller.erase_pbn_extent(1, 2) )
+        self.assertEqual( env.now, rt *2 + wt*2 + wt*4 + et )
+
+    def my_run(self):
+        env = simpy.Environment()
+        controller = flashcontroller.controller.Controller(env, self.conf)
+        env.process(self.access(env, controller))
+        env.run()
+
+    def test_main(self):
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run()
+
+
 def main():
     unittest.main()
 
