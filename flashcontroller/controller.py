@@ -126,6 +126,27 @@ class Controller(object):
         self.channels = [Channel(self.env, conf, i)
                 for i in range( self.n_channels_per_dev)]
 
+    def get_flash_requests_for_pbns(self, block_start, block_count, op):
+        ret_requests = []
+        for block in range(block_start, block_start + block_count):
+            machine_block_addr = self.physical_to_machine_block(block)
+            flash_req = create_flashrequest( machine_block_addr, op = op)
+            ret_requests.append(flash_req)
+
+        return ret_requests
+
+    def get_flash_requests_for_ppns(self, page_start, page_count, op):
+        """
+        op can be 'read', 'write', and 'erase'
+        """
+        ret_requests = []
+        for page in range(page_start, page_start + page_count):
+            machine_page_addr = self.physical_to_machine_page(page)
+            flash_req = create_flashrequest(machine_page_addr, op = op)
+            ret_requests.append(flash_req)
+
+        return ret_requests
+
     def physical_to_machine_page(self, page):
         addr = FlashAddress()
 
@@ -138,27 +159,6 @@ class Controller(object):
         addr.location[-1] = no
 
         return addr
-
-    def get_flash_requests_for_pbn(self, block_start, block_count, op):
-        ret_requests = []
-        for block in range(block_start, block_start + block_count):
-            machine_block_addr = self.physical_to_machine_block(block)
-            flash_req = create_flashrequest( machine_block_addr, op = op)
-            ret_requests.append(flash_req)
-
-        return ret_requests
-
-    def get_flash_requests_for_ppn(self, page_start, page_count, op):
-        """
-        op can be 'read', 'write', and 'erase'
-        """
-        ret_requests = []
-        for page in range(page_start, page_start + page_count):
-            machine_page_addr = self.physical_to_machine_page(page)
-            flash_req = create_flashrequest(machine_page_addr, op = op)
-            ret_requests.append(flash_req)
-
-        return ret_requests
 
     def physical_to_machine_block(self, block):
         """

@@ -1604,7 +1604,7 @@ class Dftl(object):
             if ppn == 'UNINIT':
                 continue
 
-            req = self.flash.get_flash_requests_for_ppn(ppn, 1,
+            req = self.flash.get_flash_requests_for_ppns(ppn, 1,
                     op = io_req.operation)
             flash_reqs.extend(req)
 

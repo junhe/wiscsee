@@ -171,7 +171,7 @@ class FTLwDFTL(object):
         if io_req.operation == 'discard':
             return []
         elif io_req.operation in ('read', 'write'):
-            return self.flash_controller.get_flash_requests_for_ppn(
+            return self.flash_controller.get_flash_requests_for_ppns(
                     page_start, page_count, op = io_req.operation)
         elif io_req.operation in ('enable_recorder', 'disable_recorder'):
             return []
