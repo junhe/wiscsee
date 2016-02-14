@@ -756,7 +756,7 @@ class MappingManager(object):
         if ppn == MISS:
             # cache miss
             while self.cached_mapping_table.is_full():
-                yield self.process(self.evict_cache_entry())
+                yield self.env.process(self.evict_cache_entry())
 
             # find the physical translation page holding lpn's mapping in GTD
             ppn = yield self.env.process(
@@ -1473,7 +1473,7 @@ class GarbageCollector(object):
         # set page states to ERASED and in-OOB lpn to nothing
         self.oob.erase_block(blocknum)
 
-        self.env.process(
+        yield self.env.process(
             self.flash.erase_pbn_extent(blocknum, 1))
 
 
