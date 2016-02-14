@@ -697,13 +697,14 @@ class MappingManager(object):
     them.
     This class should act as a coordinator of all the mapping data structures.
     """
-    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj):
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
+            envobj):
         self.conf = confobj
-
         self.flash = flashobj
         self.oob = oobobj
         self.block_pool = block_pool
         self.recorder = recorderobj
+        self.env = envobj
 
         # managed and owned by Mappingmanager
         self.global_mapping_table = GlobalMappingTable(confobj, flashobj)
@@ -721,7 +722,7 @@ class MappingManager(object):
         """
         ppns = []
         for lpn in lpns:
-            old_ppn = self.lpn_to_ppn(lpn)
+            old_ppn = yield self.env.process( self.lpn_to_ppn(lpn) )
             new_ppn = self.block_pool.next_data_page_to_program()
             ppns.append(new_ppn)
             # CMT
@@ -732,17 +733,17 @@ class MappingManager(object):
             self.oob.new_lba_write(lpn = lpn, old_ppn = old_ppn,
                 new_ppn = new_ppn)
 
-        return ppns
+        self.env.exit(ppns)
 
     def ppns_for_reading(self, lpns):
         """
         """
         ppns = []
         for lpn in lpns:
-            ppn = self.lpn_to_ppn(lpn)
+            ppn = yield self.env.process( self.lpn_to_ppn(lpn) )
             ppns.append(ppn)
 
-        return ppns
+        self.env.exit(ppns)
 
     def lpn_to_ppn(self, lpn):
         """
@@ -755,16 +756,17 @@ class MappingManager(object):
         if ppn == MISS:
             # cache miss
             while self.cached_mapping_table.is_full():
-                self.evict_cache_entry()
+                yield self.process(self.evict_cache_entry())
 
             # find the physical translation page holding lpn's mapping in GTD
-            ppn = self.load_mapping_entry_to_cache(lpn)
+            ppn = yield self.env.process(
+                    self.load_mapping_entry_to_cache(lpn))
 
             self.recorder.count_me("cache", "miss")
         else:
             self.recorder.count_me("cache", "hit")
 
-        return ppn
+        self.env.exit(ppn)
 
     def load_mapping_entry_to_cache(self, lpn):
         """
@@ -776,8 +778,8 @@ class MappingManager(object):
         m_ppn = self.directory.m_ppn_of_lpn(lpn)
 
         # read it up, this operation is just for statistics
-        self.flash.read_pages(ppns = [m_ppn], tag = TRANS_CACHE)
-        # self.flash
+        yield self.env.process(
+                self.flash.rw_ppn_extent(m_ppn, 1, op = 'read'))
 
         # Now we have all the entries of m_ppn in memory, we need to put
         # the mapping of lpn->ppn to CMT
@@ -785,7 +787,7 @@ class MappingManager(object):
         self.cached_mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
             dirty = False)
 
-        return ppn
+        self.env.exit(ppn)
 
     def initialize_mappings(self):
         """
@@ -842,7 +844,8 @@ class MappingManager(object):
             new_mappings[entry.lpn] = entry.ppn
 
         # update translation page
-        self.update_translation_page_on_flash(m_vpn, new_mappings, tag)
+        yield self.env.process(
+            self.update_translation_page_on_flash(m_vpn, new_mappings, tag))
 
         # mark as clean
         for entry in batch_entries:
@@ -861,7 +864,7 @@ class MappingManager(object):
         if vic_entrydata.dirty == True:
             # If we have to write to flash, we write in batch
             m_vpn = self.directory.m_vpn_of_lpn(vic_lpn)
-            self.batch_write_back(m_vpn)
+            yield self.env.process(self.batch_write_back(m_vpn))
 
         # remove only the victim entry
         self.cached_mapping_table.remove_entry_by_lpn(vic_lpn)
@@ -880,7 +883,9 @@ class MappingManager(object):
 
         # update translation page
         self.recorder.count_me('batch.size', len(new_mappings))
-        self.update_translation_page_on_flash(m_vpn, new_mappings, TRANS_CACHE)
+        yield self.env.process(
+                self.update_translation_page_on_flash(m_vpn, new_mappings,
+                    TRANS_CACHE))
 
         # mark them as clean
         for entry in batch_entries:
@@ -916,7 +921,8 @@ class MappingManager(object):
         # update GMT on flash
         if len(new_mappings) < self.conf.dftl_n_mapping_entries_per_page():
             # need to read some mappings
-            self.flash.read_pages(ppns = [old_m_ppn], tag = tag)
+            yield self.env.process(
+                self.flash.rw_ppn_extent(old_m_ppn, 1, op = 'read') )
         else:
             self.recorder.count_me('cache', 'saved.1.read')
 
@@ -924,7 +930,9 @@ class MappingManager(object):
         new_m_ppn = self.block_pool.next_translation_page_to_program()
 
         # update flash
-        self.flash.write_pages(ppns = [new_m_ppn], ppn_data = None, tag = tag)
+        yield self.env.process(
+            self.flash.rw_ppn_extent(new_m_ppn, 1, op = 'write'))
+
         # update our fake 'on-flash' GMT
         for lpn, new_ppn in new_mappings.items():
             self.global_mapping_table.update(lpn = lpn, ppn = new_ppn)
@@ -1093,12 +1101,13 @@ class BlockInfo(object):
 
 class GarbageCollector(object):
     def __init__(self, confobj, flashobj, oobobj, block_pool, mapping_manager,
-        recorderobj):
+        recorderobj, envobj):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
         self.block_pool = block_pool
         self.recorder = recorderobj
+        self.env = envobj
 
         self.mapping_manager = mapping_manager
 
@@ -1130,9 +1139,9 @@ class GarbageCollector(object):
             victim_type, victim_block = (blockinfo.block_type,
                 blockinfo.block_num)
             if victim_type == DATA_BLOCK:
-                self.clean_data_block(victim_block)
+                yield self.env.process(self.clean_data_block(victim_block))
             elif victim_type == TRANS_BLOCK:
-                self.clean_trans_block(victim_block)
+                yield self.env.process(self.clean_trans_block(victim_block))
             blk_cnt += 1
 
         if triggered:
@@ -1147,7 +1156,8 @@ class GarbageCollector(object):
         changes = []
         for ppn in range(start, end):
             if self.oob.states.is_page_valid(ppn):
-                change = self.move_data_page_to_new_location(ppn)
+                change = yield self.env.process(
+                        self.move_data_page_to_new_location(ppn))
                 changes.append(change)
 
         # change the mappings
@@ -1156,22 +1166,25 @@ class GarbageCollector(object):
         # mark block as free
         self.block_pool.move_used_data_block_to_free(flash_block)
         # it handles oob and flash
-        self.erase_block(flash_block, DATA_CLEANING)
+        yield self.env.process(
+                self.erase_block(flash_block, DATA_CLEANING))
 
     def clean_trans_block(self, flash_block):
-        self.move_valid_pages(flash_block,
-            self.move_trans_page_to_new_location)
+        yield self.env.process(
+                self.move_valid_pages(flash_block,
+                self.move_trans_page_to_new_location))
         # mark block as free
         self.block_pool.move_used_trans_block_to_free(flash_block)
         # it handles oob and flash
-        self.erase_block(flash_block, TRANS_CLEAN)
+        yield self.env.process(
+                self.erase_block(flash_block, TRANS_CLEAN))
 
     def move_valid_pages(self, flash_block, mover_func):
         start, end = self.conf.block_to_page_range(flash_block)
 
         for ppn in range(start, end):
             if self.oob.states.is_page_valid(ppn):
-                mover_func(ppn)
+                yield self.env.process( mover_func(ppn) )
 
     def move_valid_data_pages(self, flash_block, mover_func):
         """
@@ -1195,25 +1208,22 @@ class GarbageCollector(object):
         old_ppn = ppn
 
         # read the the data page
-        pagedata = self.flash.read_pages(ppns = [old_ppn],
-                tag = DATA_CLEANING)[0]
+        self.env.process(
+                self.flash.rw_ppn_extent(old_ppn, 1, op = 'read'))
 
         # find the mapping
         lpn = self.oob.translate_ppn_to_lpn(old_ppn)
 
         # write to new page
         new_ppn = self.block_pool.next_gc_data_page_to_program()
-        self.flash.write_pages(ppns = [new_ppn], ppn_data = [pagedata],
-                tag = DATA_CLEANING)
+        self.env.process(
+                self.flash.rw_ppn_extent(new_ppn, 1, op = 'write'))
 
         # update new page and old page's OOB
         self.oob.data_page_move(lpn, old_ppn, new_ppn)
 
-        if lpn == 6127:
-            print 'we will move 6127'
-            exit(1)
-
-        return {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn}
+        ret = {'lpn':lpn, 'old_ppn':old_ppn, 'new_ppn':new_ppn}
+        self.env.exit(ret)
 
     def group_changes(self, changes):
         """
@@ -1240,8 +1250,9 @@ class GarbageCollector(object):
         # update translation page on flash
         new_mappings = {change['lpn']:change['new_ppn']
                 for change in changes_list}
-        self.mapping_manager.update_translation_page_on_flash(
-                m_vpn, new_mappings, TRANS_UPDATE_FOR_DATA_GC)
+        yield self.env.process(
+                self.mapping_manager.update_translation_page_on_flash(
+                m_vpn, new_mappings, TRANS_UPDATE_FOR_DATA_GC))
 
     def update_cache_mappings(self, changes_in_cache):
         # some mappings are in flash and some in cache
@@ -1291,7 +1302,8 @@ class GarbageCollector(object):
                 some_in_flash = True
 
         if some_in_flash == True:
-            self.update_flash_mappings(m_vpn, changes_list)
+            yield self.env.process(
+                    self.update_flash_mappings(m_vpn, changes_list))
             if some_in_cache == True:
                 self.update_cache_mappings(changes_in_cache)
 
@@ -1329,12 +1341,13 @@ class GarbageCollector(object):
 
         m_vpn = self.oob.translate_ppn_to_lpn(old_m_ppn)
 
-        self.flash.read_pages(ppns = [old_m_ppn], tag = TRANS_CLEAN)
+        yield self.env.process(
+            self.flash.rw_ppn_extent(old_m_ppn, 1, op = 'read'))
 
         # write to new page
         new_m_ppn = self.block_pool.next_gc_translation_page_to_program()
-        self.flash.write_pages(ppns = [new_m_ppn], ppn_data = None,
-                tag = TRANS_CLEAN)
+        yield self.env.process(
+            self.flash.rw_ppn_extent(new_m_ppn, 1, op = 'write'))
 
         # update new page and old page's OOB
         self.oob.new_write(m_vpn, old_m_ppn, new_m_ppn)
@@ -1460,7 +1473,9 @@ class GarbageCollector(object):
         # set page states to ERASED and in-OOB lpn to nothing
         self.oob.erase_block(blocknum)
 
-        self.flash.erase_blocks(pbns = [blocknum], tag = tag)
+        self.env.process(
+            self.flash.erase_pbn_extent(blocknum, 1))
+
 
 def dec_debug(function):
     def wrapper(self, lpn):
@@ -1537,7 +1552,8 @@ class Dftl(object):
             block_pool = self.block_pool,
             flashobj = self.flash,
             oobobj=self.oob,
-            recorderobj = recorderobj
+            recorderobj = recorderobj,
+            envobj = env
             )
 
         self.garbage_collector = GarbageCollector(
@@ -1546,7 +1562,8 @@ class Dftl(object):
             oobobj=self.oob,
             block_pool = self.block_pool,
             mapping_manager = self.mapping_manager,
-            recorderobj = recorderobj
+            recorderobj = recorderobj,
+            envobj = env
             )
 
         # We should initialize Globaltranslationdirectory in Dftl
@@ -1579,9 +1596,9 @@ class Dftl(object):
             # for debug
             yield self.env.timeout(3)
 
-            # flash_reqs = yield self.env.process(
-                    # self.handle_io_requests(io_req))
-            flash_reqs = self.handle_io_requests(io_req)
+            flash_reqs = yield self.env.process(
+                    self.handle_io_requests(io_req))
+            # flash_reqs = self.handle_io_requests(io_req)
             self.env.exit(flash_reqs)
 
     def handle_io_requests(self, io_req):
@@ -1592,9 +1609,11 @@ class Dftl(object):
         print 'lpns', lpns
 
         if io_req.operation == 'read':
-            ppns = self.mapping_manager.ppns_for_reading(lpns)
+            ppns = yield self.env.process(
+                    self.mapping_manager.ppns_for_reading(lpns))
         elif io_req.operation == 'write':
-            ppns = self.mapping_manager.ppns_for_writing(lpns)
+            ppns = yield self.env.process(
+                    self.mapping_manager.ppns_for_writing(lpns))
             print 'write ppns', ppns
         else:
             print 'io operation', io_req.operation, 'is not processed'
@@ -1609,7 +1628,7 @@ class Dftl(object):
                     op = io_req.operation)
             flash_reqs.extend(req)
 
-        return flash_reqs
+        self.env.exit(flash_reqs)
 
     def lba_discard(self, lpn, pid = None):
         """
@@ -1637,7 +1656,7 @@ class Dftl(object):
             # lpn =  lpn
         # )
 
-        ppn = self.mapping_manager.lpn_to_ppn(lpn)
+        ppn = yield self.env.process(self.mapping_manager.lpn_to_ppn(lpn))
         if ppn == UNINITIATED:
             return
 
@@ -1650,27 +1669,6 @@ class Dftl(object):
 
         # garbage collection checking and possibly doing
         # self.garbage_collector.try_gc()
-
-    def sec_read(self, sector, count):
-        """
-        There are two parts here.
-        1. Translation all LPN to PPN
-        2. Read the PPNs in parallel
-
-        Note that the tranlation may incur GC
-        It returns an array of data.
-        """
-        lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
-
-        ppns_to_read = self.mapping_manager.ppns_for_reading(
-            range(lpn_start, lpn_start + lpn_count))
-
-        data = self.flash.read_pages(ppns = ppns_to_read, tag = DATA_USER)
-        data = self.page_to_sec_items(data)
-
-        self.check_read(sector, count, data)
-
-        return data
 
     def check_read(self, sector, sector_count, data):
         for sec, sec_data in zip(
@@ -1711,24 +1709,6 @@ class Dftl(object):
             new_data.append(page_items)
 
         return new_data
-
-    def sec_write(self, sector, count, data = None):
-        lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
-
-        ppns_to_write = self.mapping_manager.ppns_for_writing(
-            range(lpn_start, lpn_start + lpn_count))
-
-        ppn_data = self.sec_to_page_items(data)
-        self.flash.write_pages(ppns = ppns_to_write, ppn_data = ppn_data,
-                tag = DATA_USER)
-
-        self.garbage_collector.try_gc()
-
-    def sec_discard(self, sector, count):
-        lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
-
-        for lpn in range(lpn_start, lpn_start + lpn_count):
-            self.lba_discard(lpn)
 
     def pre_workload(self):
         pass
@@ -1824,9 +1804,5 @@ return flash hierarchy requests
 3. change the realftl to use flash controller, which queues requests.
 4. Done
 """
-
-
-
-
 
 
