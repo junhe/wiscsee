@@ -1594,7 +1594,7 @@ class Dftl(object):
             yield ram_request # serialize all access to data structures
 
             # for debug
-            yield self.env.timeout(3)
+            # yield self.env.timeout(3)
 
             flash_reqs = yield self.env.process(
                     self.handle_io_requests(io_req))
@@ -1602,11 +1602,9 @@ class Dftl(object):
             self.env.exit(flash_reqs)
 
     def handle_io_requests(self, io_req):
-        print 'handling request', str(io_req)
         lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(io_req.sector,
                 io_req.sector_count)
         lpns = range(lpn_start, lpn_start + lpn_count)
-        print 'lpns', lpns
 
         if io_req.operation == 'read':
             ppns = yield self.env.process(
@@ -1614,7 +1612,6 @@ class Dftl(object):
         elif io_req.operation == 'write':
             ppns = yield self.env.process(
                     self.mapping_manager.ppns_for_writing(lpns))
-            print 'write ppns', ppns
         else:
             print 'io operation', io_req.operation, 'is not processed'
             ppns = []

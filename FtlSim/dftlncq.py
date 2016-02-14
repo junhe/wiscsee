@@ -182,22 +182,23 @@ class FTLwDFTL(object):
         req_index = 0
         while True:
             io_req = yield self.ncq.queue.get()
-            print pid, 'Got request (', req_index, io_req.operation, ') at time', self.env.now
-            print str(io_req)
+            print "At time {} [{}] got request ({}) {}".format(self.env.now,
+                    pid, req_index, str(io_req))
 
-            print pid, 'before translation', self.env.now
+            s = self.env.now
             flash_reqs = yield self.env.process( self.realftl.translate(io_req) )
-            print pid, 'after translation', self.env.now
-
-            print '-=-=-=-===================================='
-            for req in flash_reqs:
-                print str(req)
-            print '-------------------------------------------'
+            e = self.env.now
+            print "Translation took", e - s
 
             # flash_reqs = self.get_direct_mapped_flash_requests(io_req) # for debug
+
+            s = self.env.now
             yield self.env.process(
                     self.access_flash(flash_reqs))
-            print pid, 'Finish request (', req_index, io_req.operation, ') at time', self.env.now
+            print "At time {} [{}] finish request ({})".format(self.env.now,
+                    pid, req_index)
+            e = self.env.now
+            print "Accessing flash took", e - s
 
             req_index += 1
 
