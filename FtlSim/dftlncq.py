@@ -200,6 +200,11 @@ class FTLwDFTL(object):
             e = self.env.now
             print "Accessing flash took", e - s
 
+            # Try clean garbage
+            self.env.process(
+                    self.realftl.clean_garbage())
+
+
             req_index += 1
 
     def run(self):

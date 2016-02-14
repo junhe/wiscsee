@@ -1115,7 +1115,7 @@ class GarbageCollector(object):
 
         self.victim_block_seqid = 0
 
-    def try_gc(self):
+    def gc_process(self):
         triggered = False
 
         self.decider.refresh()
@@ -1626,6 +1626,13 @@ class Dftl(object):
             flash_reqs.extend(req)
 
         self.env.exit(flash_reqs)
+
+    def clean_garbage(self):
+        with self.resource_ram.request() as ram_request:
+            yield ram_request # serialize all access to data structures
+            yield self.env.process(
+                    self.garbage_collector.gc_process())
+
 
     def lba_discard(self, lpn, pid = None):
         """
