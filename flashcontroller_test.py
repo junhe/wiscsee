@@ -308,6 +308,51 @@ class TestControllerRequest2(unittest.TestCase):
         self.setup_ftl()
         self.my_run()
 
+class TestControllerTime(unittest.TestCase):
+    def setup_config(self):
+        self.conf = config.ConfigNewFlash()
+
+        # 2 pages per block, 2 blocks per channel, 2 channels in total
+        self.conf['flash_config']['n_pages_per_block'] = 2
+        self.conf['flash_config']['n_blocks_per_plane'] = 2
+        self.conf['flash_config']['n_planes_per_chip'] = 1
+        self.conf['flash_config']['n_chips_per_package'] = 1
+        self.conf['flash_config']['n_packages_per_channel'] = 1
+        self.conf['flash_config']['n_channels_per_dev'] = 2
+
+        self.conf['flash_config']['t_WC'] = 1
+        self.conf['flash_config']['t_R'] = 1
+        self.conf['flash_config']['t_RC'] = 1
+        self.conf['flash_config']['t_PROG'] = 1
+        self.conf['flash_config']['t_BERS'] = 1
+        self.conf['flash_config']['page_size'] = 1
+
+
+    def setup_environment(self):
+        pass
+
+    def setup_workload(self):
+        pass
+
+    def setup_ftl(self):
+        pass
+
+    def my_run(self):
+        env = simpy.Environment()
+        controller = flashcontroller.controller.Controller(env, self.conf)
+
+        self.assertEqual(controller.channels[0].read_time, 9)
+        self.assertEqual(controller.channels[0].program_time, 9)
+        self.assertEqual(controller.channels[0].erase_time, 6)
+
+    def test_main(self):
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run()
+
+
 
 def main():
     unittest.main()

@@ -367,9 +367,16 @@ class Channel(object):
         # self.program_time = 7 * t_wc + page_size * t_wc + t_prog
         # self.erase_time = 5 * t_wc + t_erase
 
-        self.read_time = 1
-        self.program_time = 2
-        self.erase_time = 3
+        self.read_time = 7 * self.conf['flash_config']['t_WC'] + \
+            self.conf['flash_config']['t_R'] + \
+            self.conf['flash_config']['page_size'] * \
+            self.conf['flash_config']['t_RC']
+        self.program_time = 7 * self.conf['flash_config']['t_WC'] + \
+            self.conf['flash_config']['page_size'] * \
+            self.conf['flash_config']['t_WC'] +\
+            self.conf['flash_config']['t_PROG']
+        self.erase_time = 5 * self.conf['flash_config']['t_WC'] + \
+            self.conf['flash_config']['t_BERS']
 
     def write_page(self, addr = None , data = None):
         """

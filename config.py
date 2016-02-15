@@ -496,12 +496,18 @@ class ConfigNewFlash(Config):
             "page_read_time"        : 20*USEC,  # Max
             "page_prog_time"        : 200*USEC, # Typical
             "block_erase_time"      : 1.6*MSEC, # Typical
+
+            "t_WC"                  : 45*NSEC,
+            "t_RC"                  : 50*NSEC,
+            "t_R"                   : 20*USEC,
+            "t_PROG"                : 200*USEC,
+            "t_BERS"                : 1.5*MSEC
             }
         return flash_config
 
     def set_flash_num_blocks_by_bytes(self, size_byte):
         """
-        This function will only change n_blocks_per_channel.
+        This function will only change n_blocks_per_plane
         """
         pagesize = self['flash_config']['page_size']
         n_pages_per_block = self['flash_config']['n_pages_per_block']
