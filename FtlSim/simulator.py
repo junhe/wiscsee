@@ -331,13 +331,19 @@ class SimulatorDES(Simulator):
         i = 0
         for event in self.event_iter:
             yield self.ftl.ncq.queue.put(event)
-            yield self.env.timeout(1) # interval between request
+            # TODO: timeout according to trace
+            # yield self.env.timeout(1) # interval between request
             i += 1
+
+        for i in range(self.conf['dftlncq']['ncq_depth']):
+            event = EventSimple(0, "end_process")
+            yield self.ftl.ncq.queue.put(event)
+
 
     def run(self):
         self.env.process(self.host_proc())
         # not need use env.process() because ftl.run() is not a generator
-        self.ftl.run()
+        self.env.process(self.ftl.run())
 
         self.env.run()
 

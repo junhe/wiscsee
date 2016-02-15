@@ -188,6 +188,9 @@ class FTLwDFTL(object):
             print "At time {} [{}] got request ({}) {}".format(self.env.now,
                     pid, req_index, str(io_req))
 
+            if io_req.operation == 'end_process':
+                break
+
             s = self.env.now
             flash_reqs = yield self.env.process( self.realftl.translate(io_req) )
             e = self.env.now
@@ -209,9 +212,13 @@ class FTLwDFTL(object):
             req_index += 1
 
     def run(self):
+        procs = []
         for i in range(self.conf['dftlncq']['ncq_depth']):
-            self.env.process( self.process(i) )
-        # no need to wait for all processes to finish here because
-        # this function is not a simpy process
+            p = self.env.process( self.process(i) )
+            procs.append(p)
+        e = simpy.events.AllOf(self.env, procs)
+        yield e
+        print "++++++++++++++++++++++++END OF FTL+++++++++++++++++++++++++++"
+        print "Time:", self.env.now
 
 
