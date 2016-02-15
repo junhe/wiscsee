@@ -150,6 +150,9 @@ class FTLwDFTL(object):
         self.realftl.recorder.enable()
 
     def get_direct_mapped_flash_requests(self, io_req):
+        """
+        For example, read LPN 20 will executed as reading PPN 20
+        """
         page_start, page_count = self.conf.sec_ext_to_page_ext(io_req.sector,
                 io_req.sector_count)
         if io_req.operation == 'discard':
@@ -189,8 +192,6 @@ class FTLwDFTL(object):
             flash_reqs = yield self.env.process( self.realftl.translate(io_req) )
             e = self.env.now
             print "Translation took", e - s
-
-            # flash_reqs = self.get_direct_mapped_flash_requests(io_req) # for debug
 
             s = self.env.now
             yield self.env.process(

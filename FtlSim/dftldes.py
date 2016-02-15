@@ -944,6 +944,22 @@ class MappingManager(object):
         # update GTD so we can find it
         self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
 
+    def discard_lpn(self, lpn):
+        ppn = yield self.env.process(self.lpn_to_ppn(lpn))
+        if ppn == UNINITIATED:
+            return
+
+        # flash page ppn has valid data
+        self.cached_mapping_table.overwrite_entry(lpn = lpn,
+            ppn = UNINITIATED, dirty = True)
+
+        # OOB
+        self.oob.wipe_ppn(ppn)
+
+    def discard_lpns(self, lpns):
+        for lpn in lpns:
+            yield self.env.process(self.discard_lpn(lpn))
+
 
 class GcDecider(object):
     """
@@ -1605,6 +1621,7 @@ class Dftl(object):
         lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(io_req.sector,
                 io_req.sector_count)
         lpns = range(lpn_start, lpn_start + lpn_count)
+        print "Handling io: lpn", lpn_start, "count", lpn_count
 
         if io_req.operation == 'read':
             ppns = yield self.env.process(
@@ -1612,6 +1629,10 @@ class Dftl(object):
         elif io_req.operation == 'write':
             ppns = yield self.env.process(
                     self.mapping_manager.ppns_for_writing(lpns))
+        elif io_req.operation == 'discard':
+            yield self.env.process(
+                    self.mapping_manager.discard_lpns(lpns))
+            ppns = []
         else:
             print 'io operation', io_req.operation, 'is not processed'
             ppns = []
@@ -1635,30 +1656,7 @@ class Dftl(object):
 
 
     def lba_discard(self, lpn, pid = None):
-        """
-        block_pool:
-            no need to update
-        CMT:
-            if lpn->ppn exist, you need to update it to lpn->UNINITIATED
-            if not exist, you need to add lpn->UNINITIATED
-            the mapping lpn->UNINITIATED will be written back to GMT later
-        GMT:
-            no need to update
-            REMEMBER: all updates to GMT can and only can be maded through CMT
-        OOB:
-            invalidate the ppn
-            remove the lpn
-        GTD:
-            no updates needed
-            updates should be done by GC
-        """
         self.recorder.put('logical_discard', lpn, 'user')
-
-        # self.recorder.write_file('lba.trace.txt',
-            # timestamp = self.oob.timestamp(),
-            # operation = 'discard',
-            # lpn =  lpn
-        # )
 
         ppn = yield self.env.process(self.mapping_manager.lpn_to_ppn(lpn))
         if ppn == UNINITIATED:
@@ -1671,22 +1669,7 @@ class Dftl(object):
         # OOB
         self.oob.wipe_ppn(ppn)
 
-        # garbage collection checking and possibly doing
         # self.garbage_collector.try_gc()
-
-    def check_read(self, sector, sector_count, data):
-        for sec, sec_data in zip(
-                range(sector, sector + sector_count), data):
-            if sec_data == None:
-                continue
-            if not sec_data.startswith(str(sec)):
-                msg = "request: sec {} count {}\n".format(sector, sector_count)
-                msg += "INFTL: Data is not correct. Got: {read}, "\
-                        "sector={sec}".format(
-                        read = sec_data,
-                        sec = sec)
-                # print msg
-                raise RuntimeError(msg)
 
     def page_to_sec_items(self, data):
         ret = []

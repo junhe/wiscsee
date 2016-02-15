@@ -485,6 +485,120 @@ class ExtentTestWorkload4DFTLDES(LBAWorkloadGenerator):
                     size = size)
             yield event
 
+class ExtentTestWorkloadFLEX(LBAWorkloadGenerator):
+    def __init__(self, confobj):
+        if not isinstance(confobj, config.Config):
+            raise TypeError("confobj is not config.Config. It is {}".
+                format(type(confobj).__name__))
+        self.conf = confobj
+
+        self.sector_size = self.conf['sector_size']
+        self.ftl_type = self.conf['ftl_type']
+
+        if self.ftl_type in ('dftl', 'dftlext', 'dftlncq', 'ftlwdftl'):
+            self.over_provisioning = self.conf['dftl']['over_provisioning']
+        elif self.ftl_type == 'nkftl':
+            self.over_provisioning = self.conf['nkftl']['provision_ratio']
+        else:
+            raise RuntimeError("FTL type {} is not supported".format(
+                self.ftl_type))
+
+        self.op_count = self.conf['lba_workload_configs']\
+            ['ExtentTestWorkloadFLEX']['op_count']
+        self.ops = self.conf['lba_workload_configs']\
+            ['ExtentTestWorkloadFLEX']['ops']
+        if isinstance(self.conf, config.ConfigNewFlash):
+            self.page_size = self.conf['flash_config']['page_size']
+        else:
+            self.page_size = self.conf.page_size
+
+    def test_random(self):
+        events = []
+        maxpage = 0
+
+        lba_span = int(self.conf.total_num_pages() / self.over_provisioning)
+        print 'total num pages', self.conf.total_num_pages()
+        print 'lba_span', lba_span
+
+        max_access_pages = 2
+        for i in range(self.op_count):
+            op = random.choice(self.ops)
+            page = int(random.random() * (lba_span - max_access_pages))
+            npages = random.randint(1, max_access_pages)
+            if maxpage < page:
+                maxpage = page
+            events.append( (op, page, npages) )
+
+        return events
+
+    def __iter__(self):
+        yield simulator.Event(sector_size = self.sector_size,
+                pid = 0, operation = 'enable_recorder',
+                offset = 0, size = 0)
+
+        events = self.test_random()
+
+        for op, lpn, npages in events:
+            offset = lpn * self.page_size
+            size = self.page_size * npages
+            event = simulator.Event(sector_size = self.sector_size,
+                    pid = 0, operation = op, offset = offset,
+                    size = size)
+            yield event
+
+class ExtentTestWorkloadFLEX2(LBAWorkloadGenerator):
+    def __init__(self, confobj):
+        if not isinstance(confobj, config.Config):
+            raise TypeError("confobj is not config.Config. It is {}".
+                format(type(confobj).__name__))
+        self.conf = confobj
+
+        self.sector_size = self.conf['sector_size']
+        self.ftl_type = self.conf['ftl_type']
+
+        if self.ftl_type in ('dftl', 'dftlext', 'dftlncq', 'ftlwdftl'):
+            self.over_provisioning = self.conf['dftl']['over_provisioning']
+        elif self.ftl_type == 'nkftl':
+            self.over_provisioning = self.conf['nkftl']['provision_ratio']
+        else:
+            raise RuntimeError("FTL type {} is not supported".format(
+                self.ftl_type))
+
+        self.events = self.conf['lba_workload_configs']\
+            ['ExtentTestWorkloadFLEX2']['events']
+        if isinstance(self.conf, config.ConfigNewFlash):
+            self.page_size = self.conf['flash_config']['page_size']
+        else:
+            self.page_size = self.conf.page_size
+
+    def check(self):
+        lba_span = int(self.conf.total_num_pages() / self.over_provisioning)
+        print 'total num pages', self.conf.total_num_pages()
+        print 'lba_span', lba_span
+
+        ret = []
+        for event in self.events:
+            end_page = event[1] + event[2]
+            assert end_page < self.conf.total_num_pages()
+            ret.append(event)
+
+        return ret
+
+    def __iter__(self):
+        yield simulator.Event(sector_size = self.sector_size,
+                pid = 0, operation = 'enable_recorder',
+                offset = 0, size = 0)
+
+        events = self.check()
+
+        for op, lpn, npages in events:
+            offset = lpn * self.page_size
+            size = self.page_size * npages
+            event = simulator.Event(sector_size = self.sector_size,
+                    pid = 0, operation = op, offset = offset,
+                    size = size)
+            yield event
+
 
 class Random(LBAWorkloadGenerator):
     def __init__(self, confobj):
