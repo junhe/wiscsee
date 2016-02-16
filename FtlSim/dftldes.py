@@ -1140,6 +1140,9 @@ class GarbageCollector(object):
                 triggered = True
                 self.recorder.count_me("GC", "invoked")
                 print 'GC is triggerred', self.block_pool.used_ratio(), \
+                    'usedblocks:', self.block_pool.total_used_blocks(), \
+                    'data_usedblocks:', len(self.block_pool.data_usedblocks), \
+                    'trans_usedblocks:', len(self.block_pool.trans_usedblocks), \
                     'freeblocks:', len(self.block_pool.freeblocks)
                 block_iter = self.victim_blocks_iter()
                 blk_cnt = 0
