@@ -1612,9 +1612,6 @@ class Dftl(object):
         with self.resource_ram.request() as ram_request:
             yield ram_request # serialize all access to data structures
 
-            # for debug
-            # yield self.env.timeout(3)
-
             flash_reqs = yield self.env.process(
                     self.handle_io_requests(io_req))
             # flash_reqs = self.handle_io_requests(io_req)
@@ -1658,22 +1655,6 @@ class Dftl(object):
                     self.garbage_collector.gc_process())
 
 
-    def lba_discard(self, lpn, pid = None):
-        self.recorder.put('logical_discard', lpn, 'user')
-
-        ppn = yield self.env.process(self.mapping_manager.lpn_to_ppn(lpn))
-        if ppn == UNINITIATED:
-            return
-
-        # flash page ppn has valid data
-        self.mapping_manager.cached_mapping_table.overwrite_entry(lpn = lpn,
-            ppn = UNINITIATED, dirty = True)
-
-        # OOB
-        self.oob.wipe_ppn(ppn)
-
-        # self.garbage_collector.try_gc()
-
     def page_to_sec_items(self, data):
         ret = []
         for page_data in data:
@@ -1711,88 +1692,5 @@ class Dftl(object):
 
     def get_type(self):
         return "dftlext"
-
-
-class ParallelFlash(object):
-    def __init__(self, confobj, recorderobj, globalhelper = None):
-        self.conf = confobj
-        self.recorder = recorderobj
-        self.global_helper = globalhelper
-        self.flash_backend = flash.SimpleFlash(recorderobj, confobj)
-
-    def get_max_channel_page_count(self, ppns):
-        """
-        Find the max count of the channels
-        """
-        pbns = []
-        for ppn in ppns:
-            if ppn == 'UNINIT':
-                # skip it so unitialized ppn does not involve flash op
-                continue
-            block, _ = self.conf.page_to_block_off(ppn)
-            pbns.append(block)
-
-        return self.get_max_channel_block_count(pbns)
-
-    def get_max_channel_block_count(self, pbns):
-        channel_counter = Counter()
-        for pbn in pbns:
-            channel, _ = block_to_channel_block(self.conf, pbn)
-            channel_counter[channel] += 1
-
-        return self.find_max_count(channel_counter)
-
-    def find_max_count(self, channel_counter):
-        if len(channel_counter) == 0:
-            return 0
-        else:
-            max_channel, max_count = channel_counter.most_common(1)[0]
-            return max_count
-
-    def read_pages(self, ppns, tag):
-        """
-        Read ppns in batch and calculate time
-        lpns are the corresponding lpns of ppns, we pass them in for checking
-        """
-        max_count = self.get_max_channel_page_count(ppns)
-
-        data = []
-        for ppn in ppns:
-            data.append( self.flash_backend.page_read(ppn, tag) )
-        return data
-
-    def write_pages(self, ppns, ppn_data, tag):
-        """
-        This function will store ppn_data to flash and calculate the time
-        it takes to do it with real flash.
-
-        The access time is determined by the channel with the longest request
-        queue.
-        """
-        max_count = self.get_max_channel_page_count(ppns)
-
-        # save the data to flash
-        if ppn_data == None:
-            for ppn in ppns:
-                self.flash_backend.page_write(ppn, tag)
-        else:
-            for ppn, item in zip(ppns, ppn_data):
-                self.flash_backend.page_write(ppn, tag, data = item)
-
-    def erase_blocks(self, pbns, tag):
-        max_count = self.get_max_channel_block_count(pbns)
-
-        for block in pbns:
-            self.flash_backend.block_erase(block, cat = tag)
-
-
-"""
-Transforming this ftl to DES-enabled needs these steps
-1. treat this realftl as a non-simpy process, have the interface
-return flash hierarchy requests
-2. make the interface simpy process, add yield timeout() for testing
-3. change the realftl to use flash controller, which queues requests.
-4. Done
-"""
 
 
