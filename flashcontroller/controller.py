@@ -265,11 +265,16 @@ class Controller(object):
 class Controller2(Controller):
     """
     This controller has a recorder
+    So far it also has functions from ParallelFlash
     """
     def __init__(self, simpy_env, conf, recorderobj):
         super(Controller2, self).__init__(simpy_env, conf)
+
         self.recorder = recorderobj
         self.flash_backend = FtlSim.flash.SimpleFlash(recorderobj, conf)
+
+        self.channels = [Channel2(self.env, conf, self.recorder, i)
+                for i in range( self.n_channels_per_dev)]
 
     def get_max_channel_page_count(self, ppns):
         """
@@ -397,6 +402,55 @@ class Channel(object):
         with self.resource.request() as request:
             yield request
             yield self.env.timeout( self.erase_time )
+
+class Channel2(Channel):
+    """
+    It has recorder
+    """
+    def __init__(self, simpy_env, conf, recorderobj, channel_id = None):
+        super(Channel2, self).__init__(simpy_env, conf, channel_id)
+        self.recorder = recorderobj
+
+    def write_page(self, addr = None , data = None):
+        """
+        If you want to when this operation is finished, just print env.now.
+        If you want to know how long it takes, use env.now before and after
+        the operation.
+        """
+        with self.resource.request() as request:
+            yield request
+            s = self.env.now
+            yield self.env.timeout( self.program_time )
+            e = self.env.now
+            self.recorder.add_to_timer("channel_busy_time", self.channel_id,
+                    e - s)
+
+    def read_page(self, addr = None):
+        with self.resource.request() as request:
+            yield request
+            s = self.env.now
+            yield self.env.timeout( self.read_time )
+            e = self.env.now
+            self.recorder.add_to_timer("channel_busy_time", self.channel_id,
+                    e - s)
+
+    def erase_block(self, addr = None):
+        with self.resource.request() as request:
+            yield request
+            s = self.env.now
+            yield self.env.timeout( self.erase_time )
+            e = self.env.now
+            self.recorder.add_to_timer("channel_busy_time", self.channel_id,
+                    e - s)
+
+
+
+
+
+
+
+
+
 
 
 
