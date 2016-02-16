@@ -1624,7 +1624,7 @@ class Dftl(object):
         lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(io_req.sector,
                 io_req.sector_count)
         lpns = range(lpn_start, lpn_start + lpn_count)
-        print "Handling io: lpn", lpn_start, "count", lpn_count
+        # print "Handling io: lpn", lpn_start, "count", lpn_count
 
         if io_req.operation == 'read':
             ppns = yield self.env.process(

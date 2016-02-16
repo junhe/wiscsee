@@ -91,8 +91,8 @@ class FTLwDFTL(object):
         req_index = 0
         while True:
             io_req = yield self.ncq.queue.get()
-            print "At time {} [{}] got request ({}) {}".format(self.env.now,
-                    pid, req_index, str(io_req))
+            # print "At time {} [{}] got request ({}) {}".format(self.env.now,
+                    # pid, req_index, str(io_req))
 
             if io_req.operation == 'end_process':
                 break
@@ -100,15 +100,15 @@ class FTLwDFTL(object):
             s = self.env.now
             flash_reqs = yield self.env.process( self.realftl.translate(io_req) )
             e = self.env.now
-            print "Translation took", e - s
+            # print "Translation took", e - s
 
             s = self.env.now
             yield self.env.process(
                     self.access_flash(flash_reqs))
-            print "At time {} [{}] finish request ({})".format(self.env.now,
-                    pid, req_index)
+            # print "At time {} [{}] finish request ({})".format(self.env.now,
+                    # pid, req_index)
             e = self.env.now
-            print "Accessing flash took", e - s
+            # print "Accessing flash took", e - s
 
             # Try clean garbage
             self.env.process(
@@ -116,6 +116,9 @@ class FTLwDFTL(object):
 
 
             req_index += 1
+
+            if pid == 0 and req_index % 100 == 0:
+                print self.env.now / float(SEC)
 
     def run(self):
         procs = []
@@ -125,6 +128,6 @@ class FTLwDFTL(object):
         e = simpy.events.AllOf(self.env, procs)
         yield e
         print "++++++++++++++++++++++++END OF FTL+++++++++++++++++++++++++++"
-        print "Time:", self.env.now
+        print "Time:", float(self.env.now) / SEC
 
 
