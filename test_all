@@ -14,3 +14,7 @@ echo
 echo ======= dftlncq_test =======
 sudo python ./dftlncq_test.py -v
 
+echo 
+echo ======= recorder_test =======
+sudo python ./recorder_test.py
+

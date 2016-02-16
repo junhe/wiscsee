@@ -39,6 +39,9 @@ class Recorder(object):
         self.file_pool = {} # {filename:descriptor}
         self.file_colnames = {} # {filename:[colname1, 2, ...]
 
+        # {set name: collections.counter}
+        self.general_accumulator = {}
+
         self.enabled = None
 
         if self.output_target == FILE_TARGET:
@@ -104,6 +107,24 @@ class Recorder(object):
         counter = self.counters.setdefault(counter_name, collections.Counter())
         counter[item] += 1
 
+    def add_to_general_accumulater(self,
+            counter_set_name, item_name, addition):
+        """
+        {counter set 1:
+            {counter 1: ##,
+             counter 2: #},
+         counter set 2:
+            {counter 1: ##,
+             counter 2: #},
+        }
+        """
+        counter_dict = self.general_accumulator.setdefault(counter_set_name,
+                collections.Counter())
+        counter_dict[item_name] += addition
+
+    def add_to_timer(self, counter_set_name, item_name, addition):
+        self.add_to_general_accumulater(counter_set_name, item_name, addition)
+
     def _counters_to_table(self):
         """
         columns
@@ -114,6 +135,31 @@ class Recorder(object):
             for item_name, count in counter.items():
                 d = {'counter.name': counter_name,
                      'item.name'   : item_name,
+                     'count'       : count}
+                table.append(d)
+
+        return table
+
+    def counter_sets_to_table(self, counter_sets):
+        """
+        counter sets
+        {counter set 1:
+            {counter 1: ##,
+             counter 2: #},
+         counter set 2:
+            {counter 1: ##,
+             counter 2: #},
+        }
+
+
+        table columns
+        counter.name   item.name    count
+        """
+        table = []
+        for counter_set_name, counter_set in counter_sets.items():
+            for counter_name, count in counter_set.items():
+                d = {'counter.set.name': counter_set_name,
+                     'counter.name'   : counter_name,
                      'count'       : count}
                 table.append(d)
 

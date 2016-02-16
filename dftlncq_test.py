@@ -247,6 +247,7 @@ class TestFTLwithDFTLIntegrated(unittest.TestCase):
         self.setup_ftl()
         self.my_run()
 
+
 class TestFTLwithDFTLIntegrated2(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNCQFTL()
