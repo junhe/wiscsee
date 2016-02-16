@@ -84,6 +84,9 @@ class Recorder(object):
                 print '*********  recorder counters (count_me()) **********'
                 print utils.table_to_str(count_table, sep = '\t')
 
+        print utils.table_to_str(
+                self.counter_sets_to_table(self.general_accumulator))
+
         if self.output_target == STDOUT_TARGET:
             count_table = self._counters_to_table()
 

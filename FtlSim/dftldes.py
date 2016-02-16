@@ -1594,7 +1594,7 @@ class Dftl(object):
         # This resource protects all data structures stored in the memory.
         self.resource_ram = simpy.Resource(self.env, capacity = 1)
 
-    def translate(self, io_req):
+    def translate(self, io_req, pid):
         """
         io_req is of type simulator.Event()
 
@@ -1612,9 +1612,12 @@ class Dftl(object):
         with self.resource_ram.request() as ram_request:
             yield ram_request # serialize all access to data structures
 
+            s = self.env.now
             flash_reqs = yield self.env.process(
                     self.handle_io_requests(io_req))
-            # flash_reqs = self.handle_io_requests(io_req)
+            e = self.env.now
+            self.recorder.add_to_timer("translation_time-wo_wait", pid, e - s)
+
             self.env.exit(flash_reqs)
 
     def handle_io_requests(self, io_req):

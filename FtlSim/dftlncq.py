@@ -98,10 +98,12 @@ class FTLwDFTL(object):
                 break
 
             s = self.env.now
-            flash_reqs = yield self.env.process( self.realftl.translate(io_req) )
+            flash_reqs = yield self.env.process(
+                    self.realftl.translate(io_req, pid) )
             e = self.env.now
             # print "Translation took", e - s
-            self.recorder.add_to_timer("ftl", "translation_time", e - s)
+            self.recorder.add_to_timer("translation_time-w_wait", pid,
+                    e - s)
 
             s = self.env.now
             yield self.env.process(
@@ -109,8 +111,8 @@ class FTLwDFTL(object):
             # print "At time {} [{}] finish request ({})".format(self.env.now,
                     # pid, req_index)
             e = self.env.now
-            # print "Accessing flash took", e - s
-            self.recorder.add_to_timer("ftl", "flash_access_time", e - s)
+            self.recorder.add_to_timer("forground_flash_access_time-w_wait", pid,
+                    e - s)
 
             # Try clean garbage
             self.env.process(
