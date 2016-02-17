@@ -55,22 +55,22 @@ class SSDFramework(object):
 
         self.realftl.recorder.enable()
 
-    def get_direct_mapped_flash_requests(self, io_req):
+    def get_direct_mapped_flash_requests(self, host_req):
         """
         For example, read LPN 20 will executed as reading PPN 20
         """
-        page_start, page_count = self.conf.sec_ext_to_page_ext(io_req.sector,
-                io_req.sector_count)
-        if io_req.operation == 'discard':
+        page_start, page_count = self.conf.sec_ext_to_page_ext(host_req.sector,
+                host_req.sector_count)
+        if host_req.operation == 'discard':
             return []
-        elif io_req.operation in ('read', 'write'):
+        elif host_req.operation in ('read', 'write'):
             return self.flash_controller.get_flash_requests_for_ppns(
-                    page_start, page_count, op = io_req.operation)
-        elif io_req.operation in ('enable_recorder', 'disable_recorder'):
+                    page_start, page_count, op = host_req.operation)
+        elif host_req.operation in ('enable_recorder', 'disable_recorder'):
             return []
         else:
             raise RuntimeError("operation {} is not supported".format(
-                io_req.operation))
+                host_req.operation))
 
     def access_flash(self, flash_reqs):
         """
@@ -90,16 +90,16 @@ class SSDFramework(object):
     def process(self, pid):
         req_index = 0
         while True:
-            io_req = yield self.ncq.queue.get()
+            host_req = yield self.ncq.queue.get()
             # print "At time {} [{}] got request ({}) {}".format(self.env.now,
-                    # pid, req_index, str(io_req))
+                    # pid, req_index, str(host_req))
 
-            if io_req.operation == 'end_process':
+            if host_req.operation == 'end_process':
                 break
 
             s = self.env.now
             flash_reqs = yield self.env.process(
-                    self.realftl.translate(io_req, pid) )
+                    self.realftl.translate(host_req, pid) )
             e = self.env.now
             # print "Translation took", e - s
             self.recorder.add_to_timer("translation_time-w_wait", pid,
