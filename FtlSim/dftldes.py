@@ -17,10 +17,12 @@ import lrulist
 import recorder
 import utils
 
-
 UNINITIATED, MISS = ('UNINIT', 'MISS')
 DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
 random.seed(0)
+
+class ConfigDFTLDES(config.ConfigNCQFTL):
+    pass
 
 class GlobalHelper(object):
     """
@@ -1749,5 +1751,10 @@ class Dftl(object):
 
     def get_type(self):
         return "dftldes"
+
+
+
+
+
 
 

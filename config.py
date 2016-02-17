@@ -5,9 +5,36 @@ import pprint
 
 from commons import *
 import utils
-import WlRunner
 
 WLRUNNER, LBAGENERATOR = ('WLRUNNER', 'LBAGENERATOR')
+
+class MountOption(dict):
+    """
+    This class abstract the option of file system mount command.
+    The initial motivation is to handle the difference, for example, between
+    data=ordered and delalloc. Note that one of them has format opt_name=value,
+    the other is just value.
+
+    It inherite dict class so json module can serialize it.
+    """
+    def __init__(self, opt_name, value, include_name):
+        """
+        opt_name: such as discard
+        value: such as discard, nodiscard
+        include_name: such as True, False
+        """
+        self['opt_name'] = opt_name
+        self['value'] = value
+        self['include_name'] = include_name
+
+    def __str__(self):
+        if self['include_name']:
+            prefix = self['opt_name'] + '='
+        else:
+            prefix = ''
+
+        return prefix + str(self['value'])
+
 
 class Config(dict):
     def __init__(self, confdic = None):
@@ -231,7 +258,7 @@ class Config(dict):
         return n
 
     def get_default_config(self):
-        MOpt = WlRunner.filesystem.MountOption
+        MOpt = MountOption
 
         confdic = {
             ############### Global #########
