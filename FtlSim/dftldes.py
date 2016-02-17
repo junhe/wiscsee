@@ -789,6 +789,26 @@ class MappingManager(object):
 
         self.env.exit(ppn)
 
+    def load_translation_page(self, m_vpn):
+        """
+        m_vpn is mapping virtual page number
+
+        This function reads a translation page and returns the
+        mapping entries stored in the page.
+        """
+        m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn = m_vpn)
+
+        yield self.env.process(
+                self.flash.rw_ppn_extent(m_ppn, 1, op = 'read'))
+
+        # Now we suppose we have all the mapping entries stored in the
+        # translation page
+        entries = {}
+        for lpn in self.directory.m_vpn_to_lpns(m_vpn):
+            entries[lpn] = self.global_mapping_table.lpn_to_ppn(lpn)
+
+        self.env.exit(entries)
+
     def initialize_mappings(self):
         """
         This function initialize global translation directory. We assume the
