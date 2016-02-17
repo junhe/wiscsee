@@ -12,7 +12,7 @@ sudo python ./flashcontroller_test.py -v
 
 echo 
 echo ======= dftlncq_test =======
-sudo python ./dftlncq_test.py -v
+sudo python ./ssdframework_test.py -v
 
 echo 
 echo ======= recorder_test =======

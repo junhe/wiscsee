@@ -520,11 +520,12 @@ class CachedMappingTable(object):
     entry in CMT. In that case, we need to find all the CMT entries in the same
     translation page with the victim entry.
     """
-    def __init__(self, confobj):
+    def __init__(self, confobj, ftl_conf_key):
         self.conf = confobj
+        self.ftl_conf = self.conf[ftl_conf_key]
 
         self.entry_bytes = 8 # lpn + ppn
-        max_bytes = self.conf['dftl']['max_cmt_bytes']
+        max_bytes = self.ftl_conf['max_cmt_bytes']
         self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
             self.entry_bytes
         print 'cache max entries', self.max_n_entries, \
@@ -595,7 +596,7 @@ class GlobalMappingTable(object):
     This mapping table is for data pages, not for translation pages.
     GMT should have entries as many as the number of pages in flash
     """
-    def __init__(self, confobj, flashobj):
+    def __init__(self, confobj, flashobj, ftl_conf_key):
         """
         flashobj is the flash device that we may operate on.
         """
@@ -604,6 +605,7 @@ class GlobalMappingTable(object):
                format(type(confobj).__name__))
 
         self.conf = confobj
+        self.ftl_conf = self.conf[ftl_conf_key]
 
         self.n_entries_per_page = self.conf.dftl_n_mapping_entries_per_page()
 
@@ -624,7 +626,7 @@ class GlobalMappingTable(object):
         total_entries * entry size / page size
         """
         entries = self.total_entries()
-        entry_bytes = self.conf['dftl']['global_mapping_entry_bytes']
+        entry_bytes = self.ftl_conf['global_mapping_entry_bytes']
         flash_page_size = self.conf.page_size
         # play the ceiling trick
         return (entries * entry_bytes + (flash_page_size -1))/flash_page_size
@@ -707,17 +709,19 @@ class MappingManager(object):
     This class should act as a coordinator of all the mapping data structures.
     """
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
-            envobj):
+            envobj, ftl_conf_key):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
         self.block_pool = block_pool
         self.recorder = recorderobj
         self.env = envobj
+        self.ftl_conf = self.conf[ftl_conf_key]
 
         # managed and owned by Mappingmanager
-        self.global_mapping_table = GlobalMappingTable(confobj, flashobj)
-        self.cached_mapping_table = CachedMappingTable(confobj)
+        self.global_mapping_table = GlobalMappingTable(confobj, flashobj,
+                ftl_conf_key)
+        self.cached_mapping_table = CachedMappingTable(confobj, ftl_conf_key)
         self.directory = GlobalTranslationDirectory(confobj)
 
     def __del__(self):
@@ -999,22 +1003,23 @@ class GcDecider(object):
     Later, use low water mark and progress to decide. If we haven't make
     progress in 10 times, stop GC
     """
-    def __init__(self, confobj, block_pool, recorderobj):
+    def __init__(self, confobj, block_pool, recorderobj, ftl_conf_key):
         self.conf = confobj
         self.block_pool = block_pool
         self.recorder = recorderobj
+        self.ftl_conf = self.conf[ftl_conf_key]
 
         # Check if the high_watermark is appropriate
         # The high watermark should not be lower than the file system size
         # because if the file system is full you have to constantly GC and
         # cannot get more space
-        min_high = 1 / float(self.conf['dftl']['over_provisioning'])
-        if self.conf['dftl']['GC_threshold_ratio'] < min_high:
+        min_high = 1 / float(self.ftl_conf['over_provisioning'])
+        if self.ftl_conf['GC_threshold_ratio'] < min_high:
             hi_watermark_ratio = min_high
             print 'High watermark is reset to {}. It was {}'.format(
-                hi_watermark_ratio, self.conf['dftl']['GC_threshold_ratio'])
+                hi_watermark_ratio, self.ftl_conf['GC_threshold_ratio'])
         else:
-            hi_watermark_ratio = self.conf['dftl']['GC_threshold_ratio']
+            hi_watermark_ratio = self.ftl_conf['GC_threshold_ratio']
             print 'Using user defined high watermark', hi_watermark_ratio
 
         self.high_watermark = hi_watermark_ratio * \
@@ -1026,13 +1031,13 @@ class GcDecider(object):
                 "for garbage collection. You may encounter "\
                 "Out Of Space error!".format(spare_blocks))
 
-        min_low = 0.8 * 1 / self.conf['dftl']['over_provisioning']
-        if self.conf['dftl']['GC_low_threshold_ratio'] < min_low:
+        min_low = 0.8 * 1 / self.ftl_conf['over_provisioning']
+        if self.ftl_conf['GC_low_threshold_ratio'] < min_low:
             low_watermark_ratio = min_low
             print 'Low watermark is reset to {}. It was {}'.format(
-                low_watermark_ratio, self.conf['dftl']['GC_low_threshold_ratio'])
+                low_watermark_ratio, self.ftl_conf['GC_low_threshold_ratio'])
         else:
-            low_watermark_ratio = self.conf['dftl']['GC_low_threshold_ratio']
+            low_watermark_ratio = self.ftl_conf['GC_low_threshold_ratio']
             print 'Using user defined low watermark', low_watermark_ratio
 
         self.low_watermark = low_watermark_ratio * \
@@ -1152,17 +1157,19 @@ class BlockInfo(object):
 
 class GarbageCollector(object):
     def __init__(self, confobj, flashobj, oobobj, block_pool, mapping_manager,
-        recorderobj, envobj):
+        recorderobj, envobj, ftl_conf_key):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
         self.block_pool = block_pool
         self.recorder = recorderobj
         self.env = envobj
+        self.ftl_conf = self.conf[ftl_conf_key]
 
         self.mapping_manager = mapping_manager
 
-        self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
+        self.decider = GcDecider(self.conf, self.block_pool,
+                self.recorder, ftl_conf_key)
 
         self.victim_block_seqid = 0
 
@@ -1586,6 +1593,8 @@ class Dftl(object):
         self.recorder = recorderobj
         self.flash = flashcontrollerobj
         self.env = env
+        self.ftl_conf_key = "dftl"
+        self.ftl_conf = self.conf[self.ftl_conf_key]
 
         # bitmap has been created parent class
         # Change: we now don't put the bitmap here
@@ -1607,7 +1616,8 @@ class Dftl(object):
             flashobj = self.flash,
             oobobj=self.oob,
             recorderobj = recorderobj,
-            envobj = env
+            envobj = env,
+            ftl_conf_key = self.ftl_conf_key
             )
 
         self.garbage_collector = GarbageCollector(
@@ -1617,7 +1627,8 @@ class Dftl(object):
             block_pool = self.block_pool,
             mapping_manager = self.mapping_manager,
             recorderobj = recorderobj,
-            envobj = env
+            envobj = env,
+            ftl_conf_key = self.ftl_conf_key
             )
 
         # We should initialize Globaltranslationdirectory in Dftl
@@ -1729,6 +1740,6 @@ class Dftl(object):
         pass
 
     def get_type(self):
-        return "dftlext"
+        return "dftldes"
 
 
