@@ -282,6 +282,18 @@ def test_nkftl():
                         * conf["Synthetic"]["chunk_size"] / 2**20
                     workflow(conf)
 
+def set_exp_metadata(conf, save_data, expname, subexpname):
+    if save_data == True:
+        targetdir = '/tmp/results'
+    else:
+        targetdir = '/tmp/tmpresults'
+
+    conf['targetdir'] = targetdir
+
+    conf['expname'] = expname
+    conf['subexpname'] = subexpname
+
+
 def choose_exp_metadata(default_conf, interactive = True):
     """
     This function will return a dictionary containing a few things relating
@@ -802,6 +814,80 @@ class DftlextExp001(Experiment):
 def DftlextExp001_run():
     obj = DftlextExp001()
     obj.main()
+
+class NCQExp(object):
+    def __init__(self, ncq_depth, n_channels, trafficsize, expname):
+        self.ncq_depth = ncq_depth
+        self.n_channels = n_channels
+        self.trafficsize = trafficsize
+        self.expname = expname
+
+    def setup_config(self):
+        self.conf = config.ConfigNCQFTL()
+        self.conf['dftlncq']['ncq_depth'] = self.ncq_depth
+
+        self.conf['flash_config']['page_size'] = 2048
+        self.conf['flash_config']['n_pages_per_block'] = 64
+        self.conf['flash_config']['n_blocks_per_plane'] = 32
+        self.conf['flash_config']['n_planes_per_chip'] = 1
+        self.conf['flash_config']['n_chips_per_package'] = 1
+        self.conf['flash_config']['n_packages_per_channel'] = 1
+        self.conf['flash_config']['n_channels_per_dev'] = self.n_channels
+
+    def setup_environment(self):
+        subname_items = [self.ncq_depth, self.n_channels, self.trafficsize]
+        subname_items = [str(x) for x in subname_items]
+        set_exp_metadata(self.conf, save_data = True,
+                expname = self.expname,
+                subexpname = '.'.join(subname_items))
+
+        self.conf['enable_blktrace'] = True
+        self.conf['enable_simulation'] = True
+
+    def setup_workload(self):
+        self.conf["workload_src"] = LBAGENERATOR
+        self.conf["lba_workload_class"] = "TestWorkloadFLEX3"
+
+        chunk_size = 32*KB
+        page_size = self.conf['flash_config']['page_size']
+        self.conf["lba_workload_configs"]["TestWorkloadFLEX3"] = {
+                "op_count": self.trafficsize/chunk_size,
+                "extent_size": chunk_size/page_size ,
+                "ops": ['write'], 'mode': 'random'}
+                # "ops": ['read', 'write', 'discard']}
+        self.conf["age_workload_class"] = "NoOp"
+
+    def setup_ftl(self):
+        self.conf['ftl_type'] = 'ftlwdftl'
+        self.conf['simulator_class'] = 'SimulatorDES'
+
+        devsize_mb = 256
+        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
+        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 2))
+        print "Current n_blocks_per_plane",\
+            self.conf['flash_config']['n_blocks_per_plane']
+
+    def my_run(self):
+        runtime_update(self.conf)
+        workflow(self.conf)
+
+    def test_main(self):
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run()
+
+def run_ncqexp():
+    for ncq_depth in (1, 4, 8):
+        for n_channels in (1, 4, 8):
+            exp = NCQExp(
+                    ncq_depth = ncq_depth,
+                    n_channels = n_channels,
+                    trafficsize = 64*MB,
+                    expname = 'myexp5')
+            exp.test_main()
 
 
 def main(cmd_args):
