@@ -254,7 +254,7 @@ class TestFTLwithDFTLIntegrated2(unittest.TestCase):
         self.conf['dftlncq']['ncq_depth'] = 2
 
         self.conf['flash_config']['page_size'] = 2048
-        self.conf['flash_config']['n_pages_per_block'] = 8
+        self.conf['flash_config']['n_pages_per_block'] = 4
         self.conf['flash_config']['n_blocks_per_plane'] = 8
         self.conf['flash_config']['n_planes_per_chip'] = 1
         self.conf['flash_config']['n_chips_per_package'] = 1
