@@ -304,7 +304,7 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
 
         self.sector_size = self.conf['sector_size']
         self.ftl_type = self.conf['ftl_type']
-        if self.ftl_type in ('dftl', 'dftlext', 'dftlncq', 'ftlwdftl'):
+        if self.ftl_type in ('dftl', 'dftlext', 'dftldes', 'ftlwdftl'):
             self.over_provisioning = self.conf['dftl']['over_provisioning']
         elif self.ftl_type == 'nkftl':
             self.over_provisioning = self.conf['nkftl']['provision_ratio']
@@ -370,7 +370,7 @@ class TestWorkloadFLEX3(LBAWorkloadGenerator):
 
         self.sector_size = self.conf['sector_size']
         self.ftl_type = self.conf['ftl_type']
-        if self.ftl_type in ('dftl', 'dftlext', 'dftlncq', 'ftlwdftl'):
+        if self.ftl_type in ('dftl', 'dftlext', 'dftldes', 'ftlwdftl'):
             self.over_provisioning = self.conf['dftl']['over_provisioning']
         elif self.ftl_type == 'nkftl':
             self.over_provisioning = self.conf['nkftl']['provision_ratio']
@@ -448,7 +448,7 @@ class ExtentTestWorkloadMANUAL(LBAWorkloadGenerator):
         self.sector_size = self.conf['sector_size']
         self.ftl_type = self.conf['ftl_type']
 
-        if self.ftl_type in ('dftl', 'dftlext', 'dftlncq', 'ftlwdftl'):
+        if self.ftl_type in ('dftl', 'dftlext', 'dftldes', 'ftlwdftl'):
             self.over_provisioning = self.conf['dftl']['over_provisioning']
         elif self.ftl_type == 'nkftl':
             self.over_provisioning = self.conf['nkftl']['provision_ratio']
@@ -506,7 +506,7 @@ class ExtentTestWorkload4DFTLDES(LBAWorkloadGenerator):
 
         self.sector_size = self.conf['sector_size']
         self.ftl_type = self.conf['ftl_type']
-        if self.ftl_type in ('dftl', 'dftlext', 'dftlncq', 'ftlwdftl'):
+        if self.ftl_type in ('dftl', 'dftlext', 'dftldes', 'ftlwdftl'):
             self.over_provisioning = self.conf['dftl']['over_provisioning']
         elif self.ftl_type == 'nkftl':
             self.over_provisioning = self.conf['nkftl']['provision_ratio']
@@ -573,7 +573,7 @@ class ExtentTestWorkloadFLEX(LBAWorkloadGenerator):
         self.sector_size = self.conf['sector_size']
         self.ftl_type = self.conf['ftl_type']
 
-        if self.ftl_type in ('dftl', 'dftlext', 'dftlncq', 'ftlwdftl'):
+        if self.ftl_type in ('dftl', 'dftlext', 'dftldes', 'ftlwdftl'):
             self.over_provisioning = self.conf['dftl']['over_provisioning']
         elif self.ftl_type == 'nkftl':
             self.over_provisioning = self.conf['nkftl']['provision_ratio']
@@ -634,7 +634,7 @@ class ExtentTestWorkloadFLEX2(LBAWorkloadGenerator):
         self.sector_size = self.conf['sector_size']
         self.ftl_type = self.conf['ftl_type']
 
-        if self.ftl_type in ('dftl', 'dftlext', 'dftlncq', 'ftlwdftl'):
+        if self.ftl_type in ('dftl', 'dftlext', 'dftldes', 'ftlwdftl'):
             self.over_provisioning = self.conf['dftl']['over_provisioning']
         elif self.ftl_type == 'nkftl':
             self.over_provisioning = self.conf['nkftl']['provision_ratio']

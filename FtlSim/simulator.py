@@ -8,7 +8,7 @@ import sys
 import bmftl
 import config
 import dftl2
-import dftlncq
+import ssdframework
 import dftlext
 import dftlDES
 import dmftl
@@ -314,12 +314,12 @@ class SimulatorDES(Simulator):
 
         self.env = simpy.Environment()
 
-        if self.conf['ftl_type'] == 'dftlncq':
-            ftl_class = dftlncq.FTL
-            self.ftl = dftlncq.FTL(self.conf, self.rec, self.env)
+        if self.conf['ftl_type'] == 'dftldes':
+            ftl_class = ssdframework.FTL
+            self.ftl = ssdframework.FTL(self.conf, self.rec, self.env)
         elif self.conf['ftl_type'] == 'ftlwdftl':
-            ftl_class = dftlncq.SSDFramework
-            self.ftl = dftlncq.SSDFramework(self.conf, self.rec, self.env)
+            ftl_class = ssdframework.SSDFramework
+            self.ftl = ssdframework.SSDFramework(self.conf, self.rec, self.env)
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))
