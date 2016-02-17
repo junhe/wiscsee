@@ -4,6 +4,7 @@ import random
 import config
 import workload
 from FtlSim import simulator
+from commons import *
 
 class LBAWorkloadGenerator(object):
     __metaclass__ = abc.ABCMeta

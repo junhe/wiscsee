@@ -991,6 +991,12 @@ class GcDecider(object):
         self.high_watermark = hi_watermark_ratio * \
             self.conf.n_blocks_per_dev
 
+        spare_blocks = (1 - hi_watermark_ratio) * self.conf.n_blocks_per_dev
+        if not spare_blocks > 32:
+            raise RuntimeError("Num of spare blocks {} may not be enough"\
+                "for garbage collection. You may encounter "\
+                "Out Of Space error!".format(spare_blocks))
+
         min_low = 0.8 * 1 / self.conf['dftl']['over_provisioning']
         if self.conf['dftl']['GC_low_threshold_ratio'] < min_low:
             low_watermark_ratio = min_low
