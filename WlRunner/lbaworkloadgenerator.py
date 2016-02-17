@@ -398,14 +398,21 @@ class TestWorkloadFLEX3(LBAWorkloadGenerator):
         events = []
         maxpage = 0
 
-        lba_span = int(self.conf.total_num_pages() / self.over_provisioning)
-        print 'total num pages', self.conf.total_num_pages()
-        print 'lba_span', lba_span
+        logical_span = int(self.conf.total_num_pages() / self.over_provisioning)
+        print 'Total num pages', self.conf.total_num_pages(), "pages",\
+                self.conf.total_num_pages() * \
+                self.conf['flash_config']['page_size'] / MB, "MB"
+        print "Total blocks", self.conf.n_blocks_per_dev
+        print "Total logical blocks", logical_span / \
+                self.conf['flash_config']['n_pages_per_block']
+        print 'Logical_span', logical_span, "pages", logical_span *\
+                self.conf['flash_config']['page_size'] / MB, "MB"
 
         for i in range(self.op_count):
             op = random.choice(ops)
             if self.mode == 'random':
-                page = int(random.random() * (lba_span - self.extent_size))
+                page = int(random.random() * (logical_span - self.extent_size))
+                assert page < logical_span
             elif self.mode == 'sequential':
                 page = i * self.extent_size
             else:
