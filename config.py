@@ -493,15 +493,15 @@ class ConfigNewFlash(Config):
             # time info
             # TODO: these are fixed numbers, but they are random in real world
             # TODO: Note that the SSD time is different than the flash package time
-            "page_read_time"        : 20*USEC,  # Max
-            "page_prog_time"        : 200*USEC, # Typical
-            "block_erase_time"      : 1.6*MSEC, # Typical
+            "page_read_time"        : 20*MICROSEC,  # Max
+            "page_prog_time"        : 200*MICROSEC, # Typical
+            "block_erase_time"      : 1.6*MILISEC, # Typical
 
-            "t_WC"                  : 45*NSEC,
-            "t_RC"                  : 50*NSEC,
-            "t_R"                   : 20*USEC,
-            "t_PROG"                : 200*USEC,
-            "t_BERS"                : 1.5*MSEC
+            "t_WC"                  : 45*NANOSEC,
+            "t_RC"                  : 50*NANOSEC,
+            "t_R"                   : 20*MICROSEC,
+            "t_PROG"                : 200*MICROSEC,
+            "t_BERS"                : 1.5*MILISEC
             }
         return flash_config
 

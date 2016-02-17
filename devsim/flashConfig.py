@@ -19,9 +19,9 @@ flash_config = {
     # time info
     # TODO: these are fixed numbers, but they are random in real world
     # TODO: Note that the SSD time is different than the flash package time
-    "page_read_time"        : 25*USEC,  # Max
-    "page_prog_time"        : 200*USEC, # Typical
-    "block_erase_time"      : 1.6*MSEC, # Typical
+    "page_read_time"        : 25*MICROSEC,  # Max
+    "page_prog_time"        : 200*MICROSEC, # Typical
+    "block_erase_time"      : 1.6*MILISEC, # Typical
     }
 
 def calc_and_cache(conf):
