@@ -32,7 +32,7 @@ class NCQSingleQueue(object):
         self.queue = simpy.Store(self.env)
 
 
-class FTLwDFTL(object):
+class SSDFramework(object):
     """
     The interface of this FTL for the host is a queue (NCQ). The host puts
     requests to the queue with certain time intervals according to the
