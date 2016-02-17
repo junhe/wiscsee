@@ -131,6 +131,7 @@ class FTLwDFTL(object):
         e = simpy.events.AllOf(self.env, procs)
         yield e
         print "++++++++++++++++++++++++END OF FTL+++++++++++++++++++++++++++"
-        print "Time:", float(self.env.now) / SEC
+        print "Time:", float(self.env.now)
+        self.recorder.add_to_timer("simulation_time", 0, self.env.now)
 
 

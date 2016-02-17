@@ -80,6 +80,12 @@ class Recorder(object):
             count_table = self._counters_to_table()
             utils.table_to_file(count_table, count_table_path)
 
+            counter_set_path = '.'.join((self.path,
+                'general_accumulator_table'))
+            general_accumulator_table = self.counter_sets_to_table(
+                    self.general_accumulator)
+            utils.table_to_file(general_accumulator_table, counter_set_path)
+
             if self.print_when_finished:
                 print '*********  recorder counters (count_me()) **********'
                 print utils.table_to_str(count_table, sep = '\t')
