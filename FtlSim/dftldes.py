@@ -1600,12 +1600,12 @@ class Dftl(object):
         # This resource protects all data structures stored in the memory.
         self.resource_ram = simpy.Resource(self.env, capacity = 1)
 
-    def translate(self, io_req, pid):
+    def translate(self, host_req, pid):
         """
-        io_req is of type simulator.Event()
+        host_req is of type simulator.Event()
 
         Our job here is to find the corresponding physical flat address
-        of the address in io_req. The during the translation, we may
+        of the address in host_req. The during the translation, we may
         need to synchronizely access flash.
 
         We do the following here:
@@ -1620,30 +1620,30 @@ class Dftl(object):
 
             s = self.env.now
             flash_reqs = yield self.env.process(
-                    self.handle_io_requests(io_req))
+                    self.handle_host_requests(host_req))
             e = self.env.now
             self.recorder.add_to_timer("translation_time-wo_wait", pid, e - s)
 
             self.env.exit(flash_reqs)
 
-    def handle_io_requests(self, io_req):
-        lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(io_req.sector,
-                io_req.sector_count)
+    def handle_host_requests(self, host_req):
+        lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(host_req.sector,
+                host_req.sector_count)
         lpns = range(lpn_start, lpn_start + lpn_count)
         # print "Handling io: lpn", lpn_start, "count", lpn_count
 
-        if io_req.operation == 'read':
+        if host_req.operation == 'read':
             ppns = yield self.env.process(
                     self.mapping_manager.ppns_for_reading(lpns))
-        elif io_req.operation == 'write':
+        elif host_req.operation == 'write':
             ppns = yield self.env.process(
                     self.mapping_manager.ppns_for_writing(lpns))
-        elif io_req.operation == 'discard':
+        elif host_req.operation == 'discard':
             yield self.env.process(
                     self.mapping_manager.discard_lpns(lpns))
             ppns = []
         else:
-            print 'io operation', io_req.operation, 'is not processed'
+            print 'io operation', host_req.operation, 'is not processed'
             ppns = []
 
         flash_reqs = []
@@ -1652,7 +1652,7 @@ class Dftl(object):
                 continue
 
             req = self.flash.get_flash_requests_for_ppns(ppn, 1,
-                    op = io_req.operation)
+                    op = host_req.operation)
             flash_reqs.extend(req)
 
         self.env.exit(flash_reqs)

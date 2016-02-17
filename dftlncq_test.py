@@ -32,7 +32,7 @@ class TestFTLwithDFTL(unittest.TestCase):
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
-        self.conf['ftl_type'] = 'ftlwdftl'
+        self.conf['ftl_type'] = 'dftldes'
         self.conf['simulator_class'] = 'SimulatorDES'
 
         devsize_mb = 2
@@ -78,7 +78,7 @@ class TestFTLwithDFTL2(unittest.TestCase):
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
-        self.conf['ftl_type'] = 'ftlwdftl'
+        self.conf['ftl_type'] = 'dftldes'
         self.conf['simulator_class'] = 'SimulatorDES'
 
         devsize_mb = 8
@@ -125,7 +125,7 @@ class TestFTLwithDFTLFLEX(unittest.TestCase):
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
-        self.conf['ftl_type'] = 'ftlwdftl'
+        self.conf['ftl_type'] = 'dftldes'
         self.conf['simulator_class'] = 'SimulatorDES'
 
         devsize_mb = 2
@@ -180,7 +180,7 @@ class TestFTLwithDFTLFLEX2(unittest.TestCase):
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
-        self.conf['ftl_type'] = 'ftlwdftl'
+        self.conf['ftl_type'] = 'dftldes'
         self.conf['simulator_class'] = 'SimulatorDES'
 
         devsize_mb = 2
@@ -226,7 +226,7 @@ class TestFTLwithDFTLIntegrated(unittest.TestCase):
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
-        self.conf['ftl_type'] = 'ftlwdftl'
+        self.conf['ftl_type'] = 'dftldes'
         self.conf['simulator_class'] = 'SimulatorDES'
 
         devsize_mb = 1024
@@ -285,7 +285,7 @@ class TestFTLwithDFTLIntegrated2(unittest.TestCase):
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
-        self.conf['ftl_type'] = 'ftlwdftl'
+        self.conf['ftl_type'] = 'dftldes'
         self.conf['simulator_class'] = 'SimulatorDES'
 
         devsize_mb = 8
@@ -343,7 +343,7 @@ class TestFTLwithDFTLGCthreshold(unittest.TestCase):
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
-        self.conf['ftl_type'] = 'ftlwdftl'
+        self.conf['ftl_type'] = 'dftldes'
         self.conf['simulator_class'] = 'SimulatorDES'
 
         devsize_mb = 8

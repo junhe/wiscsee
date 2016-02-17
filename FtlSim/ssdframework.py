@@ -37,6 +37,11 @@ class SSDFramework(object):
     The interface of this FTL for the host is a queue (NCQ). The host puts
     requests to the queue with certain time intervals according to the
     blktrace.
+
+    realftl should provide translate() process to take host request and
+    translate them to flash access requests
+    realftl should provide clean_garbage()
+
     """
     def __init__(self, confobj, recorderobj, simpy_env):
         self.conf = confobj
@@ -50,14 +55,20 @@ class SSDFramework(object):
         self.flash_controller = flashcontroller.controller.Controller2(
                 self.env, self.conf, self.recorder)
 
-        self.realftl = dftldes.Dftl(self.conf, self.recorder,
-                self.flash_controller, self.env)
+        if self.conf['ftl_type'] == 'dftldes':
+            self.realftl = dftldes.Dftl(self.conf, self.recorder,
+                    self.flash_controller, self.env)
+        else:
+            raise RuntimeError("ftl_type {} is not supported.".format(
+                self.conf['ftl_type']))
 
         self.realftl.recorder.enable()
 
     def get_direct_mapped_flash_requests(self, host_req):
         """
         For example, read LPN 20 will executed as reading PPN 20
+
+        This is only for debugging.
         """
         page_start, page_count = self.conf.sec_ext_to_page_ext(host_req.sector,
                 host_req.sector_count)

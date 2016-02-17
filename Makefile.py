@@ -858,7 +858,7 @@ class NCQExp(object):
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
-        self.conf['ftl_type'] = 'ftlwdftl'
+        self.conf['ftl_type'] = 'dftldes'
         self.conf['simulator_class'] = 'SimulatorDES'
 
         devsize_mb = 256
