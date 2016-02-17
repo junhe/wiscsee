@@ -824,7 +824,7 @@ class NCQExp(object):
 
     def setup_config(self):
         self.conf = config.ConfigNCQFTL()
-        self.conf['dftlncq']['ncq_depth'] = self.ncq_depth
+        self.conf['SSDFramework']['ncq_depth'] = self.ncq_depth
 
         self.conf['flash_config']['page_size'] = 2048
         self.conf['flash_config']['n_pages_per_block'] = 64

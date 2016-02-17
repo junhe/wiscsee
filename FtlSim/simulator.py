@@ -335,7 +335,7 @@ class SimulatorDES(Simulator):
             # yield self.env.timeout(1) # interval between request
             i += 1
 
-        for i in range(self.conf['dftlncq']['ncq_depth']):
+        for i in range(self.conf['SSDFramework']['ncq_depth']):
             event = EventSimple(0, "end_process")
             yield self.ftl.ncq.queue.put(event)
 

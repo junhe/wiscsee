@@ -44,7 +44,7 @@ class SSDFramework(object):
         self.env = simpy_env
 
         self.ncq = NCQSingleQueue(
-                ncq_depth = self.conf['dftlncq']['ncq_depth'],
+                ncq_depth = self.conf['SSDFramework']['ncq_depth'],
                 simpy_env = self.env)
 
         self.flash_controller = flashcontroller.controller.Controller2(
@@ -125,7 +125,7 @@ class SSDFramework(object):
 
     def run(self):
         procs = []
-        for i in range(self.conf['dftlncq']['ncq_depth']):
+        for i in range(self.conf['SSDFramework']['ncq_depth']):
             p = self.env.process( self.process(i) )
             procs.append(p)
         e = simpy.events.AllOf(self.env, procs)

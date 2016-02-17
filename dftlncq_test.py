@@ -8,7 +8,7 @@ from Makefile import *
 class TestFTLwithDFTL(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNCQFTL()
-        self.conf['dftlncq']['ncq_depth'] = 2
+        self.conf['SSDFramework']['ncq_depth'] = 2
 
         self.conf['flash_config']['n_pages_per_block'] = 2
         self.conf['flash_config']['n_blocks_per_plane'] = 2
@@ -54,7 +54,7 @@ class TestFTLwithDFTL(unittest.TestCase):
 class TestFTLwithDFTL2(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNCQFTL()
-        self.conf['dftlncq']['ncq_depth'] = 2
+        self.conf['SSDFramework']['ncq_depth'] = 2
 
         self.conf['flash_config']['n_pages_per_block'] = 2
         self.conf['flash_config']['n_blocks_per_plane'] = 32
@@ -101,7 +101,7 @@ class TestFTLwithDFTL2(unittest.TestCase):
 class TestFTLwithDFTLFLEX(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNCQFTL()
-        self.conf['dftlncq']['ncq_depth'] = 2
+        self.conf['SSDFramework']['ncq_depth'] = 2
 
         self.conf['flash_config']['n_pages_per_block'] = 2
         self.conf['flash_config']['n_blocks_per_plane'] = 2
@@ -148,7 +148,7 @@ class TestFTLwithDFTLFLEX(unittest.TestCase):
 class TestFTLwithDFTLFLEX2(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNCQFTL()
-        self.conf['dftlncq']['ncq_depth'] = 1
+        self.conf['SSDFramework']['ncq_depth'] = 1
 
         self.conf['flash_config']['n_pages_per_block'] = 2
         self.conf['flash_config']['n_blocks_per_plane'] = 2
@@ -202,7 +202,7 @@ class TestFTLwithDFTLFLEX2(unittest.TestCase):
 class TestFTLwithDFTLIntegrated(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNCQFTL()
-        self.conf['dftlncq']['ncq_depth'] = 2
+        self.conf['SSDFramework']['ncq_depth'] = 2
 
         self.conf['flash_config']['n_pages_per_block'] = 2
         self.conf['flash_config']['n_blocks_per_plane'] = 32
@@ -251,7 +251,7 @@ class TestFTLwithDFTLIntegrated(unittest.TestCase):
 class TestFTLwithDFTLIntegrated2(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNCQFTL()
-        self.conf['dftlncq']['ncq_depth'] = 2
+        self.conf['SSDFramework']['ncq_depth'] = 2
 
         self.conf['flash_config']['page_size'] = 2048
         self.conf['flash_config']['n_pages_per_block'] = 4
@@ -309,7 +309,7 @@ class TestFTLwithDFTLIntegrated2(unittest.TestCase):
 class TestFTLwithDFTLGCthreshold(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNCQFTL()
-        self.conf['dftlncq']['ncq_depth'] = 2
+        self.conf['SSDFramework']['ncq_depth'] = 2
 
         self.conf['flash_config']['page_size'] = 2048
         self.conf['flash_config']['n_pages_per_block'] = 64
