@@ -549,6 +549,15 @@ class CachedMappingTable(object):
                 lpn, self.entries[lpn].ppn))
         self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
 
+    def add_new_entry_softly(self, lpn, ppn):
+        """
+        If lpn is already in cache, don't add it. Don't change dirty bit.
+        If lpn is not in cache, add it and set dirty to False
+        """
+        if not self.entries.has_key(lpn):
+            self.entries[lpn] = \
+                CacheEntryData(lpn = lpn, ppn = ppn, dirty = False)
+
     def update_entry(self, lpn, ppn, dirty):
         "You may end up remove the old one"
         self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
