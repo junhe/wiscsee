@@ -35,7 +35,7 @@ class TestFTLwithDFTL(unittest.TestCase):
         self.conf['ftl_type'] = 'ftlwdftl'
         self.conf['simulator_class'] = 'SimulatorDES'
 
-        devsize_mb = 1
+        devsize_mb = 2
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
@@ -56,7 +56,7 @@ class TestFTLwithDFTL2(unittest.TestCase):
         self.conf = config.ConfigNCQFTL()
         self.conf['dftlncq']['ncq_depth'] = 2
 
-        self.conf['flash_config']['n_pages_per_block'] = 128
+        self.conf['flash_config']['n_pages_per_block'] = 2
         self.conf['flash_config']['n_blocks_per_plane'] = 32
         self.conf['flash_config']['n_planes_per_chip'] = 1
         self.conf['flash_config']['n_chips_per_package'] = 1
@@ -128,7 +128,7 @@ class TestFTLwithDFTLFLEX(unittest.TestCase):
         self.conf['ftl_type'] = 'ftlwdftl'
         self.conf['simulator_class'] = 'SimulatorDES'
 
-        devsize_mb = 1
+        devsize_mb = 2
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
@@ -183,7 +183,7 @@ class TestFTLwithDFTLFLEX2(unittest.TestCase):
         self.conf['ftl_type'] = 'ftlwdftl'
         self.conf['simulator_class'] = 'SimulatorDES'
 
-        devsize_mb = 1
+        devsize_mb = 2
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
@@ -204,7 +204,7 @@ class TestFTLwithDFTLIntegrated(unittest.TestCase):
         self.conf = config.ConfigNCQFTL()
         self.conf['dftlncq']['ncq_depth'] = 2
 
-        self.conf['flash_config']['n_pages_per_block'] = 128
+        self.conf['flash_config']['n_pages_per_block'] = 2
         self.conf['flash_config']['n_blocks_per_plane'] = 32
         self.conf['flash_config']['n_planes_per_chip'] = 1
         self.conf['flash_config']['n_chips_per_package'] = 1
@@ -251,15 +251,16 @@ class TestFTLwithDFTLIntegrated(unittest.TestCase):
 class TestFTLwithDFTLIntegrated2(unittest.TestCase):
     def setup_config(self):
         self.conf = config.ConfigNCQFTL()
-        self.conf['dftlncq']['ncq_depth'] = 8
+        self.conf['dftlncq']['ncq_depth'] = 2
 
         self.conf['flash_config']['page_size'] = 2048
-        self.conf['flash_config']['n_pages_per_block'] = 64
-        self.conf['flash_config']['n_blocks_per_plane'] = 32
+        self.conf['flash_config']['n_pages_per_block'] = 8
+        self.conf['flash_config']['n_blocks_per_plane'] = 8
         self.conf['flash_config']['n_planes_per_chip'] = 1
         self.conf['flash_config']['n_chips_per_package'] = 1
         self.conf['flash_config']['n_packages_per_channel'] = 1
-        self.conf['flash_config']['n_channels_per_dev'] = 32
+        self.conf['flash_config']['n_channels_per_dev'] = 4
+
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -272,7 +273,7 @@ class TestFTLwithDFTLIntegrated2(unittest.TestCase):
         self.conf["workload_src"] = LBAGENERATOR
         self.conf["lba_workload_class"] = "TestWorkloadFLEX3"
 
-        traffic = 64*MB
+        traffic = 10*MB
         chunk_size = 32*KB
         page_size = self.conf['flash_config']['page_size']
         self.conf["lba_workload_configs"]["TestWorkloadFLEX3"] = {
@@ -287,10 +288,10 @@ class TestFTLwithDFTLIntegrated2(unittest.TestCase):
         self.conf['ftl_type'] = 'ftlwdftl'
         self.conf['simulator_class'] = 'SimulatorDES'
 
-        devsize_mb = 256
+        devsize_mb = 8
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
         self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
-        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 2))
+        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.3))
         print "Current n_blocks_per_plane",\
             self.conf['flash_config']['n_blocks_per_plane']
 
