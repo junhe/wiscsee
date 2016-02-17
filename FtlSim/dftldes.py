@@ -33,6 +33,9 @@ class GlobalHelper(object):
 LOGICAL_READ, LOGICAL_WRITE, LOGICAL_DISCARD = ('LOGICAL_READ', \
         'LOGICAL_WRITE', 'LOGICAL_DISCARD')
 
+def n_mapping_entries_per_page(conf, ftl_conf_key):
+    return conf.page_size \
+        / conf[ftl_conf_key]['global_mapping_entry_bytes']
 
 def block_to_channel_block(conf, blocknum):
     n_blocks_per_channel = conf.n_blocks_per_channel
@@ -607,7 +610,8 @@ class GlobalMappingTable(object):
         self.conf = confobj
         self.ftl_conf = self.conf[ftl_conf_key]
 
-        self.n_entries_per_page = self.conf.dftl_n_mapping_entries_per_page()
+        self.n_entries_per_page = n_mapping_entries_per_page(
+            self.conf, ftl_conf_key)
 
         # do the easy thing first, if necessary, we can later use list or
         # other data structure
@@ -651,15 +655,17 @@ class GlobalTranslationDirectory(object):
     This is an in-memory data structure. It is only for book keeping. It used
     to remeber thing so that we don't lose it.
     """
-    def __init__(self, confobj):
+    def __init__(self, confobj, ftl_conf_key):
         self.conf = confobj
+        self.ftl_conf = self.conf[ftl_conf_key]
 
         self.flash_npage_per_block = self.conf.n_pages_per_block
         self.flash_num_blocks = self.conf.n_blocks_per_dev
         self.flash_page_size = self.conf.page_size
         self.total_pages = self.conf.total_num_pages()
 
-        self.n_entries_per_page = self.conf.dftl_n_mapping_entries_per_page()
+        self.n_entries_per_page = n_mapping_entries_per_page(self.conf,
+            ftl_conf_key)
 
         # M_VPN -> M_PPN
         # Virtual translation page number --> Physical translation page number
@@ -717,12 +723,13 @@ class MappingManager(object):
         self.recorder = recorderobj
         self.env = envobj
         self.ftl_conf = self.conf[ftl_conf_key]
+        self.ftl_conf_key = ftl_conf_key
 
         # managed and owned by Mappingmanager
         self.global_mapping_table = GlobalMappingTable(confobj, flashobj,
                 ftl_conf_key)
         self.cached_mapping_table = CachedMappingTable(confobj, ftl_conf_key)
-        self.directory = GlobalTranslationDirectory(confobj)
+        self.directory = GlobalTranslationDirectory(confobj, ftl_conf_key)
 
     def __del__(self):
         print self.flash.recorder.count_counter
@@ -952,7 +959,8 @@ class MappingManager(object):
         old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
 
         # update GMT on flash
-        if len(new_mappings) < self.conf.dftl_n_mapping_entries_per_page():
+        if len(new_mappings) < \
+                n_mapping_entries_per_page(self.conf, self.ftl_conf_key):
             # need to read some mappings
             yield self.env.process(
                 self.flash.rw_ppn_extent(old_m_ppn, 1, op = 'read') )
