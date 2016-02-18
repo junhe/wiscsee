@@ -21,7 +21,7 @@ UNINITIATED, MISS = ('UNINIT', 'MISS')
 DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
 random.seed(0)
 
-class ConfigDFTLDES(config.ConfigNCQFTL):
+class Config(config.ConfigNCQFTL):
     @property
     def n_mapping_entries_per_page(self):
         return self.page_size / self['dftl']['global_mapping_entry_bytes']
