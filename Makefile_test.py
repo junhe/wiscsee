@@ -30,36 +30,10 @@ class TestTemplate(unittest.TestCase):
         self.my_run()
 
 
-class DftlExp(Experiment):
-    def setup_environment(self):
-        metadata_dic = choose_exp_metadata(self.conf, interactive = False)
-        self.conf.update(metadata_dic)
-
-        self.conf['enable_blktrace'] = True
-        self.conf['enable_simulation'] = True
-
-    def setup_workload(self):
-        self.conf["workload_src"] = LBAGENERATOR
-        self.conf["age_workload_class"] = "NoOp"
-
-    def setup_ftl(self):
-        self.conf['ftl_type'] = 'dftl2'
-        self.conf['simulator_class'] = 'SimulatorNonDESe2elba'
-
-        devsize_mb = 1024
-        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf.page_size)
-        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
-        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
-
-    def run(self):
-        runtime_update(self.conf)
-        workflow(self.conf)
-
-
 class DftlextExp(Experiment):
     def __init__(self):
         # Get default setting
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -79,7 +53,7 @@ class DftlextExp(Experiment):
 
         devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf.page_size)
-        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def run(self):
@@ -93,7 +67,7 @@ class DftlextExp2(Experiment):
     """
     def __init__(self):
         # Get default setting
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -115,7 +89,7 @@ class DftlextExp2(Experiment):
 
         devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf.page_size)
-        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def run(self):
@@ -128,7 +102,7 @@ class DftlextExpE2e(Experiment):
     """
     def __init__(self):
         # Get default setting
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -150,17 +124,12 @@ class DftlextExpE2e(Experiment):
 
         devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def run(self):
         runtime_update(self.conf)
         workflow(self.conf)
-
-class DftlTest(unittest.TestCase):
-    def test_Dftl(self):
-        exp = DftlExp()
-        exp.main()
 
 class DftlextTest(unittest.TestCase):
     def test_Dftl(self):
@@ -179,7 +148,7 @@ class DftlextTest3(unittest.TestCase):
 
 class TestChannelBlockPool(unittest.TestCase):
     def setup_config(self):
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -210,7 +179,7 @@ class TestBlockPool_freeblocks(unittest.TestCase):
     Test pop_a_free_block
     """
     def setup_config(self):
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -251,7 +220,7 @@ class TestBlockPool_data(unittest.TestCase):
     Test pop_a_free_block_data
     """
     def setup_config(self):
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -306,7 +275,7 @@ class TestBlockPool_trans(unittest.TestCase):
     Test pop_a_free_block_data
     """
     def setup_config(self):
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -349,7 +318,7 @@ class TestBlockPool_next_data(unittest.TestCase):
     Test pop_a_free_block_data
     """
     def setup_config(self):
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -393,7 +362,7 @@ class TestBlockPool_next_gc_data(unittest.TestCase):
     Test pop_a_free_block_data
     """
     def setup_config(self):
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -436,7 +405,7 @@ class TestBlockPool_next_gc_data(unittest.TestCase):
 
 class TestDftextGC(unittest.TestCase):
     def setup_config(self):
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
         self.conf.n_channels_per_dev = 4
 
     def setup_environment(self):
@@ -459,7 +428,7 @@ class TestDftextGC(unittest.TestCase):
 
         devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def my_run(self):
@@ -476,7 +445,7 @@ class TestDftextGC(unittest.TestCase):
 
 class TestDftextGCSingleChannel(unittest.TestCase):
     def setup_config(self):
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
 
         print '1', self.conf.n_blocks_per_dev
 
@@ -500,7 +469,7 @@ class TestDftextGCSingleChannel(unittest.TestCase):
 
         devsize_mb = 1
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def my_run(self):
@@ -517,7 +486,7 @@ class TestDftextGCSingleChannel(unittest.TestCase):
 
 class TestDftlextTimeline(unittest.TestCase):
     def setup_config(self):
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
 
     def setup_environment(self):
         pass
@@ -549,7 +518,7 @@ class TestDftlextTimeline(unittest.TestCase):
 
 class TestDftlextParallelFlash(unittest.TestCase):
     def setup_config(self):
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
         # 2 pages per block, 2 blocks per channel, 2 channels in total
         self.conf['flash_config']['n_pages_per_block'] = 2
         self.conf['flash_config']['n_blocks_per_plane'] = 2
@@ -604,7 +573,7 @@ class TestDftlextParallelFlash(unittest.TestCase):
 
 class TestTimelineAndFlash(unittest.TestCase):
     def setup_config(self):
-        self.conf = config.ConfigNewFlash()
+        self.conf = FtlSim.dftlext.Config()
         # 2 pages per block, 2 blocks per channel, 2 channels in total
         self.conf['sector_size'] = self.conf['flash_config']['page_size']
         self.conf['flash_config']['n_pages_per_block'] = 2
@@ -632,7 +601,7 @@ class TestTimelineAndFlash(unittest.TestCase):
         devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / \
                 self.conf['flash_config']['page_size'])
-        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
         runtime_update(self.conf)

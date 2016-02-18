@@ -194,6 +194,49 @@ UNINITIATED, MISS = ('UNINIT', 'MISS')
 DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
 random.seed(0)
 
+class Config(config.ConfigNCQFTL):
+    def __init__(self, confdic = None):
+        super(Config, self).__init__(confdic)
+
+        local_itmes = {
+            # number of bytes per entry in global_mapping_table
+            "global_mapping_entry_bytes": 4, # 32 bits
+            "GC_threshold_ratio": 0.95,
+            "GC_low_threshold_ratio": 0.9,
+            "over_provisioning": 1.28,
+            "max_cmt_bytes": None # cmt: cached mapping table
+            }
+        self.update(local_itmes)
+
+    @property
+    def n_mapping_entries_per_page(self):
+        return self.page_size / self['global_mapping_entry_bytes']
+
+    @property
+    def max_cmt_bytes(self):
+        return self['max_cmt_bytes']
+
+    @max_cmt_bytes.setter
+    def max_cmt_bytes(self, value):
+        self['max_cmt_bytes'] = value
+
+    @property
+    def global_mapping_entry_bytes(self):
+        return self['global_mapping_entry_bytes']
+
+    @property
+    def over_provisioning(self):
+        return self['over_provisioning']
+
+    @property
+    def GC_threshold_ratio(self):
+        return self['GC_threshold_ratio']
+
+    @property
+    def GC_low_threshold_ratio(self):
+        return self['GC_low_threshold_ratio']
+
+
 class GlobalHelper(object):
     """
     In case you need some global variables. We put all global stuff here so
@@ -759,7 +802,7 @@ class CachedMappingTable(object):
         self.conf = confobj
 
         self.entry_bytes = 8 # lpn + ppn
-        max_bytes = self.conf['dftl']['max_cmt_bytes']
+        max_bytes = self.conf.max_cmt_bytes
         self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
             self.entry_bytes
         print 'cache max entries', self.max_n_entries, \
@@ -831,7 +874,7 @@ class GlobalMappingTable(object):
 
         self.conf = confobj
 
-        self.n_entries_per_page = self.conf.dftl_n_mapping_entries_per_page()
+        self.n_entries_per_page = self.conf.n_mapping_entries_per_page
 
         # do the easy thing first, if necessary, we can later use list or
         # other data structure
@@ -850,7 +893,7 @@ class GlobalMappingTable(object):
         total_entries * entry size / page size
         """
         entries = self.total_entries()
-        entry_bytes = self.conf['dftl']['global_mapping_entry_bytes']
+        entry_bytes = self.conf.global_mapping_entry_bytes
         flash_page_size = self.conf.page_size
         # play the ceiling trick
         return (entries * entry_bytes + (flash_page_size -1))/flash_page_size
@@ -883,7 +926,7 @@ class GlobalTranslationDirectory(object):
         self.flash_page_size = self.conf.page_size
         self.total_pages = self.conf.total_num_pages()
 
-        self.n_entries_per_page = self.conf.dftl_n_mapping_entries_per_page()
+        self.n_entries_per_page = self.conf.n_mapping_entries_per_page
 
         # M_VPN -> M_PPN
         # Virtual translation page number --> Physical translation page number
@@ -1154,7 +1197,7 @@ class MappingManager(object):
         old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
 
         # update GMT on flash
-        if len(new_mappings) < self.conf.dftl_n_mapping_entries_per_page():
+        if len(new_mappings) < self.conf.n_mapping_entries_per_page:
             # need to read some mappings
             self.flash.read_pages(ppns = [old_m_ppn], tag = tag)
         else:
@@ -1195,25 +1238,25 @@ class GcDecider(object):
         # The high watermark should not be lower than the file system size
         # because if the file system is full you have to constantly GC and
         # cannot get more space
-        min_high = 1 / float(self.conf['dftl']['over_provisioning'])
-        if self.conf['dftl']['GC_threshold_ratio'] < min_high:
+        min_high = 1 / float(self.conf.over_provisioning)
+        if self.conf.GC_threshold_ratio < min_high:
             hi_watermark_ratio = min_high
             print 'High watermark is reset to {}. It was {}'.format(
-                hi_watermark_ratio, self.conf['dftl']['GC_threshold_ratio'])
+                hi_watermark_ratio, self.conf.GC_threshold_ratio)
         else:
-            hi_watermark_ratio = self.conf['dftl']['GC_threshold_ratio']
+            hi_watermark_ratio = self.conf.GC_threshold_ratio
             print 'Using user defined high watermark', hi_watermark_ratio
 
         self.high_watermark = hi_watermark_ratio * \
             self.conf.n_blocks_per_dev
 
-        min_low = 0.8 * 1 / self.conf['dftl']['over_provisioning']
-        if self.conf['dftl']['GC_low_threshold_ratio'] < min_low:
+        min_low = 0.8 * 1 / self.conf.over_provisioning
+        if self.conf.GC_low_threshold_ratio < min_low:
             low_watermark_ratio = min_low
             print 'Low watermark is reset to {}. It was {}'.format(
-                low_watermark_ratio, self.conf['dftl']['GC_low_threshold_ratio'])
+                low_watermark_ratio, self.conf.GC_low_threshold_ratio)
         else:
-            low_watermark_ratio = self.conf['dftl']['GC_low_threshold_ratio']
+            low_watermark_ratio = self.conf.GC_low_threshold_ratio
             print 'Using user defined low watermark', low_watermark_ratio
 
         self.low_watermark = low_watermark_ratio * \
