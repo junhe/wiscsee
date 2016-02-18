@@ -22,7 +22,30 @@ DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
 random.seed(0)
 
 class ConfigDFTLDES(config.ConfigNCQFTL):
-    pass
+    @property
+    def n_mapping_entries_per_page(self):
+        return self.page_size / self['dftl']['global_mapping_entry_bytes']
+
+    @property
+    def max_cmt_bytes(self):
+        return self['dftl']['max_cmt_bytes']
+
+    @property
+    def global_mapping_entry_bytes(self):
+        return self['dftl']['global_mapping_entry_bytes']
+
+    @property
+    def over_provisioning(self):
+        return self['dftl']['over_provisioning']
+
+    @property
+    def GC_threshold_ratio(self):
+        return self['dftl']['GC_threshold_ratio']
+
+    @property
+    def GC_low_threshold_ratio(self):
+        return self['dftl']['GC_low_threshold_ratio']
+
 
 class GlobalHelper(object):
     """
@@ -34,10 +57,6 @@ class GlobalHelper(object):
 
 LOGICAL_READ, LOGICAL_WRITE, LOGICAL_DISCARD = ('LOGICAL_READ', \
         'LOGICAL_WRITE', 'LOGICAL_DISCARD')
-
-def n_mapping_entries_per_page(conf, ftl_conf_key):
-    return conf.page_size \
-        / conf[ftl_conf_key]['global_mapping_entry_bytes']
 
 def block_to_channel_block(conf, blocknum):
     n_blocks_per_channel = conf.n_blocks_per_channel
@@ -525,12 +544,11 @@ class CachedMappingTable(object):
     entry in CMT. In that case, we need to find all the CMT entries in the same
     translation page with the victim entry.
     """
-    def __init__(self, confobj, ftl_conf_key):
+    def __init__(self, confobj):
         self.conf = confobj
-        self.ftl_conf = self.conf[ftl_conf_key]
 
         self.entry_bytes = 8 # lpn + ppn
-        max_bytes = self.ftl_conf['max_cmt_bytes']
+        max_bytes = self.conf.max_cmt_bytes
         self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
             self.entry_bytes
         print 'cache max entries', self.max_n_entries, \
@@ -601,7 +619,7 @@ class GlobalMappingTable(object):
     This mapping table is for data pages, not for translation pages.
     GMT should have entries as many as the number of pages in flash
     """
-    def __init__(self, confobj, flashobj, ftl_conf_key):
+    def __init__(self, confobj, flashobj):
         """
         flashobj is the flash device that we may operate on.
         """
@@ -610,10 +628,8 @@ class GlobalMappingTable(object):
                format(type(confobj).__name__))
 
         self.conf = confobj
-        self.ftl_conf = self.conf[ftl_conf_key]
 
-        self.n_entries_per_page = n_mapping_entries_per_page(
-            self.conf, ftl_conf_key)
+        self.n_entries_per_page = self.conf.n_mapping_entries_per_page
 
         # do the easy thing first, if necessary, we can later use list or
         # other data structure
@@ -632,7 +648,7 @@ class GlobalMappingTable(object):
         total_entries * entry size / page size
         """
         entries = self.total_entries()
-        entry_bytes = self.ftl_conf['global_mapping_entry_bytes']
+        entry_bytes = self.conf.global_mapping_entry_bytes
         flash_page_size = self.conf.page_size
         # play the ceiling trick
         return (entries * entry_bytes + (flash_page_size -1))/flash_page_size
@@ -657,17 +673,15 @@ class GlobalTranslationDirectory(object):
     This is an in-memory data structure. It is only for book keeping. It used
     to remeber thing so that we don't lose it.
     """
-    def __init__(self, confobj, ftl_conf_key):
+    def __init__(self, confobj):
         self.conf = confobj
-        self.ftl_conf = self.conf[ftl_conf_key]
 
         self.flash_npage_per_block = self.conf.n_pages_per_block
         self.flash_num_blocks = self.conf.n_blocks_per_dev
         self.flash_page_size = self.conf.page_size
         self.total_pages = self.conf.total_num_pages()
 
-        self.n_entries_per_page = n_mapping_entries_per_page(self.conf,
-            ftl_conf_key)
+        self.n_entries_per_page = self.conf.n_mapping_entries_per_page
 
         # M_VPN -> M_PPN
         # Virtual translation page number --> Physical translation page number
@@ -717,21 +731,18 @@ class MappingManager(object):
     This class should act as a coordinator of all the mapping data structures.
     """
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
-            envobj, ftl_conf_key):
+            envobj):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
         self.block_pool = block_pool
         self.recorder = recorderobj
         self.env = envobj
-        self.ftl_conf = self.conf[ftl_conf_key]
-        self.ftl_conf_key = ftl_conf_key
 
         # managed and owned by Mappingmanager
-        self.global_mapping_table = GlobalMappingTable(confobj, flashobj,
-                ftl_conf_key)
-        self.cached_mapping_table = CachedMappingTable(confobj, ftl_conf_key)
-        self.directory = GlobalTranslationDirectory(confobj, ftl_conf_key)
+        self.global_mapping_table = GlobalMappingTable(confobj, flashobj)
+        self.cached_mapping_table = CachedMappingTable(confobj)
+        self.directory = GlobalTranslationDirectory(confobj)
 
     def __del__(self):
         print self.flash.recorder.count_counter
@@ -961,8 +972,7 @@ class MappingManager(object):
         old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
 
         # update GMT on flash
-        if len(new_mappings) < \
-                n_mapping_entries_per_page(self.conf, self.ftl_conf_key):
+        if len(new_mappings) < self.conf.n_mapping_entries_per_page:
             # need to read some mappings
             yield self.env.process(
                 self.flash.rw_ppn_extent(old_m_ppn, 1, op = 'read') )
@@ -1013,23 +1023,22 @@ class GcDecider(object):
     Later, use low water mark and progress to decide. If we haven't make
     progress in 10 times, stop GC
     """
-    def __init__(self, confobj, block_pool, recorderobj, ftl_conf_key):
+    def __init__(self, confobj, block_pool, recorderobj):
         self.conf = confobj
         self.block_pool = block_pool
         self.recorder = recorderobj
-        self.ftl_conf = self.conf[ftl_conf_key]
 
         # Check if the high_watermark is appropriate
         # The high watermark should not be lower than the file system size
         # because if the file system is full you have to constantly GC and
         # cannot get more space
-        min_high = 1 / float(self.ftl_conf['over_provisioning'])
-        if self.ftl_conf['GC_threshold_ratio'] < min_high:
+        min_high = 1 / float(self.conf.over_provisioning)
+        if self.conf.GC_threshold_ratio < min_high:
             hi_watermark_ratio = min_high
             print 'High watermark is reset to {}. It was {}'.format(
-                hi_watermark_ratio, self.ftl_conf['GC_threshold_ratio'])
+                hi_watermark_ratio, self.conf.GC_threshold_ratio)
         else:
-            hi_watermark_ratio = self.ftl_conf['GC_threshold_ratio']
+            hi_watermark_ratio = self.conf.GC_threshold_ratio
             print 'Using user defined high watermark', hi_watermark_ratio
 
         self.high_watermark = hi_watermark_ratio * \
@@ -1041,13 +1050,13 @@ class GcDecider(object):
                 "for garbage collection. You may encounter "\
                 "Out Of Space error!".format(spare_blocks))
 
-        min_low = 0.8 * 1 / self.ftl_conf['over_provisioning']
-        if self.ftl_conf['GC_low_threshold_ratio'] < min_low:
+        min_low = 0.8 * 1 / self.conf.over_provisioning
+        if self.conf.GC_low_threshold_ratio < min_low:
             low_watermark_ratio = min_low
             print 'Low watermark is reset to {}. It was {}'.format(
-                low_watermark_ratio, self.ftl_conf['GC_low_threshold_ratio'])
+                low_watermark_ratio, self.conf.GC_low_threshold_ratio)
         else:
-            low_watermark_ratio = self.ftl_conf['GC_low_threshold_ratio']
+            low_watermark_ratio = self.conf.GC_low_threshold_ratio
             print 'Using user defined low watermark', low_watermark_ratio
 
         self.low_watermark = low_watermark_ratio * \
@@ -1167,19 +1176,18 @@ class BlockInfo(object):
 
 class GarbageCollector(object):
     def __init__(self, confobj, flashobj, oobobj, block_pool, mapping_manager,
-        recorderobj, envobj, ftl_conf_key):
+        recorderobj, envobj):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
         self.block_pool = block_pool
         self.recorder = recorderobj
         self.env = envobj
-        self.ftl_conf = self.conf[ftl_conf_key]
 
         self.mapping_manager = mapping_manager
 
         self.decider = GcDecider(self.conf, self.block_pool,
-                self.recorder, ftl_conf_key)
+                self.recorder)
 
         self.victim_block_seqid = 0
 
@@ -1603,8 +1611,6 @@ class Dftl(object):
         self.recorder = recorderobj
         self.flash = flashcontrollerobj
         self.env = env
-        self.ftl_conf_key = "dftl"
-        self.ftl_conf = self.conf[self.ftl_conf_key]
 
         # bitmap has been created parent class
         # Change: we now don't put the bitmap here
@@ -1626,8 +1632,7 @@ class Dftl(object):
             flashobj = self.flash,
             oobobj=self.oob,
             recorderobj = recorderobj,
-            envobj = env,
-            ftl_conf_key = self.ftl_conf_key
+            envobj = env
             )
 
         self.garbage_collector = GarbageCollector(
@@ -1637,8 +1642,7 @@ class Dftl(object):
             block_pool = self.block_pool,
             mapping_manager = self.mapping_manager,
             recorderobj = recorderobj,
-            envobj = env,
-            ftl_conf_key = self.ftl_conf_key
+            envobj = env
             )
 
         # We should initialize Globaltranslationdirectory in Dftl
