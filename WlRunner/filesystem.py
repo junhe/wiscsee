@@ -4,33 +4,6 @@ import os
 import fshelper
 import utils
 
-class MountOption(dict):
-    """
-    This class abstract the option of file system mount command.
-    The initial motivation is to handle the difference, for example, between
-    data=ordered and delalloc. Note that one of them has format opt_name=value,
-    the other is just value.
-
-    It inherite dict class so json module can serialize it.
-    """
-    def __init__(self, opt_name, value, include_name):
-        """
-        opt_name: such as discard
-        value: such as discard, nodiscard
-        include_name: such as True, False
-        """
-        self['opt_name'] = opt_name
-        self['value'] = value
-        self['include_name'] = include_name
-
-    def __str__(self):
-        if self['include_name']:
-            prefix = self['opt_name'] + '='
-        else:
-            prefix = ''
-
-        return prefix + str(self['value'])
-
 class LoopDevice(object):
     def __init__(self, dev_path, tmpfs_mount_point, size_mb, img_file=None):
         self.dev_path = dev_path
