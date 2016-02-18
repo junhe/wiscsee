@@ -154,14 +154,6 @@ class Config(dict):
             'exact bytes. rem:', rem
         self['flash_num_blocks'] = nblocks
 
-    def dftl_n_mapping_entries_per_page(self):
-        "used by dftl, return the number of mapping entries in a page"
-        return self['flash_page_size'] \
-            / self['dftl']['global_mapping_entry_bytes']
-
-    def dftl_lpn_to_m_vpn(self, lpn):
-        n_entries_per_page = self.dftl_n_mapping_entries_per_page()
-        return lpn / n_entries_per_page
 
     def sec_ext_to_page_ext(self, sector, count):
         """
@@ -279,21 +271,6 @@ class Config(dict):
             "flash_num_blocks"      : 64,
             # "enable_e2e_test"       : False,
             "simulation_processor"  : 'e2e', # regular, extent
-
-            ############## Dftl ############
-            "dftl": {
-                # number of bytes per entry in global_mapping_table
-                "global_mapping_entry_bytes": 4, # 32 bits
-                "GC_threshold_ratio": 0.95,
-                "GC_low_threshold_ratio": 0.9,
-                "over_provisioning": 1.28,
-                "max_cmt_bytes": None, # cmt: cached mapping table
-                "tpftl": {
-                    "entry_node_bytes": 6, # page 8, TPFTL paper
-                    "page_node_bytes": 8,  # m_vpn, pointer to entrylist
-                    "selective_threshold": 3
-                }
-            },
 
             ############## NKFTL (SAST) ############
             "nkftl": {
@@ -598,11 +575,6 @@ class ConfigNewFlash(Config):
                 self['flash_config']['page_size']))
 
             return start_page, npages
-
-    def dftl_n_mapping_entries_per_page(self):
-        "used by dftl, return the number of mapping entries in a page"
-        return self['flash_config']['page_size'] \
-            / self['dftl']['global_mapping_entry_bytes']
 
     def sec_ext_to_page_ext(self, sector, count):
         """
