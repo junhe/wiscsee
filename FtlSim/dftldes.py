@@ -27,8 +27,7 @@ class Config(config.ConfigNCQFTL):
 
         local_itmes = {
             # number of bytes per entry in global_mapping_table
-            # "global_mapping_entry_bytes": 4, # 32 bits
-            "global_mapping_entry_bytes": 512, # 32 bits
+            "global_mapping_entry_bytes": 4, # 32 bits
             "GC_threshold_ratio": 0.95,
             "GC_low_threshold_ratio": 0.9,
             "over_provisioning": 1.28,
@@ -582,14 +581,14 @@ class CachedMappingTable(object):
             self.entry_bytes
         print 'cache max entries', self.max_n_entries, ',', \
             'for data of size', self.max_n_entries * self.conf.page_size, 'MB'
-        if not self.conf.n_mapping_entries_per_page < self.max_n_entries:
-            raise ValueError("Because we may read a whole translation page "\
-                    "cache. We need the cache to be large enough to hold "\
-                    "it. So we don't lost any entries. But now "\
-                    "n_mapping_entries_per_page {} is larger than "\
-                    "max_n_entries {}.".format(
-                    self.conf.n_mapping_entries_per_page,
-                    self.max_n_entries))
+        # if not self.conf.n_mapping_entries_per_page < self.max_n_entries:
+            # raise ValueError("Because we may read a whole translation page "\
+                    # "cache. We need the cache to be large enough to hold "\
+                    # "it. So we don't lost any entries. But now "\
+                    # "n_mapping_entries_per_page {} is larger than "\
+                    # "max_n_entries {}.".format(
+                    # self.conf.n_mapping_entries_per_page,
+                    # self.max_n_entries))
 
         # self.entries = {}
         # self.entries = lrulist.LruCache()
