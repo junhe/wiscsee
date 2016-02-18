@@ -22,29 +22,46 @@ DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
 random.seed(0)
 
 class Config(config.ConfigNCQFTL):
+    def __init__(self, confdic = None):
+        super(Config, self).__init__(confdic)
+
+        local_itmes = {
+            # number of bytes per entry in global_mapping_table
+            "global_mapping_entry_bytes": 4, # 32 bits
+            "GC_threshold_ratio": 0.95,
+            "GC_low_threshold_ratio": 0.9,
+            "over_provisioning": 1.28,
+            "max_cmt_bytes": None # cmt: cached mapping table
+            }
+        self.update(local_itmes)
+
     @property
     def n_mapping_entries_per_page(self):
-        return self.page_size / self['dftl']['global_mapping_entry_bytes']
+        return self.page_size / self['global_mapping_entry_bytes']
 
     @property
     def max_cmt_bytes(self):
-        return self['dftl']['max_cmt_bytes']
+        return self['max_cmt_bytes']
+
+    @max_cmt_bytes.setter
+    def max_cmt_bytes(self, value):
+        self['max_cmt_bytes'] = value
 
     @property
     def global_mapping_entry_bytes(self):
-        return self['dftl']['global_mapping_entry_bytes']
+        return self['global_mapping_entry_bytes']
 
     @property
     def over_provisioning(self):
-        return self['dftl']['over_provisioning']
+        return self['over_provisioning']
 
     @property
     def GC_threshold_ratio(self):
-        return self['dftl']['GC_threshold_ratio']
+        return self['GC_threshold_ratio']
 
     @property
     def GC_low_threshold_ratio(self):
-        return self['dftl']['GC_low_threshold_ratio']
+        return self['GC_low_threshold_ratio']
 
 
 class GlobalHelper(object):
