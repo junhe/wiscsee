@@ -816,14 +816,15 @@ def DftlextExp001_run():
     obj.main()
 
 class NCQExp(object):
-    def __init__(self, ncq_depth, n_channels, trafficsize, expname):
+    def __init__(self, ncq_depth, n_channels, trafficsize, expname, mode):
         self.ncq_depth = ncq_depth
         self.n_channels = n_channels
         self.trafficsize = trafficsize
         self.expname = expname
+        self.mode = mode
 
     def setup_config(self):
-        self.conf = config.ConfigNCQFTL()
+        self.conf = FtlSim.dftldes.Config()
         self.conf['SSDFramework']['ncq_depth'] = self.ncq_depth
 
         self.conf['flash_config']['page_size'] = 2048
@@ -853,7 +854,7 @@ class NCQExp(object):
         self.conf["lba_workload_configs"]["TestWorkloadFLEX3"] = {
                 "op_count": self.trafficsize/chunk_size,
                 "extent_size": chunk_size/page_size ,
-                "ops": ['write'], 'mode': 'random'}
+                "ops": ['write'], 'mode': self.mode}
                 # "ops": ['read', 'write', 'discard']}
         self.conf["age_workload_class"] = "NoOp"
 
@@ -863,7 +864,7 @@ class NCQExp(object):
 
         devsize_mb = 256
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf['dftl']['max_cmt_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 2))
         print "Current n_blocks_per_plane",\
             self.conf['flash_config']['n_blocks_per_plane']
@@ -880,15 +881,20 @@ class NCQExp(object):
         self.my_run()
 
 def run_ncqexp():
-    for ncq_depth in (1, 4, 8):
-        for n_channels in (1, 4, 8):
-            exp = NCQExp(
-                    ncq_depth = ncq_depth,
-                    n_channels = n_channels,
-                    trafficsize = 64*MB,
-                    expname = 'myexp5')
-            exp.test_main()
+    expname = raw_input("HELLO, you expname please:")
+    if expname == '':
+        expname = 'default-expname'
 
+    for ncq_depth in (1, 16, 32):
+        for n_channels in (32, 256):
+            for mode in ("random", "sequential"):
+                exp = NCQExp(
+                        ncq_depth = ncq_depth,
+                        n_channels = n_channels,
+                        trafficsize = 64*MB,
+                        expname = expname,
+                        mode = mode)
+                exp.test_main()
 
 def main(cmd_args):
     if cmd_args.git == True:
