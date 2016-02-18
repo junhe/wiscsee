@@ -1798,6 +1798,10 @@ class Dftl(ftlbuilder.FtlBuilder):
     def __init__(self, confobj, recorderobj, flashobj):
         super(Dftl, self).__init__(confobj, recorderobj, flashobj)
 
+        if not isinstance(confobj, Config):
+            raise TypeError("confobj is not Config. it is {}".
+               format(type(confobj).__name__))
+
         # bitmap has been created parent class
         # Change: we now don't put the bitmap here
         # self.bitmap.initialize()

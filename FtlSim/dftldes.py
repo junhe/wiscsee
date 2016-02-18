@@ -1624,6 +1624,10 @@ class Dftl(object):
     This class is a coordinator of other coordinators and data structures
     """
     def __init__(self, confobj, recorderobj, flashcontrollerobj, env):
+        if not isinstance(confobj, Config):
+            raise TypeError("confobj is not Config. it is {}".
+               format(type(confobj).__name__))
+
         self.conf = confobj
         self.recorder = recorderobj
         self.flash = flashcontrollerobj
