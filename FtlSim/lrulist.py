@@ -408,9 +408,6 @@ class SegmentedLruCache(object):
             self.hit(node)
         else:
             # create new
-            if self.is_full():
-                raise RuntimeError("Trying to add key-value to a full cache")
-
             node = Node(key = key, value = value)
             self.table[key] = node
             self.add_new_node(node)

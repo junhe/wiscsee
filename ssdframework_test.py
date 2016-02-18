@@ -379,6 +379,7 @@ class Test_load_translation_page(unittest.TestCase):
         self.conf['flash_config']['n_chips_per_package'] = 1
         self.conf['flash_config']['n_packages_per_channel'] = 1
         self.conf['flash_config']['n_channels_per_dev'] = 4
+        self.conf
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -421,10 +422,9 @@ class Test_load_translation_page(unittest.TestCase):
             ftl.mapping_manager.update_translation_page_on_flash(0,
                 new_mappings, ''))
 
-        entries = yield simulator.env.process(
-                ftl.mapping_manager.load_translation_page(0))
+        entries = ftl.mapping_manager.retrieve_translation_page(0)
 
-        for lpn in range(100):
+        for lpn in range(4):
             self.assertEqual(entries[lpn], lpn*1000)
 
     def my_run(self):

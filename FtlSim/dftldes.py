@@ -27,13 +27,25 @@ class Config(config.ConfigNCQFTL):
 
         local_itmes = {
             # number of bytes per entry in global_mapping_table
-            "global_mapping_entry_bytes": 4, # 32 bits
+            # "global_mapping_entry_bytes": 4, # 32 bits
+            "global_mapping_entry_bytes": 512, # 32 bits
             "GC_threshold_ratio": 0.95,
             "GC_low_threshold_ratio": 0.9,
             "over_provisioning": 1.28,
             "max_cmt_bytes": None # cmt: cached mapping table
             }
         self.update(local_itmes)
+
+        # self['keeping_all_tp_entries'] = False
+        self['keeping_all_tp_entries'] = True
+
+    @property
+    def keeping_all_tp_entries(self):
+        return self['keeping_all_tp_entries']
+
+    @keeping_all_tp_entries.setter
+    def keeping_all_tp_entries(self, value):
+        self['keeping_all_tp_entries'] = value
 
     @property
     def n_mapping_entries_per_page(self):
@@ -568,8 +580,16 @@ class CachedMappingTable(object):
         max_bytes = self.conf.max_cmt_bytes
         self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
             self.entry_bytes
-        print 'cache max entries', self.max_n_entries, \
-            self.max_n_entries * 4096 / 2**20, 'MB'
+        print 'cache max entries', self.max_n_entries, ',', \
+            'for data of size', self.max_n_entries * self.conf.page_size, 'MB'
+        if not self.conf.n_mapping_entries_per_page < self.max_n_entries:
+            raise ValueError("Because we may read a whole translation page "\
+                    "cache. We need the cache to be large enough to hold "\
+                    "it. So we don't lost any entries. But now "\
+                    "n_mapping_entries_per_page {} is larger than "\
+                    "max_n_entries {}.".format(
+                    self.conf.n_mapping_entries_per_page,
+                    self.max_n_entries))
 
         # self.entries = {}
         # self.entries = lrulist.LruCache()
@@ -599,6 +619,17 @@ class CachedMappingTable(object):
             self.entries[lpn] = \
                 CacheEntryData(lpn = lpn, ppn = ppn, dirty = False)
 
+    def add_new_entries_softly(self, mappings):
+        """
+        mappings {
+            lpn1: ppn1
+            lpn2: ppn2
+            lpn3: ppn3
+            }
+        """
+        for lpn, ppn in mappings.items():
+            self.add_new_entry_softly(lpn, ppn)
+
     def update_entry(self, lpn, ppn, dirty):
         "You may end up remove the old one"
         self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
@@ -624,8 +655,7 @@ class CachedMappingTable(object):
 
     def is_full(self):
         n = len(self.entries)
-        assert n <= self.max_n_entries
-        return n == self.max_n_entries
+        return n >= self.max_n_entries
 
     def __repr__(self):
         return repr(self.entries)
@@ -831,33 +861,32 @@ class MappingManager(object):
         yield self.env.process(
                 self.flash.rw_ppn_extent(m_ppn, 1, op = 'read'))
 
-        # Now we have all the entries of m_ppn in memory, we need to put
-        # the mapping of lpn->ppn to CMT
-        ppn = self.global_mapping_table.lpn_to_ppn(lpn)
-        self.cached_mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
-            dirty = False)
+        if self.conf.keeping_all_tp_entries == True:
+            m_vpn = self.directory.m_vpn_of_lpn(lpn)
+            entries = self.retrieve_translation_page(m_vpn)
+            self.cached_mapping_table.add_new_entries_softly(entries)
+            ppn = entries[lpn]
+        else:
+            # Now we have all the entries of m_ppn in memory, we need to put
+            # the mapping of lpn->ppn to CMT
+            ppn = self.global_mapping_table.lpn_to_ppn(lpn)
+            self.cached_mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
+                dirty = False)
 
         self.env.exit(ppn)
 
-    def load_translation_page(self, m_vpn):
+    def retrieve_translation_page(self, m_vpn):
         """
         m_vpn is mapping virtual page number
 
-        This function reads a translation page and returns the
-        mapping entries stored in the page.
+        This function does not actually read flash. It just gets the mappings
+        from global mapping table.
         """
-        m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn = m_vpn)
-
-        yield self.env.process(
-                self.flash.rw_ppn_extent(m_ppn, 1, op = 'read'))
-
-        # Now we suppose we have all the mapping entries stored in the
-        # translation page
         entries = {}
         for lpn in self.directory.m_vpn_to_lpns(m_vpn):
             entries[lpn] = self.global_mapping_table.lpn_to_ppn(lpn)
 
-        self.env.exit(entries)
+        return entries
 
     def initialize_mappings(self):
         """
