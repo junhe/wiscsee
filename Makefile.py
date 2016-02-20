@@ -996,7 +996,8 @@ def main(cmd_args):
     # test_nkftl()
     # test_dftl2_new_parallel_write()
     # test_fio()
-    DftlextExp001_run()
+    # DftlextExp001_run()
+    run_FIO_DFTLDES()
 
 def _main():
     parser = argparse.ArgumentParser(
