@@ -229,8 +229,8 @@ class DictByLinkedList(collections.MutableMapping):
 
 class LruCache(DictByLinkedList):
     """
-    geeting and setting a value will move it to the head of the list
-    It provides mapping interfaces like dict.
+    Geting and setting (recent use) a value will move it to the head
+    of the list. It provides mapping interfaces like dict.
     """
     def __getitem__(self, key):
         node = self.table[key]
@@ -261,7 +261,7 @@ class LruCache(DictByLinkedList):
         return self.linked_list.tail().key
 
     def most_recently_used_key(self):
-        return self.linked_list.tail().key
+        return self.linked_list.head().key
 
     def victim_key(self):
         return self.linked_list.tail().key
