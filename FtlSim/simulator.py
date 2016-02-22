@@ -28,12 +28,13 @@ class EventSimple(object):
         return "EventSimple PID:{} OP:{}".format(self.pid, self.operation)
 
 
-class Event(EventSimple):
-    def __init__(self, sector_size, pid, operation, offset, size):
+class Event(object):
+    def __init__(self, sector_size, pid, operation, offset, size, sync = True):
         self.pid = int(pid)
         self.operation = operation
         self.offset = int(offset)
         self.size = int(size)
+        self.sync = sync
 
         assert self.offset % sector_size == 0,\
             "offset {} is not aligned with sector size {}.".format(
@@ -47,11 +48,24 @@ class Event(EventSimple):
         self.sector_count = self.size / sector_size
 
     def __str__(self):
-        return "Event pid:{pid}, operation:{operation}, offset:{offset},"\
-                "size:{size}, sector:{sector}, sector_count:{sector_count}"\
+        return "Event pid:{pid}, operation:{operation}, offset:{offset}, "\
+                "size:{size}, sector:{sector}, sector_count:{sector_count}, "\
+                "sync:{sync}"\
                 .format(pid = self.pid, operation = self.operation,
                         offset = self.offset, size = self.size,
-                        sector = self.sector, sector_count = self.sector_count)
+                        sector = self.sector, sector_count = self.sector_count,
+                        sync = self.sync)
+
+class Event2(Event):
+    """
+    Add sync as attribute. It is a boolean.
+    """
+    def __init__(self, sector_size, pid, operation, offset, size, sync):
+        super(Event2, self).__init__(sector_size, pid, operation, offset, size)
+        self.sync = sync
+
+    def __str__(self):
+        return super(Event2, self).__str__() + ", sync: {}".format(self.sync)
 
 
 class Simulator(object):

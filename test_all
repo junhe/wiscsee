@@ -18,3 +18,6 @@ echo
 echo ======= recorder_test =======
 sudo python ./recorder_test.py
 
+echo 
+echo ======= lrulist_test =======
+sudo python ./lrulist_test.py

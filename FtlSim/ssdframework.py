@@ -12,6 +12,8 @@ import bidict
 
 import config
 from commons import *
+from ftlsim_commons import *
+import datacache
 import flash
 import flashcontroller
 import ftlbuilder
@@ -54,6 +56,9 @@ class SSDFramework(object):
 
         self.flash_controller = flashcontroller.controller.Controller2(
                 self.env, self.conf, self.recorder)
+
+        self.datacache = datacache.DataCache(
+            self.conf['SSDFramework']['data_cache_max_n_entries'], self.env)
 
         if self.conf['ftl_type'] == 'dftldes':
             self.realftl = dftldes.Dftl(self.conf, self.recorder,
@@ -98,19 +103,50 @@ class SSDFramework(object):
         all_ctrl_procs = simpy.events.AllOf(self.env, ctrl_procs)
         yield all_ctrl_procs
 
+    def data_cache_process(self, pid):
+        while True:
+            host_event = yield self.ncq.queue.get()
+
+            if host_event.operation == 'end_process':
+                break
+
+            with self.datacache.resource.request() as dcache_request:
+                yield dcache_request
+                print str(host_event)
+
+                lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(
+                        host_event.sector, host_event.sector_count)
+
+                subextents = self.datacache.split_extent(lpn_start, lpn_count)
+                datacache.display_extents(subextents)
+
+                for subextent in subextents:
+                    ssd_req = SSDRequest(
+                            subextent.lpn_start,
+                            subextent.lpn_count,
+                            subextent.in_cache,
+                            host_event.operation)
+                    print ssd_req
+
+    def sub_ext_process(self, ssd_request):
+        pass
+
+
     def process(self, pid):
         req_index = 0
         while True:
-            host_req = yield self.ncq.queue.get()
-            # print "At time {} [{}] got request ({}) {}".format(self.env.now,
-                    # pid, req_index, str(host_req))
+            host_event = yield self.ncq.queue.get()
 
-            if host_req.operation == 'end_process':
+            if host_event.operation == 'end_process':
                 break
+            elif not host_event.operation in ('read', 'write', 'discard'):
+                continue
+
+            ssd_req = create_ssd_request(self.conf, host_event)
 
             s = self.env.now
             flash_reqs = yield self.env.process(
-                    self.realftl.translate(host_req, pid) )
+                    self.realftl.translate(ssd_req, pid) )
             e = self.env.now
             # print "Translation took", e - s
             self.recorder.add_to_timer("translation_time-w_wait", pid,
@@ -138,6 +174,7 @@ class SSDFramework(object):
         procs = []
         for i in range(self.conf['SSDFramework']['ncq_depth']):
             p = self.env.process( self.process(i) )
+            # p = self.env.process( self.data_cache_process(i) )
             procs.append(p)
         e = simpy.events.AllOf(self.env, procs)
         yield e

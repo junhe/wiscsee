@@ -647,7 +647,8 @@ class ConfigNCQFTL(ConfigNewFlash):
     def __init__(self, confdic = None):
         super(ConfigNCQFTL, self).__init__(confdic)
 
-        self['SSDFramework'] = {'ncq_depth': 32}
+        self['SSDFramework'] = {'ncq_depth': 32,
+                                'data_cache_max_n_entries': 4096}
 
 
 
