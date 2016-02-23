@@ -67,7 +67,7 @@ class SSDFramework(object):
             raise RuntimeError("ftl_type {} is not supported.".format(
                 self.conf['ftl_type']))
 
-        self.realftl.recorder.enable()
+        self.recorder.disable()
 
     def get_direct_mapped_flash_requests(self, host_req):
         """
@@ -122,6 +122,10 @@ class SSDFramework(object):
 
             if host_event.operation == 'end_process':
                 break
+            elif host_event.operation == 'enable_recorder':
+                self.realftl.recorder.enable()
+                self.workload_start_time = self.env.now
+                self.recorder.add_to_timer("workload_start_time", 0, self.env.now)
             elif not host_event.operation in ('read', 'write', 'discard'):
                 continue
 
@@ -163,6 +167,8 @@ class SSDFramework(object):
         yield e
         print "++++++++++++++++++++++++END OF FTL+++++++++++++++++++++++++++"
         print "Time:", float(self.env.now)
+        print "Workload time", float(self.env.now - self.workload_start_time) / SEC
         self.recorder.add_to_timer("simulation_time", 0, self.env.now)
+
 
 

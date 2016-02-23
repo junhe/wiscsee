@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import copy
+import collections
 import itertools
 import random
 import argparse
@@ -815,34 +816,55 @@ def DftlextExp001_run():
     obj = DftlextExp001()
     obj.main()
 
+def chain_items_as_str(iterator):
+    return '.'.join([str(x) for x in iterator])
+
+def get_expname():
+    ret = raw_input("Enter expname (default-expname):")
+    if ret == "":
+        return "default-expname"
+    else:
+        return ret
 
 class FIO_DFTLDES(object):
-    def __init__(self):
+    def __init__(self, parameters):
         # Get default setting
         self.conf = FtlSim.dftldes.Config()
         self.devsize_mb = 256
+        self.parameters = parameters
+        print self.parameters
 
     def setup_environment(self):
-        metadata_dic = choose_exp_metadata(self.conf, interactive = True)
-        self.conf.update(metadata_dic)
+        set_exp_metadata(self.conf, save_data = True,
+                expname = self.parameters.expname,
+                subexpname = chain_items_as_str(self.parameters))
 
         self.conf['enable_blktrace'] = True
         self.conf['enable_simulation'] = True
 
-        self.conf['filesystem'] = 'ext4'
+        self.conf['filesystem'] = self.parameters.filesystem
         self.conf['loop_dev_size_mb'] = self.devsize_mb
 
         self.conf['device_path'] = "/dev/loop0"
         self.conf['device_type'] = "loop" # loop, rea'
 
-        self.conf['flash_config']['page_size'] = 1024
+        self.conf['flash_config']['page_size'] = 2048
+        self.conf['flash_config']['n_pages_per_block'] = 64
+        # left to be set later
+        self.conf['flash_config']['n_blocks_per_plane'] = None
+
+        self.conf['flash_config']['n_planes_per_chip'] = 1
+        self.conf['flash_config']['n_chips_per_package'] = 1
+        self.conf['flash_config']['n_packages_per_channel'] = 1
+        self.conf['flash_config']['n_channels_per_dev'] = 32
 
         self.conf['enable_blktrace'] = True
         self.conf['enable_simulation'] = True
 
     def setup_workload(self):
         filesize = 64*MB
-        job_desc = testfio.build_one_run(pattern_tuple = ['randwrite'],
+        job_desc = testfio.build_one_run(
+                pattern_tuple = [self.parameters.pattern],
                 bs = 32*KB, usefs = True, conf = self.conf,
                 traffic_size = 64*MB,
                 file_size = filesize,
@@ -859,15 +881,13 @@ class FIO_DFTLDES(object):
         self.conf["workload_class"] = "FIO"
         self.conf["age_workload_class"] = "NoOp"
 
-
         self.conf['wrap_by_perf'] = False
 
     def setup_ftl(self):
         self.conf['ftl_type'] = 'dftldes'
         self.conf['simulator_class'] = 'SimulatorDES'
 
-        self.conf['flash_config']['n_channels_per_dev'] = 8
-        self.conf['SSDFramework']['ncq_depth'] = 4
+        self.conf['SSDFramework']['ncq_depth'] = 16
 
         entries_need = int(self.devsize_mb * 2**20 * 0.03 / self.conf.page_size)
         self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
@@ -883,9 +903,16 @@ class FIO_DFTLDES(object):
         self.setup_ftl()
         self.run()
 
+
 def run_FIO_DFTLDES():
-    obj = FIO_DFTLDES()
-    obj.main()
+    Parameters = collections.namedtuple("Parameters",
+            "filesystem expname pattern")
+    expname = get_expname()
+    for filesystem in ('ext4'):
+        for pattern in ('write'):
+            obj = FIO_DFTLDES(Parameters(filesystem = filesystem,
+                expname = expname, pattern = pattern))
+            obj.main()
 
 
 class NCQExp(object):

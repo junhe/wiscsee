@@ -39,7 +39,8 @@ def build_one_run(pattern_tuple, bs, usefs, conf, traffic_size, file_size,
                             'direct'    : 1,
                             'iodepth'   :1,
                             'bs'        : bs,
-                            'bssplit'   : bssplit
+                            'bssplit'   : bssplit,
+                            'fallocate' : 'none'
                             }
                 }
     else:

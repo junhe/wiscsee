@@ -131,6 +131,7 @@ class Recorder(object):
                 collections.Counter())
         counter_dict[item_name] += addition
 
+    @switchable
     def add_to_timer(self, counter_set_name, item_name, addition):
         self.add_to_general_accumulater(counter_set_name, item_name, addition)
 
