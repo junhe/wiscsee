@@ -33,5 +33,6 @@ sudo pip install bidict
 
 sudo apt-get install -y blktrace
 
+sudo pip install simpy
 
 
