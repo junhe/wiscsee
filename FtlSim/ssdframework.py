@@ -103,56 +103,6 @@ class SSDFramework(object):
         all_ctrl_procs = simpy.events.AllOf(self.env, ctrl_procs)
         yield all_ctrl_procs
 
-    def data_cache_process(self, pid):
-        while True:
-            host_event = yield self.ncq.queue.get()
-
-            if host_event.operation == 'end_process':
-                break
-            elif not host_event.operation in ('read', 'write', 'discard'):
-                continue
-
-            ssd_req = create_ssd_request(self.conf, host_event)
-
-            with self.datacache.resource.request() as dcache_request:
-                yield dcache_request
-                print str(ssd_req)
-
-                subextents = self.datacache.split_extent(
-                    ssd_req.lpn_start, ssd_req.lpn_count)
-                ssd_requests = self.extent_to_request_list(subextents,
-                        host_event.operation)
-
-                # what you have to do with the data cache lock
-                requests_to_do = []
-                for req in ssd_requests:
-                    if req.operation == 'read' and req.in_cache == True:
-                        # we assume we can tag a page with its lpn
-                        # and send it to host
-                        for lpn in req.lpn_iter():
-                            # just touch it
-                            self.datacache.get_entry(lpn)
-                        continue
-                    elif req.operation == 'write' and req.in_cache == True:
-                        for lpn in req.lpn_iter():
-                            self.datacache.update_entry(lpn = lpn, data = None,
-                                dirty = True)
-                    elif req.operation == 'write' and req.in_cache == False:
-                        pass
-
-
-            # Note we don't have datacahe lock here
-            procs = []
-            for subextent in subextents:
-                ssd_req = SSDRequest(
-                        subextent.lpn_start,
-                        subextent.lpn_count,
-                        subextent.in_cache,
-                        host_event.operation)
-                print ssd_req
-                p = self.env.process(sub_ext_process(ssd_req))
-                procs.append(p)
-
     def extent_to_request_list(self, subextents, operation):
         req_list = []
         for subextent in subextents:
