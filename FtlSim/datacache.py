@@ -26,7 +26,20 @@ class DataCache(object):
         self.resource = simpy.Resource(self.env, capacity = 1)
 
     def evict_n_entries(self, n):
-        pass
+        """
+        Find n victims and remove them from lrucache
+        It returns a list of
+         [ (lpn, entry), .... ]
+        """
+        victims = []
+        while len(self.lrucache) > 0 and n > 0:
+            lpn = self.lrucache.victim_key()
+            victims.append( (lpn, self.get_entry(lpn)) )
+            del self.lrucache[lpn]
+
+            n -= 1
+
+        return victims
 
     def has_lpn(self, lpn):
         return self.lrucache.has_key(lpn)
@@ -35,7 +48,7 @@ class DataCache(object):
         self.lrucache[lpn] = Entry(data, dirty)
 
     def get_entry(self, lpn):
-        return self.lrucache[lpn].values()
+        return self.lrucache[lpn]
 
     def update_entry(self, lpn, data, dirty):
         self.add_entry(lpn, data, dirty)
