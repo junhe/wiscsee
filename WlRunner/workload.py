@@ -59,10 +59,10 @@ class FIONEW(Workload):
         self.resultpath = os.path.join(self.conf['result_dir'],
             'fio.report.txt')
 
-        if not isinstance(self.workload_conf, fio.JobConfig):
+        if not isinstance(self.workload_conf['ini'], fio.JobConfig):
             raise TypeError(
                 "class {} is not of type class {}".
-                format(type(self.workload_conf).__name__,
+                format(type(self.workload_conf['ini']).__name__,
                     fio.JobConfig.__name__
                     ))
 
@@ -72,7 +72,7 @@ class FIONEW(Workload):
         utils.table_to_file(table, self.resultpath + '.parsed')
 
     def run(self):
-        self.workload_conf.save(self.jobpath)
+        self.workload_conf['ini'].save(self.jobpath)
 
         utils.prepare_dir_for_path(self.resultpath)
         fio_cmd = "fio {} --output-format=json --output {}".format(

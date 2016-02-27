@@ -19,11 +19,14 @@ class TestFio(unittest.TestCase):
 
     def setup_workload(self):
         self.fio_job_conf = WlRunner.fio.JobConfig()
-        self.conf['fio_job_conf'] = self.fio_job_conf.as_ordered_dict()
-
         self.fio_job_conf.append_section("global", {'size': '8kb'})
         self.fio_job_conf.append_section("job1",
                 {'rw': 'write', 'filename': '/tmp/tmp.fio.file'})
+
+        self.conf['fio_job_conf'] = {
+            'ini': self.fio_job_conf.as_ordered_dict(),
+            'runner': {}
+            }
 
     def setup_ftl(self):
         pass
