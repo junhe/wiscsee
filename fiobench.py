@@ -30,9 +30,6 @@ def get_fio_conf():
             }
         )]
 
-
-
-
 def stress_n_processes():
     class StressNProcesses(object):
         def __init__(self):
@@ -40,29 +37,47 @@ def stress_n_processes():
             self.conf = config.ConfigNewFlash()
 
         def setup_environment(self):
-            pass
+            self.conf['device_path'] = "/dev/loop0"
+            self.conf['device_type'] = "loop" # loop, real
+            self.conf['loop_dev_size_mb'] = 256
+
+            self.conf['use_fs'] = True
+            self.conf['filesystem'] = 'ext4'
+            self.conf["n_online_cpus"] = 'all'
+
+            self.conf['enable_blktrace'] = False
+            self.conf['enable_simulation'] = False
+            self.conf['workload_class'] = 'FIONEW'
 
         def setup_workload(self):
             tmp_job_conf = [
                 ("job1", {
                     'ioengine'  : 'libaio',
-                    'io_size'   : '1mb',
                     'size'      : '1mb',
-                    'filename'  : '/tmp/sdc',
+                    'directory'  : self.conf['fs_mount_point'],
                     'direct'    : 1,
                     'iodepth'   : 1,
-                    'bs'        : '32kb',
+                    'bs'        : '4kb',
                     'fallocate' : 'none',
-                    'numjobs'   : 2
+                    'numjobs'   : 10,
+                    'group_reporting': WlRunner.fio.NOVALUE
                     }
                 )]
             self.conf['fio_job_conf'] = {
-                    'ini': WlRunner.fio.JobConfig(tmp_job_conf)
+                    'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                    'runner': {
+                        'to_json': False
+                    }
                 }
             self.conf['workload_conf_key'] = 'fio_job_conf'
 
         def setup_ftl(self):
             pass
+
+        def run_fio(self):
+            workload = WlRunner.workload.FIONEW(self.conf,
+                    workload_conf_key = self.conf['workload_conf_key'])
+            workload.run()
 
         def run(self):
             set_exp_metadata(self.conf, save_data = True,
@@ -70,9 +85,8 @@ def stress_n_processes():
                     subexpname = 'testsubexp')
             runtime_update(self.conf)
 
-            workload = WlRunner.workload.FIONEW(self.conf,
-                    workload_conf_key = 'fio_job_conf')
-            workload.run()
+            # self.run_fio()
+            workflow(self.conf)
 
         def main(self):
             self.setup_environment()

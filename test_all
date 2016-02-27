@@ -27,3 +27,6 @@ echo
 echo ======= fiounittest_test =======
 sudo python ./fiounittest_test.py
 
+echo 
+echo ======= misc_test =======
+sudo python ./misc_test.py
