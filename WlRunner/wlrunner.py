@@ -172,7 +172,7 @@ class WorkloadRunner(object):
             return self.run_without_blktrace()
 
     def run_without_blktrace(self):
-        cpuhandler.enable_n_cpus(self.conf['n_online_cpus'])
+        cpuhandler.set_cpus(self.conf['n_online_cpus'])
 
         self.prepare_fs()
         self.build_fs()
@@ -186,7 +186,7 @@ class WorkloadRunner(object):
     def run_with_blktrace(self):
         try:
             # Set number of CPUs
-            cpuhandler.enable_n_cpus(self.conf['n_online_cpus'])
+            cpuhandler.set_cpus(self.conf['n_online_cpus'])
 
             self.prepare_fs()
 

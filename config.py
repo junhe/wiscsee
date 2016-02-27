@@ -398,7 +398,7 @@ class Config(dict):
 
             ############# OS #####################
             "linux_version": utils.linux_kernel_version(),
-            "n_online_cpus": 1
+            "n_online_cpus": 'all'
         }
 
         return confdic

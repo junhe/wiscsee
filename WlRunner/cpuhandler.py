@@ -57,13 +57,23 @@ def switch_cpu(cpuid, mode):
 
     return
 
+def enable_all_cpus():
+    possible_cpus = get_possible_cpus()
+    enable_n_cpus(len(possible_cpus))
+
+def set_cpus(n):
+    if n == 'NOOP' or n == None:
+        return
+
+    if n == 'all':
+        enable_all_cpus()
+
+    enable_n_cpus(n)
+
 def enable_n_cpus(n):
     """
     Enable n CPUs
     """
-    if n == 'NOOP':
-        return
-
     online_cpus = get_online_cpuids()
 
     n_online = len(online_cpus)
@@ -90,11 +100,5 @@ def enable_n_cpus(n):
 
     online_cpus = get_online_cpuids()
     assert len(online_cpus) == n
-
-def main():
-    enable_n_cpus(1)
-
-if __name__ == '__main__':
-    main()
 
 
