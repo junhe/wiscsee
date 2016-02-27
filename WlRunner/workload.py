@@ -66,6 +66,8 @@ class FIONEW(Workload):
                     fio.JobConfig.__name__
                     ))
 
+        self.to_json = self.workload_conf['runner'].get('to_json', True)
+
     def parse_results(self):
         d = utils.load_json(self.resultpath)
         table = fio.parse_results(d)
@@ -74,9 +76,13 @@ class FIONEW(Workload):
     def run(self):
         self.workload_conf['ini'].save(self.jobpath)
 
-        utils.prepare_dir_for_path(self.resultpath)
-        fio_cmd = "fio {} --output-format=json --output {}".format(
-            self.jobpath, self.resultpath)
+
+        if self.to_json == True:
+            utils.prepare_dir_for_path(self.resultpath)
+            fio_cmd = "fio {} --output-format=json --output {}".format(
+                self.jobpath, self.resultpath)
+        else:
+            fio_cmd = "fio {}".format(self.jobpath)
 
         if self.conf['wrap_by_perf'] == True:
             perf.flamegraph_wrap(perf_path = self.conf['perf']['perf_path'],
@@ -84,10 +90,10 @@ class FIONEW(Workload):
                     result_dir = self.conf['result_dir'],
                     flamegraph_dir = self.conf['perf']['flamegraph_dir'])
         else:
-            utils.shcmd("fio {} --output-format=json --output {}".format(self.jobpath,
-                self.resultpath))
+            utils.shcmd(fio_cmd)
 
-        self.parse_results()
+        if self.to_json:
+            self.parse_results()
 
     def stop(self):
         pass
