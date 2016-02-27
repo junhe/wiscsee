@@ -21,3 +21,9 @@ sudo python ./recorder_test.py
 echo 
 echo ======= lrulist_test =======
 sudo python ./lrulist_test.py
+
+
+echo 
+echo ======= fiounittest_test =======
+sudo python ./fiounittest_test.py
+
