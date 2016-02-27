@@ -45,8 +45,6 @@ def stress_n_processes():
             self.conf['filesystem'] = 'ext4'
             self.conf["n_online_cpus"] = 'all'
 
-            self.conf['enable_blktrace'] = False
-            self.conf['enable_simulation'] = False
             self.conf['workload_class'] = 'FIONEW'
 
         def setup_workload(self):
@@ -72,7 +70,8 @@ def stress_n_processes():
             self.conf['workload_conf_key'] = 'fio_job_conf'
 
         def setup_ftl(self):
-            pass
+            self.conf['enable_blktrace'] = False
+            self.conf['enable_simulation'] = False
 
         def run_fio(self):
             workload = WlRunner.workload.FIONEW(self.conf,
