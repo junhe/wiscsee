@@ -67,6 +67,7 @@ def set_cpus(n):
 
     if n == 'all':
         enable_all_cpus()
+        return
 
     enable_n_cpus(n)
 
