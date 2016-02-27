@@ -28,7 +28,6 @@ class Workload(object):
                 format(type(confobj).__name__))
 
         self.conf = confobj
-        print '>>>>>>>>>>>>>>>>',workload_conf_key
         if workload_conf_key != None and workload_conf_key != 'None':
             self.workload_conf = confobj[workload_conf_key]
 
@@ -50,35 +49,22 @@ class NoOp(Workload):
     def stop(self):
         pass
 
-class FIO(Workload):
-    """
-    """
+class FIONEW(Workload):
     def __init__(self, confobj, workload_conf_key = None):
-        super(FIO, self).__init__(confobj, workload_conf_key)
+        super(FIONEW, self).__init__(confobj, workload_conf_key)
 
         self.jobpath = os.path.join(self.conf['result_dir'],
             'fio_job_description.ini')
+
         self.resultpath = os.path.join(self.conf['result_dir'],
             'fio.report.txt')
 
-        if not isinstance(self.workload_conf, fio.JobDescription):
+        if not isinstance(self.workload_conf, fio.JobConfig):
             raise TypeError(
-                "workload_conf({}({})) is not of type class JobDescription".
-                format(type(confobj).__name__))
-
-    def create_job_file(self):
-        """
-        self.workload_conf should have the format of:
-            [
-             {'global': { 'attr1':value1,
-                          'attr2':value2}},
-             {'section1': { 'attr1': value1,
-                            'attr2': value2},
-             ...
-            ]
-        """
-        job = self.workload_conf
-        job.save(self.jobpath)
+                "class {} is not of type class {}".
+                format(type(self.workload_conf).__name__,
+                    fio.JobConfig.__name__
+                    ))
 
     def parse_results(self):
         d = utils.load_json(self.resultpath)
@@ -86,10 +72,9 @@ class FIO(Workload):
         utils.table_to_file(table, self.resultpath + '.parsed')
 
     def run(self):
-        self.create_job_file()
+        self.workload_conf.save(self.jobpath)
 
         utils.prepare_dir_for_path(self.resultpath)
-        print str(self.workload_conf)
         fio_cmd = "fio {} --output-format=json --output {}".format(
             self.jobpath, self.resultpath)
 
@@ -106,6 +91,7 @@ class FIO(Workload):
 
     def stop(self):
         pass
+
 
 class WlMultiWriters(Workload):
     """
