@@ -228,7 +228,6 @@ def test_fio():
         conf['fio_para'] = para
         # conf['device_path'] = get_dev_by_hostname()
         conf['device_path'] = "/dev/loop0"
-        conf['device_type'] = "loop" # loop, real
 
         conf['simulator_class'] = 'SimulatorNonDESe2e'
         conf['ftl_type'] = "dftlext"
@@ -362,7 +361,6 @@ class DftlextExp001(Experiment):
         self.conf['dev_size_mb'] = self.devsize_mb
 
         self.conf['device_path'] = "/dev/loop0"
-        self.conf['device_type'] = "loop" # loop, rea'
 
         self.conf['flash_config']['page_size'] = 1024
 
@@ -437,7 +435,6 @@ class FIO_DFTLDES(object):
         self.conf['dev_size_mb'] = self.devsize_mb
 
         self.conf['device_path'] = "/dev/loop0"
-        self.conf['device_type'] = "loop" # loop, rea'
 
         self.conf['flash_config']['page_size'] = 2048
         self.conf['flash_config']['n_pages_per_block'] = 64

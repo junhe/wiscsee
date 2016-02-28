@@ -303,9 +303,7 @@ class Config(dict):
             "tmpfs_mount_point"     : "/mnt/tmpfs",
 
             # "device_path"           : "/dev/sdc1", # or sth. like /dev/sdc1
-            # "device_type"           : "real", # loop, real
             "device_path"           : "/dev/loop0", # or sth. like /dev/sdc1
-            "device_type"           : "loop", # loop, real
 
             "enable_blktrace"       : False,
 
@@ -414,6 +412,13 @@ class Config(dict):
     @property
     def n_blocks_per_dev(self):
         return self['flash_num_blocks']
+
+    @property
+    def device_type(self):
+        if self['device_path'].startswith("/dev/loop"):
+            return 'loop'
+        else:
+            return 'real'
 
 
 class ConfigNewFlash(Config):

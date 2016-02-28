@@ -38,8 +38,7 @@ def stress_n_processes():
             self.para = para
 
         def setup_environment(self):
-            self.conf['device_path'] = "/dev/loop0"
-            self.conf['device_type'] = "loop" # loop, real
+            self.conf['device_path'] = "/dev/sdc1"
             self.conf['dev_size_mb'] = 256
 
             self.conf['use_fs'] = True

@@ -65,7 +65,7 @@ class WorkloadRunner(object):
                 format(type(confobj).__name__()))
         self.conf = confobj
 
-        if self.conf['device_type'] == 'loop':
+        if self.conf.device_type == 'loop':
             # create loop dev object, it is not physically created yet
             self.loopdev = filesystem.LoopDevice(
                 dev_path = self.conf['device_path'],
@@ -124,9 +124,9 @@ class WorkloadRunner(object):
 
     def prepare_fs(self):
         # Prepare file systems
-        if self.conf['device_type'] == 'loop':
+        if self.conf.device_type == 'loop':
             self.loopdev.create()
-        elif self.conf['device_type'] == 'real':
+        elif self.conf.device_type == 'real':
             # umount file system if it is mounted
             if fshelper.isMounted(self.conf['fs_mount_point']):
                 utils.shcmd(
