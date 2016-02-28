@@ -25,6 +25,7 @@ import testfio
 import FtlSim
 import WlRunner
 from utils import *
+from commons import *
 
 class Experiment(object):
     def __init__(self):

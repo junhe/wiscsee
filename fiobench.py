@@ -32,9 +32,10 @@ def get_fio_conf():
 
 def stress_n_processes():
     class StressNProcesses(object):
-        def __init__(self):
+        def __init__(self, para):
             # Get default setting
             self.conf = config.ConfigNewFlash()
+            self.para = para
 
         def setup_environment(self):
             self.conf['device_path'] = "/dev/loop0"
@@ -42,7 +43,7 @@ def stress_n_processes():
             self.conf['loop_dev_size_mb'] = 256
 
             self.conf['use_fs'] = True
-            self.conf['filesystem'] = 'ext4'
+            self.conf['filesystem'] = self.para.filesystem
             self.conf["n_online_cpus"] = 'all'
 
             self.conf['workload_class'] = 'FIONEW'
@@ -54,10 +55,10 @@ def stress_n_processes():
                     'size'      : '1mb',
                     'directory'  : self.conf['fs_mount_point'],
                     'direct'    : 1,
-                    'iodepth'   : 1,
-                    'bs'        : '4kb',
+                    'iodepth'   : self.para.iodepth,
+                    'bs'        : self.para.bs,
                     'fallocate' : 'none',
-                    'numjobs'   : 10,
+                    'numjobs'   : self.para.numjobs,
                     'group_reporting': WlRunner.fio.NOVALUE
                     }
                 )]
@@ -93,7 +94,12 @@ def stress_n_processes():
             self.setup_ftl()
             self.run()
 
-    obj = StressNProcesses()
+    Parameters = collections.namedtuple("Parameters",
+            "filesystem, numjobs, bs, iodepth")
+
+    obj = StressNProcesses( Parameters(
+        filesystem = 'ext4', numjobs = 3, bs = 4*KB, iodepth = 1
+        ))
     obj.main()
 
 def main(cmd_args):
