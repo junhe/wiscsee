@@ -70,7 +70,7 @@ class WorkloadRunner(object):
             self.loopdev = filesystem.LoopDevice(
                 dev_path = self.conf['device_path'],
                 tmpfs_mount_point = self.conf['tmpfs_mount_point'],
-                size_mb = self.conf['loop_dev_size_mb'])
+                size_mb = self.conf['dev_size_mb'])
 
         # create file system object, it is not physically created
         fs = self.conf['filesystem']
@@ -144,7 +144,7 @@ class WorkloadRunner(object):
             #    [0 0 0]
             # sdc 1 2 3
             part_sizes = [0 for i in range(dev_id)]
-            size = self.conf['loop_dev_size_mb'] * 2**20
+            size = self.conf['dev_size_mb'] * 2**20
             part_sizes[dev_id - 1] = size
             fshelper.partition_disk(base_dev_path, part_sizes)
 

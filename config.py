@@ -299,7 +299,7 @@ class Config(dict):
 
             ############## For WlRunner ########
             # for loop dev
-            "loop_dev_size_mb"      : None,
+            "dev_size_mb"      : None,
             "tmpfs_mount_point"     : "/mnt/tmpfs",
 
             # "device_path"           : "/dev/sdc1", # or sth. like /dev/sdc1

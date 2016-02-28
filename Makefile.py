@@ -260,7 +260,7 @@ def test_fio():
                 disable_ext4_journal(conf)
                 # enable_ext4_journal(conf)
 
-            conf['loop_dev_size_mb'] = para['dev_mb']
+            conf['dev_size_mb'] = para['dev_mb']
             runtime_update(conf)
             workflow(conf)
         else:
@@ -359,7 +359,7 @@ class DftlextExp001(Experiment):
         self.conf['enable_simulation'] = True
 
         self.conf['filesystem'] = 'ext4'
-        self.conf['loop_dev_size_mb'] = self.devsize_mb
+        self.conf['dev_size_mb'] = self.devsize_mb
 
         self.conf['device_path'] = "/dev/loop0"
         self.conf['device_type'] = "loop" # loop, rea'
@@ -434,7 +434,7 @@ class FIO_DFTLDES(object):
         self.conf['enable_simulation'] = True
 
         self.conf['filesystem'] = self.parameters.filesystem
-        self.conf['loop_dev_size_mb'] = self.devsize_mb
+        self.conf['dev_size_mb'] = self.devsize_mb
 
         self.conf['device_path'] = "/dev/loop0"
         self.conf['device_type'] = "loop" # loop, rea'
