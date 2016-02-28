@@ -81,8 +81,8 @@ def stress_n_processes():
 
         def run(self):
             set_exp_metadata(self.conf, save_data = True,
-                    expname = 'testexp',
-                    subexpname = 'testsubexp')
+                    expname = self.para.expname,
+                    subexpname = chain_items_as_str(self.para))
             runtime_update(self.conf)
 
             # self.run_fio()
@@ -95,10 +95,11 @@ def stress_n_processes():
             self.run()
 
     Parameters = collections.namedtuple("Parameters",
-            "filesystem, numjobs, bs, iodepth")
+            "filesystem, numjobs, bs, iodepth, expname")
 
     obj = StressNProcesses( Parameters(
-        filesystem = 'ext4', numjobs = 3, bs = 4*KB, iodepth = 1
+        filesystem = 'ext4', numjobs = 3, bs = 4*KB, iodepth = 1,
+        expname = get_expname()
         ))
     obj.main()
 
