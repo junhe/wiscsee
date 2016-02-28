@@ -31,6 +31,9 @@ def get_fio_conf():
         )]
 
 def stress_n_processes():
+    """
+    stress the number of processes on file system
+    """
     class StressNProcesses(object):
         def __init__(self, para):
             # Get default setting
@@ -40,7 +43,7 @@ def stress_n_processes():
 
         def setup_environment(self):
             self.conf['device_path'] = "/dev/sdc1"
-            self.conf['dev_size_mb'] = 256
+            self.conf['dev_size_mb'] = 16*GB/MB
 
             self.conf['use_fs'] = True
             self.conf['filesystem'] = self.para.filesystem
@@ -52,20 +55,21 @@ def stress_n_processes():
             tmp_job_conf = [
                 ("job1", {
                     'ioengine'  : 'libaio',
-                    'size'      : '1mb',
+                    'size'      : self.para.size,
                     'directory'  : self.conf['fs_mount_point'],
                     'direct'    : 1,
                     'iodepth'   : self.para.iodepth,
                     'bs'        : self.para.bs,
                     'fallocate' : 'none',
                     'numjobs'   : self.para.numjobs,
-                    'group_reporting': WlRunner.fio.NOVALUE
+                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'rw'        : 'write'
                     }
                 )]
             self.conf['fio_job_conf'] = {
                     'ini': WlRunner.fio.JobConfig(tmp_job_conf),
                     'runner': {
-                        'to_json': False
+                        'to_json': True
                     }
                 }
             self.conf['workload_conf_key'] = 'fio_job_conf'
@@ -95,13 +99,20 @@ def stress_n_processes():
             self.run()
 
     Parameters = collections.namedtuple("Parameters",
-            "filesystem, numjobs, bs, iodepth, expname")
+            "filesystem, numjobs, bs, iodepth, expname, size")
+    expname = get_expname()
 
-    obj = StressNProcesses( Parameters(
-        filesystem = 'ext4', numjobs = 3, bs = 4*KB, iodepth = 1,
-        expname = get_expname()
-        ))
-    obj.main()
+    total_size = 1*GB
+    for numjobs in [1, 4, 16]:
+        for bs in [4*KB, 128*KB]:
+            for iodepth in [16]:
+                for filesystem in ['ext4', 'f2fs']:
+                    obj = StressNProcesses( Parameters(
+                        filesystem = filesystem, numjobs = numjobs,
+                        bs = bs, iodepth = iodepth,
+                        expname = expname, size = total_size / numjobs
+                        ))
+                    obj.main()
 
 def main(cmd_args):
     if cmd_args.git == True:
