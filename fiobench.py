@@ -36,6 +36,7 @@ def stress_n_processes():
             # Get default setting
             self.conf = config.ConfigNewFlash()
             self.para = para
+            self.conf['exp_parameters'] = self.para._asdict()
 
         def setup_environment(self):
             self.conf['device_path'] = "/dev/sdc1"
