@@ -3,7 +3,9 @@ import unittest
 import simpy
 
 import flashcontroller
+import FtlSim
 from commons import *
+from Makefile import *
 
 
 class TestTemplate(unittest.TestCase):
@@ -344,6 +346,92 @@ class TestControllerTime(unittest.TestCase):
         self.assertEqual(controller.channels[0].read_time, 9)
         self.assertEqual(controller.channels[0].program_time, 9)
         self.assertEqual(controller.channels[0].erase_time, 6)
+
+    def test_main(self):
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run()
+
+class TestControllerTag(unittest.TestCase):
+    def setup_config(self):
+        self.conf = config.ConfigNewFlash()
+
+        # 2 pages per block, 2 blocks per channel, 2 channels in total
+        self.conf['flash_config']['n_pages_per_block'] = 2
+        self.conf['flash_config']['n_blocks_per_plane'] = 2
+        self.conf['flash_config']['n_planes_per_chip'] = 1
+        self.conf['flash_config']['n_chips_per_package'] = 1
+        self.conf['flash_config']['n_packages_per_channel'] = 1
+        self.conf['flash_config']['n_channels_per_dev'] = 2
+
+    def setup_environment(self):
+        pass
+
+    def setup_workload(self):
+        pass
+
+    def setup_ftl(self):
+        pass
+
+    def create_request(self, channel, op):
+        req = flashcontroller.controller.FlashRequest()
+        req.addr = flashcontroller.controller.FlashAddress()
+        req.addr.channel = channel
+        if op == 'read':
+            req.operation = OP_READ
+        elif op == 'write':
+            req.operation = OP_WRITE
+        elif op == 'erase':
+            req.operation = OP_ERASE
+        else:
+            raise RuntimeError()
+
+        return req
+
+    def access(self, env,  controller):
+        channel = controller.channels[0]
+        rt = channel.read_time
+        wt = channel.program_time
+        et = channel.erase_time
+
+        yield env.process( controller.rw_ppn_extent(0, 2, 'read',
+            tag = 'mytag1') )
+        self.assertEqual( env.now, rt *2 ) # two pages go to the same channel
+        self.assertEqual(
+            controller.recorder.\
+            general_accumulator[channel.counter_set_name()]['mytag1'], rt * 2)
+
+        yield env.process( controller.rw_ppn_extent(4, 2, 'write',
+            tag = 'mytag2') )
+        self.assertEqual( env.now, rt *2 + wt*2 ) # two pages go to the same channel
+
+        yield env.process( controller.rw_ppn_extent(0, 8, 'write',
+            tag = 'mytag2') )
+        # 4 pages go to one channel
+        self.assertEqual( env.now, rt *2 + wt*2 + wt*4 )
+
+        # one req goes to channel 1, another one goes to channel 2
+        yield env.process( controller.erase_pbn_extent(1, 2, tag = 'mytag3') )
+        self.assertEqual( env.now, rt *2 + wt*2 + wt*4 + et )
+
+    def my_run(self):
+        env = simpy.Environment()
+        set_exp_metadata(self.conf, save_data = False,
+                expname = 'default',
+                subexpname = 'default-sub')
+        runtime_update(self.conf)
+        rec = FtlSim.recorder.Recorder(output_target = self.conf['output_target'],
+            path = self.conf.get_output_file_path(),
+            verbose_level = self.conf['verbose_level'],
+            print_when_finished = False
+            )
+        rec.enable()
+
+        controller = flashcontroller.controller.Controller3(env, self.conf, rec)
+        env.process(self.access(env, controller))
+        env.run()
 
     def test_main(self):
         self.setup_config()

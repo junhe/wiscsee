@@ -269,12 +269,69 @@ class Controller2(Controller):
     """
     def __init__(self, simpy_env, conf, recorderobj):
         super(Controller2, self).__init__(simpy_env, conf)
-
         self.recorder = recorderobj
-        self.flash_backend = FtlSim.flash.SimpleFlash(recorderobj, conf)
-
         self.channels = [Channel2(self.env, conf, self.recorder, i)
                 for i in range( self.n_channels_per_dev)]
+
+
+class Controller3(Controller2):
+    """
+    With tag
+    """
+    def __init__(self, simpy_env, conf, recorderobj):
+        super(Controller3, self).__init__(simpy_env, conf, recorderobj)
+
+        self.channels = [Channel3(self.env, conf, self.recorder, i)
+                for i in range( self.n_channels_per_dev)]
+
+    def execute_request_list(self, flash_request_list, tag):
+        procs = []
+        for request in flash_request_list:
+            p = self.env.process(self.execute_request(request, tag))
+            procs.append(p)
+        event = simpy.events.AllOf(self.env, procs)
+        yield event
+
+    def write_page(self, addr, tag, data = None):
+        yield self.env.process(
+            self.channels[addr.channel].write_page(tag = tag,
+                addr = None, data = None))
+
+    def read_page(self, addr, tag):
+        yield self.env.process(
+            self.channels[addr.channel].read_page(tag = tag,
+                addr = None))
+
+    def erase_block(self, addr, tag):
+        yield self.env.process(
+            self.channels[addr.channel].erase_block(tag = tag, addr = None))
+
+    def rw_ppn_extent(self, ppn_start, ppn_count, op, tag):
+        """
+        op is 'read' or 'write'
+        """
+        flash_reqs = self.get_flash_requests_for_ppns(ppn_start, ppn_count,
+            op = op)
+        yield self.env.process( self.execute_request_list(flash_reqs, tag) )
+
+    def erase_pbn_extent(self, pbn_start, pbn_count, tag):
+        flash_reqs = self.get_flash_requests_for_pbns(pbn_start, pbn_count,
+                op = 'erase')
+        yield self.env.process( self.execute_request_list(flash_reqs, tag) )
+
+    def execute_request(self, flash_request, tag):
+        if flash_request.operation == OP_READ:
+            yield self.env.process(
+                    self.read_page(addr = flash_request.addr, tag = tag))
+        elif flash_request.operation == OP_WRITE:
+            yield self.env.process(
+                self.write_page(flash_request.addr, tag = tag))
+        elif flash_request.operation == OP_ERASE:
+            yield self.env.process(
+                self.erase_block(flash_request.addr, tag = tag))
+        else:
+            raise RuntimeError("operation {} is not supported".format(
+                flash_request.operation))
 
 
 class Channel(object):
@@ -379,13 +436,39 @@ class Channel2(Channel):
                     e - s)
 
 
+class Channel3(Channel2):
+    """
+    Operations can be tagged
+    """
+    def counter_set_name(self):
+        return "channel_busy_time.{}".format(self.channel_id)
 
+    def write_page(self, tag, addr = None , data = None):
+        """
+        If you want to when this operation is finished, just print env.now.
+        If you want to know how long it takes, use env.now before and after
+        the operation.
+        """
+        with self.resource.request() as request:
+            yield request
+            s = self.env.now
+            yield self.env.timeout( self.program_time )
+            e = self.env.now
+            self.recorder.add_to_timer(self.counter_set_name(), tag, e - s)
 
+    def read_page(self, tag, addr = None):
+        with self.resource.request() as request:
+            yield request
+            s = self.env.now
+            yield self.env.timeout( self.read_time )
+            e = self.env.now
+            self.recorder.add_to_timer(self.counter_set_name(), tag, e - s)
 
-
-
-
-
-
-
+    def erase_block(self, tag, addr = None):
+        with self.resource.request() as request:
+            yield request
+            s = self.env.now
+            yield self.env.timeout( self.erase_time )
+            e = self.env.now
+            self.recorder.add_to_timer(self.counter_set_name(), tag, e - s)
 
