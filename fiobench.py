@@ -30,11 +30,11 @@ def get_fio_conf():
             }
         )]
 
-def stress_n_processes():
+def stress_n_processes_raw():
     """
     stress the number of processes on file system
     """
-    class StressNProcesses(object):
+    class StressNProcesses_raw(object):
         def __init__(self, para):
             # Get default setting
             self.conf = config.ConfigNewFlash()
@@ -45,27 +45,45 @@ def stress_n_processes():
             self.conf['device_path'] = "/dev/sdc1"
             self.conf['dev_size_mb'] = 16*GB/MB
 
-            self.conf['use_fs'] = True
-            self.conf['filesystem'] = self.para.filesystem
+            self.conf['filesystem'] = None
             self.conf["n_online_cpus"] = 'all'
 
             self.conf['workload_class'] = 'FIONEW'
 
         def setup_workload(self):
             tmp_job_conf = [
-                ("job1", {
+                ("global", {
                     'ioengine'  : 'libaio',
                     'size'      : self.para.size,
-                    'directory'  : self.conf['fs_mount_point'],
                     'direct'    : 1,
+                    'filename'  : self.conf['device_path'],
                     'iodepth'   : self.para.iodepth,
                     'bs'        : self.para.bs,
                     'fallocate' : 'none',
-                    'numjobs'   : self.para.numjobs,
+                    'offset_increment': self.para.size
+                    }
+                ),
+                ("writer", {
                     'group_reporting': WlRunner.fio.NOVALUE,
+                    'numjobs'   : self.para.numjobs,
                     'rw'        : 'write'
                     }
-                )]
+                ),
+                ("reader", {
+                    'stonewall': WlRunner.fio.NOVALUE,
+                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'numjobs'   : self.para.numjobs,
+                    'rw'        : 'read'
+                    }
+                ),
+                ("readandwrite", {
+                    'stonewall': WlRunner.fio.NOVALUE,
+                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'numjobs'   : self.para.numjobs,
+                    'rw'        : 'rw'
+                    }
+                )
+                ]
             self.conf['fio_job_conf'] = {
                     'ini': WlRunner.fio.JobConfig(tmp_job_conf),
                     'runner': {
@@ -99,20 +117,157 @@ def stress_n_processes():
             self.run()
 
     Parameters = collections.namedtuple("Parameters",
-            "filesystem, numjobs, bs, iodepth, expname, size")
+            "numjobs, bs, iodepth, expname, size")
     expname = get_expname()
 
-    total_size = 1*GB
-    for numjobs in [1, 4, 16]:
-        for bs in [4*KB, 128*KB]:
-            for iodepth in [16]:
-                for filesystem in ['ext4', 'f2fs']:
-                    obj = StressNProcesses( Parameters(
-                        filesystem = filesystem, numjobs = numjobs,
+    total_size = 2*GB
+    for i in range(3):
+        for numjobs in [1, 4, 16, 32]:
+            for bs in [4*KB, 128*KB]:
+                for iodepth in [1]:
+                    obj = StressNProcesses_raw( Parameters(
+                        numjobs = numjobs,
                         bs = bs, iodepth = iodepth,
                         expname = expname, size = total_size / numjobs
                         ))
                     obj.main()
+
+def stress_n_processes():
+    """
+    stress the number of processes on file system
+    """
+    class StressNProcesses(object):
+        def __init__(self, para):
+            # Get default setting
+            self.conf = config.ConfigNewFlash()
+            self.para = para
+            self.conf['exp_parameters'] = self.para._asdict()
+
+        def setup_environment(self):
+            self.conf['device_path'] = "/dev/sdc1"
+            self.conf['dev_size_mb'] = 16*GB/MB
+
+            self.conf['filesystem'] = self.para.filesystem
+            self.conf["n_online_cpus"] = 'all'
+
+            self.conf['workload_class'] = 'FIONEW'
+
+        def setup_workload(self):
+            tmp_job_conf = [
+                ("global", {
+                    'ioengine'  : 'libaio',
+                    'size'      : self.para.size,
+                    'directory'  : self.conf['fs_mount_point'],
+                    'direct'    : 1,
+                    'sync'      : 1,
+                    'iodepth'   : self.para.iodepth,
+                    'bs'        : self.para.bs,
+                    'fallocate' : 'none',
+                    'numjobs'   : self.para.numjobs,
+                    }
+                ),
+                ("writer", {
+                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'rw'        : self.para.rw[0]
+                    }
+                ),
+                ("reader", {
+                    'stonewall': WlRunner.fio.NOVALUE,
+                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'rw'        : self.para.rw[1]
+                    }
+                ),
+                ("mixedreadandwrite", {
+                    'stonewall': WlRunner.fio.NOVALUE,
+                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'rw'        : self.para.rw[2]
+                    }
+                )
+                ]
+            self.conf['fio_job_conf'] = {
+                    'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                    'runner': {
+                        'to_json': True
+                    }
+                }
+            self.conf['workload_conf_key'] = 'fio_job_conf'
+
+        def setup_ftl(self):
+            self.conf['enable_blktrace'] = False
+            self.conf['enable_simulation'] = False
+
+        def run_fio(self):
+            workload = WlRunner.workload.FIONEW(self.conf,
+                    workload_conf_key = self.conf['workload_conf_key'])
+            workload.run()
+
+        def run(self):
+            set_exp_metadata(self.conf, save_data = True,
+                    expname = self.para.expname,
+                    subexpname = chain_items_as_filename(self.para))
+            runtime_update(self.conf)
+
+            # self.run_fio()
+            workflow(self.conf)
+
+        def main(self):
+            self.setup_environment()
+            self.setup_workload()
+            self.setup_ftl()
+            self.run()
+
+    def test_seq():
+        """
+        """
+        Parameters = collections.namedtuple("Parameters",
+                "filesystem, numjobs, bs, iodepth, expname, size, rw")
+
+        expname = get_expname()
+        para_dict = {
+                'numjobs'        : [1, 4, 16],
+                'bs'             : [4*KB, 128*KB],
+                'iodepth'        : [1],
+                'filesystem'     : ['ext4', 'f2fs', 'xfs', 'btrfs'],
+                'expname'        : [expname],
+                'rw'             : [('write', 'read', 'rw')]
+                }
+
+        parameter_combs = ParameterCombinations(para_dict)
+        total_size = 2*GB
+        for para in parameter_combs:
+            para['size'] =  total_size / para['numjobs']
+
+        for para in parameter_combs:
+            obj = StressNProcesses( Parameters(**para) )
+            obj.main()
+
+    def test_rand():
+        Parameters = collections.namedtuple("Parameters",
+                "filesystem, numjobs, bs, iodepth, expname, size, rw")
+
+        expname = get_expname()
+        para_dict = {
+                'numjobs'        : [1, 4, 16],
+                'bs'             : [4*KB, 128*KB],
+                'iodepth'        : [1],
+                'filesystem'     : ['ext4', 'f2fs'],
+                'expname'        : [expname],
+                'rw'             : [('randwrite', 'randread', 'randrw')]
+                }
+
+        parameter_combs = ParameterCombinations(para_dict)
+        total_size = 2*GB
+        for para in parameter_combs:
+            para['size'] =  total_size / para['numjobs']
+
+        for para in parameter_combs:
+            obj = StressNProcesses( Parameters(**para) )
+            obj.main()
+
+
+    # test_seq()
+    test_rand()
+
 
 def main(cmd_args):
     if cmd_args.git == True:
