@@ -7,14 +7,12 @@ import sys
 
 import bmftl
 import config
-import dftl2
 import ssdframework
 import dftlext
 import dmftl
 import flash
 import nkftl2
 import recorder
-import tpftl
 
 from commons import *
 
