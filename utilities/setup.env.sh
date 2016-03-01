@@ -35,4 +35,4 @@ sudo apt-get install -y blktrace
 
 sudo pip install simpy
 
-
+sudo apt-get install xfsprogs
