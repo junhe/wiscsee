@@ -86,7 +86,7 @@ def stress_n_processes():
         def run(self):
             set_exp_metadata(self.conf, save_data = True,
                     expname = self.para.expname,
-                    subexpname = chain_items_as_str(self.para))
+                    subexpname = chain_items_as_filename(self.para))
             runtime_update(self.conf)
 
             # self.run_fio()
