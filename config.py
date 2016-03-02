@@ -6,7 +6,8 @@ import pprint
 from commons import *
 import utils
 
-WLRUNNER, LBAGENERATOR = ('WLRUNNER', 'LBAGENERATOR')
+WLRUNNER, LBAGENERATOR, LBAMULTIPROC = ('WLRUNNER', 'LBAGENERATOR',
+    'LBAMULTIPROC')
 
 class MountOption(dict):
     """

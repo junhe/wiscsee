@@ -116,18 +116,26 @@ class SSDFramework(object):
 
         return req_list
 
+    def release_token(self, event):
+        event.token.release(event.token_req)
+
     def process(self, pid):
         req_index = 0
         while True:
             host_event = yield self.ncq.queue.get()
 
             if host_event.operation == 'end_process':
+                self.release_token(host_event)
                 break
             elif host_event.operation == 'enable_recorder':
                 self.realftl.recorder.enable()
                 self.workload_start_time = self.env.now
                 self.recorder.add_to_timer("workload_start_time", 0, self.env.now)
+
+                self.release_token(host_event)
+                continue
             elif not host_event.operation in ('read', 'write', 'discard'):
+                self.release_token(host_event)
                 continue
 
             ssd_req = create_ssd_request(self.conf, host_event)
@@ -136,15 +144,12 @@ class SSDFramework(object):
             flash_reqs = yield self.env.process(
                     self.realftl.translate(ssd_req, pid) )
             e = self.env.now
-            # print "Translation took", e - s
             self.recorder.add_to_timer("translation_time-w_wait", pid,
                     e - s)
 
             s = self.env.now
             yield self.env.process(
                     self.access_flash(flash_reqs))
-            # print "At time {} [{}] finish request ({})".format(self.env.now,
-                    # pid, req_index)
             e = self.env.now
             self.recorder.add_to_timer("forground_flash_access_time-w_wait", pid,
                     e - s)
@@ -157,6 +162,8 @@ class SSDFramework(object):
 
             if pid == 0 and req_index % 100 == 0:
                 print self.env.now / float(SEC)
+
+            self.release_token(host_event)
 
     def run(self):
         procs = []

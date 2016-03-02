@@ -12,6 +12,13 @@ class LBAWorkloadGenerator(object):
     @abc.abstractmethod
     def __iter__(self):
         return
+class LBAMultiProcGenerator(object):
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def get_iter_list(self):
+        return
+
 
 class Sequential(LBAWorkloadGenerator):
     def __init__(self, confobj):
@@ -757,6 +764,51 @@ class HotCold(LBAWorkloadGenerator):
             offset = chunkid * chunk_bytes
             size = chunk_bytes
             event = 'write {} {}'.format(offset, size)
+            yield event
+
+
+class MultipleProcess(LBAMultiProcGenerator):
+    def __init__(self, confobj):
+        if not isinstance(confobj, config.Config):
+            raise TypeError("confobj is not config.Config. It is {}".
+                format(type(confobj).__name__))
+        self.conf = confobj
+
+        self.sector_size = self.conf['sector_size']
+        self.ftl_type = self.conf['ftl_type']
+
+        self.over_provisioning = self.conf.over_provisioning
+
+        # [
+        #   [(xx, xx x), (xx, x, xxx), ...],
+        #   [(xx, xx x), (xx, x, xxx), ...],
+        #   ...
+        # ]
+        self.events = self.conf['lba_workload_configs']\
+            ['MultipleProcess']['events']
+        if isinstance(self.conf, config.ConfigNewFlash):
+            self.page_size = self.conf['flash_config']['page_size']
+        else:
+            self.page_size = self.conf.page_size
+
+    def get_iter_list(self):
+        ret = []
+        for raw_list in self.events:
+            ret.append( self.get_iter(raw_list) )
+
+        return ret
+
+    def get_iter(self, raw_list):
+        yield simulator.Event(sector_size = self.sector_size,
+                pid = 0, operation = 'enable_recorder',
+                offset = 0, size = 0)
+
+        for op, lpn, npages in raw_list:
+            offset = lpn * self.page_size
+            size = self.page_size * npages
+            event = simulator.Event(sector_size = self.sector_size,
+                    pid = 0, operation = op, offset = offset,
+                    size = size)
             yield event
 
 

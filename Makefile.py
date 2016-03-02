@@ -19,7 +19,7 @@ import simpy
 import string
 
 import config
-from config import WLRUNNER, LBAGENERATOR
+from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 from environments import *
 import experiment
 import testfio
@@ -73,6 +73,10 @@ def run_workload(conf):
         lbagen = eval("""WlRunner.lbaworkloadgenerator.{classname}(conf)""".\
             format(classname=conf['lba_workload_class']))
         event_iter = lbagen
+    elif workload_src == LBAMULTIPROC:
+        lbagen = eval("""WlRunner.lbaworkloadgenerator.{classname}(conf)""".\
+            format(classname=conf['lba_workload_class']))
+        event_iter = lbagen.get_iter_list()
     else:
         raise RuntimeError("{} is not a valid workload source"\
             .format(workload_src))
@@ -87,10 +91,13 @@ def run_simulator(conf, event_iter):
     simulator.run()
 
 def create_simulator(simulator_class, conf, event_iter):
-
     """
     type: "DES", "NonDES"
     """
+    if simulator_class == 'SimulatorDESSync' and not isinstance(event_iter, list):
+        raise RuntimeError("The input of SimulatorDESSync must be a list of "
+                "iterators!")
+
     return eval("FtlSim.simulator.{sim_class}(conf, event_iter)".format(
         sim_class = simulator_class))
 
