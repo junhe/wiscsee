@@ -332,7 +332,8 @@ class SimulatorDES(Simulator):
 
         # this token is acquired before we issue request to queue.
         # it effectively control the queue depth of this process
-        token = simpy.Resource(self.env, capacity = 1)
+        token = simpy.Resource(self.env,
+                capacity = self.conf['process_queue_depth'])
 
         for event in self.event_iter:
             event.token = token
@@ -392,7 +393,8 @@ class SimulatorDESSync(Simulator):
 
         # this token is acquired before we issue request to queue.
         # it effectively control the queue depth of this process
-        token = simpy.Resource(self.env, capacity = 1)
+        token = simpy.Resource(self.env,
+                capacity = self.conf['process_queue_depth'])
 
         for event in event_iter:
             event.token = token
