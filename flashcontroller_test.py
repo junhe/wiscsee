@@ -401,7 +401,7 @@ class TestControllerTag(unittest.TestCase):
         self.assertEqual( env.now, rt *2 ) # two pages go to the same channel
         self.assertEqual(
             controller.recorder.\
-            general_accumulator[channel.counter_set_name()]['mytag1'], rt * 2)
+            general_accumulator['channel_busy_time']['channel_0-read-mytag1'], rt * 2)
 
         yield env.process( controller.rw_ppn_extent(4, 2, 'write',
             tag = 'mytag2') )

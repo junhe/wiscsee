@@ -441,7 +441,7 @@ class Channel3(Channel2):
     Operations can be tagged
     """
     def counter_set_name(self):
-        return "channel_busy_time.{}".format(self.channel_id)
+        return "channel_busy_time"
 
     def write_page(self, tag, addr = None , data = None):
         """
@@ -454,7 +454,11 @@ class Channel3(Channel2):
             s = self.env.now
             yield self.env.timeout( self.program_time )
             e = self.env.now
-            self.recorder.add_to_timer(self.counter_set_name(), tag, e - s)
+            self.recorder.add_to_timer(
+                self.counter_set_name(),
+                "channel_{id}-write-{tag}".format(id = self.channel_id,
+                    tag = tag),
+                e - s)
 
     def read_page(self, tag, addr = None):
         with self.resource.request() as request:
@@ -462,7 +466,11 @@ class Channel3(Channel2):
             s = self.env.now
             yield self.env.timeout( self.read_time )
             e = self.env.now
-            self.recorder.add_to_timer(self.counter_set_name(), tag, e - s)
+            self.recorder.add_to_timer(
+                self.counter_set_name(),
+                "channel_{id}-read-{tag}".format(id = self.channel_id,
+                    tag = tag),
+                e - s)
 
     def erase_block(self, tag, addr = None):
         with self.resource.request() as request:
@@ -470,5 +478,9 @@ class Channel3(Channel2):
             s = self.env.now
             yield self.env.timeout( self.erase_time )
             e = self.env.now
-            self.recorder.add_to_timer(self.counter_set_name(), tag, e - s)
+            self.recorder.add_to_timer(
+                self.counter_set_name(),
+                "channel_{id}-erase-{tag}".format(id = self.channel_id,
+                    tag = tag),
+                e - s)
 

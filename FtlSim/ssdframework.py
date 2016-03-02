@@ -54,7 +54,7 @@ class SSDFramework(object):
                 ncq_depth = self.conf['SSDFramework']['ncq_depth'],
                 simpy_env = self.env)
 
-        self.flash_controller = flashcontroller.controller.Controller2(
+        self.flash_controller = flashcontroller.controller.Controller3(
                 self.env, self.conf, self.recorder)
 
         self.datacache = datacache.DataCache(
@@ -97,7 +97,8 @@ class SSDFramework(object):
         for flash_req in flash_reqs:
             # This will have the requests automatically queued at channel
             p = self.env.process(
-                    self.flash_controller.execute_request(flash_req))
+                    self.flash_controller.execute_request(flash_req,
+                        tag = TAG_FOREGROUND))
             ctrl_procs.append(p)
 
         all_ctrl_procs = simpy.events.AllOf(self.env, ctrl_procs)

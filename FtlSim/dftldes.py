@@ -16,6 +16,7 @@ import ftlbuilder
 import lrulist
 import recorder
 import utils
+from commons import *
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')
 DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
@@ -869,7 +870,8 @@ class MappingManager(object):
 
         # read it up, this operation is just for statistics
         yield self.env.process(
-                self.flash.rw_ppn_extent(m_ppn, 1, op = 'read'))
+                self.flash.rw_ppn_extent(m_ppn, 1, op = 'read',
+                tag = TAG_BACKGROUND))
 
         if self.conf.keeping_all_tp_entries == True:
             m_vpn = self.directory.m_vpn_of_lpn(lpn)
@@ -1031,7 +1033,8 @@ class MappingManager(object):
         if len(new_mappings) < self.conf.n_mapping_entries_per_page:
             # need to read some mappings
             yield self.env.process(
-                self.flash.rw_ppn_extent(old_m_ppn, 1, op = 'read') )
+                self.flash.rw_ppn_extent(old_m_ppn, 1, op = 'read',
+                    tag = TAG_BACKGROUND) )
         else:
             self.recorder.count_me('cache', 'saved.1.read')
 
@@ -1040,7 +1043,8 @@ class MappingManager(object):
 
         # update flash
         yield self.env.process(
-            self.flash.rw_ppn_extent(new_m_ppn, 1, op = 'write'))
+            self.flash.rw_ppn_extent(new_m_ppn, 1, op = 'write',
+                tag = TAG_BACKGROUND))
 
         # update our fake 'on-flash' GMT
         for lpn, new_ppn in new_mappings.items():
@@ -1344,7 +1348,8 @@ class GarbageCollector(object):
 
         # read the the data page
         self.env.process(
-                self.flash.rw_ppn_extent(old_ppn, 1, op = 'read'))
+                self.flash.rw_ppn_extent(old_ppn, 1, op = 'read',
+                    tag = TAG_BACKGROUND))
 
         # find the mapping
         lpn = self.oob.translate_ppn_to_lpn(old_ppn)
@@ -1352,7 +1357,8 @@ class GarbageCollector(object):
         # write to new page
         new_ppn = self.block_pool.next_gc_data_page_to_program()
         self.env.process(
-                self.flash.rw_ppn_extent(new_ppn, 1, op = 'write'))
+                self.flash.rw_ppn_extent(new_ppn, 1, op = 'write',
+                    tag = TAG_BACKGROUND))
 
         # update new page and old page's OOB
         self.oob.data_page_move(lpn, old_ppn, new_ppn)
@@ -1477,12 +1483,14 @@ class GarbageCollector(object):
         m_vpn = self.oob.translate_ppn_to_lpn(old_m_ppn)
 
         yield self.env.process(
-            self.flash.rw_ppn_extent(old_m_ppn, 1, op = 'read'))
+            self.flash.rw_ppn_extent(old_m_ppn, 1, op = 'read',
+                tag = TAG_BACKGROUND))
 
         # write to new page
         new_m_ppn = self.block_pool.next_gc_translation_page_to_program()
         yield self.env.process(
-            self.flash.rw_ppn_extent(new_m_ppn, 1, op = 'write'))
+            self.flash.rw_ppn_extent(new_m_ppn, 1, op = 'write',
+                tag = TAG_BACKGROUND))
 
         # update new page and old page's OOB
         self.oob.new_write(m_vpn, old_m_ppn, new_m_ppn)
@@ -1609,7 +1617,7 @@ class GarbageCollector(object):
         self.oob.erase_block(blocknum)
 
         yield self.env.process(
-            self.flash.erase_pbn_extent(blocknum, 1))
+            self.flash.erase_pbn_extent(blocknum, 1, tag = TAG_BACKGROUND))
 
 
 def dec_debug(function):
@@ -1810,9 +1818,6 @@ class Dftl(object):
 
     def get_type(self):
         return "dftldes"
-
-
-
 
 
 
