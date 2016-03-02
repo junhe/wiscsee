@@ -2,6 +2,7 @@ import bitarray
 from collections import deque, Counter
 import csv
 import datetime
+import itertools
 import random
 import os
 import Queue
@@ -120,8 +121,7 @@ class SSDFramework(object):
         event.token.release(event.token_req)
 
     def process(self, pid):
-        req_index = 0
-        while True:
+        for req_index in itertools.count():
             host_event = yield self.ncq.queue.get()
 
             if host_event.operation == 'end_process':
@@ -157,8 +157,6 @@ class SSDFramework(object):
             # Try clean garbage
             self.env.process(
                     self.realftl.clean_garbage())
-
-            req_index += 1
 
             if pid == 0 and req_index % 100 == 0:
                 print self.env.now / float(SEC)
