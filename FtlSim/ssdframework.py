@@ -127,7 +127,8 @@ class SSDFramework(object):
             if host_event.operation == 'end_process':
                 self.release_token(host_event)
                 break
-            elif host_event.operation == 'enable_recorder':
+
+            if host_event.operation == 'enable_recorder':
                 self.realftl.recorder.enable()
                 self.workload_start_time = self.env.now
                 self.recorder.add_to_timer("workload_start_time", 0, self.env.now)
@@ -140,6 +141,7 @@ class SSDFramework(object):
 
             ssd_req = create_ssd_request(self.conf, host_event)
 
+            # Translate for the reqests
             s = self.env.now
             flash_reqs = yield self.env.process(
                     self.realftl.translate(ssd_req, pid) )
@@ -147,6 +149,7 @@ class SSDFramework(object):
             self.recorder.add_to_timer("translation_time-w_wait", pid,
                     e - s)
 
+            # Access flash
             s = self.env.now
             yield self.env.process(
                     self.access_flash(flash_reqs))
