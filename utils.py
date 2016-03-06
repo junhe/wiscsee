@@ -138,6 +138,19 @@ def linux_kernel_version():
     kernel_ver = run_and_get_output('uname -r')[0].strip()
     return kernel_ver
 
+def set_vm(name, value):
+    filepath = os.path.join("/proc/sys/vm/", name)
+    with open(filepath, 'w') as f:
+        f.write(str(value))
+
+def set_vm_default():
+    set_vm("dirty_background_bytes", 0)
+    set_vm("dirty_background_ratio", 10)
+    set_vm("dirty_bytes", 0)
+    set_vm("dirty_ratio", 20)
+    set_vm("dirty_expire_centisecs", 3000)
+    set_vm("dirty_writeback_centisecs", 500)
+
 if __name__ == '__main__':
     is_proc_running('blktrace')
 
