@@ -308,6 +308,8 @@ class Config(dict):
 
             "enable_blktrace"       : False,
 
+            "event_columns"         : ['pid', 'operation', 'offset', 'size', 'timestamp'],
+
             "fs_mount_point"        : "/mnt/fsonloop",
             "mnt_opts" : {
                 "ext4":   { 'discard': MOpt(opt_name = "discard",

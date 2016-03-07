@@ -372,7 +372,6 @@ def stress_page_cache():
             obj = Experimenter( Parameters(**para) )
             obj.main()
 
-
     # test_seq()
     test_rand()
 
