@@ -21,9 +21,9 @@ class BlockTraceManager(object):
         stop_blktrace_on_bg()
 
     def blkparse_file_to_ftlsim_input_file(self):
-        table = parse_blkparse_to_table(open(self.resultpath, 'r'))
+        table = parse_blkparse_result(open(self.resultpath, 'r'))
         utils.prepare_dir_for_path(self.to_ftlsim_path)
-        finaltable_to_ftlsim_input(table, self.to_ftlsim_path,
+        create_event_file(table, self.to_ftlsim_path,
             self.sector_size)
 
 def start_blktrace_on_bg(dev, resultpath):
@@ -75,13 +75,13 @@ def is_data_line(line):
     else:
         return True
 
-def is_multiwriter_line(line):
-    return line.startswith("MARK:")
 
-def parse_blkparse_to_table(line_iter):
+def parse_blkparse_result(line_iter):
     def line2dic(line):
-        "is_data_line() must be true for this line"\
-        "['8,0', '0', '1', '0.000000000', '440', 'A', 'W', '12912077', '+', '8', '<-', '(8,2)', '606224']"
+        """
+        is_data_line() must be true for this line"\
+        ['8,0', '0', '1', '0.000000000', '440', 'A', 'W', '12912077', '+', '8', '<-', '(8,2)', '606224']"
+        """
         names = ['devid', 'cpuid', 'seqid', 'time', 'pid', 'action', 'RWBS', 'blockstart', 'ignore1', 'size']
         #        0        1         2       3        4      5         6       7             8          9
         items = line.split()
@@ -98,20 +98,16 @@ def parse_blkparse_to_table(line_iter):
         if is_data_line(line):
             ret = line2dic(line)
             ret['type'] = 'blkparse'
-        elif is_multiwriter_line(line):
-            continue # we don't use this at this moment
-            filepath = line.split(":")[1]
-            ret = {'filepath': filepath,
-                   'type':     'multiwriters'}
         else:
             ret = None
+
         if ret != None:
             table.append(ret)
 
     table.sort(key = lambda k: k['time'])
     return table
 
-def finaltable_to_ftlsim_input(table, out_path, sector_size):
+def create_event_file(table, out_path, sector_size):
     utils.prepare_dir_for_path(out_path)
     out = open(out_path, 'w')
     for row in table:
