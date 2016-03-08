@@ -640,15 +640,10 @@ class TestTimelineAndFlash(unittest.TestCase):
 
 
 class TestEventIter(unittest.TestCase):
-    def test_main(self):
-        events = list(WlRunner.wlrunner.SimpleEventIterator(["1123 write 0 100"]))
-        e = events[0]
-        self.assertEqual(e.pid, 1123)
-        self.assertEqual(e.operation, 'write')
-
     def test_main2(self):
-        events = list(WlRunner.wlrunner.EventIterator(512,
-            ["1123 write 0 4096", "13 write 40960 4096"]))
+        conf = config.ConfigNewFlash()
+        events = list(WlRunner.wlrunner.EventIterator(conf,
+            ["1123 write 0 4096 0 0", "13 write 40960 4096 1 1"]))
         e = events[0]
         self.assertEqual(e.pid, 1123)
         self.assertEqual(e.operation, 'write')

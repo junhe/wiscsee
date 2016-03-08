@@ -22,35 +22,23 @@ class FileLineIterator(object):
                 yield line
 
 
-class SimpleEventIterator(object):
-    def __init__(self, filelineiter):
-        self.filelineiter = filelineiter
-
-    def str_to_event(self, line):
-        """
-        PID OPERATION OFFSET SIZE
-        """
-        items = line.split()
-        return simulator.EventSimple(pid = items[0], operation = items[1])
-
-    def __iter__(self):
-        for line in self.filelineiter:
-            yield self.str_to_event(line)
-
-
 class EventIterator(object):
-    def __init__(self, sector_size, filelineiter):
-        self.sector_size = sector_size
+    def __init__(self, conf, filelineiter):
+        self.conf = conf
+        self.sector_size = self.conf['sector_size']
         self.filelineiter = filelineiter
+        self.event_file_columns = self.conf['event_file_columns']
 
     def str_to_event(self, line):
-        """
-        PID OPERATION OFFSET SIZE
-        """
         items = line.split()
-        return simulator.Event(sector_size = self.sector_size,
-                pid = items[0], operation = items[1], offset = items[2],
-                size = items[3])
+        assert len(self.event_file_columns) == len(items)
+        dic = dict(zip(self.event_file_columns, items))
+        dic['sector_size'] = self.sector_size
+
+        return simulator.Event(**dic)
+        # return simulator.Event(sector_size = self.sector_size,
+                # pid = items[0], operation = items[1], offset = items[2],
+                # size = items[3])
 
     def __iter__(self):
         for line in self.filelineiter:
@@ -236,8 +224,7 @@ class WorkloadRunner(object):
 
         mkfs_iter = FileLineIterator(
             self.conf.get_ftlsim_events_output_path_mkfs())
-        event_mkfs_iter = EventIterator(self.conf['sector_size'],
-                mkfs_iter)
+        event_mkfs_iter = EventIterator(self.conf, mkfs_iter)
 
         for event in event_mkfs_iter:
             yield event
@@ -252,8 +239,7 @@ class WorkloadRunner(object):
 
         workload_iter = FileLineIterator(
             self.conf.get_ftlsim_events_output_path())
-        event_workload_iter = EventIterator(self.conf['sector_size'],
-            workload_iter)
+        event_workload_iter = EventIterator(self.conf, workload_iter)
 
         for event in event_workload_iter:
             yield event
