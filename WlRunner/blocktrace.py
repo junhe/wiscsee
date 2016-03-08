@@ -7,7 +7,8 @@ import utils
 
 class BlockTraceManager(object):
     "This class provides interfaces to interact with blktrace"
-    def __init__(self, dev, resultpath, to_ftlsim_path, sector_size):
+    def __init__(self, confobj, dev, resultpath, to_ftlsim_path, sector_size):
+        self.conf = confobj
         self.dev = dev
         self.resultpath = resultpath
         self.to_ftlsim_path = to_ftlsim_path
@@ -20,7 +21,7 @@ class BlockTraceManager(object):
         "this is not elegant... TODO:improve"
         stop_blktrace_on_bg()
 
-    def blkparse_file_to_ftlsim_input_file(self):
+    def create_event_file_from_blkparse(self):
         table = parse_blkparse_result(open(self.resultpath, 'r'))
         utils.prepare_dir_for_path(self.to_ftlsim_path)
         create_event_file(table, self.to_ftlsim_path,
@@ -128,13 +129,6 @@ def create_event_file(table, out_path, sector_size):
             else:
                 raise RuntimeError('unknow operation')
 
-            items = [str(x) for x in [pid, operation, byte_offset, byte_size]]
-            line = ' '.join(items)+'\n'
-        elif row['type'] == 'multiwriters':
-            pid = 'NA'
-            operation = 'finish'
-            byte_offset = row['filepath']
-            byte_size = 'NA'
             items = [str(x) for x in [pid, operation, byte_offset, byte_size]]
             line = ' '.join(items)+'\n'
         else:

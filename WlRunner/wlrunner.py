@@ -67,6 +67,7 @@ class WorkloadRunner(object):
 
         # blktracer for making file system
         self.blktracer_mkfs = blocktrace.BlockTraceManager(
+            confobj = self.conf,
             dev = self.conf['device_path'],
             resultpath = self.conf.get_blkparse_result_path_mkfs(),
             to_ftlsim_path = self.conf.get_ftlsim_events_output_path_mkfs(),
@@ -74,6 +75,7 @@ class WorkloadRunner(object):
 
         # blktracer for running workload
         self.blktracer = blocktrace.BlockTraceManager(
+            confobj = self.conf,
             dev = self.conf['device_path'],
             resultpath = self.conf.get_blkparse_result_path(),
             to_ftlsim_path = self.conf.get_ftlsim_events_output_path(),
@@ -204,7 +206,7 @@ class WorkloadRunner(object):
             time.sleep(1)
             self.blktracer_mkfs.stop_tracing_and_collecting()
             time.sleep(1)
-            self.blktracer_mkfs.blkparse_file_to_ftlsim_input_file()
+            self.blktracer_mkfs.create_event_file_from_blkparse()
 
             self.blktracer.start_tracing_and_collecting()
             time.sleep(1)
@@ -221,7 +223,7 @@ class WorkloadRunner(object):
             time.sleep(1)
             self.blktracer.stop_tracing_and_collecting()
             utils.shcmd("sync")
-            self.blktracer.blkparse_file_to_ftlsim_input_file()
+            self.blktracer.create_event_file_from_blkparse()
             return self.get_event_iterator()
         finally:
             # always try to clean up the blktrace processes
