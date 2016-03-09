@@ -24,17 +24,16 @@ def switchable(function):
 class Recorder(object):
     def __init__(self, output_target, path = None, verbose_level = 1,
             print_when_finished = False):
-        """This can be improved by passing in file descriptor, then you don't
-        need output_target"""
         self.output_target = output_target
         self.path = path
         self.verbose_level = verbose_level
         self.print_when_finished = print_when_finished
 
+        self.counters = {}
+
         self.counter = {}
         self.put_and_count_counter = {}
         self.count_counter = {}
-        self.counters = {} # for count_me, counter_name:collections.counter
 
         self.file_pool = {} # {filename:descriptor}
         self.file_colnames = {} # {filename:[colname1, 2, ...]
@@ -115,6 +114,16 @@ class Recorder(object):
         """
         counter = self.counters.setdefault(counter_name, collections.Counter())
         counter[item] += 1
+
+        self.add_to_general_accumulater(counter_name, item, 1)
+
+    def get_count_me(self, counter_name, item):
+        counter = self.counters.setdefault(counter_name, collections.Counter())
+        return counter[item]
+
+    def get_general_accumulater(self,
+            counter_set_name, item_name):
+        return self.general_accumulator[counter_set_name][item_name]
 
     def add_to_general_accumulater(self,
             counter_set_name, item_name, addition):
