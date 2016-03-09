@@ -184,7 +184,7 @@ class WorkloadRunner(object):
             self.blktracer.stop_tracing_and_collecting()
 
     def get_event_iterator(self):
-        yield simulator.Event(sector_size = self.conf['sector_size'],
+        yield hostevent.Event(sector_size = self.conf['sector_size'],
             pid = 0, operation = 'disable_recorder',
             offset = 0, size = 0)
 
@@ -196,10 +196,10 @@ class WorkloadRunner(object):
             yield event
 
         # special event indicates the start of workload
-        yield simulator.Event(sector_size = self.conf['sector_size'],
+        yield hostevent.Event(sector_size = self.conf['sector_size'],
             pid = 0, operation = 'enable_recorder',
             offset = 0, size = 0)
-        yield simulator.Event(sector_size = self.conf['sector_size'],
+        yield hostevent.Event(sector_size = self.conf['sector_size'],
             pid = 0, operation = 'workloadstart',
             offset = 0, size = 0)
 

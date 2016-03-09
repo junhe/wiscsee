@@ -13,50 +13,9 @@ import dmftl
 import flash
 import nkftl2
 import recorder
+import hostevent
 
 from commons import *
-
-
-class EventSimple(object):
-    def __init__(self, pid, operation):
-        self.pid = int(pid)
-        self.operation = operation
-
-    def __str__(self):
-        return "EventSimple PID:{} OP:{}".format(self.pid, self.operation)
-
-
-class Event(object):
-    def __init__(self, sector_size, pid, operation, offset, size,
-            timestamp = None, pre_wait_time = None, sync = True):
-        self.pid = int(pid)
-        self.operation = operation
-        self.offset = int(offset)
-        self.size = int(size)
-        self.sync = sync
-        self.timestamp = timestamp
-        self.pre_wait_time = pre_wait_time
-
-        assert self.offset % sector_size == 0,\
-            "offset {} is not aligned with sector size {}.".format(
-            self.offset, sector_size)
-        self.sector = self.offset / sector_size
-
-        assert self.size % sector_size == 0, \
-            "size {} is not multiple of sector size {}".format(
-            self.size, sector_size)
-
-        self.sector_count = self.size / sector_size
-
-    def __str__(self):
-        return "Event pid:{pid}, operation:{operation}, offset:{offset}, "\
-                "size:{size}, sector:{sector}, sector_count:{sector_count}, "\
-                "sync:{sync}"\
-                .format(pid = self.pid, operation = self.operation,
-                        offset = self.offset, size = self.size,
-                        sector = self.sector, sector_count = self.sector_count,
-                        sync = self.sync)
-
 
 class Simulator(object):
     __metaclass__ = abc.ABCMeta
@@ -336,7 +295,7 @@ class SimulatorDES(Simulator):
             yield self.ssdframework.ncq.queue.put(event)
 
         for i in range(self.conf['SSDFramework']['ncq_depth']):
-            event = EventSimple(0, "end_process")
+            event = hostevent.EventSimple(0, "end_process")
 
             event.token = token
             event.token_req = event.token.request()
@@ -397,7 +356,7 @@ class SimulatorDESSync(Simulator):
             yield self.ssdframework.ncq.queue.put(event)
 
         for i in range(self.conf['SSDFramework']['ncq_depth']):
-            event = EventSimple(0, "end_process")
+            event = hostevent.EventSimple(0, "end_process")
 
             event.token = token
             event.token_req = event.token.request()
@@ -455,7 +414,7 @@ class SimulatorDESTime(Simulator):
             yield self.ssdframework.ncq.queue.put(event)
 
         for i in range(self.conf['SSDFramework']['ncq_depth']):
-            event = EventSimple(0, "end_process")
+            event = hostevent.EventSimple(0, "end_process")
 
             event.token = token
             event.token_req = event.token.request()

@@ -3,7 +3,7 @@ import random
 
 import config
 import workload
-from FtlSim import simulator
+from FtlSim import simulator, hostevent
 from commons import *
 
 class LBAWorkloadGenerator(object):
@@ -227,7 +227,7 @@ class Manual(LBAWorkloadGenerator):
         return events
 
     def __iter__(self):
-        yield simulator.Event(sector_size = self.sector_size,
+        yield hostevent.Event(sector_size = self.sector_size,
                 pid = 0, operation = 'enable_recorder',
                 offset = 0, size = 0)
 
@@ -241,7 +241,7 @@ class Manual(LBAWorkloadGenerator):
         for op, lpn in events:
             offset = lpn * self.conf.page_size
             size = self.conf.page_size
-            event = simulator.Event(sector_size = self.sector_size,
+            event = hostevent.Event(sector_size = self.sector_size,
                     pid = 0, operation = op, offset = offset,
                     size = size)
             yield event
@@ -287,7 +287,7 @@ class TestWorkload(LBAWorkloadGenerator):
         return events
 
     def __iter__(self):
-        yield simulator.Event(sector_size = self.sector_size,
+        yield hostevent.Event(sector_size = self.sector_size,
                 pid = 0, operation = 'enable_recorder',
                 offset = 0, size = 0)
 
@@ -296,7 +296,7 @@ class TestWorkload(LBAWorkloadGenerator):
         for op, lpn in events:
             offset = lpn * self.conf.page_size
             size = self.conf.page_size
-            event = simulator.Event(sector_size = self.sector_size,
+            event = hostevent.Event(sector_size = self.sector_size,
                     pid = 0, operation = op, offset = offset,
                     size = size)
             yield event
@@ -354,7 +354,7 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
         return events
 
     def __iter__(self):
-        yield simulator.Event(sector_size = self.sector_size,
+        yield hostevent.Event(sector_size = self.sector_size,
                 pid = 0, operation = 'enable_recorder',
                 offset = 0, size = 0)
 
@@ -363,7 +363,7 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
         for op, lpn, npages in events:
             offset = lpn * self.page_size
             size = self.page_size * npages
-            event = simulator.Event(sector_size = self.sector_size,
+            event = hostevent.Event(sector_size = self.sector_size,
                     pid = 0, operation = op, offset = offset,
                     size = size)
             yield event
@@ -430,7 +430,7 @@ class TestWorkloadFLEX3(LBAWorkloadGenerator):
         return events
 
     def __iter__(self):
-        yield simulator.Event(sector_size = self.sector_size,
+        yield hostevent.Event(sector_size = self.sector_size,
                 pid = 0, operation = 'enable_recorder',
                 offset = 0, size = 0)
 
@@ -439,7 +439,7 @@ class TestWorkloadFLEX3(LBAWorkloadGenerator):
         for op, lpn, npages in events:
             offset = lpn * self.page_size
             size = self.page_size * npages
-            event = simulator.Event(sector_size = self.sector_size,
+            event = hostevent.Event(sector_size = self.sector_size,
                     pid = 0, operation = op, offset = offset,
                     size = size)
             yield event
@@ -490,7 +490,7 @@ class ExtentTestWorkloadMANUAL(LBAWorkloadGenerator):
         return events
 
     def __iter__(self):
-        yield simulator.Event(sector_size = self.sector_size,
+        yield hostevent.Event(sector_size = self.sector_size,
                 pid = 0, operation = 'enable_recorder',
                 offset = 0, size = 0)
 
@@ -499,7 +499,7 @@ class ExtentTestWorkloadMANUAL(LBAWorkloadGenerator):
         for op, lpn, npages in events:
             offset = lpn * self.page_size
             size = self.page_size * npages
-            event = simulator.Event(sector_size = self.sector_size,
+            event = hostevent.Event(sector_size = self.sector_size,
                     pid = 0, operation = op, offset = offset,
                     size = size)
             yield event
@@ -556,7 +556,7 @@ class ExtentTestWorkload4DFTLDES(LBAWorkloadGenerator):
         return events
 
     def __iter__(self):
-        yield simulator.Event(sector_size = self.sector_size,
+        yield hostevent.Event(sector_size = self.sector_size,
                 pid = 0, operation = 'enable_recorder',
                 offset = 0, size = 0)
 
@@ -565,7 +565,7 @@ class ExtentTestWorkload4DFTLDES(LBAWorkloadGenerator):
         for op, lpn, npages in events:
             offset = lpn * self.page_size
             size = self.page_size * npages
-            event = simulator.Event(sector_size = self.sector_size,
+            event = hostevent.Event(sector_size = self.sector_size,
                     pid = 0, operation = op, offset = offset,
                     size = size)
             yield event
@@ -617,7 +617,7 @@ class ExtentTestWorkloadFLEX(LBAWorkloadGenerator):
         return events
 
     def __iter__(self):
-        yield simulator.Event(sector_size = self.sector_size,
+        yield hostevent.Event(sector_size = self.sector_size,
                 pid = 0, operation = 'enable_recorder',
                 offset = 0, size = 0)
 
@@ -626,7 +626,7 @@ class ExtentTestWorkloadFLEX(LBAWorkloadGenerator):
         for op, lpn, npages in events:
             offset = lpn * self.page_size
             size = self.page_size * npages
-            event = simulator.Event(sector_size = self.sector_size,
+            event = hostevent.Event(sector_size = self.sector_size,
                     pid = 0, operation = op, offset = offset,
                     size = size)
             yield event
@@ -670,7 +670,7 @@ class ExtentTestWorkloadFLEX2(LBAWorkloadGenerator):
         return ret
 
     def __iter__(self):
-        yield simulator.Event(sector_size = self.sector_size,
+        yield hostevent.Event(sector_size = self.sector_size,
                 pid = 0, operation = 'enable_recorder',
                 offset = 0, size = 0)
 
@@ -679,7 +679,7 @@ class ExtentTestWorkloadFLEX2(LBAWorkloadGenerator):
         for op, lpn, npages in events:
             offset = lpn * self.page_size
             size = self.page_size * npages
-            event = simulator.Event(sector_size = self.sector_size,
+            event = hostevent.Event(sector_size = self.sector_size,
                     pid = 0, operation = op, offset = offset,
                     size = size)
             yield event
@@ -799,14 +799,14 @@ class MultipleProcess(LBAMultiProcGenerator):
         return ret
 
     def get_iter(self, raw_list):
-        yield simulator.Event(sector_size = self.sector_size,
+        yield hostevent.Event(sector_size = self.sector_size,
                 pid = 0, operation = 'enable_recorder',
                 offset = 0, size = 0)
 
         for op, lpn, npages in raw_list:
             offset = lpn * self.page_size
             size = self.page_size * npages
-            event = simulator.Event(sector_size = self.sector_size,
+            event = hostevent.Event(sector_size = self.sector_size,
                     pid = 0, operation = op, offset = offset,
                     size = size)
             yield event
