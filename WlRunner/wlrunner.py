@@ -7,46 +7,9 @@ import cpuhandler
 import filesystem
 import fshelper
 import ftrace
-from FtlSim import simulator
+from FtlSim import simulator, hostevent
 import utils
 import workload
-
-class FileLineIterator(object):
-    def __init__(self, file_path):
-        self.file_path = file_path
-
-    def __iter__(self):
-        with open(self.file_path, 'r') as f:
-            for line in f:
-                line = line.strip()
-                yield line
-
-
-class EventIterator(object):
-    def __init__(self, conf, filelineiter):
-        self.conf = conf
-        self.sector_size = self.conf['sector_size']
-        self.filelineiter = filelineiter
-        self.event_file_columns = self.conf['event_file_columns']
-
-    def str_to_event(self, line):
-        items = line.split()
-        if len(self.event_file_columns) != len(items):
-            raise RuntimeError("Lengths not equal: {} {}".format(
-                self.event_file_columns, items))
-        dic = dict(zip(self.event_file_columns, items))
-        dic['sector_size'] = self.sector_size
-        dic['pre_wait_time'] = float(dic['pre_wait_time'])
-
-        return simulator.Event(**dic)
-        # return simulator.Event(sector_size = self.sector_size,
-                # pid = items[0], operation = items[1], offset = items[2],
-                # size = items[3])
-
-    def __iter__(self):
-        for line in self.filelineiter:
-            yield self.str_to_event(line)
-
 
 
 class WorkloadRunner(object):
@@ -227,7 +190,7 @@ class WorkloadRunner(object):
 
         mkfs_iter = FileLineIterator(
             self.conf.get_ftlsim_events_output_path_mkfs())
-        event_mkfs_iter = EventIterator(self.conf, mkfs_iter)
+        event_mkfs_iter = hostevent.EventIterator(self.conf, mkfs_iter)
 
         for event in event_mkfs_iter:
             yield event
@@ -242,7 +205,7 @@ class WorkloadRunner(object):
 
         workload_iter = FileLineIterator(
             self.conf.get_ftlsim_events_output_path())
-        event_workload_iter = EventIterator(self.conf, workload_iter)
+        event_workload_iter = hostevent.EventIterator(self.conf, workload_iter)
 
         for event in event_workload_iter:
             yield event
