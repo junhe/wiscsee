@@ -489,6 +489,129 @@ def stress_metadata():
     test_rand()
 
 
+def compare_real_and_sim():
+    """
+    Run workload with blktrace, record performance
+    Then run the trace with simulator
+    """
+    class Experimenter(object):
+        def __init__(self, para):
+            # Get default setting
+            self.conf = FtlSim.dftldes.Config()
+            self.para = para
+            self.conf['exp_parameters'] = self.para._asdict()
+
+        def setup_environment(self):
+            self.conf['device_path'] = "/dev/sdc1"
+            self.conf['dev_size_mb'] = 256
+            self.conf['filesystem'] = self.para.filesystem
+            self.conf["n_online_cpus"] = 'all'
+
+            self.conf['workload_class'] = 'FIONEW'
+
+            set_vm_default()
+            set_vm("dirty_bytes", self.para.dirty_bytes)
+
+        def setup_workload(self):
+            tmp_job_conf = [
+                ("global", {
+                    'ioengine'  : 'libaio',
+                    'size'      : self.para.size,
+                    'directory'  : self.conf['fs_mount_point'],
+                    'direct'    : self.para.direct,
+                    # 'sync'      : 1 ,
+                    'iodepth'   : self.para.iodepth,
+                    'bs'        : self.para.bs,
+                    'fallocate' : 'none',
+                    'numjobs'   : self.para.numjobs,
+                    }
+                ),
+                ("writer", {
+                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'rw'        : self.para.rw
+                    }
+                )
+                ]
+            self.conf['fio_job_conf'] = {
+                    'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                    'runner': {
+                        'to_json': True
+                    }
+                }
+            self.conf['workload_conf_key'] = 'fio_job_conf'
+
+        def setup_flash(self):
+            self.conf['SSDFramework']['ncq_depth'] = 1
+
+
+            self.conf['flash_config']['page_size'] = 2048
+            self.conf['flash_config']['n_pages_per_block'] = 64
+            self.conf['flash_config']['n_blocks_per_plane'] = 8
+            self.conf['flash_config']['n_planes_per_chip'] = 1
+            self.conf['flash_config']['n_chips_per_package'] = 1
+            self.conf['flash_config']['n_packages_per_channel'] = 1
+            self.conf['flash_config']['n_channels_per_dev'] = 32
+
+        def setup_ftl(self):
+            self.conf['enable_blktrace'] = True
+            self.conf['enable_simulation'] = True
+
+            self.conf['simulator_class'] = 'SimulatorDESTime'
+            self.conf['ftl_type'] = 'dftldes'
+
+
+            devsize_mb = self.conf['dev_size_mb']
+            entries_need = int(devsize_mb * 2**20 * 0.1 / self.conf['flash_config']['page_size'])
+            self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+            self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+
+        def run(self):
+            set_exp_metadata(self.conf, save_data = True,
+                    expname = self.para.expname,
+                    subexpname = chain_items_as_filename(self.para))
+            runtime_update(self.conf)
+
+            workflow(self.conf)
+
+        def main(self):
+            self.setup_environment()
+            self.setup_workload()
+            self.setup_flash()
+            self.setup_ftl()
+            self.run()
+
+    def test_rand():
+        Parameters = collections.namedtuple("Parameters",
+            "filesystem, numjobs, bs, iodepth, expname, size, rw, direct, "\
+            "dirty_bytes")
+
+        expname = get_expname()
+        para_dict = {
+                'numjobs'        : [1],
+                'bs'             : [128*KB],
+                'iodepth'        : [1],
+                'filesystem'     : ['ext4'],
+                'expname'        : [expname],
+                'rw'             : ['randwrite'],
+                'direct'         : [1],
+                'dirty_bytes'    : [4*MB]
+                }
+
+        parameter_combs = ParameterCombinations(para_dict)
+        total_size = 64*MB
+        for para in parameter_combs:
+            para['size'] =  total_size / para['numjobs']
+
+        for para in parameter_combs:
+            obj = Experimenter( Parameters(**para) )
+            obj.main()
+
+    # test_seq()
+    test_rand()
+
+
+
+
 def main(cmd_args):
     if cmd_args.git == True:
         shcmd("sudo -u jun git commit -am 'commit by Makefile: {commitmsg}'"\
