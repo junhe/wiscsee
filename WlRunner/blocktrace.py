@@ -5,29 +5,17 @@ import time
 
 import utils
 
-class BlockTraceManager(object):
-    "This class provides interfaces to interact with blktrace"
-    def __init__(self, confobj, dev, resultpath, to_ftlsim_path, sector_size):
-        self.conf = confobj
-        self.dev = self.conf['device_path']
-        self.resultpath = resultpath
-        self.to_ftlsim_path = to_ftlsim_path
-        self.sector_size = sector_size
+class RawParser(object):
+    """
+    Parse blkparse output
+    """
+    def __init__(self, conf, raw_blkparse_file_path, parsed_output_path):
+        self.conf = conf
+        self.raw_blkparse_file_path = raw_blkparse_file_path
+        self.parsed_output_path = parsed_output_path
+        self.sector_size = self.conf['sector_size']
 
-    def start_tracing_and_collecting(self):
-        self.proc = start_blktrace_on_bg(self.dev, self.resultpath)
-
-    def stop_tracing_and_collecting(self):
-        "this is not elegant... TODO:improve"
-        stop_blktrace_on_bg()
-
-    def create_event_file_from_blkparse(self):
-        table = self.parse_blkparse_result(open(self.resultpath, 'r'))
-        utils.prepare_dir_for_path(self.to_ftlsim_path)
-        self.create_event_file(table, self.to_ftlsim_path,
-            self.sector_size)
-
-    def line2dic(self, line):
+    def __line_to_dic(self, line):
         """
         is_data_line() must be true for this line"\
         ['8,0', '0', '1', '0.000000000', '440', 'A', 'W', '12912077', '+', '8', '<-', '(8,2)', '606224']"
@@ -41,36 +29,10 @@ class BlockTraceManager(object):
 
         return dic
 
-    def parse_blkparse_result(self, line_iter):
-        table = []
-        for line in line_iter:
-            line = line.strip()
-            # print is_data_line(line), line
-            if is_data_line(line):
-                ret = self.line2dic(line)
-                ret['type'] = 'blkparse'
-            else:
-                ret = None
-
-            if ret != None:
-                table.append(ret)
-
-        table.sort(key = lambda k: k['timestamp'])
-        self.calculate_pre_wait_time(table)
-        return table
-
-    def calculate_pre_wait_time(self, event_table):
-        for i, row in enumerate(event_table):
-            if i == 0:
-                row['pre_wait_time'] = 0
-                continue
-            row['pre_wait_time'] = float(event_table[i]['timestamp']) - \
-                float(event_table[i-1]['timestamp'])
-            assert row['pre_wait_time'] >= 0
-
-    def parse_row(self, row):
+    def __parse_row_dict(self, row):
         """
         Parse a row from blkparse file
+        row is a dictionary of the line
         """
         # offset, size
         blk_start = int(row['blockstart'])
@@ -99,19 +61,29 @@ class BlockTraceManager(object):
 
         return line_dict
 
-    def create_event_line(self, line_dict):
+
+    def __calculate_pre_wait_time(self, event_table):
+        for i, row in enumerate(event_table):
+            if i == 0:
+                row['pre_wait_time'] = 0
+                continue
+            row['pre_wait_time'] = float(event_table[i]['timestamp']) - \
+                float(event_table[i-1]['timestamp'])
+            assert row['pre_wait_time'] >= 0
+
+    def __create_event_line(self, line_dict):
         columns = [str(line_dict[colname])
                 for colname in self.conf['event_file_columns']]
         line = ' '.join(columns)
         return line
 
-    def create_event_file(self, table, out_path, sector_size):
+    def __dump_table(self, table, out_path):
         utils.prepare_dir_for_path(out_path)
         out = open(out_path, 'w')
-        for row in table:
-            if row['type'] == 'blkparse':
-                line_dict = self.parse_row(row)
-                line = self.create_event_line(line_dict)
+        for row_dict in table:
+            if row_dict['type'] == 'blkparse':
+                line_dict = self.__parse_row_dict(row_dict)
+                line = self.__create_event_line(line_dict)
             else:
                 raise NotImplementedError()
 
@@ -120,6 +92,49 @@ class BlockTraceManager(object):
         out.flush()
         os.fsync(out)
         out.close()
+
+    def parse_raw(self):
+        with open(self.raw_blkparse_file_path, 'r') as line_iter:
+            table = []
+            for line in line_iter:
+                line = line.strip()
+                # print is_data_line(line), line
+                if is_data_line(line):
+                    ret = self.__line_to_dic(line)
+                    ret['type'] = 'blkparse'
+                else:
+                    ret = None
+
+                if ret != None:
+                    table.append(ret)
+
+            table.sort(key = lambda k: k['timestamp'])
+            self.__calculate_pre_wait_time(table)
+        return table
+
+    def create_event_file(self):
+        table = self.parse_raw()
+        self.__dump_table(table, self.parsed_output_path)
+
+
+class BlockTraceManager(object):
+    "This class provides interfaces to interact with blktrace"
+    def __init__(self, confobj, dev, resultpath, to_ftlsim_path, sector_size):
+        self.conf = confobj
+        self.dev = self.conf['device_path']
+        self.resultpath = resultpath
+        self.to_ftlsim_path = to_ftlsim_path
+        self.sector_size = sector_size
+
+    def start_tracing_and_collecting(self):
+        self.proc = start_blktrace_on_bg(self.dev, self.resultpath)
+
+    def stop_tracing_and_collecting(self):
+        stop_blktrace_on_bg()
+
+    def create_event_file_from_blkparse(self):
+        rawparser = RawParser(self.conf, self.resultpath, self.to_ftlsim_path)
+        rawparser.create_event_file()
 
 
 def start_blktrace_on_bg(dev, resultpath):
