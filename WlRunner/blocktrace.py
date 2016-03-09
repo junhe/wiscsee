@@ -69,6 +69,9 @@ class BlockTraceManager(object):
             assert row['pre_wait_time'] >= 0
 
     def parse_row(self, row):
+        """
+        Parse a row from blkparse file
+        """
         # offset, size
         blk_start = int(row['blockstart'])
         size = int(row['size'])
@@ -94,6 +97,9 @@ class BlockTraceManager(object):
             'pre_wait_time': row['pre_wait_time']
                 }
 
+        return line_dict
+
+    def create_event_line(self, line_dict):
         columns = [str(line_dict[colname])
                 for colname in self.conf['event_file_columns']]
         line = ' '.join(columns)
@@ -104,7 +110,8 @@ class BlockTraceManager(object):
         out = open(out_path, 'w')
         for row in table:
             if row['type'] == 'blkparse':
-                line = self.parse_row(row)
+                line_dict = self.parse_row(row)
+                line = create_event_line(line_dict)
             else:
                 raise NotImplementedError()
 
@@ -163,41 +170,5 @@ def is_data_line(line):
         return False
     else:
         return True
-
-
-def create_event_file(table, out_path, sector_size):
-    utils.prepare_dir_for_path(out_path)
-    out = open(out_path, 'w')
-    for row in table:
-        if row['type'] == 'blkparse':
-            pid = row['pid']
-            blk_start = int(row['blockstart'])
-            size = int(row['size'])
-
-            byte_offset = blk_start * sector_size
-            byte_size = size * sector_size
-
-            if row['RWBS'] == 'D':
-                operation = 'discard'
-            elif 'W' in row['RWBS']:
-                operation = 'write'
-            elif 'R' in row['RWBS']:
-                operation = 'read'
-            else:
-                raise RuntimeError('unknow operation')
-
-            items = [str(x) for x in [pid, operation, byte_offset, byte_size]]
-            line = ' '.join(items)+'\n'
-        else:
-            raise NotImplementedError()
-
-        out.write( line )
-
-    out.flush()
-    os.fsync(out)
-    out.close()
-
-
-
 
 
