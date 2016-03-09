@@ -70,25 +70,6 @@ class SSDFramework(object):
 
         self.recorder.disable()
 
-    def get_direct_mapped_flash_requests(self, host_req):
-        """
-        For example, read LPN 20 will executed as reading PPN 20
-
-        This is only for debugging.
-        """
-        page_start, page_count = self.conf.sec_ext_to_page_ext(host_req.sector,
-                host_req.sector_count)
-        if host_req.operation == 'discard':
-            return []
-        elif host_req.operation in ('read', 'write'):
-            return self.flash_controller.get_flash_requests_for_ppns(
-                    page_start, page_count, op = host_req.operation)
-        elif host_req.operation in ('enable_recorder', 'disable_recorder'):
-            return []
-        else:
-            raise RuntimeError("operation {} is not supported".format(
-                host_req.operation))
-
     def access_flash(self, flash_reqs):
         """
         This simpy process spawn multiple processes to access flash
