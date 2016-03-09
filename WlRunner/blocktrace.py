@@ -105,11 +105,10 @@ class BlockTraceManager(object):
         for row in table:
             if row['type'] == 'blkparse':
                 line = self.parse_row(row)
-                print line
             else:
                 raise NotImplementedError()
 
-            out.write( line )
+            out.write( line + '\n' )
 
         out.flush()
         os.fsync(out)

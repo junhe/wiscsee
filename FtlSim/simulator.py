@@ -426,21 +426,16 @@ class SimulatorDESSync(Simulator):
         raise NotImplementedError()
 
 class SimulatorDESTime(Simulator):
-    def __init__(self, conf, event_iters):
-        """
-        event_iters is list of event iterators
-        """
-        super(SimulatorDESSync, self).__init__(conf, None)
+    def __init__(self, conf, event_iter):
+        super(SimulatorDESTime, self).__init__(conf, None)
 
-        if not isinstance(event_iters, list):
-            raise RuntimeError("event_iters must be a list of iterators.")
 
-        self.event_iters = event_iters
+        self.event_iter = event_iter
 
         self.env = simpy.Environment()
         self.ssdframework = ssdframework.SSDFramework(self.conf, self.rec, self.env)
 
-    def host_proc(self, pid, event_iter):
+    def host_proc(self, event_iter):
         """
         This process acts like a producer, putting requests to ncq
         """
@@ -454,7 +449,8 @@ class SimulatorDESTime(Simulator):
             event.token = token
             event.token_req = event.token.request()
 
-            yield event.token_req
+            # if event.operation in ('read', 'write', 'discard'):
+                # yield self.env.timeout(int(event.pre_wait_time * SEC))
 
             yield self.ssdframework.ncq.queue.put(event)
 
@@ -468,15 +464,16 @@ class SimulatorDESTime(Simulator):
 
             yield self.ssdframework.ncq.queue.put(event)
 
+        print 'Host finish time', self.env.now
+
     def run(self):
-        for i, event_iter in enumerate(self.event_iters):
-            self.env.process(self.host_proc(i, event_iter))
+        self.env.process(self.host_proc(self.event_iter))
         self.env.process(self.ssdframework.run())
 
         self.env.run()
 
     def get_sim_type(self):
-        return "SimulatorDES"
+        return "SimulatorDESTime"
 
     def write(self):
         raise NotImplementedError()

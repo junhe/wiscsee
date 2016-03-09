@@ -31,9 +31,12 @@ class EventIterator(object):
 
     def str_to_event(self, line):
         items = line.split()
-        assert len(self.event_file_columns) == len(items)
+        if len(self.event_file_columns) != len(items):
+            raise RuntimeError("Lengths not equal: {} {}".format(
+                self.event_file_columns, items))
         dic = dict(zip(self.event_file_columns, items))
         dic['sector_size'] = self.sector_size
+        dic['pre_wait_time'] = float(dic['pre_wait_time'])
 
         return simulator.Event(**dic)
         # return simulator.Event(sector_size = self.sector_size,

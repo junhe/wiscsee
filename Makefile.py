@@ -91,22 +91,8 @@ def run_simulator(conf, event_iter):
     simulator.run()
 
 def create_simulator(simulator_class, conf, event_iter):
-    """
-    type: "DES", "NonDES"
-    """
-    if simulator_class == 'SimulatorDESSync' and not isinstance(event_iter, list):
-        raise RuntimeError("The input of SimulatorDESSync must be a list of "
-                "iterators!")
-
     return eval("FtlSim.simulator.{sim_class}(conf, event_iter)".format(
         sim_class = simulator_class))
-
-    # if simulator_type == 'DES':
-        # return FtlSim.simulator.SimulatorDES(conf, event_iter)
-    # elif simulator_type == 'NonDES':
-        # return FtlSim.simulator.SimulatorNonDES(conf, event_iter)
-    # else:
-        # raise NotImplementedError()
 
 def set_exp_metadata(conf, save_data, expname, subexpname):
     if save_data == True:
