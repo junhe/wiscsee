@@ -111,7 +111,7 @@ class BlockTraceManager(object):
         for row in table:
             if row['type'] == 'blkparse':
                 line_dict = self.parse_row(row)
-                line = create_event_line(line_dict)
+                line = self.create_event_line(line_dict)
             else:
                 raise NotImplementedError()
 

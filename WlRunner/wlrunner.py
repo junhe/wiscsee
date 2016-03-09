@@ -188,7 +188,7 @@ class WorkloadRunner(object):
             pid = 0, operation = 'disable_recorder',
             offset = 0, size = 0)
 
-        mkfs_iter = FileLineIterator(
+        mkfs_iter = hostevent.FileLineIterator(
             self.conf.get_ftlsim_events_output_path_mkfs())
         event_mkfs_iter = hostevent.EventIterator(self.conf, mkfs_iter)
 
@@ -203,7 +203,7 @@ class WorkloadRunner(object):
             pid = 0, operation = 'workloadstart',
             offset = 0, size = 0)
 
-        workload_iter = FileLineIterator(
+        workload_iter = hostevent.FileLineIterator(
             self.conf.get_ftlsim_events_output_path())
         event_workload_iter = hostevent.EventIterator(self.conf, workload_iter)
 
