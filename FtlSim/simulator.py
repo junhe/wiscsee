@@ -392,7 +392,8 @@ class SimulatorDESTime(Simulator):
         self.event_iter = event_iter
 
         self.env = simpy.Environment()
-        self.ssdframework = ssdframework.SSDFramework(self.conf, self.rec, self.env)
+        self.ssdframework = ssdframework.SSDFramework(self.conf, self.rec,
+                self.env)
 
     def host_proc(self, event_iter):
         """
@@ -408,8 +409,8 @@ class SimulatorDESTime(Simulator):
             event.token = token
             event.token_req = event.token.request()
 
-            # if event.operation in ('read', 'write', 'discard'):
-                # yield self.env.timeout(int(event.pre_wait_time * SEC))
+            if event.operation in ('read', 'write', 'discard'):
+                yield self.env.timeout(int(event.pre_wait_time * SEC))
 
             yield self.ssdframework.ncq.queue.put(event)
 
