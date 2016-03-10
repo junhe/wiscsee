@@ -25,7 +25,9 @@ class TestFTLwithDFTL(unittest.TestCase):
 
         recorder = FtlSim.recorder.Recorder(
                 output_target = FtlSim.recorder.FILE_TARGET,
-                path = "/tmp/recorder")
+                path = "/tmp/recorder",
+                output_directory = "/tmp"
+                )
 
         recorder.add_to_general_accumulater("counter_set_1", "counter1", 3)
         recorder.add_to_general_accumulater("counter_set_1", "counter1", 4)
@@ -66,7 +68,9 @@ class TestCountMe(unittest.TestCase):
 
         recorder = FtlSim.recorder.Recorder(
                 output_target = FtlSim.recorder.FILE_TARGET,
-                path = "/tmp/recorder")
+                path = "/tmp/recorder",
+                output_directory = '/tmp'
+                )
         recorder.enable()
 
         recorder.count_me("counter_name_1", "item1")

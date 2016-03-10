@@ -24,12 +24,12 @@ def switchable(function):
 
 class Recorder(object):
     def __init__(self, output_target,
+            output_directory = None,
             path = None,
             verbose_level = 1,
             print_when_finished = False):
         self.output_target = output_target
-        self.path = path
-        self.output_directory = os.path.dirname(self.path)
+        self.output_directory = output_directory
         self.verbose_level = verbose_level
         self.print_when_finished = print_when_finished
 
@@ -70,7 +70,7 @@ class Recorder(object):
         # open log file
         log_path = os.path.join(self.output_directory, 'recorder.log')
         utils.prepare_dir_for_path(log_path)
-        self.log_handle = open(self.path, 'w')
+        self.log_handle = open(log_path, 'w')
 
     def __save_accumulator(self):
         counter_set_path = os.path.join(self.output_directory,
@@ -156,8 +156,7 @@ class Recorder(object):
         """
         width = 20
         if not self.file_pool.has_key(filename):
-            fd = open( os.path.join(
-                os.path.dirname(self.path), filename ), 'wr+')
+            fd = open( os.path.join( self.output_directory, filename ), 'wr+')
             self.file_pool[filename] = fd
             self.file_colnames[filename] = kwargs.keys()
             colnames = [str(colname).rjust(width) for colname in kwargs.keys()]
