@@ -30,7 +30,6 @@ class Recorder(object):
         self.print_when_finished = print_when_finished
 
         self.counter = {}
-        self.count_counter = {}
 
         self.file_pool = {} # {filename:descriptor}
         self.file_colnames = {} # {filename:[colname1, 2, ...]
@@ -66,9 +65,6 @@ class Recorder(object):
                 print 'stats'
                 pprint.pprint(self.counter)
 
-
-            path3 = '.'.join((self.path, 'count.stats'))
-            utils.table_to_file([self.count_counter], path3)
 
             counter_set_path = '.'.join((self.path,
                 'general_accumulator_table'))
@@ -196,11 +192,6 @@ class Recorder(object):
 
         if self.verbose_level >= 1:
             self._output('RECORD', operation, page_num, category)
-
-    @switchable
-    def count(self, item, *args ):
-        """ The first parameter will be counted """
-        self.count_counter[item] = self.count_counter.setdefault(item, 0) + 1
 
     @switchable
     def warning(self, *args):

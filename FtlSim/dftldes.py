@@ -802,9 +802,6 @@ class MappingManager(object):
         self.cached_mapping_table = CachedMappingTable(confobj)
         self.directory = GlobalTranslationDirectory(confobj)
 
-    def __del__(self):
-        print self.flash.recorder.count_counter
-
     def ppns_for_writing(self, lpns):
         """
         This function returns ppns that can be written.
