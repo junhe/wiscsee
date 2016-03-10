@@ -25,7 +25,6 @@ def switchable(function):
 class Recorder(object):
     def __init__(self, output_target,
             output_directory = None,
-            path = None,
             verbose_level = 1,
             print_when_finished = False):
         self.output_target = output_target

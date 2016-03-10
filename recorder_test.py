@@ -25,7 +25,6 @@ class TestFTLwithDFTL(unittest.TestCase):
 
         recorder = FtlSim.recorder.Recorder(
                 output_target = FtlSim.recorder.FILE_TARGET,
-                path = "/tmp/recorder",
                 output_directory = "/tmp"
                 )
 
@@ -68,7 +67,6 @@ class TestCountMe(unittest.TestCase):
 
         recorder = FtlSim.recorder.Recorder(
                 output_target = FtlSim.recorder.FILE_TARGET,
-                path = "/tmp/recorder",
                 output_directory = '/tmp'
                 )
         recorder.enable()

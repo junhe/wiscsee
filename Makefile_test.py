@@ -541,7 +541,6 @@ class TestDftlextParallelFlash(unittest.TestCase):
         runtime_update(self.conf)
         rec = FtlSim.recorder.Recorder(output_target = self.conf['output_target'],
             output_directory = self.conf['result_dir'],
-            path = self.conf.get_output_file_path(),
             verbose_level = self.conf['verbose_level'],
             print_when_finished = self.conf['print_when_finished']
             )
@@ -610,7 +609,6 @@ class TestTimelineAndFlash(unittest.TestCase):
         self.rec = FtlSim.recorder.Recorder(
             output_target = self.conf['output_target'],
             output_directory = self.conf['result_dir'],
-            path = self.conf.get_output_file_path(),
             verbose_level = self.conf['verbose_level'],
             print_when_finished = self.conf['print_when_finished']
             )
