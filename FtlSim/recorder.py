@@ -80,7 +80,7 @@ class Recorder(object):
         utils.table_to_file(general_accumulator_table, counter_set_path)
 
     @switchable
-    def __output(self, *args):
+    def __write_log(self, *args):
         line = ' '.join( str(x) for x in args)
         line += '\n'
         if self.output_target == FILE_TARGET:
@@ -170,7 +170,7 @@ class Recorder(object):
     @switchable
     def debug(self, *args):
         if self.verbose_level >= 3:
-            self.__output('DEBUG', *args)
+            self.__write_log('DEBUG', *args)
 
     @switchable
     def put(self, operation, page_num, category):
@@ -181,11 +181,11 @@ class Recorder(object):
     @switchable
     def warning(self, *args):
         if self.verbose_level >= 2:
-            self.__output('WARNING', *args)
+            self.__write_log('WARNING', *args)
 
     @switchable
     def error(self, *args):
         if self.verbose_level >= 0:
-            self.__output('ERROR', *args)
+            self.__write_log('ERROR', *args)
 
 
