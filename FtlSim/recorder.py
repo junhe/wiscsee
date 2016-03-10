@@ -22,26 +22,41 @@ def switchable(function):
     return wrapper
 
 class Recorder(object):
-    def __init__(self, output_target, path = None, verbose_level = 1,
+    def __init__(self, output_target,
+            path = None,
+            verbose_level = 1,
             print_when_finished = False):
         self.output_target = output_target
         self.path = path
+        self.output_directory = os.path.dirname(self.path)
         self.verbose_level = verbose_level
         self.print_when_finished = print_when_finished
-
-        self.counter = {}
 
         self.file_pool = {} # {filename:descriptor}
         self.file_colnames = {} # {filename:[colname1, 2, ...]
 
         # {set name: collections.counter}
         self.general_accumulator = {}
+        self.result_dict = {'general_accumulator': self.general_accumulator}
 
         self.enabled = None
 
-        if self.output_target == FILE_TARGET:
-            utils.prepare_dir_for_path(path)
-            self.fhandle = open(path, 'w')
+        self.open_log_file()
+
+    def save_result_dict(self):
+        result_path = os.path.join(self.output_directory, 'recorder.json')
+        utils.dump_json(self.result_dict, result_path)
+
+    def close_log_file(self):
+        self.log_handle.flush()
+        os.fsync(self.log_handle)
+        self.log_handle.close()
+
+    def open_log_file(self):
+        # open log file
+        log_path = os.path.join(self.output_directory, 'recorder.log')
+        utils.prepare_dir_for_path(log_path)
+        self.log_handle = open(self.path, 'w')
 
     def enable(self):
         print "....Recorder is enabled...."
@@ -51,39 +66,18 @@ class Recorder(object):
         "Note that this will not clear the previous records"
         self.enabled = False
 
+    def save_accumulator(self):
+        counter_set_path = os.path.join(self.output_directory,
+            'accumulator_table.txt')
+        utils.prepare_dir_for_path(counter_set_path)
+        general_accumulator_table = self.parse_accumulator(
+                self.general_accumulator)
+        utils.table_to_file(general_accumulator_table, counter_set_path)
+
     def __del__(self):
-        if self.output_target == FILE_TARGET:
-            self.fhandle.flush()
-            os.fsync(self.fhandle)
-            self.fhandle.close()
-
-        if self.path:
-            # only write stats when we _output to file
-            stats_path = '.'.join((self.path, 'stats'))
-            utils.table_to_file([self.counter], stats_path)
-            if self.print_when_finished:
-                print 'stats'
-                pprint.pprint(self.counter)
-
-
-            counter_set_path = '.'.join((self.path,
-                'general_accumulator_table'))
-            general_accumulator_table = self.counter_sets_to_table(
-                    self.general_accumulator)
-            utils.table_to_file(general_accumulator_table, counter_set_path)
-
-            if self.print_when_finished:
-                print utils.table_to_str(
-                        self.counter_sets_to_table(self.general_accumulator))
-
-        if self.output_target == STDOUT_TARGET:
-            for fd in self.file_pool.values():
-                fd.seek(0)
-                lines = fd.readlines()
-                lines[:] = [l.strip() for l in lines]
-                if self.print_when_finished:
-                    print '\n'.join(lines)
-                fd.close()
+        self.close_log_file()
+        self.save_accumulator()
+        self.save_result_dict()
 
     @switchable
     def count_me(self, counter_name, item):
@@ -93,9 +87,9 @@ class Recorder(object):
         self.add_to_general_accumulater(counter_name, item, 1)
 
     def get_count_me(self, counter_name, item):
-        return self.get_general_accumulater(counter_name, item)
+        return self.get_general_accumulater_cnt(counter_name, item)
 
-    def get_general_accumulater(self,
+    def get_general_accumulater_cnt(self,
             counter_set_name, item_name):
         return self.general_accumulator[counter_set_name][item_name]
 
@@ -118,7 +112,7 @@ class Recorder(object):
     def add_to_timer(self, counter_set_name, item_name, addition):
         self.add_to_general_accumulater(counter_set_name, item_name, addition)
 
-    def counter_sets_to_table(self, counter_sets):
+    def parse_accumulator(self, counter_sets):
         """
         counter sets
         {counter set 1:
@@ -170,7 +164,7 @@ class Recorder(object):
         line = ' '.join( str(x) for x in args)
         line += '\n'
         if self.output_target == FILE_TARGET:
-            self.fhandle.write(line)
+            self.log_handle.write(line)
         else:
             sys.stdout.write(line)
 
@@ -180,18 +174,10 @@ class Recorder(object):
             self._output('DEBUG', *args)
 
     @switchable
-    def debug2(self, *args):
-        if self.verbose_level >= 3:
-            self._output('DEBUG', *args)
-
-    @switchable
     def put(self, operation, page_num, category):
         # do statistics
         item = '.'.join((operation, category))
-        self.counter[item] = self.counter.setdefault(item, 0) + 1
-
-        if self.verbose_level >= 1:
-            self._output('RECORD', operation, page_num, category)
+        self.add_to_general_accumulater("put", item, 1)
 
     @switchable
     def warning(self, *args):

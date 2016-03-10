@@ -32,7 +32,7 @@ class TestFTLwithDFTL(unittest.TestCase):
         self.assertEqual(
                 recorder.general_accumulator["counter_set_1"]["counter1"], 7)
 
-        table = recorder.counter_sets_to_table(recorder.general_accumulator)
+        table = recorder.parse_accumulator(recorder.general_accumulator)
         self.assertEqual(table[0]['count'], 7)
         self.assertEqual(table[0]['counter.name'], 'counter1')
         self.assertEqual(table[0]['counter.set.name'], 'counter_set_1')

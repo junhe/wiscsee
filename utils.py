@@ -95,6 +95,10 @@ def load_json(fpath):
     decoded = json.load(open(fpath, 'r'))
     return decoded
 
+def dump_json(dic, file_path):
+    with open(file_path, "w") as f:
+        json.dump(dic, f, indent=4)
+
 def prepare_dir_for_path(path):
     "create parent dirs for path if necessary"
     dirpath = os.path.dirname(path)
