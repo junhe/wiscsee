@@ -21,6 +21,7 @@ def switchable(function):
             return function(self, *args, **kwargs)
     return wrapper
 
+
 class Recorder(object):
     def __init__(self, output_target,
             path = None,
@@ -41,22 +42,12 @@ class Recorder(object):
 
         self.enabled = None
 
-        self.open_log_file()
+        self.__open_log_file()
 
-    def save_result_dict(self):
-        result_path = os.path.join(self.output_directory, 'recorder.json')
-        utils.dump_json(self.result_dict, result_path)
-
-    def close_log_file(self):
-        self.log_handle.flush()
-        os.fsync(self.log_handle)
-        self.log_handle.close()
-
-    def open_log_file(self):
-        # open log file
-        log_path = os.path.join(self.output_directory, 'recorder.log')
-        utils.prepare_dir_for_path(log_path)
-        self.log_handle = open(self.path, 'w')
+    def __del__(self):
+        self.__close_log_file()
+        self.__save_accumulator()
+        self.__save_result_dict()
 
     def enable(self):
         print "....Recorder is enabled...."
@@ -66,7 +57,22 @@ class Recorder(object):
         "Note that this will not clear the previous records"
         self.enabled = False
 
-    def save_accumulator(self):
+    def __save_result_dict(self):
+        result_path = os.path.join(self.output_directory, 'recorder.json')
+        utils.dump_json(self.result_dict, result_path)
+
+    def __close_log_file(self):
+        self.log_handle.flush()
+        os.fsync(self.log_handle)
+        self.log_handle.close()
+
+    def __open_log_file(self):
+        # open log file
+        log_path = os.path.join(self.output_directory, 'recorder.log')
+        utils.prepare_dir_for_path(log_path)
+        self.log_handle = open(self.path, 'w')
+
+    def __save_accumulator(self):
         counter_set_path = os.path.join(self.output_directory,
             'accumulator_table.txt')
         utils.prepare_dir_for_path(counter_set_path)
@@ -74,10 +80,14 @@ class Recorder(object):
                 self.general_accumulator)
         utils.table_to_file(general_accumulator_table, counter_set_path)
 
-    def __del__(self):
-        self.close_log_file()
-        self.save_accumulator()
-        self.save_result_dict()
+    @switchable
+    def __output(self, *args):
+        line = ' '.join( str(x) for x in args)
+        line += '\n'
+        if self.output_target == FILE_TARGET:
+            self.log_handle.write(line)
+        else:
+            sys.stdout.write(line)
 
     @switchable
     def count_me(self, counter_name, item):
@@ -160,18 +170,9 @@ class Recorder(object):
         fd.write(' '.join(args) + '\n')
 
     @switchable
-    def _output(self, *args):
-        line = ' '.join( str(x) for x in args)
-        line += '\n'
-        if self.output_target == FILE_TARGET:
-            self.log_handle.write(line)
-        else:
-            sys.stdout.write(line)
-
-    @switchable
     def debug(self, *args):
         if self.verbose_level >= 3:
-            self._output('DEBUG', *args)
+            self.__output('DEBUG', *args)
 
     @switchable
     def put(self, operation, page_num, category):
@@ -182,11 +183,11 @@ class Recorder(object):
     @switchable
     def warning(self, *args):
         if self.verbose_level >= 2:
-            self._output('WARNING', *args)
+            self.__output('WARNING', *args)
 
     @switchable
     def error(self, *args):
         if self.verbose_level >= 0:
-            self._output('ERROR', *args)
+            self.__output('ERROR', *args)
 
 
