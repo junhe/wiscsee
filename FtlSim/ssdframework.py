@@ -5,6 +5,7 @@ import datetime
 import itertools
 import random
 import os
+import pprint
 import Queue
 import sys
 import simpy
@@ -111,8 +112,8 @@ class SSDFramework(object):
 
             if host_event.operation == 'enable_recorder':
                 self.realftl.recorder.enable()
-                self.workload_start_time = self.env.now
-                self.recorder.add_to_timer("workload_start_time", 0, self.env.now)
+                self.recorder.set_result_by_one_key('workload_start_time',
+                        self.env.now)
 
                 self.release_token(host_event)
                 continue
@@ -151,14 +152,21 @@ class SSDFramework(object):
         procs = []
         for i in range(self.conf['SSDFramework']['ncq_depth']):
             p = self.env.process( self.process(i) )
-            # p = self.env.process( self.data_cache_process(i) )
             procs.append(p)
         e = simpy.events.AllOf(self.env, procs)
         yield e
-        print "++++++++++++++++++++++++END OF FTL+++++++++++++++++++++++++++"
-        print "Time:", float(self.env.now)
-        print "Workload time", float(self.env.now - self.workload_start_time) / SEC
-        self.recorder.add_to_timer("simulation_time", 0, self.env.now)
 
+        self.recorder.set_result_by_one_key(
+                "simulation_duration", self.env.now)
+
+        self.print_statistics()
+
+    def print_statistics(self):
+        print '++++++++++++++++++++ statistics ++++++++++++++++++'
+        print 'sim duration', self.recorder.result_dict['simulation_duration']
+        print 'workload start', self.recorder.result_dict['workload_start_time']
+        print 'workload duration', \
+            self.recorder.result_dict['simulation_duration'] - \
+            self.recorder.result_dict['workload_start_time']
 
 

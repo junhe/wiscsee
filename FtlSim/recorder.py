@@ -95,8 +95,14 @@ class Recorder(object):
         """
         self.add_to_general_accumulater(counter_name, item, 1)
 
+    def get_result_summary(self):
+        return self.result_dict
+
     def get_count_me(self, counter_name, item):
         return self.get_general_accumulater_cnt(counter_name, item)
+
+    def set_result_by_one_key(self, key, value):
+        self.result_dict[key] = value
 
     def get_general_accumulater_cnt(self,
             counter_set_name, item_name):
