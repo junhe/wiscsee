@@ -30,7 +30,6 @@ class Recorder(object):
         self.print_when_finished = print_when_finished
 
         self.counter = {}
-        self.put_and_count_counter = {}
         self.count_counter = {}
 
         self.file_pool = {} # {filename:descriptor}
@@ -67,8 +66,6 @@ class Recorder(object):
                 print 'stats'
                 pprint.pprint(self.counter)
 
-            path2 = '.'.join((self.path, 'put_and_count.stats'))
-            utils.table_to_file([self.put_and_count_counter], path2)
 
             path3 = '.'.join((self.path, 'count.stats'))
             utils.table_to_file([self.count_counter], path3)
@@ -199,14 +196,6 @@ class Recorder(object):
 
         if self.verbose_level >= 1:
             self._output('RECORD', operation, page_num, category)
-
-    @switchable
-    def put_and_count(self, item, *args ):
-        """ The first parameter will be counted """
-        self.put_and_count_counter[item] = self.put_and_count_counter.setdefault(item, 0) + 1
-
-        if self.verbose_level >= 1:
-            self._output('PUTCOUNT', item, *args)
 
     @switchable
     def count(self, item, *args ):
