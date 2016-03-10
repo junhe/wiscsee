@@ -29,8 +29,6 @@ class Recorder(object):
         self.verbose_level = verbose_level
         self.print_when_finished = print_when_finished
 
-        self.counters = {}
-
         self.counter = {}
         self.put_and_count_counter = {}
         self.count_counter = {}
@@ -75,10 +73,6 @@ class Recorder(object):
             path3 = '.'.join((self.path, 'count.stats'))
             utils.table_to_file([self.count_counter], path3)
 
-            count_table_path = '.'.join((self.path, 'count_table'))
-            count_table = self._counters_to_table()
-            utils.table_to_file(count_table, count_table_path)
-
             counter_set_path = '.'.join((self.path,
                 'general_accumulator_table'))
             general_accumulator_table = self.counter_sets_to_table(
@@ -86,19 +80,10 @@ class Recorder(object):
             utils.table_to_file(general_accumulator_table, counter_set_path)
 
             if self.print_when_finished:
-                print '*********  recorder counters (count_me()) **********'
-                print utils.table_to_str(count_table, sep = '\t')
-
                 print utils.table_to_str(
                         self.counter_sets_to_table(self.general_accumulator))
 
         if self.output_target == STDOUT_TARGET:
-            count_table = self._counters_to_table()
-
-            if self.print_when_finished:
-                print '*********  recorder counters (count_me()) **********'
-                print utils.table_to_str(count_table, sep = '\t')
-
             for fd in self.file_pool.values():
                 fd.seek(0)
                 lines = fd.readlines()
@@ -112,14 +97,10 @@ class Recorder(object):
         """
         use counter named counter_name to count the apperance of item_name
         """
-        counter = self.counters.setdefault(counter_name, collections.Counter())
-        counter[item] += 1
-
         self.add_to_general_accumulater(counter_name, item, 1)
 
     def get_count_me(self, counter_name, item):
-        counter = self.counters.setdefault(counter_name, collections.Counter())
-        return counter[item]
+        return self.get_general_accumulater(counter_name, item)
 
     def get_general_accumulater(self,
             counter_set_name, item_name):
@@ -143,21 +124,6 @@ class Recorder(object):
     @switchable
     def add_to_timer(self, counter_set_name, item_name, addition):
         self.add_to_general_accumulater(counter_set_name, item_name, addition)
-
-    def _counters_to_table(self):
-        """
-        columns
-        counter.name   item.name    count
-        """
-        table = []
-        for counter_name, counter in self.counters.items():
-            for item_name, count in counter.items():
-                d = {'counter.name': counter_name,
-                     'item.name'   : item_name,
-                     'count'       : count}
-                table.append(d)
-
-        return table
 
     def counter_sets_to_table(self, counter_sets):
         """
