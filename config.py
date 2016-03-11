@@ -660,7 +660,5 @@ class ConfigNCQFTL(ConfigNewFlash):
                                 'data_cache_max_n_entries': 4096
                                 }
         self['process_queue_depth'] = 32
-
-
-
+        self['simulator_enable_interval'] = False
 

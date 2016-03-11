@@ -23,6 +23,7 @@ import lrulist
 import recorder
 import utils
 import dftldes
+from WlRunner import blocktrace
 
 
 class NCQSingleQueue(object):
@@ -159,7 +160,21 @@ class SSDFramework(object):
         self.recorder.set_result_by_one_key(
                 "simulation_duration", self.env.now)
 
+        self.record_last_timestamp()
         self.print_statistics()
+
+    def record_last_timestamp(self):
+        raw_blkparse_file_path = os.path.join(
+                self.conf['result_dir'], 'blkparse-output.txt')
+
+        if not os.path.exists(raw_blkparse_file_path):
+            return
+
+        rawparser = blocktrace.RawParser(self.conf,
+                raw_blkparse_file_path, None)
+        last_timestamp = rawparser.parse_raw()[-1]['timestamp']
+        self.recorder.set_result_by_one_key('last_blkparse_timestamp',
+            last_timestamp)
 
     def print_statistics(self):
         print '++++++++++++++++++++ statistics ++++++++++++++++++'
@@ -168,5 +183,8 @@ class SSDFramework(object):
         print 'workload duration', \
             self.recorder.result_dict['simulation_duration'] - \
             self.recorder.result_dict['workload_start_time']
+        print 'last_timestamp', self.recorder.result_dict.get(
+                'last_blkparse_timestamp', None)
+
 
 

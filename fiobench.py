@@ -556,9 +556,11 @@ def compare_real_and_sim():
             self.conf['enable_blktrace'] = True
             self.conf['enable_simulation'] = True
 
+            self.conf['simulator_enable_interval'] = \
+                    self.para.simulator_enable_interval
+
             self.conf['simulator_class'] = 'SimulatorDESTime'
             self.conf['ftl_type'] = 'dftldes'
-
 
             devsize_mb = self.conf['dev_size_mb']
             entries_need = int(devsize_mb * 2**20 * 0.1 / self.conf['flash_config']['page_size'])
@@ -583,22 +585,23 @@ def compare_real_and_sim():
     def test_rand():
         Parameters = collections.namedtuple("Parameters",
             "filesystem, numjobs, bs, iodepth, expname, size, rw, direct, "\
-            "dirty_bytes")
+            "dirty_bytes, simulator_enable_interval")
 
         expname = get_expname()
         para_dict = {
                 'numjobs'        : [1],
-                'bs'             : [128*KB],
+                'bs'             : [4*KB, 128*KB],
                 'iodepth'        : [1],
                 'filesystem'     : ['ext4'],
                 'expname'        : [expname],
-                'rw'             : ['randwrite'],
+                'rw'             : ['write', 'read', 'randwrite', 'randread'],
                 'direct'         : [1],
-                'dirty_bytes'    : [4*MB]
+                'dirty_bytes'    : [4*MB],
+                'simulator_enable_interval' : [True, False]
                 }
 
         parameter_combs = ParameterCombinations(para_dict)
-        total_size = 64*MB
+        total_size = 128*MB
         for para in parameter_combs:
             para['size'] =  total_size / para['numjobs']
 

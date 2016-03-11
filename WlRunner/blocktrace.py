@@ -152,7 +152,7 @@ def start_blktrace_on_bg(dev, resultpath):
         trace_filter = 'issue'
         print "WARNING: using blktrace filter {} for kernel {}".format(
             trace_filter, kernel_ver)
-        time.sleep(5)
+        time.sleep(1)
 
     cmd = "sudo blktrace -a {filtermask} -d {dev} -o - | "\
             "blkparse -a {filtermask} -i - >> "\

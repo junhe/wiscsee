@@ -3,7 +3,7 @@ import random
 
 import config
 import workload
-from FtlSim import simulator, hostevent
+from FtlSim import hostevent
 from commons import *
 
 class LBAWorkloadGenerator(object):

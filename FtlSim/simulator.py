@@ -409,8 +409,9 @@ class SimulatorDESTime(Simulator):
             event.token = token
             event.token_req = event.token.request()
 
-            if event.operation in ('read', 'write', 'discard'):
-                yield self.env.timeout(int(event.pre_wait_time * SEC))
+            if self.conf['simulator_enable_interval'] == True:
+                if event.operation in ('read', 'write', 'discard'):
+                    yield self.env.timeout(int(event.pre_wait_time * SEC))
 
             yield self.ssdframework.ncq.queue.put(event)
 

@@ -7,7 +7,7 @@ import cpuhandler
 import filesystem
 import fshelper
 import ftrace
-from FtlSim import simulator, hostevent
+from FtlSim import hostevent
 import utils
 import workload
 
@@ -163,7 +163,6 @@ class WorkloadRunner(object):
             self.blktracer_mkfs.create_event_file_from_blkparse()
 
             self.blktracer.start_tracing_and_collecting()
-            time.sleep(1)
             while self.blktracer.proc == None:
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
@@ -174,7 +173,6 @@ class WorkloadRunner(object):
         except Exception:
             raise
         else:
-            time.sleep(1)
             self.blktracer.stop_tracing_and_collecting()
             utils.shcmd("sync")
             self.blktracer.create_event_file_from_blkparse()
