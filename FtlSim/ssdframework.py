@@ -170,7 +170,7 @@ class SSDFramework(object):
         if not os.path.exists(raw_blkparse_file_path):
             return
 
-        rawparser = blocktrace.RawParser(self.conf,
+        rawparser = blocktrace.BlktraceResult(self.conf,
                 raw_blkparse_file_path, None)
         last_timestamp = rawparser.parse_raw()[-1]['timestamp']
         self.recorder.set_result_by_one_key('last_blkparse_timestamp',

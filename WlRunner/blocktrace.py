@@ -5,7 +5,7 @@ import time
 
 import utils
 
-class RawParser(object):
+class BlktraceResult(object):
     """
     Parse blkparse output
     """
@@ -29,18 +29,7 @@ class RawParser(object):
 
         return dic
 
-    def __parse_row_dict(self, row):
-        """
-        Parse a row from blkparse file
-        row is a dictionary of the line
-        """
-        # offset, size
-        blk_start = int(row['blockstart'])
-        size = int(row['size'])
-        byte_offset = blk_start * self.sector_size
-        byte_size = size * self.sector_size
-
-        # operation
+    def __parse_and_add_operation(self, row):
         if row['RWBS'] == 'D':
             operation = 'discard'
         elif 'W' in row['RWBS']:
@@ -50,19 +39,19 @@ class RawParser(object):
         else:
             raise RuntimeError('unknow operation')
 
-        line_dict = {
-            'pid'          : row['pid'],
-            'operation'    : operation,
-            'offset'       : byte_offset,
-            'size'         : byte_size,
-            'timestamp'    : row['timestamp'],
-            'pre_wait_time': row['pre_wait_time']
-                }
+        row['operation'] = operation
 
-        return line_dict
+    def __parse_and_add_offset_size(self, row):
+        blk_start = int(row['blockstart'])
+        size = int(row['size'])
+        byte_offset = blk_start * self.sector_size
+        byte_size = size * self.sector_size
 
+        row['offset'] = byte_offset
+        row['size'] = byte_size
 
     def __calculate_pre_wait_time(self, event_table):
+        event_table.sort(key = lambda k: k['timestamp'])
         for i, row in enumerate(event_table):
             if i == 0:
                 row['pre_wait_time'] = 0
@@ -70,6 +59,8 @@ class RawParser(object):
             row['pre_wait_time'] = float(event_table[i]['timestamp']) - \
                 float(event_table[i-1]['timestamp'])
             assert row['pre_wait_time'] >= 0
+
+        return event_table
 
     def __create_event_line(self, line_dict):
         columns = [str(line_dict[colname])
@@ -82,8 +73,7 @@ class RawParser(object):
         out = open(out_path, 'w')
         for row_dict in table:
             if row_dict['type'] == 'blkparse':
-                line_dict = self.__parse_row_dict(row_dict)
-                line = self.__create_event_line(line_dict)
+                line = self.__create_event_line(row_dict)
             else:
                 raise NotImplementedError()
 
@@ -93,7 +83,18 @@ class RawParser(object):
         os.fsync(out)
         out.close()
 
-    def parse_raw(self):
+    def get_last_timestamp(self):
+        return self.parse_rawfile()[-1]['timestamp']
+
+    def get_read_sectors(self):
+        rows = self.parse_rawfile()
+        for row in rows:
+            pass
+
+    def get_written_sectors(self):
+        rows = self.parse_rawfile()
+
+    def parse_rawfile(self):
         with open(self.raw_blkparse_file_path, 'r') as line_iter:
             table = []
             for line in line_iter:
@@ -102,18 +103,19 @@ class RawParser(object):
                 if is_data_line(line):
                     ret = self.__line_to_dic(line)
                     ret['type'] = 'blkparse'
+                    self.__parse_and_add_operation(ret)
+                    self.__parse_and_add_offset_size(ret)
                 else:
                     ret = None
 
                 if ret != None:
                     table.append(ret)
 
-            table.sort(key = lambda k: k['timestamp'])
-            self.__calculate_pre_wait_time(table)
+        table = self.__calculate_pre_wait_time(table)
         return table
 
     def create_event_file(self):
-        table = self.parse_raw()
+        table = self.parse_rawfile()
         self.__dump_table(table, self.parsed_output_path)
 
 
@@ -133,7 +135,7 @@ class BlockTraceManager(object):
         stop_blktrace_on_bg()
 
     def create_event_file_from_blkparse(self):
-        rawparser = RawParser(self.conf, self.resultpath, self.to_ftlsim_path)
+        rawparser = BlktraceResult(self.conf, self.resultpath, self.to_ftlsim_path)
         rawparser.create_event_file()
 
 
