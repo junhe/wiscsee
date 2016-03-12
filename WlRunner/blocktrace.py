@@ -68,6 +68,25 @@ class BlktraceResult(object):
 
         return event_table
 
+    def __parse_rawfile(self):
+        with open(self.raw_blkparse_file_path, 'r') as line_iter:
+            table = []
+            for line in line_iter:
+                line = line.strip()
+                # print is_data_line(line), line
+                if is_data_line(line):
+                    ret = self.__line_to_dic(line)
+                    ret['type'] = 'blkparse'
+                else:
+                    ret = None
+
+                if ret != None:
+                    table.append(ret)
+
+        table = self.__calculate_pre_wait_time(table)
+
+        self.__parsed_table = table
+
     def __create_event_line(self, line_dict):
         columns = [str(line_dict[colname])
                 for colname in self.conf['event_file_columns']]
@@ -107,26 +126,6 @@ class BlktraceResult(object):
         duration = self.get_duration()
 
         return size_mb / duration
-
-
-    def __parse_rawfile(self):
-        with open(self.raw_blkparse_file_path, 'r') as line_iter:
-            table = []
-            for line in line_iter:
-                line = line.strip()
-                # print is_data_line(line), line
-                if is_data_line(line):
-                    ret = self.__line_to_dic(line)
-                    ret['type'] = 'blkparse'
-                else:
-                    ret = None
-
-                if ret != None:
-                    table.append(ret)
-
-        table = self.__calculate_pre_wait_time(table)
-
-        self.__parsed_table = table
 
 
 class BlockTraceManager(object):
