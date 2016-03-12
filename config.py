@@ -510,8 +510,11 @@ class ConfigNewFlash(Config):
             "page_prog_time"        : 200*MICROSEC, # Typical
             "block_erase_time"      : 1.6*MILISEC, # Typical
 
-            "t_WC"                  : 45*NANOSEC,
-            "t_RC"                  : 50*NANOSEC,
+            # "t_WC"                  : 45*NANOSEC,
+            # "t_RC"                  : 50*NANOSEC,
+            "t_WC"                  : 0*NANOSEC,
+            "t_RC"                  : 0*NANOSEC,
+
             "t_R"                   : 20*MICROSEC,
             "t_PROG"                : 200*MICROSEC,
             "t_BERS"                : 1.5*MILISEC
