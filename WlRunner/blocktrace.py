@@ -4,6 +4,7 @@ import subprocess
 import time
 
 import utils
+from commons import *
 
 class BlktraceResult(object):
     """
@@ -15,17 +16,22 @@ class BlktraceResult(object):
         self.parsed_output_path = parsed_output_path
         self.sector_size = self.conf['sector_size']
 
+        self.__parse_rawfile()
+
     def __line_to_dic(self, line):
         """
         is_data_line() must be true for this line"\
         ['8,0', '0', '1', '0.000000000', '440', 'A', 'W', '12912077', '+', '8', '<-', '(8,2)', '606224']"
         """
-        names = ['devid', 'cpuid', 'seqid', 'timestamp', 'pid', 'action', 'RWBS', 'blockstart', 'ignore1', 'size']
+        names = ['devid', 'cpuid', 'seqid', 'timestamp', 'pid', 'action', 'RWBS', 'sector_start', 'ignore1', 'sector_count']
         #        0        1         2       3        4      5         6       7             8          9
         items = line.split()
 
         dic = dict(zip(names, items))
         assert len(items) >= len(names)
+
+        self.__parse_and_add_operation(dic)
+        self.__parse_and_add_offset_size(dic)
 
         return dic
 
@@ -42,10 +48,10 @@ class BlktraceResult(object):
         row['operation'] = operation
 
     def __parse_and_add_offset_size(self, row):
-        blk_start = int(row['blockstart'])
-        size = int(row['size'])
-        byte_offset = blk_start * self.sector_size
-        byte_size = size * self.sector_size
+        sec_start = int(row['sector_start'])
+        sec_count = int(row['sector_count'])
+        byte_offset = sec_start * self.sector_size
+        byte_size = sec_count * self.sector_size
 
         row['offset'] = byte_offset
         row['size'] = byte_size
@@ -68,10 +74,10 @@ class BlktraceResult(object):
         line = ' '.join(columns)
         return line
 
-    def __dump_table_as_event_file(self, table, out_path):
-        utils.prepare_dir_for_path(out_path)
-        out = open(out_path, 'w')
-        for row_dict in table:
+    def create_event_file(self):
+        utils.prepare_dir_for_path(self.parsed_output_path)
+        out = open(self.parsed_output_path, 'w')
+        for row_dict in self.__parsed_table:
             if row_dict['type'] == 'blkparse':
                 line = self.__create_event_line(row_dict)
             else:
@@ -83,18 +89,27 @@ class BlktraceResult(object):
         os.fsync(out)
         out.close()
 
-    def get_last_timestamp(self):
-        return self.parse_rawfile()[-1]['timestamp']
+    def get_duration(self):
+        return float(self.__parsed_table[-1]['timestamp']) - \
+                float(self.__parsed_table[0]['timestamp'])
 
-    def get_read_sectors(self):
-        rows = self.parse_rawfile()
-        for row in rows:
-            pass
+    def count_sectors(self, operation):
+        sectors_cnt = 0
+        for row in self.__parsed_table:
+            if row['operation'] == operation:
+                sectors_cnt += int(row['sector_count'])
 
-    def get_written_sectors(self):
-        rows = self.parse_rawfile()
+        return sectors_cnt
 
-    def parse_rawfile(self):
+    def get_bandwidth_mb(self, operation):
+        sec_cnt = self.count_sectors(operation)
+        size_mb = sec_cnt * self.conf['sector_size'] / float(MB)
+        duration = self.get_duration()
+
+        return size_mb / duration
+
+
+    def __parse_rawfile(self):
         with open(self.raw_blkparse_file_path, 'r') as line_iter:
             table = []
             for line in line_iter:
@@ -103,8 +118,6 @@ class BlktraceResult(object):
                 if is_data_line(line):
                     ret = self.__line_to_dic(line)
                     ret['type'] = 'blkparse'
-                    self.__parse_and_add_operation(ret)
-                    self.__parse_and_add_offset_size(ret)
                 else:
                     ret = None
 
@@ -112,11 +125,8 @@ class BlktraceResult(object):
                     table.append(ret)
 
         table = self.__calculate_pre_wait_time(table)
-        return table
 
-    def create_event_file(self):
-        table = self.parse_rawfile()
-        self.__dump_table_as_event_file(table, self.parsed_output_path)
+        self.__parsed_table = table
 
 
 class BlockTraceManager(object):
@@ -181,7 +191,7 @@ def stop_blktrace_on_bg():
         # exit(1)
 
 def is_data_line(line):
-    #                       devid    blockstart + nblocks
+    #                       devid    sector_start + nblocks
     match_obj = re.match( r'\d+,\d+.*\d+\s+\+\s+\d+', line)
     if match_obj == None:
         return False

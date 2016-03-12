@@ -83,6 +83,20 @@ class TestManager(unittest.TestCase):
         self.setup_ftl()
         self.my_run()
 
+class TestBlocktraceResult(unittest.TestCase):
+    def test_main(self):
+        self.conf = FtlSim.dftldes.Config()
+        blkresult = WlRunner.blocktrace.BlktraceResult(self.conf,
+                './testdata/blkparse-output.txt',
+                '/tmp/blkparse-output.txt.parsed')
+        blkresult.create_event_file()
+
+        print blkresult.get_duration()
+        print blkresult.count_sectors('read')
+        print blkresult.count_sectors('write')
+        print blkresult.get_bandwidth_mb('read')
+        print blkresult.get_bandwidth_mb('write')
+
 def main():
     unittest.main()
 
