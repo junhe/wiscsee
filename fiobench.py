@@ -489,7 +489,7 @@ def stress_metadata():
     test_rand()
 
 
-def compare_real_and_sim():
+def compare_real_and_sim_w_fs():
     """
     Run workload with blktrace, record performance
     Then run the trace with simulator
@@ -541,7 +541,7 @@ def compare_real_and_sim():
             self.conf['workload_conf_key'] = 'fio_job_conf'
 
         def setup_flash(self):
-            self.conf['SSDFramework']['ncq_depth'] = 1
+            self.conf['SSDFramework']['ncq_depth'] = 32
 
 
             self.conf['flash_config']['page_size'] = 2048
@@ -590,7 +590,7 @@ def compare_real_and_sim():
         expname = get_expname()
         para_dict = {
                 'numjobs'        : [1],
-                'bs'             : [4*KB, 128*KB],
+                'bs'             : [128*KB],
                 'iodepth'        : [1],
                 'filesystem'     : ['ext4'],
                 'expname'        : [expname],
@@ -613,6 +613,121 @@ def compare_real_and_sim():
     test_rand()
 
 
+def compare_real_and_sim_raw():
+    """
+    stress the number of processes on file system
+    """
+    class Experimenter(object):
+        def __init__(self, para):
+            # Get default setting
+            self.conf = FtlSim.dftldes.Config()
+            self.para = para
+            self.conf['exp_parameters'] = self.para._asdict()
+
+        def setup_environment(self):
+            self.conf['device_path'] = "/dev/sdc1"
+            self.conf['dev_size_mb'] = 256
+            self.conf["n_online_cpus"] = 'all'
+            self.conf['filesystem'] = None
+
+            self.conf['workload_class'] = 'FIONEW'
+
+            set_vm_default()
+            set_vm("dirty_bytes", self.para.dirty_bytes)
+
+        def setup_workload(self):
+            tmp_job_conf = [
+                ("global", {
+                    'ioengine'  : 'libaio',
+                    'size'      : self.para.size,
+                    'direct'    : 1,
+                    'filename'  : self.conf['device_path'],
+                    'iodepth'   : self.para.iodepth,
+                    'bs'        : self.para.bs,
+                    'fallocate' : 'none',
+                    'offset_increment': self.para.size
+                    }
+                ),
+                ("myjob", {
+                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'numjobs'   : self.para.numjobs,
+                    'rw'        : self.para.rw
+                    }
+                )
+                ]
+            self.conf['fio_job_conf'] = {
+                    'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                    'runner': {
+                        'to_json': True
+                    }
+                }
+            self.conf['workload_conf_key'] = 'fio_job_conf'
+
+        def setup_flash(self):
+            self.conf['SSDFramework']['ncq_depth'] = 32
+
+            self.conf['flash_config']['page_size'] = 2048
+            self.conf['flash_config']['n_pages_per_block'] = 64
+            self.conf['flash_config']['n_blocks_per_plane'] = 8
+            self.conf['flash_config']['n_planes_per_chip'] = 1
+            self.conf['flash_config']['n_chips_per_package'] = 1
+            self.conf['flash_config']['n_packages_per_channel'] = 1
+            self.conf['flash_config']['n_channels_per_dev'] = 32
+
+        def setup_ftl(self):
+            self.conf['enable_blktrace'] = True
+            self.conf['enable_simulation'] = True
+
+            self.conf['simulator_enable_interval'] = \
+                    self.para.simulator_enable_interval
+
+            self.conf['simulator_class'] = 'SimulatorDESTime'
+            self.conf['ftl_type'] = 'dftldes'
+
+            devsize_mb = self.conf['dev_size_mb']
+            entries_need = int(devsize_mb * 2**20 * 0.1 / self.conf['flash_config']['page_size'])
+            self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+            self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+
+        def run(self):
+            set_exp_metadata(self.conf, save_data = True,
+                    expname = self.para.expname,
+                    subexpname = chain_items_as_filename(self.para))
+            runtime_update(self.conf)
+
+            workflow(self.conf)
+
+        def main(self):
+            self.setup_environment()
+            self.setup_workload()
+            self.setup_flash()
+            self.setup_ftl()
+            self.run()
+
+    #############################################################
+    Parameters = collections.namedtuple("Parameters",
+            "numjobs, bs, iodepth, expname, size, rw, dirty_bytes, "\
+            "simulator_enable_interval")
+
+    expname = get_expname()
+    para_dict = {
+            'numjobs'        : [1],
+            'bs'             : [128*KB, 32*KB, 256*KB],
+            'iodepth'        : [1],
+            'expname'        : [expname],
+            'rw'             : ['write', 'randwrite'],
+            'dirty_bytes'    : [4*MB],
+            'simulator_enable_interval' : [False]
+            }
+
+    parameter_combs = ParameterCombinations(para_dict)
+    total_size = 128*MB
+    for para in parameter_combs:
+        para['size'] =  total_size / para['numjobs']
+
+    for para in parameter_combs:
+        obj = Experimenter( Parameters(**para) )
+        obj.main()
 
 
 def main(cmd_args):
