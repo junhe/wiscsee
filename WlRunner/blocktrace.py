@@ -68,7 +68,7 @@ class BlktraceResult(object):
         line = ' '.join(columns)
         return line
 
-    def __dump_table(self, table, out_path):
+    def __dump_table_as_event_file(self, table, out_path):
         utils.prepare_dir_for_path(out_path)
         out = open(out_path, 'w')
         for row_dict in table:
@@ -116,7 +116,7 @@ class BlktraceResult(object):
 
     def create_event_file(self):
         table = self.parse_rawfile()
-        self.__dump_table(table, self.parsed_output_path)
+        self.__dump_table_as_event_file(table, self.parsed_output_path)
 
 
 class BlockTraceManager(object):
