@@ -2,6 +2,7 @@ import json
 import math
 import os
 import pprint
+import re
 
 from commons import *
 import utils
@@ -299,7 +300,7 @@ class Config(dict):
             "record_bad_victim_block": False,
 
             ############## For WlRunner ########
-            # for loop dev
+            "linux_ncq_depth"  : 128,
             "dev_size_mb"      : None,
             "tmpfs_mount_point"     : "/mnt/tmpfs",
 
@@ -423,6 +424,14 @@ class Config(dict):
             return 'loop'
         else:
             return 'real'
+
+    def get_device_name_no_num(self):
+        return re.search(r'/dev/([a-z]+)[0-9]*',
+                self['device_path']).group(1)
+
+    def get_partition_name(self):
+        return re.search(r'/dev/([a-z]+[0-9]*)',
+                self['device_path']).group(1)
 
 
 class ConfigNewFlash(Config):

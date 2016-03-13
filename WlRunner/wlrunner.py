@@ -118,7 +118,14 @@ class WorkloadRunner(object):
                 self.conf['f2fs'].get('sysfs', {}).items():
                 fs_obj.sysfs_setup(opt_name, value)
 
+    def __set_linux_environment(self):
+        if self.conf.device_type == 'real':
+            device_name = self.conf.get_device_name_no_num()
+            utils.set_linux_ncq_depth(device_name, self.conf['linux_ncq_depth'])
+
     def run(self):
+        self.__set_linux_environment()
+
         if self.conf['enable_blktrace'] == True:
             return self.run_with_blktrace()
         else:
