@@ -155,6 +155,19 @@ def set_vm_default():
     set_vm("dirty_expire_centisecs", 3000)
     set_vm("dirty_writeback_centisecs", 500)
 
+def set_linux_ncq_depth(devname, depth):
+    filepath = "/sys/block/{}/device/queue_depth".format(devname)
+    with open(filepath, 'w') as f:
+        f.write(str(depth))
+
+def get_linux_ncq_depth(devname):
+    filepath = "/sys/block/{}/device/queue_depth".format(devname)
+    with open(filepath, 'r') as f:
+        line = f.readline()
+        return int(line.strip())
+
+
+
 if __name__ == '__main__':
     is_proc_running('blktrace')
 
