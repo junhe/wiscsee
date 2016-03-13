@@ -301,6 +301,7 @@ class Config(dict):
 
             ############## For WlRunner ########
             "linux_ncq_depth"  : 128,
+            "linux_io_scheduler" : 'noop',
             "dev_size_mb"      : None,
             "tmpfs_mount_point"     : "/mnt/tmpfs",
 
