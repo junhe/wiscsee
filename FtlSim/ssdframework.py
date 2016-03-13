@@ -160,21 +160,27 @@ class SSDFramework(object):
         self.recorder.set_result_by_one_key(
                 "simulation_duration", self.env.now)
 
-        self.record_last_timestamp()
+        self.record_blkparse_bw()
         self.print_statistics()
 
-    def record_last_timestamp(self):
+    def record_blkparse_bw(self):
         raw_blkparse_file_path = os.path.join(
                 self.conf['result_dir'], 'blkparse-output.txt')
 
         if not os.path.exists(raw_blkparse_file_path):
             return
 
-        rawparser = blocktrace.BlktraceResult(self.conf,
+        blkresult = blocktrace.BlktraceResult(self.conf,
                 raw_blkparse_file_path, None)
-        last_timestamp = rawparser.parse_raw()[-1]['timestamp']
-        self.recorder.set_result_by_one_key('last_blkparse_timestamp',
-            last_timestamp)
+        self.recorder.set_result_by_one_key(
+                'blkparse_read_bw',
+                blkresult.get_bandwidth_mb('read'))
+        self.recorder.set_result_by_one_key(
+                'blkparse_write_bw',
+                blkresult.get_bandwidth_mb('write'))
+        self.recorder.set_result_by_one_key(
+                'blkparse_duration',
+                blkresult.get_duration())
 
     def print_statistics(self):
         print '++++++++++++++++++++ statistics ++++++++++++++++++'
@@ -183,8 +189,8 @@ class SSDFramework(object):
         print 'workload duration', \
             self.recorder.result_dict['simulation_duration'] - \
             self.recorder.result_dict['workload_start_time']
-        print 'last_timestamp', self.recorder.result_dict.get(
-                'last_blkparse_timestamp', None)
+        print 'blkparse_duration', self.recorder.result_dict.get(
+                'blkparse_duration', None)
 
 
 
