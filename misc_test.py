@@ -1,5 +1,6 @@
 import unittest
 import WlRunner
+import socket
 import utils
 
 class TestCpuhandler(unittest.TestCase):
@@ -12,10 +13,26 @@ class TestCpuhandler(unittest.TestCase):
 
 class TestLinuxNCQDepth(unittest.TestCase):
     def test_ncq_depth_setting(self):
+        if not 'wisc.cloudlab.us' in socket.gethostname():
+            return
+
         depth = 2
         utils.set_linux_ncq_depth("sdc", depth)
         read_depth = utils.get_linux_ncq_depth("sdc")
         self.assertEqual(depth, read_depth)
+
+class TestSettingScheduler(unittest.TestCase):
+    def test_setting(self):
+        if not 'wisc.cloudlab.us' in socket.gethostname():
+            return
+
+        scheduler = 'noop'
+        utils.set_linux_io_scheduler("sdc", scheduler)
+
+        read_scheduler = utils.get_linux_io_scheduler("sdc")
+        self.assertEqual(scheduler, read_scheduler)
+
+
 
 def main():
     unittest.main()
