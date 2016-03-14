@@ -645,6 +645,7 @@ def compare_real_and_sim_raw():
                     'iodepth'   : self.para.iodepth,
                     'bs'        : self.para.bs,
                     'fallocate' : 'none',
+                    'sync'      : self.para.fio_sync,
                     'offset_increment': self.para.size
                     }
                 ),
@@ -664,7 +665,7 @@ def compare_real_and_sim_raw():
             self.conf['workload_conf_key'] = 'fio_job_conf'
 
         def setup_flash(self):
-            self.conf['SSDFramework']['ncq_depth'] = 32
+            self.conf['SSDFramework']['ncq_depth'] = self.para.simulator_ncq_depth
 
             self.conf['flash_config']['page_size'] = 2048
             self.conf['flash_config']['n_pages_per_block'] = 64
@@ -675,8 +676,8 @@ def compare_real_and_sim_raw():
             self.conf['flash_config']['n_channels_per_dev'] = 32
 
         def setup_ftl(self):
-            self.conf['enable_blktrace'] = True
-            self.conf['enable_simulation'] = True
+            self.conf['enable_blktrace'] = False
+            self.conf['enable_simulation'] = False
 
             self.conf['simulator_enable_interval'] = \
                     self.para.simulator_enable_interval
@@ -685,7 +686,7 @@ def compare_real_and_sim_raw():
             self.conf['ftl_type'] = 'dftldes'
 
             devsize_mb = self.conf['dev_size_mb']
-            entries_need = int(devsize_mb * 2**20 * 0.1 / self.conf['flash_config']['page_size'])
+            entries_need = int(devsize_mb * 2**20 * 2 / self.conf['flash_config']['page_size'])
             self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
             self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
@@ -707,17 +708,21 @@ def compare_real_and_sim_raw():
     #############################################################
     Parameters = collections.namedtuple("Parameters",
             "numjobs, bs, iodepth, expname, size, rw, dirty_bytes, "\
-            "simulator_enable_interval")
+            "simulator_enable_interval, simulator_ncq_depth, linux_ncq_depth, "\
+            "fio_sync")
 
     expname = get_expname()
     para_dict = {
             'numjobs'        : [1],
-            'bs'             : [128*KB, 32*KB, 256*KB],
-            'iodepth'        : [1],
+            'bs'             : [4*KB],
+            'iodepth'        : [1, 4],
             'expname'        : [expname],
-            'rw'             : ['write', 'randwrite'],
+            'rw'             : ['randwrite'],
             'dirty_bytes'    : [4*MB],
-            'simulator_enable_interval' : [False]
+            'simulator_enable_interval' : [False],
+            'simulator_ncq_depth'       : [4],
+            'linux_ncq_depth'           : [1, 4, 32],
+            'fio_sync'                  : [0, 1]
             }
 
     parameter_combs = ParameterCombinations(para_dict)

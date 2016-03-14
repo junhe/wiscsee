@@ -33,7 +33,6 @@ class TestSettingScheduler(unittest.TestCase):
         self.assertEqual(scheduler, read_scheduler)
 
 
-
 def main():
     unittest.main()
 
