@@ -817,7 +817,7 @@ def compare_fs():
                 'rw'             : ['write', 'randwrite', 'read', 'randread'],
                 'direct'         : [0],
                 'dirty_bytes'    : [4*MB],
-                'fsync'          : [0],
+                'fsync'          : [0, 1],
                 'linux_ncq_depth': [31]
                 }
 
