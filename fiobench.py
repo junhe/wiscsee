@@ -735,6 +735,112 @@ def compare_real_and_sim_raw():
         obj.main()
 
 
+def compare_fs():
+    class Experimenter(object):
+        def __init__(self, para):
+            self.conf = FtlSim.dftldes.Config()
+            self.para = para
+            self.conf['exp_parameters'] = self.para._asdict()
+
+        def setup_environment(self):
+            self.conf['device_path'] = self.para.device_path
+            self.conf['dev_size_mb'] = 256
+            self.conf['filesystem'] = self.para.filesystem
+            self.conf["n_online_cpus"] = 'all'
+
+            self.conf['workload_class'] = 'FIONEW'
+
+            self.conf['linux_ncq_depth'] = self.para.linux_ncq_depth
+
+            set_vm_default()
+            set_vm("dirty_bytes", self.para.dirty_bytes)
+
+        def setup_workload(self):
+            tmp_job_conf = [
+                ("global", {
+                    'ioengine'  : 'libaio',
+                    'size'      : self.para.size,
+                    'directory'  : self.conf['fs_mount_point'],
+                    'direct'    : self.para.direct,
+                    # 'sync'      : 1 ,
+                    'iodepth'   : self.para.iodepth,
+                    'bs'        : self.para.bs,
+                    'fallocate' : 'none',
+                    'numjobs'   : self.para.numjobs,
+                    'fsync'     : self.para.fsync
+                    }
+                ),
+                ("writer", {
+                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'rw'        : self.para.rw
+                    }
+                )
+                ]
+            self.conf['fio_job_conf'] = {
+                    'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                    'runner': {
+                        'to_json': True
+                    }
+                }
+            self.conf['workload_conf_key'] = 'fio_job_conf'
+
+        def setup_flash(self):
+            pass
+
+        def setup_ftl(self):
+            self.conf['enable_blktrace'] = False
+            self.conf['enable_simulation'] = False
+
+        def run(self):
+            set_exp_metadata(self.conf, save_data = True,
+                    expname = self.para.expname,
+                    subexpname = chain_items_as_filename(self.para))
+            runtime_update(self.conf)
+
+            workflow(self.conf)
+
+        def main(self):
+            self.setup_environment()
+            self.setup_workload()
+            self.setup_flash()
+            self.setup_ftl()
+            self.run()
+
+    def test_rand():
+        Parameters = collections.namedtuple("Parameters",
+            "filesystem, numjobs, bs, iodepth, expname, size, rw, direct, "\
+            "dirty_bytes, fsync, device_path, linux_ncq_depth")
+
+        expname = get_expname()
+        para_dict = {
+                'device_path'    : ['/dev/sda1'],
+                'numjobs'        : [16],
+                'bs'             : [16*KB, 128*KB],
+                'iodepth'        : [1],
+                'filesystem'     : ['f2fs', 'btrfs', 'xfs', 'ext4'],
+                'expname'        : [expname],
+                'rw'             : ['write', 'randwrite', 'read', 'randread'],
+                'direct'         : [0],
+                'dirty_bytes'    : [4*MB],
+                'fsync'          : [0, 1],
+                'linux_ncq_depth': [31]
+                }
+
+        parameter_combs = ParameterCombinations(para_dict)
+        total_size = 128*MB
+        for para in parameter_combs:
+            para['size'] =  total_size / para['numjobs']
+
+        for para in parameter_combs:
+            obj = Experimenter( Parameters(**para) )
+            obj.main()
+
+    # test_seq()
+    test_rand()
+
+
+
+
 def main(cmd_args):
     if cmd_args.git == True:
         shcmd("sudo -u jun git commit -am 'commit by Makefile: {commitmsg}'"\
