@@ -73,7 +73,7 @@ class TestFTLwithDFTL2(unittest.TestCase):
         self.conf["workload_src"] = LBAGENERATOR
         self.conf["lba_workload_class"] = "ExtentTestWorkload4DFTLDES"
         self.conf["lba_workload_configs"]["ExtentTestWorkload4DFTLDES"] = {
-            "op_count": 1000}
+            "op_count": 100}
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
@@ -272,7 +272,7 @@ class TestFTLwithDFTLIntegrated2(unittest.TestCase):
         self.conf["workload_src"] = LBAGENERATOR
         self.conf["lba_workload_class"] = "TestWorkloadFLEX3"
 
-        traffic = 10*MB
+        traffic = 2*MB
         chunk_size = 32*KB
         page_size = self.conf['flash_config']['page_size']
         self.conf["lba_workload_configs"]["TestWorkloadFLEX3"] = {
@@ -625,7 +625,32 @@ class TestSimulatorSync(unittest.TestCase):
         self.setup_ftl()
         self.my_run()
 
+class TestVPNResourcePool(unittest.TestCase):
 
+    def access_vpn(self, env, respool, vpn):
+        req = respool.get_request(vpn)
+        yield req
+        yield env.timeout(10)
+        respool.release_request(vpn, req)
+
+    def init_proc(self, env, respool):
+        procs = []
+        for i in range(3):
+            p = env.process(self.access_vpn(env, respool, 88))
+            procs.append(p)
+
+            p = env.process(self.access_vpn(env, respool, 89))
+            procs.append(p)
+
+        yield simpy.events.AllOf(env, procs)
+        self.assertEqual(env.now, 30)
+
+    def test_request(self):
+        env = simpy.Environment()
+        respool = FtlSim.dftldes.VPNResourcePool(env)
+
+        env.process(self.init_proc(env, respool))
+        env.run()
 
 def main():
     unittest.main()

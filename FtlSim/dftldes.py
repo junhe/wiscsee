@@ -1662,6 +1662,21 @@ DATA_USER = "data.user"
 # move data page during gc (including read and write)
 DATA_CLEANING = "data.cleaning"
 
+class VPNResourcePool(object):
+    def __init__(self, simpy_env):
+        self.resources = {} # lpn: lock
+        self.env = simpy_env
+
+    def get_request(self, vpn):
+        res = self.resources.setdefault(vpn,
+                                    simpy.Resource(self.env, capacity = 1))
+        return res.request()
+
+    def release_request(self, vpn, request):
+        res = self.resources[vpn]
+        res.release(request)
+
+
 class Dftl(object):
     """
     The implementation literally follows DFtl paper.
@@ -1677,15 +1692,9 @@ class Dftl(object):
         self.flash = flashcontrollerobj
         self.env = env
 
-        # bitmap has been created parent class
-        # Change: we now don't put the bitmap here
-        # self.bitmap.initialize()
-        # del self.bitmap
+        self.vpn_res_pool =  VPNResourcePool(self.env)
 
         self.global_helper = GlobalHelper(confobj)
-
-        # Replace the flash object with a new one, which has global helper
-        # self.flash = ParallelFlash(self.conf, self.recorder, self.global_helper)
 
         self.block_pool = BlockPool(confobj)
         self.oob = OutOfBandAreas(confobj)
