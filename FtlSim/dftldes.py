@@ -21,78 +21,193 @@ from commons import *
 UNINITIATED, MISS = ('UNINIT', 'MISS')
 DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
 random.seed(0)
+LOGICAL_READ, LOGICAL_WRITE, LOGICAL_DISCARD = ('LOGICAL_READ', \
+        'LOGICAL_WRITE', 'LOGICAL_DISCARD')
+#
+# - translation pages
+#   - cache miss read (trans.cache.load)
+#   - eviction write  (trans.cache.evict)
+#   - cleaning read   (trans.clean)
+#   - cleaning write  (trans.clean)
+# - data pages
+#   - user read       (data.user)
+#   - user write      (data.user)
+#   - cleaning read   (data.cleaning)
+#   - cleaning writes (data.cleaning)
+# Tag format
+# pagetype.
+# Example tags:
 
-class Config(config.ConfigNCQFTL):
-    def __init__(self, confdic = None):
-        super(Config, self).__init__(confdic)
+# trans cache read is due to cache misses, the read fetches translation page
+# to cache.
+# write is due to eviction. Note that entry eviction may incure both page read
+# and write.
+TRANS_CACHE = "trans.cache"
 
-        local_itmes = {
-            # number of bytes per entry in global_mapping_table
-            "global_mapping_entry_bytes": 4, # 32 bits
-            "GC_threshold_ratio": 0.95,
-            "GC_low_threshold_ratio": 0.9,
-            "over_provisioning": 1.28,
-            "max_cmt_bytes": None # cmt: cached mapping table
-            }
-        self.update(local_itmes)
+# trans clean include:
+#  erasing translation block
+#  move translation page during gc (including read and write)
+TRANS_CLEAN = "trans.clean"  #read/write are for moving pages
 
-        # self['keeping_all_tp_entries'] = False
-        self['keeping_all_tp_entries'] = True
+#  clean_data_block()
+#   update_mapping_in_batch()
+#    update_translation_page_on_flash() this is the same as cache eviction
+TRANS_UPDATE_FOR_DATA_GC = "trans.update.for.data.gc"
 
-    @property
-    def keeping_all_tp_entries(self):
-        return self['keeping_all_tp_entries']
+DATA_USER = "data.user"
 
-    @keeping_all_tp_entries.setter
-    def keeping_all_tp_entries(self, value):
-        self['keeping_all_tp_entries'] = value
+# erase data block in clean_data_block()
+# move data page during gc (including read and write)
+DATA_CLEANING = "data.cleaning"
 
-    @property
-    def n_mapping_entries_per_page(self):
-        return self.page_size / self['global_mapping_entry_bytes']
 
-    @property
-    def max_cmt_bytes(self):
-        return self['max_cmt_bytes']
-
-    @max_cmt_bytes.setter
-    def max_cmt_bytes(self, value):
-        self['max_cmt_bytes'] = value
-
-    @property
-    def global_mapping_entry_bytes(self):
-        return self['global_mapping_entry_bytes']
-
-    @property
-    def over_provisioning(self):
-        return self['over_provisioning']
-
-    @property
-    def GC_threshold_ratio(self):
-        return self['GC_threshold_ratio']
-
-    @property
-    def GC_low_threshold_ratio(self):
-        return self['GC_low_threshold_ratio']
-
-    def sec_ext_to_page_ext(self, sector, count):
-        """
-        The sector extent has to be aligned with page
-        return page_start, page_count
-        """
-        page = sector / self.n_secs_per_page
-        page_end = (sector + count) / self.n_secs_per_page
-        page_count = page_end - page
-        if (sector + count) % self.n_secs_per_page != 0:
-            page_count += 1
-        return page, page_count
-
-class MappingDict(dict):
+class Dftl(object):
     """
-    Used to map lpn->ppn
+    The implementation literally follows DFtl paper.
+    This class is a coordinator of other coordinators and data structures
     """
-    pass
+    def __init__(self, confobj, recorderobj, flashcontrollerobj, env):
+        if not isinstance(confobj, Config):
+            raise TypeError("confobj is not Config. it is {}".
+               format(type(confobj).__name__))
 
+        self.conf = confobj
+        self.recorder = recorderobj
+        self.flash = flashcontrollerobj
+        self.env = env
+
+        self.vpn_res_pool =  VPNResourcePool(self.env)
+
+        self.global_helper = GlobalHelper(confobj)
+
+        self.block_pool = BlockPool(confobj)
+        self.oob = OutOfBandAreas(confobj)
+
+        ###### the managers ######
+        self.mapping_manager = MappingManager(
+            confobj = self.conf,
+            block_pool = self.block_pool,
+            flashobj = self.flash,
+            oobobj=self.oob,
+            recorderobj = recorderobj,
+            envobj = env
+            )
+
+        self.garbage_collector = GarbageCollector(
+            confobj = self.conf,
+            flashobj = self.flash,
+            oobobj=self.oob,
+            block_pool = self.block_pool,
+            mapping_manager = self.mapping_manager,
+            recorderobj = recorderobj,
+            envobj = env
+            )
+
+        # We should initialize Globaltranslationdirectory in Dftl
+        self.mapping_manager.initialize_mappings()
+
+        self.n_sec_per_page = self.conf.page_size \
+                / self.conf['sector_size']
+
+        # This resource protects all data structures stored in the memory.
+        self.resource_ram = simpy.Resource(self.env, capacity = 1)
+
+    def translate(self, ssd_req, pid):
+        """
+        Our job here is to find the corresponding physical flat address
+        of the address in ssd_req. The during the translation, we may
+        need to synchronizely access flash.
+
+        We do the following here:
+        Read:
+            1. find out the range of logical pages
+            2. for each logical page:
+                if mapping is in cache, just translate it
+                else bring mapping to cache and possibly evict a mapping entry
+        """
+        with self.resource_ram.request() as ram_request:
+            yield ram_request # serialize all access to data structures
+
+            s = self.env.now
+            flash_reqs = yield self.env.process(
+                    self.handle_ssd_requests(ssd_req))
+            e = self.env.now
+            self.recorder.add_to_timer("translation_time-wo_wait", pid, e - s)
+
+            self.env.exit(flash_reqs)
+
+    def handle_ssd_requests(self, ssd_req):
+        lpns = ssd_req.lpn_iter()
+
+        if ssd_req.operation == 'read':
+            ppns = yield self.env.process(
+                    self.mapping_manager.ppns_for_reading(lpns))
+        elif ssd_req.operation == 'write':
+            ppns = yield self.env.process(
+                    self.mapping_manager.ppns_for_writing(lpns))
+        elif ssd_req.operation == 'discard':
+            yield self.env.process(
+                    self.mapping_manager.discard_lpns(lpns))
+            ppns = []
+        else:
+            print 'io operation', ssd_req.operation, 'is not processed'
+            ppns = []
+
+        flash_reqs = []
+        for ppn in ppns:
+            if ppn == 'UNINIT':
+                continue
+
+            req = self.flash.get_flash_requests_for_ppns(ppn, 1,
+                    op = ssd_req.operation)
+            flash_reqs.extend(req)
+
+        self.env.exit(flash_reqs)
+
+    def clean_garbage(self):
+        with self.resource_ram.request() as ram_request:
+            yield ram_request # serialize all access to data structures
+            yield self.env.process(
+                    self.garbage_collector.gc_process())
+
+
+    def page_to_sec_items(self, data):
+        ret = []
+        for page_data in data:
+            if page_data == None:
+                page_data = [None] * self.n_sec_per_page
+            for item in page_data:
+                ret.append(item)
+
+        return ret
+
+    def sec_to_page_items(self, data):
+        if data == None:
+            return None
+
+        sec_per_page = self.conf.page_size / self.conf['sector_size']
+        n_pages = len(data) / sec_per_page
+
+        new_data = []
+        for page in range(n_pages):
+            page_items = []
+            for sec in range(sec_per_page):
+                page_items.append(data[page * sec_per_page + sec])
+            new_data.append(page_items)
+
+        return new_data
+
+    def pre_workload(self):
+        pass
+
+    def post_processing(self):
+        """
+        This function is called after the simulation.
+        """
+        pass
+
+    def get_type(self):
+        return "dftldes"
 
 class GlobalHelper(object):
     """
@@ -102,691 +217,19 @@ class GlobalHelper(object):
     def __init__(self, confobj):
         pass
 
-LOGICAL_READ, LOGICAL_WRITE, LOGICAL_DISCARD = ('LOGICAL_READ', \
-        'LOGICAL_WRITE', 'LOGICAL_DISCARD')
-
-def block_to_channel_block(conf, blocknum):
-    n_blocks_per_channel = conf.n_blocks_per_channel
-    channel = blocknum / n_blocks_per_channel
-    block_off = blocknum % n_blocks_per_channel
-    return channel, block_off
-
-def channel_block_to_block(conf, channel, block_off):
-    n_blocks_per_channel = conf.n_blocks_per_channel
-    return channel * n_blocks_per_channel + block_off
-
-def page_to_channel_page(conf, pagenum):
-    """
-    pagenum is in the context of device
-    """
-    n_pages_per_channel = conf.n_pages_per_channel
-    channel = pagenum / n_pages_per_channel
-    page_off = pagenum % n_pages_per_channel
-    return channel, page_off
-
-def channel_page_to_page(conf, channel, page_off):
-    """
-    Translate channel, page_off to pagenum in context of device
-    """
-    return channel * conf.n_pages_per_channel + page_off
-
-class OutOfBandAreas(object):
-    """
-    It is used to hold page state and logical page number of a page.
-    It is not necessary to implement it as list. But the interface should
-    appear to be so.  It consists of page state (bitmap) and logical page
-    number (dict).  Let's proivde more intuitive interfaces: OOB should accept
-    events, and react accordingly to this event. The action may involve state
-    and lpn_of_phy_page.
-    """
-    def __init__(self, confobj):
-        self.conf = confobj
-
-        self.flash_num_blocks = confobj.n_blocks_per_dev
-        self.flash_npage_per_block = confobj.n_pages_per_block
-        self.total_pages = self.flash_num_blocks * self.flash_npage_per_block
-
-        # Key data structures
-        self.states = ftlbuilder.FlashBitmap2(confobj)
-        # ppn->lpn mapping stored in OOB, Note that for translation pages, this
-        # mapping is ppn -> m_vpn
-        self.ppn_to_lpn_mvpn = {}
-        # Timestamp table PPN -> timestamp
-        # Here are the rules:
-        # 1. only programming a PPN updates the timestamp of PPN
-        #    if the content is new from FS, timestamp is the timestamp of the
-        #    LPN
-        #    if the content is copied from other flash block, timestamp is the
-        #    same as the previous ppn
-        # 2. discarding, and reading a ppn does not change it.
-        # 3. erasing a block will remove all the timestamps of the block
-        # 4. so cur_timestamp can only be advanced by LBA operations
-        self.timestamp_table = {}
-        self.cur_timestamp = 0
-
-        # flash block -> last invalidation time
-        # int -> timedate.timedate
-        self.last_inv_time_of_block = {}
-
-    ############# Time stamp related ############
-    def timestamp(self):
-        """
-        This function will advance timestamp
-        """
-        t = self.cur_timestamp
-        self.cur_timestamp += 1
-        return t
-
-    def timestamp_set_ppn(self, ppn):
-        self.timestamp_table[ppn] = self.timestamp()
-
-    def timestamp_copy(self, src_ppn, dst_ppn):
-        self.timestamp_table[dst_ppn] = self.timestamp_table[src_ppn]
-
-    def translate_ppn_to_lpn(self, ppn):
-        return self.ppn_to_lpn_mvpn[ppn]
-
-    def wipe_ppn(self, ppn):
-        self.states.invalidate_page(ppn)
-        block, _ = self.conf.page_to_block_off(ppn)
-        self.last_inv_time_of_block[block] = datetime.datetime.now()
-
-        # It is OK to delay it until we erase the block
-        # try:
-            # del self.ppn_to_lpn_mvpn[ppn]
-        # except KeyError:
-            # # it is OK that the key does not exist, for example,
-            # # when discarding without writing to it
-            # pass
-
-    def erase_block(self, flash_block):
-        self.states.erase_block(flash_block)
-
-        start, end = self.conf.block_to_page_range(flash_block)
-        for ppn in range(start, end):
-            try:
-                del self.ppn_to_lpn_mvpn[ppn]
-                # if you try to erase translation block here, it may fail,
-                # but it is expected.
-                del self.timestamp_table[ppn]
-            except KeyError:
-                pass
-
-        del self.last_inv_time_of_block[flash_block]
-
-    def new_write(self, lpn, old_ppn, new_ppn):
-        """
-        mark the new_ppn as valid
-        update the LPN in new page's OOB to lpn
-        invalidate the old_ppn, so cleaner can GC it
-        """
-        self.states.validate_page(new_ppn)
-        self.ppn_to_lpn_mvpn[new_ppn] = lpn
-
-        if old_ppn != UNINITIATED:
-            # the lpn has mapping before this write
-            self.wipe_ppn(old_ppn)
-
-    def new_lba_write(self, lpn, old_ppn, new_ppn):
-        """
-        This is exclusively for lba_write(), so far
-        """
-        self.timestamp_set_ppn(new_ppn)
-        self.new_write(lpn, old_ppn, new_ppn)
-
-    def data_page_move(self, lpn, old_ppn, new_ppn):
-        # move data page does not change the content's timestamp, so
-        # we copy
-        self.timestamp_copy(src_ppn = old_ppn, dst_ppn = new_ppn)
-        self.new_write(lpn, old_ppn, new_ppn)
-
-    def lpns_of_block(self, flash_block):
-        s, e = self.conf.block_to_page_range(flash_block)
-        lpns = []
-        for ppn in range(s, e):
-            lpns.append(self.ppn_to_lpn_mvpn.get(ppn, 'NA'))
-
-        return lpns
-
-
-class BlockPool(object):
-    def __init__(self, confobj):
-        self.conf = confobj
-        self.n_channels = self.conf['flash_config']['n_channels_per_dev']
-        self.channel_pools = [ChannelBlockPool(self.conf, i)
-                for i in range(self.n_channels)]
-
-        self.cur_channel = 0
-
-    @property
-    def freeblocks(self):
-        free = []
-        for channel in self.channel_pools:
-            free.extend( channel.freeblocks_global )
-        return free
-
-    @property
-    def data_usedblocks(self):
-        used = []
-        for channel in self.channel_pools:
-            used.extend( channel.data_usedblocks_global )
-        return used
-
-    @property
-    def trans_usedblocks(self):
-        used = []
-        for channel in self.channel_pools:
-            used.extend( channel.trans_usedblocks_global )
-        return used
-
-    def iter_channels(self, funcname, addr_type):
-        n = self.n_channels
-        while n > 0:
-            n -= 1
-            try:
-                in_channel_offset = eval("self.channel_pools[self.cur_channel].{}()"\
-                        .format(funcname))
-            except OutOfSpaceError:
-                pass
-            else:
-                if addr_type == 'block':
-                    ret = channel_block_to_block(self.conf, self.cur_channel,
-                            in_channel_offset)
-                elif addr_type == 'page':
-                    ret = channel_page_to_page(self.conf, self.cur_channel,
-                            in_channel_offset)
-                else:
-                    raise RuntimeError("addr_type {} is not supported."\
-                        .format(addr_type))
-                return ret
-            finally:
-                self.cur_channel = (self.cur_channel + 1) % self.n_channels
-
-        raise OutOfSpaceError("Tried all channels. Out of Space")
-
-    def pop_a_free_block(self):
-        return self.iter_channels("pop_a_free_block", addr_type = 'block')
-
-    def pop_a_free_block_to_trans(self):
-        return self.iter_channels("pop_a_free_block_to_trans",
-            addr_type = 'block')
-
-    def pop_a_free_block_to_data(self):
-        return self.iter_channels("pop_a_free_block_to_data",
-            addr_type = 'block')
-
-    def move_used_data_block_to_free(self, blocknum):
-        channel, block_off = block_to_channel_block(self.conf, blocknum)
-        self.channel_pools[channel].move_used_data_block_to_free(block_off)
-
-    def move_used_trans_block_to_free(self, blocknum):
-        channel, block_off = block_to_channel_block(self.conf, blocknum)
-        self.channel_pools[channel].move_used_trans_block_to_free(block_off)
-
-    def next_data_page_to_program(self):
-        return self.iter_channels("next_data_page_to_program",
-            addr_type = 'page')
-
-    def next_translation_page_to_program(self):
-        return self.iter_channels("next_translation_page_to_program",
-            addr_type = 'page')
-
-    def next_gc_data_page_to_program(self):
-        return self.iter_channels("next_gc_data_page_to_program",
-            addr_type = 'page')
-
-    def next_gc_translation_page_to_program(self):
-        return self.iter_channels("next_gc_translation_page_to_program",
-            addr_type = 'page')
-
-    def current_blocks(self):
-        cur_blocks = []
-        for channel in self.channel_pools:
-            cur_blocks.extend( channel.current_blocks_global )
-
-        return cur_blocks
-
-    def used_ratio(self):
-        n_used = 0
-        for channel in self.channel_pools:
-            n_used += channel.total_used_blocks()
-
-        return float(n_used) / self.conf.n_blocks_per_dev
-
-    def total_used_blocks(self):
-        total = 0
-        for channel in self.channel_pools:
-            total += channel.total_used_blocks()
-        return total
-
-    def num_freeblocks(self):
-        total = 0
-        for channel in self.channel_pools:
-            total += len( channel.freeblocks )
-        return total
-
-
-class OutOfSpaceError(RuntimeError):
-    pass
-
-
-class ChannelBlockPool(object):
-    """
-    This class maintains the free blocks and used blocks of a
-    flash channel.
-    The block number of each channel starts from 0.
-    """
-    def __init__(self, confobj, channel_no):
-        self.conf = confobj
-
-        self.freeblocks = deque(
-            range(self.conf.n_blocks_per_channel))
-
-        # initialize usedblocks
-        self.trans_usedblocks = []
-        self.data_usedblocks  = []
-
-        self.channel_no = channel_no
-
-    def shift_to_global(self, blocks):
-        """
-        calculate the block num in global namespace for blocks
-        """
-        return [ channel_block_to_block(self.conf, self.channel_no, block_off)
-            for block_off in blocks ]
-
-    @property
-    def freeblocks_global(self):
-        return self.shift_to_global(self.freeblocks)
-
-    @property
-    def trans_usedblocks_global(self):
-        return self.shift_to_global(self.trans_usedblocks)
-
-    @property
-    def data_usedblocks_global(self):
-        return self.shift_to_global(self.data_usedblocks)
-
-    @property
-    def current_blocks_global(self):
-        local_cur_blocks = self.current_blocks()
-
-        global_cur_blocks = []
-        for block in local_cur_blocks:
-            if block == None:
-                global_cur_blocks.append(block)
-            else:
-                global_cur_blocks.append(
-                    channel_block_to_block(self.conf, self.channel_no, block) )
-
-        return global_cur_blocks
-
-    def pop_a_free_block(self):
-        if self.freeblocks:
-            blocknum = self.freeblocks.popleft()
-        else:
-            # nobody has free block
-            raise OutOfSpaceError('No free blocks in device!!!!')
-
-        return blocknum
-
-    def pop_a_free_block_to_trans(self):
-        "take one block from freelist and add it to translation block list"
-        blocknum = self.pop_a_free_block()
-        self.trans_usedblocks.append(blocknum)
-        return blocknum
-
-    def pop_a_free_block_to_data(self):
-        "take one block from freelist and add it to data block list"
-        blocknum = self.pop_a_free_block()
-        self.data_usedblocks.append(blocknum)
-        return blocknum
-
-    def move_used_data_block_to_free(self, blocknum):
-        self.data_usedblocks.remove(blocknum)
-        self.freeblocks.append(blocknum)
-
-    def move_used_trans_block_to_free(self, blocknum):
-        try:
-            self.trans_usedblocks.remove(blocknum)
-        except ValueError:
-            sys.stderr.write( 'blocknum:' + str(blocknum) )
-            raise
-        self.freeblocks.append(blocknum)
-
-    def total_used_blocks(self):
-        return len(self.trans_usedblocks) + len(self.data_usedblocks)
-
-    def next_page_to_program(self, log_end_name_str, pop_free_block_func):
-        """
-        The following comment uses next_data_page_to_program() as a example.
-
-        it finds out the next available page to program
-        usually it is the page after log_end_pagenum.
-
-        If next=log_end_pagenum + 1 is in the same block with
-        log_end_pagenum, simply return log_end_pagenum + 1
-        If next=log_end_pagenum + 1 is out of the block of
-        log_end_pagenum, we need to pick a new block from self.freeblocks
-
-        This function is stateful, every time you call it, it will advance by
-        one.
-        """
-
-        if not hasattr(self, log_end_name_str):
-           # This is only executed for the first time
-           cur_block = pop_free_block_func()
-           # use the first page of this block to be the
-           next_page = self.conf.block_off_to_page(cur_block, 0)
-           # log_end_name_str is the page that is currently being operated on
-           setattr(self, log_end_name_str, next_page)
-
-           return next_page
-
-        cur_page = getattr(self, log_end_name_str)
-        cur_block, cur_off = self.conf.page_to_block_off(cur_page)
-
-        next_page = (cur_page + 1) % self.conf.total_num_pages()
-        next_block, next_off = self.conf.page_to_block_off(next_page)
-
-        if cur_block == next_block:
-            ret = next_page
-        else:
-            # get a new block
-            block = pop_free_block_func()
-            start, _ = self.conf.block_to_page_range(block)
-            ret = start
-
-        setattr(self, log_end_name_str, ret)
-        return ret
-
-    def next_data_page_to_program(self):
-        return self.next_page_to_program('data_log_end_ppn',
-            self.pop_a_free_block_to_data)
-
-    def next_translation_page_to_program(self):
-        return self.next_page_to_program('trans_log_end_ppn',
-            self.pop_a_free_block_to_trans)
-
-    def next_gc_data_page_to_program(self):
-        return self.next_page_to_program('gc_data_log_end_ppn',
-            self.pop_a_free_block_to_data)
-
-    def next_gc_translation_page_to_program(self):
-        return self.next_page_to_program('gc_trans_log_end_ppn',
-            self.pop_a_free_block_to_trans)
-
-    def current_blocks(self):
-        try:
-            cur_data_block, _ = self.conf.page_to_block_off(
-                self.data_log_end_ppn)
-        except AttributeError:
-            cur_data_block = None
-
-        try:
-            cur_trans_block, _ = self.conf.page_to_block_off(
-                self.trans_log_end_ppn)
-        except AttributeError:
-            cur_trans_block = None
-
-        try:
-            cur_gc_data_block, _ = self.conf.page_to_block_off(
-                self.gc_data_log_end_ppn)
-        except AttributeError:
-            cur_gc_data_block = None
-
-        try:
-            cur_gc_trans_block, _ = self.conf.page_to_block_off(
-                self.gc_trans_log_end_ppn)
-        except AttributeError:
-            cur_gc_trans_block = None
-
-        return (cur_data_block, cur_trans_block, cur_gc_data_block,
-            cur_gc_trans_block)
-
-    def __repr__(self):
-        ret = ' '.join(['freeblocks', repr(self.freeblocks)]) + '\n' + \
-            ' '.join(['trans_usedblocks', repr(self.trans_usedblocks)]) + \
-            '\n' + \
-            ' '.join(['data_usedblocks', repr(self.data_usedblocks)])
-        return ret
-
-    def visual(self):
-        block_states = [ 'O' if block in self.freeblocks else 'X'
-            for block in range(self.conf.n_blocks_per_channel)]
-        return ''.join(block_states)
-
-    def used_ratio(self):
-        return (len(self.trans_usedblocks) + len(self.data_usedblocks))\
-            / float(self.conf.n_blocks_per_channel)
-
-class CacheEntryData(object):
-    """
-    This is a helper class that store entry data for a LPN
-    """
-    def __init__(self, lpn, ppn, dirty):
-        self.lpn = lpn
-        self.ppn = ppn
-        self.dirty = dirty
-
-    def __repr__(self):
-        return "lpn:{}, ppn:{}, dirty:{}".format(self.lpn,
-            self.ppn, self.dirty)
-
-
-class CachedMappingTable(object):
-    """
-    When do we need batched update?
-    - do we need it when cleaning translation pages? NO. cleaning translation
-    pages does not change contents of translation page.
-    - do we need it when cleaning data page? Yes. When cleaning data page, you
-    need to modify some lpn->ppn. For those LPNs in the same translation page,
-    you can group them and update together. The process is: put those LPNs to
-    the same group, read the translation page, modify entries and write it to
-    flash. If you want batch updates here, you will need to buffer a few
-    lpn->ppn. Well, since we have limited SRAM, you cannot do this.
-    TODO: maybe you need to implement this.
-
-    - do we need it when writing a lpn? To be exact, we need it when evict an
-    entry in CMT. In that case, we need to find all the CMT entries in the same
-    translation page with the victim entry.
-    """
-    def __init__(self, confobj):
-        self.conf = confobj
-
-        self.entry_bytes = 8 # lpn + ppn
-        max_bytes = self.conf.max_cmt_bytes
-        self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
-            self.entry_bytes
-        print 'cache max entries', self.max_n_entries, ',', \
-            'for data of size', self.max_n_entries * self.conf.page_size, 'MB'
-        # if not self.conf.n_mapping_entries_per_page < self.max_n_entries:
-            # raise ValueError("Because we may read a whole translation page "\
-                    # "cache. We need the cache to be large enough to hold "\
-                    # "it. So we don't lost any entries. But now "\
-                    # "n_mapping_entries_per_page {} is larger than "\
-                    # "max_n_entries {}.".format(
-                    # self.conf.n_mapping_entries_per_page,
-                    # self.max_n_entries))
-
-        # self.entries = {}
-        # self.entries = lrulist.LruCache()
-        self.entries = lrulist.SegmentedLruCache(self.max_n_entries, 0.5)
-
-    def lpn_to_ppn(self, lpn):
-        "Try to find ppn of the given lpn in cache"
-        entry_data = self.entries.get(lpn, MISS)
-        if entry_data == MISS:
-            return MISS
-        else:
-            return entry_data.ppn
-
-    def add_new_entry(self, lpn, ppn, dirty):
-        "dirty is a boolean"
-        if self.entries.has_key(lpn):
-            raise RuntimeError("{}:{} already exists in CMT entries.".format(
-                lpn, self.entries[lpn].ppn))
-        self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
-
-    def add_new_entry_softly(self, lpn, ppn):
-        """
-        If lpn is already in cache, don't add it. Don't change dirty bit.
-        If lpn is not in cache, add it and set dirty to False
-        """
-        if not self.entries.has_key(lpn):
-            self.entries[lpn] = \
-                CacheEntryData(lpn = lpn, ppn = ppn, dirty = False)
-
-    def add_new_entries_softly(self, mappings):
-        """
-        mappings {
-            lpn1: ppn1
-            lpn2: ppn2
-            lpn3: ppn3
-            }
-        """
-        for lpn, ppn in mappings.items():
-            self.add_new_entry_softly(lpn, ppn)
-
-    def update_entry(self, lpn, ppn, dirty):
-        "You may end up remove the old one"
-        self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
-
-    def overwrite_entry(self, lpn, ppn, dirty):
-        "lpn must exist"
-        self.entries[lpn].ppn = ppn
-        self.entries[lpn].dirty = dirty
-
-    def remove_entry_by_lpn(self, lpn):
-        del self.entries[lpn]
-
-    def victim_entry(self):
-        # lpn = random.choice(self.entries.keys())
-        classname = type(self.entries).__name__
-        if classname in ('SegmentedLruCache', 'LruCache'):
-            lpn = self.entries.victim_key()
-        else:
-            raise RuntimeError("You need to specify victim selection")
-
-        # lpn, Cacheentrydata
-        return lpn, self.entries.peek(lpn)
-
-    def is_full(self):
-        n = len(self.entries)
-        return n >= self.max_n_entries
-
-    def __repr__(self):
-        return repr(self.entries)
-
-
-class GlobalMappingTable(object):
-    """
-    This mapping table is for data pages, not for translation pages.
-    GMT should have entries as many as the number of pages in flash
-    """
-    def __init__(self, confobj, flashobj):
-        """
-        flashobj is the flash device that we may operate on.
-        """
-        if not isinstance(confobj, config.Config):
-            raise TypeError("confobj is not conf.Config. it is {}".
-               format(type(confobj).__name__))
-
-        self.conf = confobj
-
-        self.n_entries_per_page = self.conf.n_mapping_entries_per_page
-
-        # do the easy thing first, if necessary, we can later use list or
-        # other data structure
-        self.entries = {}
-
-    def total_entries(self):
-        """
-        total number of entries stored in global mapping table.  It is the same
-        as the number of pages in flash, since we use page-leveling mapping
-        """
-        return self.conf.total_num_pages()
-
-    def total_translation_pages(self):
-        """
-        total number of translation pages needed. It is:
-        total_entries * entry size / page size
-        """
-        entries = self.total_entries()
-        entry_bytes = self.conf.global_mapping_entry_bytes
-        flash_page_size = self.conf.page_size
-        # play the ceiling trick
-        return (entries * entry_bytes + (flash_page_size -1))/flash_page_size
-
-    def lpn_to_ppn(self, lpn):
-        """
-        GMT should always be able to answer query. It is perfectly OK to return
-        None because at the beginning there is no mapping. No valid data block
-        on device.
-        """
-        return self.entries.get(lpn, UNINITIATED)
-
-    def update(self, lpn, ppn):
-        self.entries[lpn] = ppn
-
-    def __repr__(self):
-        return "global mapping table: {}".format(repr(self.entries))
-
-
-class GlobalTranslationDirectory(object):
-    """
-    This is an in-memory data structure. It is only for book keeping. It used
-    to remeber thing so that we don't lose it.
-    """
-    def __init__(self, confobj):
-        self.conf = confobj
-
-        self.flash_npage_per_block = self.conf.n_pages_per_block
-        self.flash_num_blocks = self.conf.n_blocks_per_dev
-        self.flash_page_size = self.conf.page_size
-        self.total_pages = self.conf.total_num_pages()
-
-        self.n_entries_per_page = self.conf.n_mapping_entries_per_page
-
-        # M_VPN -> M_PPN
-        # Virtual translation page number --> Physical translation page number
-        # Dftl should initialize
-        self.mapping = {}
-
-    def m_vpn_to_m_ppn(self, m_vpn):
-        """
-        m_vpn virtual translation page number. It should always be successfull.
-        """
-        return self.mapping[m_vpn]
-
-    def add_mapping(self, m_vpn, m_ppn):
-        if self.mapping.has_key(m_vpn):
-            raise RuntimeError("self.mapping already has m_vpn:{}"\
-                .format(m_vpn))
-        self.mapping[m_vpn] = m_ppn
-
-    def update_mapping(self, m_vpn, m_ppn):
-        self.mapping[m_vpn] = m_ppn
-
-    def remove_mapping(self, m_vpn):
-        del self.mapping[m_vpn]
-
-    def m_vpn_of_lpn(self, lpn):
-        "Find the virtual translation page that holds lpn"
-        return lpn / self.n_entries_per_page
-
-    def m_vpn_to_lpns(self, m_vpn):
-        start_lpn = m_vpn * self.n_entries_per_page
-        return range(start_lpn, start_lpn + self.n_entries_per_page)
-
-    def m_ppn_of_lpn(self, lpn):
-        m_vpn = self.m_vpn_of_lpn(lpn)
-        m_ppn = self.m_vpn_to_m_ppn(m_vpn)
-        return m_ppn
-
-    def __repr__(self):
-        return repr(self.mapping)
-
+class VPNResourcePool(object):
+    def __init__(self, simpy_env):
+        self.resources = {} # lpn: lock
+        self.env = simpy_env
+
+    def get_request(self, vpn):
+        res = self.resources.setdefault(vpn,
+                                    simpy.Resource(self.env, capacity = 1))
+        return res.request()
+
+    def release_request(self, vpn, request):
+        res = self.resources[vpn]
+        res.release(request)
 
 class MappingManager(object):
     """
@@ -1103,166 +546,573 @@ class MappingManager(object):
         # not in cache, we now need to make some room in cache for new
         # mappings
 
-
-
-class GcDecider(object):
+class MappingDict(dict):
     """
-    It is used to decide wheter we should do garbage collection.
-
-    When need_cleaning() is called the first time, use high water mark
-    to decide if we need GC.
-    Later, use low water mark and progress to decide. If we haven't make
-    progress in 10 times, stop GC
+    Used to map lpn->ppn
     """
-    def __init__(self, confobj, block_pool, recorderobj):
+    pass
+
+def block_to_channel_block(conf, blocknum):
+    n_blocks_per_channel = conf.n_blocks_per_channel
+    channel = blocknum / n_blocks_per_channel
+    block_off = blocknum % n_blocks_per_channel
+    return channel, block_off
+
+def channel_block_to_block(conf, channel, block_off):
+    n_blocks_per_channel = conf.n_blocks_per_channel
+    return channel * n_blocks_per_channel + block_off
+
+def page_to_channel_page(conf, pagenum):
+    """
+    pagenum is in the context of device
+    """
+    n_pages_per_channel = conf.n_pages_per_channel
+    channel = pagenum / n_pages_per_channel
+    page_off = pagenum % n_pages_per_channel
+    return channel, page_off
+
+def channel_page_to_page(conf, channel, page_off):
+    """
+    Translate channel, page_off to pagenum in context of device
+    """
+    return channel * conf.n_pages_per_channel + page_off
+
+
+class BlockPool(object):
+    def __init__(self, confobj):
         self.conf = confobj
-        self.block_pool = block_pool
-        self.recorder = recorderobj
+        self.n_channels = self.conf['flash_config']['n_channels_per_dev']
+        self.channel_pools = [ChannelBlockPool(self.conf, i)
+                for i in range(self.n_channels)]
 
-        # Check if the high_watermark is appropriate
-        # The high watermark should not be lower than the file system size
-        # because if the file system is full you have to constantly GC and
-        # cannot get more space
-        min_high = 1 / float(self.conf.over_provisioning)
-        if self.conf.GC_threshold_ratio < min_high:
-            hi_watermark_ratio = min_high
-            print 'High watermark is reset to {}. It was {}'.format(
-                hi_watermark_ratio, self.conf.GC_threshold_ratio)
-        else:
-            hi_watermark_ratio = self.conf.GC_threshold_ratio
-            print 'Using user defined high watermark', hi_watermark_ratio
+        self.cur_channel = 0
 
-        self.high_watermark = hi_watermark_ratio * \
-            self.conf.n_blocks_per_dev
+    @property
+    def freeblocks(self):
+        free = []
+        for channel in self.channel_pools:
+            free.extend( channel.freeblocks_global )
+        return free
 
-        spare_blocks = (1 - hi_watermark_ratio) * self.conf.n_blocks_per_dev
-        if not spare_blocks > 32:
-            raise RuntimeError("Num of spare blocks {} may not be enough"\
-                "for garbage collection. You may encounter "\
-                "Out Of Space error!".format(spare_blocks))
+    @property
+    def data_usedblocks(self):
+        used = []
+        for channel in self.channel_pools:
+            used.extend( channel.data_usedblocks_global )
+        return used
 
-        min_low = 0.8 * 1 / self.conf.over_provisioning
-        if self.conf.GC_low_threshold_ratio < min_low:
-            low_watermark_ratio = min_low
-            print 'Low watermark is reset to {}. It was {}'.format(
-                low_watermark_ratio, self.conf.GC_low_threshold_ratio)
-        else:
-            low_watermark_ratio = self.conf.GC_low_threshold_ratio
-            print 'Using user defined low watermark', low_watermark_ratio
+    @property
+    def trans_usedblocks(self):
+        used = []
+        for channel in self.channel_pools:
+            used.extend( channel.trans_usedblocks_global )
+        return used
 
-        self.low_watermark = low_watermark_ratio * \
-            self.conf.n_blocks_per_dev
-
-        print 'High watermark', self.high_watermark
-        print 'Low watermark', self.low_watermark
-
-        self.call_index = -1
-        self.last_used_blocks = None
-        self.freeze_count = 0
-
-    def refresh(self):
-        """
-        TODO: this class needs refactoring.
-        """
-        self.call_index = -1
-        self.last_used_blocks = None
-        self.freeze_count = 0
-
-    def need_cleaning(self):
-        "The logic is a little complicated"
-        self.call_index += 1
-
-        n_used_blocks = self.block_pool.total_used_blocks()
-
-        if self.call_index == 0:
-            # clean when above high_watermark
-            ret = n_used_blocks > self.high_watermark
-            # raise the high water mark because we want to avoid frequent GC
-            if ret == True:
-                self.raise_high_watermark()
-        else:
-            if self.freezed_too_long(n_used_blocks):
-                ret = False
-                print 'freezed too long, stop GC'
-                self.recorder.count_me("GC", 'freezed_too_long')
+    def iter_channels(self, funcname, addr_type):
+        n = self.n_channels
+        while n > 0:
+            n -= 1
+            try:
+                in_channel_offset = eval("self.channel_pools[self.cur_channel].{}()"\
+                        .format(funcname))
+            except OutOfSpaceError:
+                pass
             else:
-                # Is it higher than low watermark?
-                ret = n_used_blocks > self.low_watermark
-                if ret == False:
-                    self.recorder.count_me("GC", 'below_lowerwatermark')
-                    # We were able to bring used block to below lower
-                    # watermark. It means we still have a lot free space
-                    # We don't need to worry about frequent GC.
-                    self.reset_high_watermark()
+                if addr_type == 'block':
+                    ret = channel_block_to_block(self.conf, self.cur_channel,
+                            in_channel_offset)
+                elif addr_type == 'page':
+                    ret = channel_page_to_page(self.conf, self.cur_channel,
+                            in_channel_offset)
+                else:
+                    raise RuntimeError("addr_type {} is not supported."\
+                        .format(addr_type))
+                return ret
+            finally:
+                self.cur_channel = (self.cur_channel + 1) % self.n_channels
 
-        return ret
+        raise OutOfSpaceError("Tried all channels. Out of Space")
 
-    def reset_high_watermark(self):
-        return
+    def pop_a_free_block(self):
+        return self.iter_channels("pop_a_free_block", addr_type = 'block')
 
-        self.high_watermark = self.high_watermark_orig
+    def pop_a_free_block_to_trans(self):
+        return self.iter_channels("pop_a_free_block_to_trans",
+            addr_type = 'block')
 
-    def raise_high_watermark(self):
+    def pop_a_free_block_to_data(self):
+        return self.iter_channels("pop_a_free_block_to_data",
+            addr_type = 'block')
+
+    def move_used_data_block_to_free(self, blocknum):
+        channel, block_off = block_to_channel_block(self.conf, blocknum)
+        self.channel_pools[channel].move_used_data_block_to_free(block_off)
+
+    def move_used_trans_block_to_free(self, blocknum):
+        channel, block_off = block_to_channel_block(self.conf, blocknum)
+        self.channel_pools[channel].move_used_trans_block_to_free(block_off)
+
+    def next_data_page_to_program(self):
+        return self.iter_channels("next_data_page_to_program",
+            addr_type = 'page')
+
+    def next_translation_page_to_program(self):
+        return self.iter_channels("next_translation_page_to_program",
+            addr_type = 'page')
+
+    def next_gc_data_page_to_program(self):
+        return self.iter_channels("next_gc_data_page_to_program",
+            addr_type = 'page')
+
+    def next_gc_translation_page_to_program(self):
+        return self.iter_channels("next_gc_translation_page_to_program",
+            addr_type = 'page')
+
+    def current_blocks(self):
+        cur_blocks = []
+        for channel in self.channel_pools:
+            cur_blocks.extend( channel.current_blocks_global )
+
+        return cur_blocks
+
+    def used_ratio(self):
+        n_used = 0
+        for channel in self.channel_pools:
+            n_used += channel.total_used_blocks()
+
+        return float(n_used) / self.conf.n_blocks_per_dev
+
+    def total_used_blocks(self):
+        total = 0
+        for channel in self.channel_pools:
+            total += channel.total_used_blocks()
+        return total
+
+    def num_freeblocks(self):
+        total = 0
+        for channel in self.channel_pools:
+            total += len( channel.freeblocks )
+        return total
+
+
+class ChannelBlockPool(object):
+    """
+    This class maintains the free blocks and used blocks of a
+    flash channel.
+    The block number of each channel starts from 0.
+    """
+    def __init__(self, confobj, channel_no):
+        self.conf = confobj
+
+        self.freeblocks = deque(
+            range(self.conf.n_blocks_per_channel))
+
+        # initialize usedblocks
+        self.trans_usedblocks = []
+        self.data_usedblocks  = []
+
+        self.channel_no = channel_no
+
+    def shift_to_global(self, blocks):
         """
-        Raise high watermark.
-
-        95% of the total blocks are the highest possible
+        calculate the block num in global namespace for blocks
         """
-        return
+        return [ channel_block_to_block(self.conf, self.channel_no, block_off)
+            for block_off in blocks ]
 
-        self.high_watermark = min(self.high_watermark * 1.01,
-            self.conf.n_blocks_per_dev * 0.95)
+    @property
+    def freeblocks_global(self):
+        return self.shift_to_global(self.freeblocks)
 
-    def lower_high_watermark(self):
-        """
-        THe lowest is the original value
-        """
-        return
+    @property
+    def trans_usedblocks_global(self):
+        return self.shift_to_global(self.trans_usedblocks)
 
-        self.high_watermark = max(self.high_watermark_orig,
-            self.high_watermark / 1.01)
+    @property
+    def data_usedblocks_global(self):
+        return self.shift_to_global(self.data_usedblocks)
 
-    def improved(self, cur_n_used_blocks):
-        """
-        wether we get some free blocks since last call of this function
-        """
-        if self.last_used_blocks == None:
-            ret = True
-        else:
-            # common case
-            ret = cur_n_used_blocks < self.last_used_blocks
+    @property
+    def current_blocks_global(self):
+        local_cur_blocks = self.current_blocks()
 
-        self.last_used_blocks = cur_n_used_blocks
-        return ret
-
-    def freezed_too_long(self, cur_n_used_blocks):
-        if self.improved(cur_n_used_blocks):
-            self.freeze_count = 0
-            ret = False
-        else:
-            self.freeze_count += 1
-
-            if self.freeze_count > 2 * self.conf.n_pages_per_block:
-                ret = True
+        global_cur_blocks = []
+        for block in local_cur_blocks:
+            if block == None:
+                global_cur_blocks.append(block)
             else:
-                ret = False
+                global_cur_blocks.append(
+                    channel_block_to_block(self.conf, self.channel_no, block) )
 
+        return global_cur_blocks
+
+    def pop_a_free_block(self):
+        if self.freeblocks:
+            blocknum = self.freeblocks.popleft()
+        else:
+            # nobody has free block
+            raise OutOfSpaceError('No free blocks in device!!!!')
+
+        return blocknum
+
+    def pop_a_free_block_to_trans(self):
+        "take one block from freelist and add it to translation block list"
+        blocknum = self.pop_a_free_block()
+        self.trans_usedblocks.append(blocknum)
+        return blocknum
+
+    def pop_a_free_block_to_data(self):
+        "take one block from freelist and add it to data block list"
+        blocknum = self.pop_a_free_block()
+        self.data_usedblocks.append(blocknum)
+        return blocknum
+
+    def move_used_data_block_to_free(self, blocknum):
+        self.data_usedblocks.remove(blocknum)
+        self.freeblocks.append(blocknum)
+
+    def move_used_trans_block_to_free(self, blocknum):
+        try:
+            self.trans_usedblocks.remove(blocknum)
+        except ValueError:
+            sys.stderr.write( 'blocknum:' + str(blocknum) )
+            raise
+        self.freeblocks.append(blocknum)
+
+    def total_used_blocks(self):
+        return len(self.trans_usedblocks) + len(self.data_usedblocks)
+
+    def next_page_to_program(self, log_end_name_str, pop_free_block_func):
+        """
+        The following comment uses next_data_page_to_program() as a example.
+
+        it finds out the next available page to program
+        usually it is the page after log_end_pagenum.
+
+        If next=log_end_pagenum + 1 is in the same block with
+        log_end_pagenum, simply return log_end_pagenum + 1
+        If next=log_end_pagenum + 1 is out of the block of
+        log_end_pagenum, we need to pick a new block from self.freeblocks
+
+        This function is stateful, every time you call it, it will advance by
+        one.
+        """
+
+        if not hasattr(self, log_end_name_str):
+           # This is only executed for the first time
+           cur_block = pop_free_block_func()
+           # use the first page of this block to be the
+           next_page = self.conf.block_off_to_page(cur_block, 0)
+           # log_end_name_str is the page that is currently being operated on
+           setattr(self, log_end_name_str, next_page)
+
+           return next_page
+
+        cur_page = getattr(self, log_end_name_str)
+        cur_block, cur_off = self.conf.page_to_block_off(cur_page)
+
+        next_page = (cur_page + 1) % self.conf.total_num_pages()
+        next_block, next_off = self.conf.page_to_block_off(next_page)
+
+        if cur_block == next_block:
+            ret = next_page
+        else:
+            # get a new block
+            block = pop_free_block_func()
+            start, _ = self.conf.block_to_page_range(block)
+            ret = start
+
+        setattr(self, log_end_name_str, ret)
         return ret
 
+    def next_data_page_to_program(self):
+        return self.next_page_to_program('data_log_end_ppn',
+            self.pop_a_free_block_to_data)
 
-class BlockInfo(object):
-    """
-    This is for sorting blocks to clean the victim.
-    """
-    def __init__(self, block_type, block_num, value):
-        self.block_type = block_type
-        self.block_num = block_num
-        self.value = value
+    def next_translation_page_to_program(self):
+        return self.next_page_to_program('trans_log_end_ppn',
+            self.pop_a_free_block_to_trans)
 
-    def __comp__(self, other):
-        "You can switch between benefit/cost and greedy"
-        return cmp(self.valid_ratio, other.valid_ratio)
-        # return cmp(self.value, other.value)
+    def next_gc_data_page_to_program(self):
+        return self.next_page_to_program('gc_data_log_end_ppn',
+            self.pop_a_free_block_to_data)
+
+    def next_gc_translation_page_to_program(self):
+        return self.next_page_to_program('gc_trans_log_end_ppn',
+            self.pop_a_free_block_to_trans)
+
+    def current_blocks(self):
+        try:
+            cur_data_block, _ = self.conf.page_to_block_off(
+                self.data_log_end_ppn)
+        except AttributeError:
+            cur_data_block = None
+
+        try:
+            cur_trans_block, _ = self.conf.page_to_block_off(
+                self.trans_log_end_ppn)
+        except AttributeError:
+            cur_trans_block = None
+
+        try:
+            cur_gc_data_block, _ = self.conf.page_to_block_off(
+                self.gc_data_log_end_ppn)
+        except AttributeError:
+            cur_gc_data_block = None
+
+        try:
+            cur_gc_trans_block, _ = self.conf.page_to_block_off(
+                self.gc_trans_log_end_ppn)
+        except AttributeError:
+            cur_gc_trans_block = None
+
+        return (cur_data_block, cur_trans_block, cur_gc_data_block,
+            cur_gc_trans_block)
+
+    def __repr__(self):
+        ret = ' '.join(['freeblocks', repr(self.freeblocks)]) + '\n' + \
+            ' '.join(['trans_usedblocks', repr(self.trans_usedblocks)]) + \
+            '\n' + \
+            ' '.join(['data_usedblocks', repr(self.data_usedblocks)])
+        return ret
+
+    def visual(self):
+        block_states = [ 'O' if block in self.freeblocks else 'X'
+            for block in range(self.conf.n_blocks_per_channel)]
+        return ''.join(block_states)
+
+    def used_ratio(self):
+        return (len(self.trans_usedblocks) + len(self.data_usedblocks))\
+            / float(self.conf.n_blocks_per_channel)
+
+class OutOfSpaceError(RuntimeError):
+    pass
+
+class CachedMappingTable(object):
+    """
+    When do we need batched update?
+    - do we need it when cleaning translation pages? NO. cleaning translation
+    pages does not change contents of translation page.
+    - do we need it when cleaning data page? Yes. When cleaning data page, you
+    need to modify some lpn->ppn. For those LPNs in the same translation page,
+    you can group them and update together. The process is: put those LPNs to
+    the same group, read the translation page, modify entries and write it to
+    flash. If you want batch updates here, you will need to buffer a few
+    lpn->ppn. Well, since we have limited SRAM, you cannot do this.
+    TODO: maybe you need to implement this.
+
+    - do we need it when writing a lpn? To be exact, we need it when evict an
+    entry in CMT. In that case, we need to find all the CMT entries in the same
+    translation page with the victim entry.
+    """
+    def __init__(self, confobj):
+        self.conf = confobj
+
+        self.entry_bytes = 8 # lpn + ppn
+        max_bytes = self.conf.max_cmt_bytes
+        self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
+            self.entry_bytes
+        print 'cache max entries', self.max_n_entries, ',', \
+            'for data of size', self.max_n_entries * self.conf.page_size, 'MB'
+        # if not self.conf.n_mapping_entries_per_page < self.max_n_entries:
+            # raise ValueError("Because we may read a whole translation page "\
+                    # "cache. We need the cache to be large enough to hold "\
+                    # "it. So we don't lost any entries. But now "\
+                    # "n_mapping_entries_per_page {} is larger than "\
+                    # "max_n_entries {}.".format(
+                    # self.conf.n_mapping_entries_per_page,
+                    # self.max_n_entries))
+
+        # self.entries = {}
+        # self.entries = lrulist.LruCache()
+        self.entries = lrulist.SegmentedLruCache(self.max_n_entries, 0.5)
+
+    def lpn_to_ppn(self, lpn):
+        "Try to find ppn of the given lpn in cache"
+        entry_data = self.entries.get(lpn, MISS)
+        if entry_data == MISS:
+            return MISS
+        else:
+            return entry_data.ppn
+
+    def add_new_entry(self, lpn, ppn, dirty):
+        "dirty is a boolean"
+        if self.entries.has_key(lpn):
+            raise RuntimeError("{}:{} already exists in CMT entries.".format(
+                lpn, self.entries[lpn].ppn))
+        self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
+
+    def add_new_entry_softly(self, lpn, ppn):
+        """
+        If lpn is already in cache, don't add it. Don't change dirty bit.
+        If lpn is not in cache, add it and set dirty to False
+        """
+        if not self.entries.has_key(lpn):
+            self.entries[lpn] = \
+                CacheEntryData(lpn = lpn, ppn = ppn, dirty = False)
+
+    def add_new_entries_softly(self, mappings):
+        """
+        mappings {
+            lpn1: ppn1
+            lpn2: ppn2
+            lpn3: ppn3
+            }
+        """
+        for lpn, ppn in mappings.items():
+            self.add_new_entry_softly(lpn, ppn)
+
+    def update_entry(self, lpn, ppn, dirty):
+        "You may end up remove the old one"
+        self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
+
+    def overwrite_entry(self, lpn, ppn, dirty):
+        "lpn must exist"
+        self.entries[lpn].ppn = ppn
+        self.entries[lpn].dirty = dirty
+
+    def remove_entry_by_lpn(self, lpn):
+        del self.entries[lpn]
+
+    def victim_entry(self):
+        # lpn = random.choice(self.entries.keys())
+        classname = type(self.entries).__name__
+        if classname in ('SegmentedLruCache', 'LruCache'):
+            lpn = self.entries.victim_key()
+        else:
+            raise RuntimeError("You need to specify victim selection")
+
+        # lpn, Cacheentrydata
+        return lpn, self.entries.peek(lpn)
+
+    def is_full(self):
+        n = len(self.entries)
+        return n >= self.max_n_entries
+
+    def __repr__(self):
+        return repr(self.entries)
+
+class CacheEntryData(object):
+    """
+    This is a helper class that store entry data for a LPN
+    """
+    def __init__(self, lpn, ppn, dirty):
+        self.lpn = lpn
+        self.ppn = ppn
+        self.dirty = dirty
+
+    def __repr__(self):
+        return "lpn:{}, ppn:{}, dirty:{}".format(self.lpn,
+            self.ppn, self.dirty)
+
+
+class GlobalMappingTable(object):
+    """
+    This mapping table is for data pages, not for translation pages.
+    GMT should have entries as many as the number of pages in flash
+    """
+    def __init__(self, confobj, flashobj):
+        """
+        flashobj is the flash device that we may operate on.
+        """
+        if not isinstance(confobj, config.Config):
+            raise TypeError("confobj is not conf.Config. it is {}".
+               format(type(confobj).__name__))
+
+        self.conf = confobj
+
+        self.n_entries_per_page = self.conf.n_mapping_entries_per_page
+
+        # do the easy thing first, if necessary, we can later use list or
+        # other data structure
+        self.entries = {}
+
+    def total_entries(self):
+        """
+        total number of entries stored in global mapping table.  It is the same
+        as the number of pages in flash, since we use page-leveling mapping
+        """
+        return self.conf.total_num_pages()
+
+    def total_translation_pages(self):
+        """
+        total number of translation pages needed. It is:
+        total_entries * entry size / page size
+        """
+        entries = self.total_entries()
+        entry_bytes = self.conf.global_mapping_entry_bytes
+        flash_page_size = self.conf.page_size
+        # play the ceiling trick
+        return (entries * entry_bytes + (flash_page_size -1))/flash_page_size
+
+    def lpn_to_ppn(self, lpn):
+        """
+        GMT should always be able to answer query. It is perfectly OK to return
+        None because at the beginning there is no mapping. No valid data block
+        on device.
+        """
+        return self.entries.get(lpn, UNINITIATED)
+
+    def update(self, lpn, ppn):
+        self.entries[lpn] = ppn
+
+    def __repr__(self):
+        return "global mapping table: {}".format(repr(self.entries))
+
+
+class GlobalTranslationDirectory(object):
+    """
+    This is an in-memory data structure. It is only for book keeping. It used
+    to remeber thing so that we don't lose it.
+    """
+    def __init__(self, confobj):
+        self.conf = confobj
+
+        self.flash_npage_per_block = self.conf.n_pages_per_block
+        self.flash_num_blocks = self.conf.n_blocks_per_dev
+        self.flash_page_size = self.conf.page_size
+        self.total_pages = self.conf.total_num_pages()
+
+        self.n_entries_per_page = self.conf.n_mapping_entries_per_page
+
+        # M_VPN -> M_PPN
+        # Virtual translation page number --> Physical translation page number
+        # Dftl should initialize
+        self.mapping = {}
+
+    def m_vpn_to_m_ppn(self, m_vpn):
+        """
+        m_vpn virtual translation page number. It should always be successfull.
+        """
+        return self.mapping[m_vpn]
+
+    def add_mapping(self, m_vpn, m_ppn):
+        if self.mapping.has_key(m_vpn):
+            raise RuntimeError("self.mapping already has m_vpn:{}"\
+                .format(m_vpn))
+        self.mapping[m_vpn] = m_ppn
+
+    def update_mapping(self, m_vpn, m_ppn):
+        self.mapping[m_vpn] = m_ppn
+
+    def remove_mapping(self, m_vpn):
+        del self.mapping[m_vpn]
+
+    def m_vpn_of_lpn(self, lpn):
+        "Find the virtual translation page that holds lpn"
+        return lpn / self.n_entries_per_page
+
+    def m_vpn_to_lpns(self, m_vpn):
+        start_lpn = m_vpn * self.n_entries_per_page
+        return range(start_lpn, start_lpn + self.n_entries_per_page)
+
+    def m_ppn_of_lpn(self, lpn):
+        m_vpn = self.m_vpn_of_lpn(lpn)
+        m_ppn = self.m_vpn_to_m_ppn(m_vpn)
+        return m_ppn
+
+    def __repr__(self):
+        return repr(self.mapping)
 
 
 class GarbageCollector(object):
@@ -1650,6 +1500,282 @@ class GarbageCollector(object):
         yield self.env.process(
             self.flash.erase_pbn_extent(blocknum, 1, tag = TAG_BACKGROUND))
 
+class BlockInfo(object):
+    """
+    This is for sorting blocks to clean the victim.
+    """
+    def __init__(self, block_type, block_num, value):
+        self.block_type = block_type
+        self.block_num = block_num
+        self.value = value
+
+    def __comp__(self, other):
+        "You can switch between benefit/cost and greedy"
+        return cmp(self.valid_ratio, other.valid_ratio)
+        # return cmp(self.value, other.value)
+
+class GcDecider(object):
+    """
+    It is used to decide wheter we should do garbage collection.
+
+    When need_cleaning() is called the first time, use high water mark
+    to decide if we need GC.
+    Later, use low water mark and progress to decide. If we haven't make
+    progress in 10 times, stop GC
+    """
+    def __init__(self, confobj, block_pool, recorderobj):
+        self.conf = confobj
+        self.block_pool = block_pool
+        self.recorder = recorderobj
+
+        # Check if the high_watermark is appropriate
+        # The high watermark should not be lower than the file system size
+        # because if the file system is full you have to constantly GC and
+        # cannot get more space
+        min_high = 1 / float(self.conf.over_provisioning)
+        if self.conf.GC_threshold_ratio < min_high:
+            hi_watermark_ratio = min_high
+            print 'High watermark is reset to {}. It was {}'.format(
+                hi_watermark_ratio, self.conf.GC_threshold_ratio)
+        else:
+            hi_watermark_ratio = self.conf.GC_threshold_ratio
+            print 'Using user defined high watermark', hi_watermark_ratio
+
+        self.high_watermark = hi_watermark_ratio * \
+            self.conf.n_blocks_per_dev
+
+        spare_blocks = (1 - hi_watermark_ratio) * self.conf.n_blocks_per_dev
+        if not spare_blocks > 32:
+            raise RuntimeError("Num of spare blocks {} may not be enough"\
+                "for garbage collection. You may encounter "\
+                "Out Of Space error!".format(spare_blocks))
+
+        min_low = 0.8 * 1 / self.conf.over_provisioning
+        if self.conf.GC_low_threshold_ratio < min_low:
+            low_watermark_ratio = min_low
+            print 'Low watermark is reset to {}. It was {}'.format(
+                low_watermark_ratio, self.conf.GC_low_threshold_ratio)
+        else:
+            low_watermark_ratio = self.conf.GC_low_threshold_ratio
+            print 'Using user defined low watermark', low_watermark_ratio
+
+        self.low_watermark = low_watermark_ratio * \
+            self.conf.n_blocks_per_dev
+
+        print 'High watermark', self.high_watermark
+        print 'Low watermark', self.low_watermark
+
+        self.call_index = -1
+        self.last_used_blocks = None
+        self.freeze_count = 0
+
+    def refresh(self):
+        """
+        TODO: this class needs refactoring.
+        """
+        self.call_index = -1
+        self.last_used_blocks = None
+        self.freeze_count = 0
+
+    def need_cleaning(self):
+        "The logic is a little complicated"
+        self.call_index += 1
+
+        n_used_blocks = self.block_pool.total_used_blocks()
+
+        if self.call_index == 0:
+            # clean when above high_watermark
+            ret = n_used_blocks > self.high_watermark
+            # raise the high water mark because we want to avoid frequent GC
+            if ret == True:
+                self.raise_high_watermark()
+        else:
+            if self.freezed_too_long(n_used_blocks):
+                ret = False
+                print 'freezed too long, stop GC'
+                self.recorder.count_me("GC", 'freezed_too_long')
+            else:
+                # Is it higher than low watermark?
+                ret = n_used_blocks > self.low_watermark
+                if ret == False:
+                    self.recorder.count_me("GC", 'below_lowerwatermark')
+                    # We were able to bring used block to below lower
+                    # watermark. It means we still have a lot free space
+                    # We don't need to worry about frequent GC.
+                    self.reset_high_watermark()
+
+        return ret
+
+    def reset_high_watermark(self):
+        return
+
+        self.high_watermark = self.high_watermark_orig
+
+    def raise_high_watermark(self):
+        """
+        Raise high watermark.
+
+        95% of the total blocks are the highest possible
+        """
+        return
+
+        self.high_watermark = min(self.high_watermark * 1.01,
+            self.conf.n_blocks_per_dev * 0.95)
+
+    def lower_high_watermark(self):
+        """
+        THe lowest is the original value
+        """
+        return
+
+        self.high_watermark = max(self.high_watermark_orig,
+            self.high_watermark / 1.01)
+
+    def improved(self, cur_n_used_blocks):
+        """
+        wether we get some free blocks since last call of this function
+        """
+        if self.last_used_blocks == None:
+            ret = True
+        else:
+            # common case
+            ret = cur_n_used_blocks < self.last_used_blocks
+
+        self.last_used_blocks = cur_n_used_blocks
+        return ret
+
+    def freezed_too_long(self, cur_n_used_blocks):
+        if self.improved(cur_n_used_blocks):
+            self.freeze_count = 0
+            ret = False
+        else:
+            self.freeze_count += 1
+
+            if self.freeze_count > 2 * self.conf.n_pages_per_block:
+                ret = True
+            else:
+                ret = False
+
+        return ret
+
+
+class OutOfBandAreas(object):
+    """
+    It is used to hold page state and logical page number of a page.
+    It is not necessary to implement it as list. But the interface should
+    appear to be so.  It consists of page state (bitmap) and logical page
+    number (dict).  Let's proivde more intuitive interfaces: OOB should accept
+    events, and react accordingly to this event. The action may involve state
+    and lpn_of_phy_page.
+    """
+    def __init__(self, confobj):
+        self.conf = confobj
+
+        self.flash_num_blocks = confobj.n_blocks_per_dev
+        self.flash_npage_per_block = confobj.n_pages_per_block
+        self.total_pages = self.flash_num_blocks * self.flash_npage_per_block
+
+        # Key data structures
+        self.states = ftlbuilder.FlashBitmap2(confobj)
+        # ppn->lpn mapping stored in OOB, Note that for translation pages, this
+        # mapping is ppn -> m_vpn
+        self.ppn_to_lpn_mvpn = {}
+        # Timestamp table PPN -> timestamp
+        # Here are the rules:
+        # 1. only programming a PPN updates the timestamp of PPN
+        #    if the content is new from FS, timestamp is the timestamp of the
+        #    LPN
+        #    if the content is copied from other flash block, timestamp is the
+        #    same as the previous ppn
+        # 2. discarding, and reading a ppn does not change it.
+        # 3. erasing a block will remove all the timestamps of the block
+        # 4. so cur_timestamp can only be advanced by LBA operations
+        self.timestamp_table = {}
+        self.cur_timestamp = 0
+
+        # flash block -> last invalidation time
+        # int -> timedate.timedate
+        self.last_inv_time_of_block = {}
+
+    ############# Time stamp related ############
+    def timestamp(self):
+        """
+        This function will advance timestamp
+        """
+        t = self.cur_timestamp
+        self.cur_timestamp += 1
+        return t
+
+    def timestamp_set_ppn(self, ppn):
+        self.timestamp_table[ppn] = self.timestamp()
+
+    def timestamp_copy(self, src_ppn, dst_ppn):
+        self.timestamp_table[dst_ppn] = self.timestamp_table[src_ppn]
+
+    def translate_ppn_to_lpn(self, ppn):
+        return self.ppn_to_lpn_mvpn[ppn]
+
+    def wipe_ppn(self, ppn):
+        self.states.invalidate_page(ppn)
+        block, _ = self.conf.page_to_block_off(ppn)
+        self.last_inv_time_of_block[block] = datetime.datetime.now()
+
+        # It is OK to delay it until we erase the block
+        # try:
+            # del self.ppn_to_lpn_mvpn[ppn]
+        # except KeyError:
+            # # it is OK that the key does not exist, for example,
+            # # when discarding without writing to it
+            # pass
+
+    def erase_block(self, flash_block):
+        self.states.erase_block(flash_block)
+
+        start, end = self.conf.block_to_page_range(flash_block)
+        for ppn in range(start, end):
+            try:
+                del self.ppn_to_lpn_mvpn[ppn]
+                # if you try to erase translation block here, it may fail,
+                # but it is expected.
+                del self.timestamp_table[ppn]
+            except KeyError:
+                pass
+
+        del self.last_inv_time_of_block[flash_block]
+
+    def new_write(self, lpn, old_ppn, new_ppn):
+        """
+        mark the new_ppn as valid
+        update the LPN in new page's OOB to lpn
+        invalidate the old_ppn, so cleaner can GC it
+        """
+        self.states.validate_page(new_ppn)
+        self.ppn_to_lpn_mvpn[new_ppn] = lpn
+
+        if old_ppn != UNINITIATED:
+            # the lpn has mapping before this write
+            self.wipe_ppn(old_ppn)
+
+    def new_lba_write(self, lpn, old_ppn, new_ppn):
+        """
+        This is exclusively for lba_write(), so far
+        """
+        self.timestamp_set_ppn(new_ppn)
+        self.new_write(lpn, old_ppn, new_ppn)
+
+    def data_page_move(self, lpn, old_ppn, new_ppn):
+        # move data page does not change the content's timestamp, so
+        # we copy
+        self.timestamp_copy(src_ppn = old_ppn, dst_ppn = new_ppn)
+        self.new_write(lpn, old_ppn, new_ppn)
+
+    def lpns_of_block(self, flash_block):
+        s, e = self.conf.block_to_page_range(flash_block)
+        lpns = []
+        for ppn in range(s, e):
+            lpns.append(self.ppn_to_lpn_mvpn.get(ppn, 'NA'))
+
+        return lpns
 
 def dec_debug(function):
     def wrapper(self, lpn):
@@ -1659,206 +1785,69 @@ def dec_debug(function):
         return ret
     return wrapper
 
-#
-# - translation pages
-#   - cache miss read (trans.cache.load)
-#   - eviction write  (trans.cache.evict)
-#   - cleaning read   (trans.clean)
-#   - cleaning write  (trans.clean)
-# - data pages
-#   - user read       (data.user)
-#   - user write      (data.user)
-#   - cleaning read   (data.cleaning)
-#   - cleaning writes (data.cleaning)
-# Tag format
-# pagetype.
-# Example tags:
+class Config(config.ConfigNCQFTL):
+    def __init__(self, confdic = None):
+        super(Config, self).__init__(confdic)
 
-# trans cache read is due to cache misses, the read fetches translation page
-# to cache.
-# write is due to eviction. Note that entry eviction may incure both page read
-# and write.
-TRANS_CACHE = "trans.cache"
+        local_itmes = {
+            # number of bytes per entry in global_mapping_table
+            "global_mapping_entry_bytes": 4, # 32 bits
+            "GC_threshold_ratio": 0.95,
+            "GC_low_threshold_ratio": 0.9,
+            "over_provisioning": 1.28,
+            "max_cmt_bytes": None # cmt: cached mapping table
+            }
+        self.update(local_itmes)
 
-# trans clean include:
-#  erasing translation block
-#  move translation page during gc (including read and write)
-TRANS_CLEAN = "trans.clean"  #read/write are for moving pages
+        # self['keeping_all_tp_entries'] = False
+        self['keeping_all_tp_entries'] = True
 
-#  clean_data_block()
-#   update_mapping_in_batch()
-#    update_translation_page_on_flash() this is the same as cache eviction
-TRANS_UPDATE_FOR_DATA_GC = "trans.update.for.data.gc"
+    @property
+    def keeping_all_tp_entries(self):
+        return self['keeping_all_tp_entries']
 
-DATA_USER = "data.user"
+    @keeping_all_tp_entries.setter
+    def keeping_all_tp_entries(self, value):
+        self['keeping_all_tp_entries'] = value
 
-# erase data block in clean_data_block()
-# move data page during gc (including read and write)
-DATA_CLEANING = "data.cleaning"
+    @property
+    def n_mapping_entries_per_page(self):
+        return self.page_size / self['global_mapping_entry_bytes']
 
-class VPNResourcePool(object):
-    def __init__(self, simpy_env):
-        self.resources = {} # lpn: lock
-        self.env = simpy_env
+    @property
+    def max_cmt_bytes(self):
+        return self['max_cmt_bytes']
 
-    def get_request(self, vpn):
-        res = self.resources.setdefault(vpn,
-                                    simpy.Resource(self.env, capacity = 1))
-        return res.request()
+    @max_cmt_bytes.setter
+    def max_cmt_bytes(self, value):
+        self['max_cmt_bytes'] = value
 
-    def release_request(self, vpn, request):
-        res = self.resources[vpn]
-        res.release(request)
+    @property
+    def global_mapping_entry_bytes(self):
+        return self['global_mapping_entry_bytes']
 
+    @property
+    def over_provisioning(self):
+        return self['over_provisioning']
 
-class Dftl(object):
-    """
-    The implementation literally follows DFtl paper.
-    This class is a coordinator of other coordinators and data structures
-    """
-    def __init__(self, confobj, recorderobj, flashcontrollerobj, env):
-        if not isinstance(confobj, Config):
-            raise TypeError("confobj is not Config. it is {}".
-               format(type(confobj).__name__))
+    @property
+    def GC_threshold_ratio(self):
+        return self['GC_threshold_ratio']
 
-        self.conf = confobj
-        self.recorder = recorderobj
-        self.flash = flashcontrollerobj
-        self.env = env
+    @property
+    def GC_low_threshold_ratio(self):
+        return self['GC_low_threshold_ratio']
 
-        self.vpn_res_pool =  VPNResourcePool(self.env)
-
-        self.global_helper = GlobalHelper(confobj)
-
-        self.block_pool = BlockPool(confobj)
-        self.oob = OutOfBandAreas(confobj)
-
-        ###### the managers ######
-        self.mapping_manager = MappingManager(
-            confobj = self.conf,
-            block_pool = self.block_pool,
-            flashobj = self.flash,
-            oobobj=self.oob,
-            recorderobj = recorderobj,
-            envobj = env
-            )
-
-        self.garbage_collector = GarbageCollector(
-            confobj = self.conf,
-            flashobj = self.flash,
-            oobobj=self.oob,
-            block_pool = self.block_pool,
-            mapping_manager = self.mapping_manager,
-            recorderobj = recorderobj,
-            envobj = env
-            )
-
-        # We should initialize Globaltranslationdirectory in Dftl
-        self.mapping_manager.initialize_mappings()
-
-        self.n_sec_per_page = self.conf.page_size \
-                / self.conf['sector_size']
-
-        # This resource protects all data structures stored in the memory.
-        self.resource_ram = simpy.Resource(self.env, capacity = 1)
-
-    def translate(self, ssd_req, pid):
+    def sec_ext_to_page_ext(self, sector, count):
         """
-        Our job here is to find the corresponding physical flat address
-        of the address in ssd_req. The during the translation, we may
-        need to synchronizely access flash.
-
-        We do the following here:
-        Read:
-            1. find out the range of logical pages
-            2. for each logical page:
-                if mapping is in cache, just translate it
-                else bring mapping to cache and possibly evict a mapping entry
+        The sector extent has to be aligned with page
+        return page_start, page_count
         """
-        with self.resource_ram.request() as ram_request:
-            yield ram_request # serialize all access to data structures
-
-            s = self.env.now
-            flash_reqs = yield self.env.process(
-                    self.handle_ssd_requests(ssd_req))
-            e = self.env.now
-            self.recorder.add_to_timer("translation_time-wo_wait", pid, e - s)
-
-            self.env.exit(flash_reqs)
-
-    def handle_ssd_requests(self, ssd_req):
-        lpns = ssd_req.lpn_iter()
-
-        if ssd_req.operation == 'read':
-            ppns = yield self.env.process(
-                    self.mapping_manager.ppns_for_reading(lpns))
-        elif ssd_req.operation == 'write':
-            ppns = yield self.env.process(
-                    self.mapping_manager.ppns_for_writing(lpns))
-        elif ssd_req.operation == 'discard':
-            yield self.env.process(
-                    self.mapping_manager.discard_lpns(lpns))
-            ppns = []
-        else:
-            print 'io operation', ssd_req.operation, 'is not processed'
-            ppns = []
-
-        flash_reqs = []
-        for ppn in ppns:
-            if ppn == 'UNINIT':
-                continue
-
-            req = self.flash.get_flash_requests_for_ppns(ppn, 1,
-                    op = ssd_req.operation)
-            flash_reqs.extend(req)
-
-        self.env.exit(flash_reqs)
-
-    def clean_garbage(self):
-        with self.resource_ram.request() as ram_request:
-            yield ram_request # serialize all access to data structures
-            yield self.env.process(
-                    self.garbage_collector.gc_process())
-
-
-    def page_to_sec_items(self, data):
-        ret = []
-        for page_data in data:
-            if page_data == None:
-                page_data = [None] * self.n_sec_per_page
-            for item in page_data:
-                ret.append(item)
-
-        return ret
-
-    def sec_to_page_items(self, data):
-        if data == None:
-            return None
-
-        sec_per_page = self.conf.page_size / self.conf['sector_size']
-        n_pages = len(data) / sec_per_page
-
-        new_data = []
-        for page in range(n_pages):
-            page_items = []
-            for sec in range(sec_per_page):
-                page_items.append(data[page * sec_per_page + sec])
-            new_data.append(page_items)
-
-        return new_data
-
-    def pre_workload(self):
-        pass
-
-    def post_processing(self):
-        """
-        This function is called after the simulation.
-        """
-        pass
-
-    def get_type(self):
-        return "dftldes"
-
-
+        page = sector / self.n_secs_per_page
+        page_end = (sector + count) / self.n_secs_per_page
+        page_count = page_end - page
+        if (sector + count) % self.n_secs_per_page != 0:
+            page_count += 1
+        return page, page_count
 
 
