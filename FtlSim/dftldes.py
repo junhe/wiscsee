@@ -631,7 +631,7 @@ class MappingManager(object):
                 tag = TAG_BACKGROUND))
 
         if self.conf.keeping_all_tp_entries == True:
-            m_vpn = self.directory.lpn_to_m_vpn(lpn)
+            m_vpn = self.conf.lpn_to_m_vpn(lpn)
             entries = self.retrieve_translation_page(m_vpn)
             self.mapping_table.add_new_entries_softly(entries)
             ppn = entries[lpn]
@@ -652,7 +652,7 @@ class MappingManager(object):
         from global mapping table.
         """
         entries = {}
-        for lpn in self.directory.m_vpn_to_lpns(m_vpn):
+        for lpn in self.conf.m_vpn_to_lpns(m_vpn):
             entries[lpn] = self.global_mapping_table.lpn_to_ppn(lpn)
 
         return entries
@@ -702,7 +702,7 @@ class MappingManager(object):
             self.mapping_table.overwrite_entry(lpn = lpn,
                 ppn = new_ppn, dirty = False)
 
-        m_vpn = self.directory.lpn_to_m_vpn(lpn)
+        m_vpn = self.conf.lpn_to_m_vpn(lpn)
 
         # batch_entries may be empty
         batch_entries = self.dirty_entries_of_translation_page(m_vpn)
@@ -731,7 +731,7 @@ class MappingManager(object):
 
         if vic_entrydata.dirty == True:
             # If we have to write to flash, we write in batch
-            m_vpn = self.directory.lpn_to_m_vpn(vic_lpn)
+            m_vpn = self.conf.lpn_to_m_vpn(vic_lpn)
             yield self.env.process(self.batch_write_back(m_vpn))
 
         # remove only the victim entry
@@ -766,7 +766,7 @@ class MappingManager(object):
         retlist = []
         for entry_lpn, dataentry in self.mapping_table.entries.items():
             if dataentry.dirty == True:
-                tmp_m_vpn = self.directory.lpn_to_m_vpn(entry_lpn)
+                tmp_m_vpn = self.conf.lpn_to_m_vpn(entry_lpn)
                 if tmp_m_vpn == m_vpn:
                     retlist.append(dataentry)
 
@@ -1116,16 +1116,8 @@ class GlobalTranslationDirectory(object):
     def remove_mapping(self, m_vpn):
         del self.mapping[m_vpn]
 
-    def lpn_to_m_vpn(self, lpn):
-        "Find the virtual translation page that holds lpn"
-        return lpn / self.n_entries_per_page
-
-    def m_vpn_to_lpns(self, m_vpn):
-        start_lpn = m_vpn * self.n_entries_per_page
-        return range(start_lpn, start_lpn + self.n_entries_per_page)
-
     def lpn_to_m_ppn(self, lpn):
-        m_vpn = self.lpn_to_m_vpn(lpn)
+        m_vpn = self.conf.lpn_to_m_vpn(lpn)
         m_ppn = self.m_vpn_to_m_ppn(m_vpn)
         return m_ppn
 
@@ -1280,7 +1272,7 @@ class GarbageCollector(object):
         # Put the mapping changes into groups, each group belongs to one mvpn
         groups = {}
         for change in changes:
-            m_vpn = self.mapping_manager.directory.lpn_to_m_vpn(change['lpn'])
+            m_vpn = self.conf.lpn_to_m_vpn(change['lpn'])
             group = groups.setdefault(m_vpn, [])
             group.append(change)
 
@@ -1867,6 +1859,14 @@ class Config(config.ConfigNCQFTL):
         if (sector + count) % self.n_secs_per_page != 0:
             page_count += 1
         return page, page_count
+
+    def lpn_to_m_vpn(self, lpn):
+        return lpn / self.n_mapping_entries_per_page
+
+    def m_vpn_to_lpns(self, m_vpn):
+        start_lpn = m_vpn * self.n_mapping_entries_per_page
+        return range(start_lpn, start_lpn + self.n_mapping_entries_per_page)
+
 
 
 
