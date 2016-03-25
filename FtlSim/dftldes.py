@@ -87,6 +87,13 @@ class Config(config.ConfigNCQFTL):
             page_count += 1
         return page, page_count
 
+class MappingDict(dict):
+    """
+    Used to map lpn->ppn
+    """
+    pass
+
+
 class GlobalHelper(object):
     """
     In case you need some global variables. We put all global stuff here so
@@ -1069,6 +1076,33 @@ class MappingManager(object):
     def discard_lpns(self, lpns):
         for lpn in lpns:
             yield self.env.process(self.discard_lpn(lpn))
+
+
+    def __translate_lpns_by_cache(self, lpns):
+        """
+        Return: Found all?, mappings
+        """
+        mappings = MappingDict()
+        for lpn in lpns:
+            ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
+            if ppn == MISS:
+                return False, None
+            mappings[lpn] = ppn
+
+        return True, mappings
+
+    def translate_lpns_of_single_m_vpn(self, lpns):
+        """
+        lpns must be in the same m_vpn
+        """
+        found, mappings = self.__translate_lpns_by_cache(lpns)
+
+        if found == True:
+            return mappings
+
+        # not in cache, we now need to make some room in cache for new
+        # mappings
+
 
 
 class GcDecider(object):

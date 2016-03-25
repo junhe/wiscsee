@@ -88,18 +88,6 @@ class SSDFramework(object):
         all_ctrl_procs = simpy.events.AllOf(self.env, ctrl_procs)
         yield all_ctrl_procs
 
-    def extent_to_request_list(self, subextents, operation):
-        req_list = []
-        for subextent in subextents:
-            ssd_req = SSDRequest(
-                    subextent.lpn_start,
-                    subextent.lpn_count,
-                    subextent.in_cache,
-                    operation)
-            req_list.appen(ssd_req)
-
-        return req_list
-
     def release_token(self, event):
         event.token.release(event.token_req)
 
