@@ -559,7 +559,7 @@ class MappingManager(object):
 
         # managed and owned by Mappingmanager
         self.global_mapping_table = GlobalMappingTable(confobj, flashobj)
-        self.cached_mapping_table = CachedMappingTable(confobj)
+        self.mapping_table = MappingTable(confobj)
         self.directory = GlobalTranslationDirectory(confobj)
 
     def ppns_for_writing(self, lpns):
@@ -575,7 +575,7 @@ class MappingManager(object):
             ppns.append(new_ppn)
             # CMT
             # lpn must be in cache thanks to self.mapping_manager.lpn_to_ppn()
-            self.cached_mapping_table.overwrite_entry(
+            self.mapping_table.overwrite_entry(
                 lpn = lpn, ppn = new_ppn, dirty = True)
             # OOB
             self.oob.new_lba_write(lpn = lpn, old_ppn = old_ppn,
@@ -600,10 +600,10 @@ class MappingManager(object):
         return: real PPN or UNINITIATED
         """
         # try cached mapping table first.
-        ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
+        ppn = self.mapping_table.lpn_to_ppn(lpn)
         if ppn == MISS:
             # cache miss
-            while self.cached_mapping_table.is_full():
+            while self.mapping_table.is_full():
                 yield self.env.process(self.evict_cache_entry())
 
             # find the physical translation page holding lpn's mapping in GTD
@@ -633,13 +633,13 @@ class MappingManager(object):
         if self.conf.keeping_all_tp_entries == True:
             m_vpn = self.directory.m_vpn_of_lpn(lpn)
             entries = self.retrieve_translation_page(m_vpn)
-            self.cached_mapping_table.add_new_entries_softly(entries)
+            self.mapping_table.add_new_entries_softly(entries)
             ppn = entries[lpn]
         else:
             # Now we have all the entries of m_ppn in memory, we need to put
             # the mapping of lpn->ppn to CMT
             ppn = self.global_mapping_table.lpn_to_ppn(lpn)
-            self.cached_mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
+            self.mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
                 dirty = False)
 
         self.env.exit(ppn)
@@ -696,10 +696,10 @@ class MappingManager(object):
         GTD:
             we need to update m_vpn to new m_ppn
         """
-        cached_ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
+        cached_ppn = self.mapping_table.lpn_to_ppn(lpn)
         if cached_ppn != MISS:
             # in cache
-            self.cached_mapping_table.overwrite_entry(lpn = lpn,
+            self.mapping_table.overwrite_entry(lpn = lpn,
                 ppn = new_ppn, dirty = False)
 
         m_vpn = self.directory.m_vpn_of_lpn(lpn)
@@ -727,7 +727,7 @@ class MappingManager(object):
         """
         self.recorder.count_me('cache', 'evict')
 
-        vic_lpn, vic_entrydata = self.cached_mapping_table.victim_entry()
+        vic_lpn, vic_entrydata = self.mapping_table.victim_entry()
 
         if vic_entrydata.dirty == True:
             # If we have to write to flash, we write in batch
@@ -735,7 +735,7 @@ class MappingManager(object):
             yield self.env.process(self.batch_write_back(m_vpn))
 
         # remove only the victim entry
-        self.cached_mapping_table.remove_entry_by_lpn(vic_lpn)
+        self.mapping_table.remove_entry_by_lpn(vic_lpn)
 
     def batch_write_back(self, m_vpn):
         """
@@ -764,7 +764,7 @@ class MappingManager(object):
         Get all dirty entries in translation page m_vpn.
         """
         retlist = []
-        for entry_lpn, dataentry in self.cached_mapping_table.entries.items():
+        for entry_lpn, dataentry in self.mapping_table.entries.items():
             if dataentry.dirty == True:
                 tmp_m_vpn = self.directory.m_vpn_of_lpn(entry_lpn)
                 if tmp_m_vpn == m_vpn:
@@ -820,7 +820,7 @@ class MappingManager(object):
             return
 
         # flash page ppn has valid data
-        self.cached_mapping_table.overwrite_entry(lpn = lpn,
+        self.mapping_table.overwrite_entry(lpn = lpn,
             ppn = UNINITIATED, dirty = True)
 
         # OOB
@@ -837,7 +837,7 @@ class MappingManager(object):
         """
         mappings = MappingDict()
         for lpn in lpns:
-            ppn = self.cached_mapping_table.lpn_to_ppn(lpn)
+            ppn = self.mapping_table.lpn_to_ppn(lpn)
             if ppn == MISS:
                 return False, None
             mappings[lpn] = ppn
@@ -888,7 +888,7 @@ def channel_page_to_page(conf, channel, page_off):
     return channel * conf.n_pages_per_channel + page_off
 
 
-class CachedMappingTable(object):
+class MappingTable(object):
     """
     When do we need batched update?
     - do we need it when cleaning translation pages? NO. cleaning translation
@@ -1284,7 +1284,7 @@ class GarbageCollector(object):
             lpn = change['lpn']
             old_ppn = change['old_ppn']
             new_ppn = change['new_ppn']
-            self.mapping_manager.cached_mapping_table\
+            self.mapping_manager.mapping_table\
                 .overwrite_entry(
                 lpn = lpn, ppn = new_ppn, dirty = False)
 
@@ -1312,11 +1312,11 @@ class GarbageCollector(object):
             new_ppn = change['new_ppn']
 
             cached_ppn = self.mapping_manager\
-                .cached_mapping_table.lpn_to_ppn(lpn)
+                .mapping_table.lpn_to_ppn(lpn)
             if cached_ppn != MISS:
                 # lpn is in cache
                 some_in_cache = True
-                self.mapping_manager.cached_mapping_table.overwrite_entry(
+                self.mapping_manager.mapping_table.overwrite_entry(
                     lpn = lpn, ppn = new_ppn, dirty = True)
                 changes_in_cache.append(change)
             else:

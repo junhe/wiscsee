@@ -494,13 +494,13 @@ class Test_translation_cache(unittest.TestCase):
         simulator = create_simulator(self.conf['simulator_class'],
                 self.conf, [] )
         ftl = simulator.ssdframework.realftl
-        ftl.mapping_manager.cached_mapping_table.add_new_entry_softly(0, 333)
+        ftl.mapping_manager.mapping_table.add_new_entry_softly(0, 333)
 
-        ppn = ftl.mapping_manager.cached_mapping_table.lpn_to_ppn(0)
+        ppn = ftl.mapping_manager.mapping_table.lpn_to_ppn(0)
         self.assertEqual(ppn, 333)
 
         # check it if overwrites the existing one
-        ftl.mapping_manager.cached_mapping_table.add_new_entry_softly(0, 444)
+        ftl.mapping_manager.mapping_table.add_new_entry_softly(0, 444)
         self.assertEqual(ppn, 333)
 
     def test_main(self):
