@@ -199,7 +199,7 @@ class Config(config.ConfigNCQFTL):
         super(Config, self).__init__(confdic)
 
         local_itmes = {
-            # number of bytes per entry in global_mapping_table
+            # number of bytes per entry in mapping_on_flash
             "global_mapping_entry_bytes": 4, # 32 bits
             "GC_threshold_ratio": 0.95,
             "GC_low_threshold_ratio": 0.9,
@@ -859,7 +859,7 @@ class CachedMappingTable(object):
         return repr(self.entries)
 
 
-class GlobalMappingTable(object):
+class MappingOnFlash(object):
     """
     This mapping table is for data pages, not for translation pages.
     GMT should have entries as many as the number of pages in flash
@@ -984,7 +984,7 @@ class MappingManager(object):
         self.recorder = recorderobj
 
         # managed and owned by Mappingmanager
-        self.global_mapping_table = GlobalMappingTable(confobj, flashobj)
+        self.mapping_on_flash = MappingOnFlash(confobj, flashobj)
         self.cached_mapping_table = CachedMappingTable(confobj)
         self.directory = GlobalTranslationDirectory(confobj)
 
@@ -1061,7 +1061,7 @@ class MappingManager(object):
 
         # Now we have all the entries of m_ppn in memory, we need to put
         # the mapping of lpn->ppn to CMT
-        ppn = self.global_mapping_table.lpn_to_ppn(lpn)
+        ppn = self.mapping_on_flash.lpn_to_ppn(lpn)
         self.cached_mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
             dirty = False)
 
@@ -1075,7 +1075,7 @@ class MappingManager(object):
         is no other overhead except for reading the GTD from flash. Since the
         overhead is very small, we ignore it.
         """
-        total_pages = self.global_mapping_table.total_translation_pages()
+        total_pages = self.mapping_on_flash.total_translation_pages()
 
         # use some free blocks to be translation blocks
         tmp_blk_mapping = {}
@@ -1207,7 +1207,7 @@ class MappingManager(object):
         self.flash.write_pages(ppns = [new_m_ppn], ppn_data = None, tag = tag)
         # update our fake 'on-flash' GMT
         for lpn, new_ppn in new_mappings.items():
-            self.global_mapping_table.update(lpn = lpn, ppn = new_ppn)
+            self.mapping_on_flash.update(lpn = lpn, ppn = new_ppn)
 
         # OOB, keep m_vpn as lpn
         self.oob.new_write(lpn = m_vpn, old_ppn = old_m_ppn,

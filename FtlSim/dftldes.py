@@ -558,7 +558,7 @@ class MappingManager(object):
         self.env = envobj
 
         # managed and owned by Mappingmanager
-        self.global_mapping_table = GlobalMappingTable(confobj)
+        self.mapping_on_flash = MappingOnFlash(confobj)
         self.mapping_table = MappingTable(confobj)
         self.directory = GlobalTranslationDirectory(confobj)
 
@@ -638,7 +638,7 @@ class MappingManager(object):
         else:
             # Now we have all the entries of m_ppn in memory, we need to put
             # the mapping of lpn->ppn to CMT
-            ppn = self.global_mapping_table.lpn_to_ppn(lpn)
+            ppn = self.mapping_on_flash.lpn_to_ppn(lpn)
             self.mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
                 dirty = False)
 
@@ -653,7 +653,7 @@ class MappingManager(object):
         """
         entries = {}
         for lpn in self.conf.m_vpn_to_lpns(m_vpn):
-            entries[lpn] = self.global_mapping_table.lpn_to_ppn(lpn)
+            entries[lpn] = self.mapping_on_flash.lpn_to_ppn(lpn)
 
         return entries
 
@@ -665,7 +665,7 @@ class MappingManager(object):
         is no other overhead except for reading the GTD from flash. Since the
         overhead is very small, we ignore it.
         """
-        total_pages = self.global_mapping_table.total_translation_pages()
+        total_pages = self.mapping_on_flash.total_translation_pages()
 
         # use some free blocks to be translation blocks
         tmp_blk_mapping = {}
@@ -805,7 +805,7 @@ class MappingManager(object):
 
         # update our fake 'on-flash' GMT
         for lpn, new_ppn in new_mappings.items():
-            self.global_mapping_table.update(lpn = lpn, ppn = new_ppn)
+            self.mapping_on_flash.update(lpn = lpn, ppn = new_ppn)
 
         # OOB, keep m_vpn as lpn
         self.oob.new_write(lpn = m_vpn, old_ppn = old_m_ppn,
@@ -894,7 +894,7 @@ class MappingCache(object):
     entries from flash.
     """
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
-            envobj, directory, global_mapping_table):
+            envobj, directory, mapping_on_flash):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
@@ -902,7 +902,7 @@ class MappingCache(object):
         self.recorder = recorderobj
         self.env = envobj
         self.directory = directory
-        self.global_mapping_table = global_mapping_table
+        self.mapping_on_flash = mapping_on_flash
 
         self.mapping_table = MappingTable(confobj)
 
@@ -920,11 +920,11 @@ class MappingCache(object):
     def read_translation_page(self, m_vpn):
         d = MappingDict()
         for lpn in self.conf.m_vpn_to_lpns():
-            d[lpn] = self.global_mapping_table.lpn_to_ppn(lpn)
+            d[lpn] = self.mapping_on_flash.lpn_to_ppn(lpn)
 
         # as if we readlly read from flash
         m_ppn = self.conf.m_vpn_to_m_ppn(m_vpn)
-        yield self.env.process(self.read_flash_page(m_ppn)
+        yield self.env.process(self.read_flash_page(m_ppn))
 
         self.env.exit(d)
 
@@ -1047,7 +1047,7 @@ class CacheEntryData(object):
             self.ppn, self.dirty)
 
 
-class GlobalMappingTable(object):
+class MappingOnFlash(object):
     """
     This mapping table is for data pages, not for translation pages.
     GMT should have entries as many as the number of pages in flash
@@ -1820,7 +1820,7 @@ class Config(config.ConfigNCQFTL):
         super(Config, self).__init__(confdic)
 
         local_itmes = {
-            # number of bytes per entry in global_mapping_table
+            # number of bytes per entry in mapping_on_flash
             "global_mapping_entry_bytes": 4, # 32 bits
             "GC_threshold_ratio": 0.95,
             "GC_low_threshold_ratio": 0.9,
