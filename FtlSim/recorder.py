@@ -32,6 +32,8 @@ class Recorder(object):
         self.verbose_level = verbose_level
         self.print_when_finished = print_when_finished
 
+        assert len(self.output_target) > 0
+
         self.file_pool = {} # {filename:descriptor}
         self.file_colnames = {} # {filename:[colname1, 2, ...]
 

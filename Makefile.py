@@ -93,32 +93,6 @@ def create_simulator(simulator_class, conf, event_iter):
     return eval("FtlSim.simulator.{sim_class}(conf, event_iter)".format(
         sim_class = simulator_class))
 
-def set_exp_metadata(conf, save_data, expname, subexpname):
-    if save_data == True:
-        targetdir = '/tmp/results'
-    else:
-        targetdir = '/tmp/tmpresults'
-
-    conf['targetdir'] = targetdir
-
-    conf['expname'] = expname
-    conf['subexpname'] = subexpname
-
-def runtime_update(conf):
-    """
-    This function has to be called before running each treatment.
-    """
-    conf['time'] = time.strftime("%m-%d-%H-%M-%S", time.localtime())
-    conf['hash'] = hash(str(conf))
-    if conf.has_key('filesystem') and conf['filesystem'] != None:
-        fs = str(conf['filesystem'])
-    else:
-        fs = 'fsnotset'
-    conf['result_dir'] = "{targetdir}/{expname}/{subexpname}-{unique}".format(
-        targetdir = conf['targetdir'], expname = conf['expname'],
-        subexpname = conf['subexpname'],
-        unique = '-'.join((fs, conf['time'], str(conf['hash']))))
-
 def get_dev_by_hostname():
     if 'susitna' in socket.gethostname():
         return "/dev/sda1" # or sth. like /dev/sdc1

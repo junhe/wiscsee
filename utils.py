@@ -178,6 +178,22 @@ def get_linux_io_scheduler(devname):
         line = f.readline()
         return re.search(r'\[(\w+)\]', line).group(1)
 
+def runtime_update(conf):
+    """
+    This function has to be called before running each treatment.
+    """
+    conf['time'] = time.strftime("%m-%d-%H-%M-%S", time.localtime())
+    conf['hash'] = hash(str(conf))
+    if conf.has_key('filesystem') and conf['filesystem'] != None:
+        fs = str(conf['filesystem'])
+    else:
+        fs = 'fsnotset'
+    conf['result_dir'] = "{targetdir}/{expname}/{subexpname}-{unique}".format(
+        targetdir = conf['targetdir'], expname = conf['expname'],
+        subexpname = conf['subexpname'],
+        unique = '-'.join((fs, conf['time'], str(conf['hash']))))
+
+
 def choose_exp_metadata(default_conf, interactive = True):
     """
     This function will return a dictionary containing a few things relating
@@ -220,6 +236,17 @@ def choose_exp_metadata(default_conf, interactive = True):
 
     conf['targetdir'] = targetdir
     return conf
+
+def set_exp_metadata(conf, save_data, expname, subexpname):
+    if save_data == True:
+        targetdir = '/tmp/results'
+    else:
+        targetdir = '/tmp/tmpresults'
+
+    conf['targetdir'] = targetdir
+
+    conf['expname'] = expname
+    conf['subexpname'] = subexpname
 
 
 

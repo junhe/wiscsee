@@ -558,7 +558,7 @@ class MappingManager(object):
         self.env = envobj
 
         # managed and owned by Mappingmanager
-        self.global_mapping_table = GlobalMappingTable(confobj, flashobj)
+        self.global_mapping_table = GlobalMappingTable(confobj)
         self.mapping_table = MappingTable(confobj)
         self.directory = GlobalTranslationDirectory(confobj)
 
@@ -623,7 +623,7 @@ class MappingManager(object):
         Output: it return the ppn of lpn read from entry on flash.
         """
         # find the location of the translation page
-        m_ppn = self.directory.m_ppn_of_lpn(lpn)
+        m_ppn = self.directory.lpn_to_m_ppn(lpn)
 
         # read it up, this operation is just for statistics
         yield self.env.process(
@@ -631,7 +631,7 @@ class MappingManager(object):
                 tag = TAG_BACKGROUND))
 
         if self.conf.keeping_all_tp_entries == True:
-            m_vpn = self.directory.m_vpn_of_lpn(lpn)
+            m_vpn = self.directory.lpn_to_m_vpn(lpn)
             entries = self.retrieve_translation_page(m_vpn)
             self.mapping_table.add_new_entries_softly(entries)
             ppn = entries[lpn]
@@ -702,7 +702,7 @@ class MappingManager(object):
             self.mapping_table.overwrite_entry(lpn = lpn,
                 ppn = new_ppn, dirty = False)
 
-        m_vpn = self.directory.m_vpn_of_lpn(lpn)
+        m_vpn = self.directory.lpn_to_m_vpn(lpn)
 
         # batch_entries may be empty
         batch_entries = self.dirty_entries_of_translation_page(m_vpn)
@@ -731,7 +731,7 @@ class MappingManager(object):
 
         if vic_entrydata.dirty == True:
             # If we have to write to flash, we write in batch
-            m_vpn = self.directory.m_vpn_of_lpn(vic_lpn)
+            m_vpn = self.directory.lpn_to_m_vpn(vic_lpn)
             yield self.env.process(self.batch_write_back(m_vpn))
 
         # remove only the victim entry
@@ -766,7 +766,7 @@ class MappingManager(object):
         retlist = []
         for entry_lpn, dataentry in self.mapping_table.entries.items():
             if dataentry.dirty == True:
-                tmp_m_vpn = self.directory.m_vpn_of_lpn(entry_lpn)
+                tmp_m_vpn = self.directory.lpn_to_m_vpn(entry_lpn)
                 if tmp_m_vpn == m_vpn:
                     retlist.append(dataentry)
 
@@ -893,7 +893,25 @@ class MappingCache(object):
     This class maintains MappingTable, it evict entries from MappingTable, load
     entries from flash.
     """
-    pass
+    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
+            envobj, directory, global_mapping_table):
+        self.conf = confobj
+        self.flash = flashobj
+        self.oob = oobobj
+        self.block_pool = block_pool
+        self.recorder = recorderobj
+        self.env = envobj
+        self.directory = directory
+        self.global_mapping_table = global_mapping_table
+
+        self.mapping_table = MappingTable(confobj)
+
+    def load_trans_page(self, m_vpn):
+        pass
+
+
+
+
 
 class MappingTable(object):
     """
@@ -969,10 +987,6 @@ class MappingTable(object):
         for lpn, ppn in mappings.items():
             self.add_new_entry_softly(lpn, ppn)
 
-    def update_entry(self, lpn, ppn, dirty):
-        "You may end up remove the old one"
-        self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
-
     def overwrite_entry(self, lpn, ppn, dirty):
         "lpn must exist"
         self.entries[lpn].ppn = ppn
@@ -1018,10 +1032,7 @@ class GlobalMappingTable(object):
     This mapping table is for data pages, not for translation pages.
     GMT should have entries as many as the number of pages in flash
     """
-    def __init__(self, confobj, flashobj):
-        """
-        flashobj is the flash device that we may operate on.
-        """
+    def __init__(self, confobj):
         if not isinstance(confobj, config.Config):
             raise TypeError("confobj is not conf.Config. it is {}".
                format(type(confobj).__name__))
@@ -1105,7 +1116,7 @@ class GlobalTranslationDirectory(object):
     def remove_mapping(self, m_vpn):
         del self.mapping[m_vpn]
 
-    def m_vpn_of_lpn(self, lpn):
+    def lpn_to_m_vpn(self, lpn):
         "Find the virtual translation page that holds lpn"
         return lpn / self.n_entries_per_page
 
@@ -1113,8 +1124,8 @@ class GlobalTranslationDirectory(object):
         start_lpn = m_vpn * self.n_entries_per_page
         return range(start_lpn, start_lpn + self.n_entries_per_page)
 
-    def m_ppn_of_lpn(self, lpn):
-        m_vpn = self.m_vpn_of_lpn(lpn)
+    def lpn_to_m_ppn(self, lpn):
+        m_vpn = self.lpn_to_m_vpn(lpn)
         m_ppn = self.m_vpn_to_m_ppn(m_vpn)
         return m_ppn
 
@@ -1269,7 +1280,7 @@ class GarbageCollector(object):
         # Put the mapping changes into groups, each group belongs to one mvpn
         groups = {}
         for change in changes:
-            m_vpn = self.mapping_manager.directory.m_vpn_of_lpn(change['lpn'])
+            m_vpn = self.mapping_manager.directory.lpn_to_m_vpn(change['lpn'])
             group = groups.setdefault(m_vpn, [])
             group.append(change)
 
@@ -1856,5 +1867,6 @@ class Config(config.ConfigNCQFTL):
         if (sector + count) % self.n_secs_per_page != 0:
             page_count += 1
         return page, page_count
+
 
 
