@@ -178,6 +178,51 @@ def get_linux_io_scheduler(devname):
         line = f.readline()
         return re.search(r'\[(\w+)\]', line).group(1)
 
+def choose_exp_metadata(default_conf, interactive = True):
+    """
+    This function will return a dictionary containing a few things relating
+    to result dir. You can update the experiment configuration by
+    confdic.update(return of this function)
+
+    default_conf is readonly in this function.
+
+    Usage: Call this function for once to get a dictionary with things needing
+    to be updated. Use the returned dictionary multiple times to update
+    experimental config. Note that conf['result_dir'] still needs to be updated
+    later for each experiment.
+    """
+    conf = {}
+    result_dir = '/tmp/results'
+    # result_dir = '/users/jhe/results'
+    # result_dir = '/mnt/ramdisk/results'
+    if interactive == True:
+        toresult = raw_input('Save this experiments to {}? (y/n)'.format(result_dir))
+    else:
+        toresult = 'n'
+    if toresult.lower() == 'y':
+        targetdir = result_dir
+        expname = raw_input('Enter expname ({}):'.format(default_conf['expname']))
+        if expname.strip() != '':
+            conf['expname'] = expname
+        else:
+            conf['expname'] = default_conf['expname']
+
+        subexpname = raw_input('Enter subexpname ({}):'.format(
+            default_conf['subexpname']))
+        if subexpname.strip() != '':
+            conf['subexpname'] = subexpname
+        else:
+            conf['subexpname'] = default_conf['subexpname']
+    else:
+        targetdir = '/tmp/resulttmp'
+        conf['expname'] = default_conf['expname']
+        conf['subexpname'] = default_conf['subexpname']
+
+    conf['targetdir'] = targetdir
+    return conf
+
+
+
 if __name__ == '__main__':
     is_proc_running('blktrace')
 

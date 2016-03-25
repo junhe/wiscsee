@@ -888,6 +888,13 @@ def channel_page_to_page(conf, channel, page_off):
     return channel * conf.n_pages_per_channel + page_off
 
 
+class MappingCache(object):
+    """
+    This class maintains MappingTable, it evict entries from MappingTable, load
+    entries from flash.
+    """
+    pass
+
 class MappingTable(object):
     """
     When do we need batched update?
