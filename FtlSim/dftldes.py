@@ -907,9 +907,29 @@ class MappingCache(object):
         self.mapping_table = MappingTable(confobj)
 
     def load_trans_page(self, m_vpn):
+        """
+        Read mapping entries from translation page and put them to
+        mapping_table
+        """
         pass
 
+    def read_flash_page(self, m_ppn):
+        yield self.env.process(
+                self.flash.rw_ppn_extent(m_ppn, 1, 'read', tag = None))
 
+    def read_translation_page(self, m_vpn):
+        d = MappingDict()
+        for lpn in self.conf.m_vpn_to_lpns():
+            d[lpn] = self.global_mapping_table.lpn_to_ppn(lpn)
+
+        # as if we readlly read from flash
+        m_ppn = self.conf.m_vpn_to_m_ppn(m_vpn)
+        yield self.env.process(self.read_flash_page(m_ppn)
+
+        self.env.exit(d)
+
+    def write_translation_page(self, m_vpn, mapping_dict):
+        pass
 
 
 
