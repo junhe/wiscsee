@@ -665,7 +665,7 @@ class MappingManager(object):
         is no other overhead except for reading the GTD from flash. Since the
         overhead is very small, we ignore it.
         """
-        total_pages = self.mapping_on_flash.total_translation_pages()
+        total_pages = self.conf.total_translation_pages()
 
         # use some free blocks to be translation blocks
         tmp_blk_mapping = {}
@@ -913,23 +913,27 @@ class MappingCache(object):
         """
         pass
 
-    def read_flash_page(self, m_ppn):
-        yield self.env.process(
-                self.flash.rw_ppn_extent(m_ppn, 1, 'read', tag = None))
-
     def read_translation_page(self, m_vpn):
-        d = MappingDict()
-        for lpn in self.conf.m_vpn_to_lpns():
-            d[lpn] = self.mapping_on_flash.lpn_to_ppn(lpn)
+        lpns = self.conf.m_vpn_to_lpns(m_vpn)
+        d = self.mapping_on_flash.lpns_to_ppns(lpns)
 
         # as if we readlly read from flash
-        m_ppn = self.conf.m_vpn_to_m_ppn(m_vpn)
-        yield self.env.process(self.read_flash_page(m_ppn))
+        m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
+        yield self.env.process(
+                self.flash.rw_ppn_extent(m_ppn, 1, 'read', tag = None))
 
         self.env.exit(d)
 
     def write_translation_page(self, m_vpn, mapping_dict):
-        pass
+        """
+        mapping_dict should only has lpns belonging to m_vpn
+        """
+        self.mapping_on_flash.batch_update(mapping_dict)
+
+        m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
+        yield self.env.process(
+                self.flash.rw_ppn_extent(m_ppn, 1, 'write', tag = None))
+
 
 
 
@@ -1065,24 +1069,6 @@ class MappingOnFlash(object):
         # other data structure
         self.entries = {}
 
-    def total_entries(self):
-        """
-        total number of entries stored in global mapping table.  It is the same
-        as the number of pages in flash, since we use page-leveling mapping
-        """
-        return self.conf.total_num_pages()
-
-    def total_translation_pages(self):
-        """
-        total number of translation pages needed. It is:
-        total_entries * entry size / page size
-        """
-        entries = self.total_entries()
-        entry_bytes = self.conf.global_mapping_entry_bytes
-        flash_page_size = self.conf.page_size
-        # play the ceiling trick
-        return (entries * entry_bytes + (flash_page_size -1))/flash_page_size
-
     def lpn_to_ppn(self, lpn):
         """
         GMT should always be able to answer query. It is perfectly OK to return
@@ -1093,6 +1079,17 @@ class MappingOnFlash(object):
 
     def update(self, lpn, ppn):
         self.entries[lpn] = ppn
+
+    def batch_update(self, mapping_dict):
+        for lpn, ppn in mapping_dict.items():
+            self.update(lpn, ppn)
+
+    def lpns_to_ppns(self, lpns):
+        d = MappingDict()
+        for lpn in lpns:
+            d[lpn] = self.lpn_to_ppn(lpn)
+
+        return d
 
     def __repr__(self):
         return "global mapping table: {}".format(repr(self.entries))
@@ -1887,6 +1884,16 @@ class Config(config.ConfigNCQFTL):
         start_lpn = m_vpn * self.n_mapping_entries_per_page
         return range(start_lpn, start_lpn + self.n_mapping_entries_per_page)
 
-
+    def total_translation_pages(self):
+        """
+        total number of translation pages needed. It is:
+        total_entries * entry size / page size
+        """
+        n_entries = self.total_num_pages()
+        entry_bytes = self.global_mapping_entry_bytes
+        flash_page_size = self.page_size
+        # play the ceiling trick
+        return (n_entries * entry_bytes + \
+                (flash_page_size -1)) / flash_page_size
 
 
