@@ -103,9 +103,6 @@ class Dftl(object):
             envobj = env
             )
 
-        # We should initialize Globaltranslationdirectory in Dftl
-        self.mapping_manager.initialize_mappings()
-
         self.n_sec_per_page = self.conf.page_size \
                 / self.conf['sector_size']
 
@@ -560,7 +557,8 @@ class MappingManager(object):
         # managed and owned by Mappingmanager
         self.mapping_on_flash = MappingOnFlash(confobj)
         self.mapping_table = MappingTable(confobj)
-        self.directory = GlobalTranslationDirectory(confobj)
+        self.directory = GlobalTranslationDirectory(confobj, oobobj,
+                block_pool)
 
     def ppns_for_writing(self, lpns):
         """
@@ -656,26 +654,6 @@ class MappingManager(object):
             entries[lpn] = self.mapping_on_flash.lpn_to_ppn(lpn)
 
         return entries
-
-    def initialize_mappings(self):
-        """
-        This function initialize global translation directory. We assume the
-        GTD is very small and stored in flash before mounting. We also assume
-        that the global mapping table has been prepared by the vendor, so there
-        is no other overhead except for reading the GTD from flash. Since the
-        overhead is very small, we ignore it.
-        """
-        total_pages = self.conf.total_translation_pages()
-
-        # use some free blocks to be translation blocks
-        tmp_blk_mapping = {}
-        for m_vpn in range(total_pages):
-            m_ppn = self.block_pool.next_translation_page_to_program()
-            # Note that we don't actually read or write flash
-            self.directory.add_mapping(m_vpn=m_vpn, m_ppn=m_ppn)
-            # update oob of the translation page
-            self.oob.new_write(lpn = m_vpn, old_ppn = UNINITIATED,
-                new_ppn = m_ppn)
 
     def update_entry(self, lpn, new_ppn, tag = "NA"):
         """
@@ -1100,13 +1078,15 @@ class GlobalTranslationDirectory(object):
     This is an in-memory data structure. It is only for book keeping. It used
     to remeber thing so that we don't lose it.
     """
-    def __init__(self, confobj):
+    def __init__(self, confobj, oob, block_pool):
         self.conf = confobj
 
         self.flash_npage_per_block = self.conf.n_pages_per_block
         self.flash_num_blocks = self.conf.n_blocks_per_dev
         self.flash_page_size = self.conf.page_size
         self.total_pages = self.conf.total_num_pages()
+        self.oob = oob
+        self.block_pool = block_pool
 
         self.n_entries_per_page = self.conf.n_mapping_entries_per_page
 
@@ -1114,6 +1094,28 @@ class GlobalTranslationDirectory(object):
         # Virtual translation page number --> Physical translation page number
         # Dftl should initialize
         self.mapping = {}
+
+        self._initialize()
+
+    def _initialize(self):
+        """
+        This function initialize global translation directory. We assume the
+        GTD is very small and stored in flash before mounting. We also assume
+        that the global mapping table has been prepared by the vendor, so there
+        is no other overhead except for reading the GTD from flash. Since the
+        overhead is very small, we ignore it.
+        """
+        total_pages = self.conf.total_translation_pages()
+
+        # use some free blocks to be translation blocks
+        tmp_blk_mapping = {}
+        for m_vpn in range(total_pages):
+            m_ppn = self.block_pool.next_translation_page_to_program()
+            # Note that we don't actually read or write flash
+            self.add_mapping(m_vpn=m_vpn, m_ppn=m_ppn)
+            # update oob of the translation page
+            self.oob.new_write(lpn = m_vpn, old_ppn = UNINITIATED,
+                new_ppn = m_ppn)
 
     def m_vpn_to_m_ppn(self, m_vpn):
         """
