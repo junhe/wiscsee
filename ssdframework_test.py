@@ -36,7 +36,7 @@ class TestFTLwithDFTL(unittest.TestCase):
 
         devsize_mb = 2
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * 8 # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def my_run(self):
@@ -82,7 +82,7 @@ class TestFTLwithDFTL2(unittest.TestCase):
 
         devsize_mb = 8
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * 8 # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def my_run(self):
@@ -129,7 +129,7 @@ class TestFTLwithDFTLFLEX(unittest.TestCase):
 
         devsize_mb = 2
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * 8 # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def my_run(self):
@@ -184,7 +184,7 @@ class TestFTLwithDFTLFLEX2(unittest.TestCase):
 
         devsize_mb = 2
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * 8 # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def my_run(self):
@@ -230,7 +230,7 @@ class TestFTLwithDFTLIntegrated(unittest.TestCase):
 
         devsize_mb = 1024
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * 8 # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
         print "Current n_blocks_per_plane",\
             self.conf['flash_config']['n_blocks_per_plane']
@@ -289,7 +289,7 @@ class TestFTLwithDFTLIntegrated2(unittest.TestCase):
 
         devsize_mb = 8
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * 8 # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.3))
         print "Current n_blocks_per_plane",\
             self.conf['flash_config']['n_blocks_per_plane']
@@ -347,7 +347,7 @@ class TestFTLwithDFTLGCthreshold(unittest.TestCase):
 
         devsize_mb = 8
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * 8 # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.3))
         print "Current n_blocks_per_plane",\
             self.conf['flash_config']['n_blocks_per_plane']
@@ -408,7 +408,7 @@ class Test_load_translation_page(unittest.TestCase):
         self.conf['simulator_class'] = 'SimulatorDES'
 
         devsize_mb = 8
-        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * 8 # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.3))
         print "Current n_blocks_per_plane",\
             self.conf['flash_config']['n_blocks_per_plane']
@@ -482,7 +482,7 @@ class Test_translation_cache(unittest.TestCase):
         self.conf['simulator_class'] = 'SimulatorDES'
 
         devsize_mb = 8
-        self.conf.mapping_cache_bytes = int(self.conf.n_mapping_entries_per_page * 8) # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = int(self.conf.n_mapping_entries_per_page * self.conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.3))
         print "Current n_blocks_per_plane",\
             self.conf['flash_config']['n_blocks_per_plane']
@@ -551,7 +551,7 @@ class TestDatacache(unittest.TestCase):
 
         devsize_mb = 2
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * 8 # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def my_run(self):
@@ -611,7 +611,7 @@ class TestSimulatorSync(unittest.TestCase):
 
         devsize_mb = 2
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * 8 # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def my_run(self):
