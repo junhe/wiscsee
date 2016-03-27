@@ -159,7 +159,7 @@ def test_fio():
         conf['flash_config']['page_size'] = 1024
         devsize_mb = 1024
         entries_need = int(devsize_mb * 2**20 * 0.03 / conf.page_size)
-        conf['dftl']['mapping_cache_bytes'] = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        conf['dftl']['mapping_cache_bytes'] = int(entries_need * conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
         conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
         # perf
@@ -318,7 +318,7 @@ class DftlextExp001(Experiment):
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
         entries_need = int(self.devsize_mb * 2**20 * 0.03 / self.conf.page_size)
-        self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = int(entries_need * self.conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(self.devsize_mb * 2**20 * 1.28))
 
     def run(self):
@@ -414,7 +414,7 @@ class FIO_DFTLDES(object):
         self.conf['SSDFramework']['ncq_depth'] = 16
 
         entries_need = int(self.devsize_mb * 2**20 * 0.03 / self.conf.page_size)
-        self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = int(entries_need * self.conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(self.devsize_mb * 2**20 * 1.28))
 
     def run(self):
@@ -492,7 +492,7 @@ def run_ncqexp():
 
             entries_need = int(self.devsize_mb * 2**20 * self.cache_ratio / \
                     self.conf['flash_config']['page_size'])
-            self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+            self.conf.mapping_cache_bytes = int(entries_need * self.conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
             self.conf.set_flash_num_blocks_by_bytes(int(self.devsize_mb * 2**20 * 2))
             print "Current n_blocks_per_plane",\
                 self.conf['flash_config']['n_blocks_per_plane']
