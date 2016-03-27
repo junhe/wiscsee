@@ -328,7 +328,7 @@ class SegmentedLruCache(object):
     def keys(self):
         return self.table.keys()
 
-    def add_new_node(self, node):
+    def _add_new_node(self, node):
         """
         this node does not exist in any list
         add it to the MRU side of the probationary_list
@@ -336,7 +336,7 @@ class SegmentedLruCache(object):
         node.owner_list = self.probationary_list
         self.probationary_list.add_to_head(node)
 
-    def remove_item(self, key):
+    def _remove_item(self, key):
         """
         Remove this item from all lists
         """
@@ -346,7 +346,7 @@ class SegmentedLruCache(object):
         l = node.owner_list
         l.delete(node)
 
-    def move_from_prob_to_prot(self, node):
+    def _move_from_prob_to_prot(self, node):
         """
         move from probationary to MRU side of protected.
         This is the only gate to get into protected list.
@@ -355,13 +355,13 @@ class SegmentedLruCache(object):
         if len(self.protected_list) >= self.max_protected_entries:
             # need to evict
             victim_node = self.protected_list.tail()
-            self.move_from_prot_to_prob(victim_node)
+            self._move_from_prot_to_prob(victim_node)
 
         self.probationary_list.delete(node)
         self.protected_list.add_to_head(node) # MRU side
         node.owner_list = self.protected_list
 
-    def move_from_prot_to_prob(self, node):
+    def _move_from_prot_to_prob(self, node):
         "move from probationary to MRU side of protected"
         self.protected_list.delete(node)
         self.probationary_list.add_to_head(node) # MRU side
@@ -370,7 +370,7 @@ class SegmentedLruCache(object):
     def hit(self, node):
         "this method should be called when we have a hit"
         if node.owner_list is self.probationary_list:
-            self.move_from_prob_to_prot(node)
+            self._move_from_prob_to_prot(node)
         elif node.owner_list is self.protected_list:
             self.protected_list.move_to_head(node)
 
@@ -410,7 +410,7 @@ class SegmentedLruCache(object):
             # create new
             node = Node(key = key, value = value)
             self.table[key] = node
-            self.add_new_node(node)
+            self._add_new_node(node)
 
     def victim_key(self):
         """
@@ -430,7 +430,7 @@ class SegmentedLruCache(object):
         return len(self.table) == self.max_entries
 
     def __delitem__(self, key):
-        self.remove_item(key)
+        self._remove_item(key)
 
     def __iter__(self):
         return self.table.keys()

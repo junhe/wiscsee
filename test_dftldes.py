@@ -127,18 +127,57 @@ class TestMappingTable(unittest.TestCase):
         victim_lpn, _ = table.victim_entry()
         self.assertEqual(victim_lpn, 100000)
 
+    def test_quiet_overwrite(self):
+        config = create_config()
+        table = FtlSim.dftldes.MappingTable(config)
+
+        table.add_new_entry(lpn = 0, ppn = 100, dirty = False)
+        table.add_new_entry(lpn = 100000, ppn = 2, dirty = False)
+
+        victim_lpn, _ = table.victim_entry()
+        self.assertEqual(victim_lpn, 0)
+
+        table.overwrite_quietly(lpn = 0, ppn = 200, dirty = True)
+
+        victim_lpn, _ = table.victim_entry()
+        self.assertEqual(victim_lpn, 0)
+
+        ppn = table.lpn_to_ppn(0)
+        self.assertEqual(ppn, 200)
+
 
 class TestMappingCache(unittest.TestCase):
     def update_proc(self, objs, mapping_cache):
+        conf = objs['conf']
         env = objs['env']
-        yield env.timeout(1)
+
+        m_vpn = 3
+        lpns  = conf.m_vpn_to_lpns(m_vpn)
+        for lpn in lpns:
+            ppn = lpn * 1000
+            yield env.process(mapping_cache.update(lpn, ppn))
+            ppn_in_cache = yield env.process(mapping_cache.lpn_to_ppn(lpn))
+            self.assertEqual(ppn, ppn_in_cache)
+
+        # it should not take any time
+        self.assertEqual(env.now, 0)
+
+        m_vpn = 4
+        lpns  = conf.m_vpn_to_lpns(m_vpn)
+        for lpn in lpns:
+            ppn = lpn * 1000
+            yield env.process(mapping_cache.update(lpn, ppn))
+            ppn_in_cache = yield env.process(mapping_cache.lpn_to_ppn(lpn))
+            self.assertEqual(ppn, ppn_in_cache)
 
     def test_update(self):
         conf = create_config()
+        conf.n_cache_entries = conf.n_mapping_entries_per_page
         objs = create_obj_set(conf)
-        mapping_cache = create_mapping_cache(objs)
-        env = objs['env']
 
+        mapping_cache = create_mapping_cache(objs)
+
+        env = objs['env']
         env.process(self.update_proc(objs, mapping_cache))
         env.run()
 

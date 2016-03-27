@@ -923,7 +923,7 @@ class MappingCache(object):
             m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_lpn)
             yield self.env.process(self._write_back(m_vpn))
 
-        self._cached_mappings.remove_entry_by_lpn(lpn)
+        self._cached_mappings.remove_entry_by_lpn(victim_lpn)
 
     def _free_one_m_vpn(self):
         victim_lpn, entry_data = self._cached_mappings.victim_entry()
@@ -1104,6 +1104,11 @@ class MappingTable(object):
         "lpn must exist"
         self.entries[lpn].ppn = ppn
         self.entries[lpn].dirty = dirty
+
+    def overwrite_quietly(self, lpn, ppn, dirty):
+        entry_data = self._peek(lpn)
+        entry_data.ppn = ppn
+        entry_data.dirty = dirty
 
     def remove_entry_by_lpn(self, lpn):
         del self.entries[lpn]
