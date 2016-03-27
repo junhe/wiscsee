@@ -890,35 +890,58 @@ class MappingCache(object):
         if ppn == MISS:
             m_vpn = self.conf.lpn_to_m_vpn(lpn)
             yield self.env.process(
-                self.load(m_vpn))
+                self._load(m_vpn))
         ppn = self._lpn_to_ppn_by_cache(lpn)
 
         self.env.exit(ppn)
 
+    def update(self, lpn, ppn):
+        """
+        It may evict to make room for this entry
+        """
+        if self._lpn_to_ppn_by_cache(lpn) != MISS:
+            # hit
+            self._cached_mappings.overwrite_entry(lpn, ppn, dirty = True)
+            self.env.exit(None)
+        else:
+            # miss
+            if self._cached_mappings.is_full():
+                yield self.env.process(self._make_room(n_needed = 1))
+            self._cached_mappings.add_new_entry(
+                lpn = lpn, ppn = ppn, dirty = True)
+
     def _lpn_to_ppn_by_cache(self, lpn):
         return self._cached_mappings.lpn_to_ppn(lpn)
 
-    def _replace_in_cache(self, lpn, ppn, dirty):
-        return self._cached_mappings.overwrite_entry(lpn, ppn, dirty)
+    def _make_room(self, n_needed):
+        while self._cached_mappings.count_of_free() < n_needed:
+            yield self.env.process(self._free_one_entry())
 
-    def update(self, lpn, ppn):
-        """
-        It may evict to make place for this entry
-        """
-        if self._cached_mappings.is_full():
-            raise NotImplementedError()
-        else:
-            # it is always dirty if you modify cache directly
-            self._cached_mappings.update(lpn, ppn, dirty = True)
+    def _free_one_entry(self):
+        victim_lpn, entry_data = self._cached_mappings.victim_entry()
+        if entry_data.dirty == True:
+            m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_lpn)
+            yield self.env.process(self._write_back(m_vpn))
 
-    def load(self, m_vpn):
+        self._cached_mappings.remove_entry_by_lpn(lpn)
+
+    def _free_one_m_vpn(self):
+        victim_lpn, entry_data = self._cached_mappings.victim_entry()
+        m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_lpn)
+
+        if self._cached_mappings.is_m_vpn_dirty(m_vpn):
+            yield self.env.process(self._write_back(m_vpn))
+
+        self._cached_mappings.delete_entries_of_m_vpn(m_vpn)
+
+    def _load(self, m_vpn):
         mapping_dict = yield self.env.process(
-                self.read_translation_page(m_vpn))
+                self._read_translation_page(m_vpn))
 
         self._cached_mappings.add_new_entries_if_not_exist(mapping_dict,
                 dirty = False)
 
-    def read_translation_page(self, m_vpn):
+    def _read_translation_page(self, m_vpn):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
         mapping_dict = self.mapping_on_flash.lpns_to_ppns(lpns)
 
@@ -929,7 +952,30 @@ class MappingCache(object):
 
         self.env.exit(mapping_dict)
 
-    def update_mapping_on_flash(self, m_vpn, mapping_dict):
+    def _evict(self, m_vpn):
+        yield self.env.process(self._write_back(m_vpn))
+        self._cached_mappings.delete_entries_of_m_vpn(m_vpn)
+
+    def _write_back(self, m_vpn):
+        mapping_in_cache = self._cached_mappings.get_m_vpn_mappings(m_vpn)
+
+        if len(mapping_in_cache) < self.conf.n_mapping_entries_per_page:
+            # Not all mappings are in cache
+            mapping_in_flash = yield self.env.process(
+                    self._read_translation_page(m_vpn))
+            latest_mapping = mapping_in_flash
+            latest_mapping.update(mapping_in_cache)
+        else:
+            # all mappings are in cache, no need to read the translation page
+            latest_mapping = mapping_in_cache
+
+        yield self.env.process(
+            self._update_mapping_on_flash(m_vpn, latest_mapping))
+
+        # mark entries in cache as clean
+        self._cached_mappings.batch_update(mapping_in_cache, dirty = False)
+
+    def _update_mapping_on_flash(self, m_vpn, mapping_dict):
         """
         mapping_dict should only has lpns belonging to m_vpn
         """
@@ -959,23 +1005,6 @@ class MappingCache(object):
         assert self.oob.ppn_to_lpn_mvpn[new_m_ppn] == m_vpn
         assert self.directory.m_vpn_to_m_ppn(m_vpn) == new_m_ppn
 
-    def write_back(self, m_vpn):
-        mapping_in_cache = self._cached_mappings.get_m_vpn_mappings(m_vpn)
-
-        if len(mapping_in_cache) < self.conf.n_mapping_entries_per_page:
-            # Not all mappings are in cache
-            mapping_in_flash = yield self.env.process(
-                    self.read_translation_page(m_vpn))
-            latest_mapping = mapping_in_flash
-            latest_mapping.update(mapping_in_cache)
-        else:
-            # all mappings are in cache, no need to read the translation page
-            latest_mapping = mapping_in_cache
-
-        yield self.env.process(
-            self.update_mapping_on_flash(m_vpn, latest_mapping))
-
-        self._cached_mappings.delete_entries_of_m_vpn(m_vpn)
 
 
 class MappingTable(object):
@@ -1004,14 +1033,14 @@ class MappingTable(object):
             self.entry_bytes
         print 'cache max entries', self.max_n_entries, ',', \
             'for data of size', self.max_n_entries * self.conf.page_size, 'MB'
-        # if not self.conf.n_mapping_entries_per_page < self.max_n_entries:
-            # raise ValueError("Because we may read a whole translation page "\
-                    # "cache. We need the cache to be large enough to hold "\
-                    # "it. So we don't lost any entries. But now "\
-                    # "n_mapping_entries_per_page {} is larger than "\
-                    # "max_n_entries {}.".format(
-                    # self.conf.n_mapping_entries_per_page,
-                    # self.max_n_entries))
+        if self.conf.n_mapping_entries_per_page > self.max_n_entries:
+            raise ValueError("Because we may read a whole translation page "\
+                    "cache. We need the cache to be large enough to hold "\
+                    "it. So we don't lost any entries. But now "\
+                    "n_mapping_entries_per_page {} is larger than "\
+                    "max_n_entries {}.".format(
+                    self.conf.n_mapping_entries_per_page,
+                    self.max_n_entries))
 
         # self.entries = {}
         # self.entries = lrulist.LruCache()
@@ -1025,14 +1054,18 @@ class MappingTable(object):
         else:
             return entry_data.ppn
 
+    def batch_update(self, mapping_dict, dirty):
+        for lpn, ppn in mapping_dict.items():
+            self.update(lpn, ppn, dirty)
+
+    def update(self, lpn, ppn, dirty):
+        self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
+
     def add_new_entry(self, lpn, ppn, dirty):
         "dirty is a boolean"
         if self.entries.has_key(lpn):
             raise RuntimeError("{}:{} already exists in CMT entries.".format(
                 lpn, self.entries[lpn].ppn))
-        self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
-
-    def update(self, lpn, ppn, dirty):
         self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
 
     def add_new_entries_if_not_exist(self, mappings, dirty):
@@ -1086,6 +1119,9 @@ class MappingTable(object):
         # lpn, Cacheentrydata
         return lpn, self.entries.peek(lpn)
 
+    def _peek(self, lpn):
+        return self.entries.peek(lpn)
+
     def delete_entries_of_m_vpn(self, m_vpn):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
         for lpn in lpns:
@@ -1095,9 +1131,24 @@ class MappingTable(object):
                 # OK if it is not there
                 pass
 
+    def _is_dirty(self, lpn):
+        return self._peek(lpn).dirty
+
+    def is_m_vpn_dirty(self, m_vpn):
+        lpns = self.conf.m_vpn_to_lpns(m_vpn)
+        for lpn in lpns:
+            if self._is_dirty(lpn):
+                return True
+        return False
+
     def is_full(self):
-        n = len(self.entries)
-        return n >= self.max_n_entries
+        return self.count() >= self.max_n_entries
+
+    def count(self):
+        return len(self.entries)
+
+    def count_of_free(self):
+        return self.max_n_entries - self.count()
 
     def __repr__(self):
         return repr(self.entries)
