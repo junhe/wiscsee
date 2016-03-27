@@ -564,7 +564,7 @@ def compare_real_and_sim_w_fs():
 
             devsize_mb = self.conf['dev_size_mb']
             entries_need = int(devsize_mb * 2**20 * 0.1 / self.conf['flash_config']['page_size'])
-            self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+            self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
             self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
         def run(self):
@@ -687,7 +687,7 @@ def compare_real_and_sim_raw():
 
             devsize_mb = self.conf['dev_size_mb']
             entries_need = int(devsize_mb * 2**20 * 2 / self.conf['flash_config']['page_size'])
-            self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+            self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
             self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
         def run(self):

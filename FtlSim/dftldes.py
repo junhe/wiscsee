@@ -1027,8 +1027,8 @@ class MappingTable(object):
     def __init__(self, confobj):
         self.conf = confobj
 
-        self.entry_bytes = 8 # lpn + ppn
-        max_bytes = self.conf.max_cmt_bytes
+        self.entry_bytes = self.conf['cache_entry_bytes'] # lpn + ppn
+        max_bytes = self.conf.mapping_cache_bytes
         self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
             self.entry_bytes
         print 'cache max entries', self.max_n_entries, ',', \
@@ -1959,10 +1959,11 @@ class Config(config.ConfigNCQFTL):
         local_itmes = {
             # number of bytes per entry in mapping_on_flash
             "translation_page_entry_bytes": 4, # 32 bits
+            "cache_entry_bytes": 8, # 4 bytes for lpn, 4 bytes for ppn
             "GC_threshold_ratio": 0.95,
             "GC_low_threshold_ratio": 0.9,
             "over_provisioning": 1.28,
-            "max_cmt_bytes": None # cmt: cached mapping table
+            "mapping_cache_bytes": None # cmt: cached mapping table
             }
         self.update(local_itmes)
 
@@ -1982,12 +1983,20 @@ class Config(config.ConfigNCQFTL):
         return self.page_size / self['translation_page_entry_bytes']
 
     @property
-    def max_cmt_bytes(self):
-        return self['max_cmt_bytes']
+    def mapping_cache_bytes(self):
+        return self['mapping_cache_bytes']
 
-    @max_cmt_bytes.setter
-    def max_cmt_bytes(self, value):
-        self['max_cmt_bytes'] = value
+    @mapping_cache_bytes.setter
+    def mapping_cache_bytes(self, value):
+        self['mapping_cache_bytes'] = value
+
+    @property
+    def n_cache_entries(self):
+        return self.mapping_cache_bytes / self['cache_entry_bytes']
+
+    @n_cache_entries.setter
+    def n_cache_entries(self, value):
+        self.mapping_cache_bytes = value * self['cache_entry_bytes']
 
     @property
     def translation_page_entry_bytes(self):
@@ -2004,8 +2013,6 @@ class Config(config.ConfigNCQFTL):
     @property
     def GC_low_threshold_ratio(self):
         return self['GC_low_threshold_ratio']
-
-
 
     def sec_ext_to_page_ext(self, sector, count):
         """

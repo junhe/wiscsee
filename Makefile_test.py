@@ -53,7 +53,7 @@ class DftlextExp(Experiment):
 
         devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf.page_size)
-        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def run(self):
@@ -89,7 +89,7 @@ class DftlextExp2(Experiment):
 
         devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf.page_size)
-        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def run(self):
@@ -124,7 +124,7 @@ class DftlextExpE2e(Experiment):
 
         devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def run(self):
@@ -428,7 +428,7 @@ class TestDftextGC(unittest.TestCase):
 
         devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def my_run(self):
@@ -469,7 +469,7 @@ class TestDftextGCSingleChannel(unittest.TestCase):
 
         devsize_mb = 1
         entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def my_run(self):
@@ -601,7 +601,7 @@ class TestTimelineAndFlash(unittest.TestCase):
         devsize_mb = 16
         entries_need = int(devsize_mb * 2**20 * 0.03 / \
                 self.conf['flash_config']['page_size'])
-        self.conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+        self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
         runtime_update(self.conf)

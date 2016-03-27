@@ -23,7 +23,7 @@ def create_config():
     conf['simulator_class'] = 'SimulatorDESSync'
 
     devsize_mb = 64
-    conf.max_cmt_bytes = conf.n_mapping_entries_per_page * 8 # 8 bytes (64bits) needed in mem
+    conf.n_cache_entries = conf.n_mapping_entries_per_page
     conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     utils.runtime_update(conf)

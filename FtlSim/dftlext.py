@@ -204,7 +204,7 @@ class Config(config.ConfigNCQFTL):
             "GC_threshold_ratio": 0.95,
             "GC_low_threshold_ratio": 0.9,
             "over_provisioning": 1.28,
-            "max_cmt_bytes": None # cmt: cached mapping table
+            "mapping_cache_bytes": None # cmt: cached mapping table
             }
         self.update(local_itmes)
 
@@ -213,12 +213,12 @@ class Config(config.ConfigNCQFTL):
         return self.page_size / self['translation_page_entry_bytes']
 
     @property
-    def max_cmt_bytes(self):
-        return self['max_cmt_bytes']
+    def mapping_cache_bytes(self):
+        return self['mapping_cache_bytes']
 
-    @max_cmt_bytes.setter
-    def max_cmt_bytes(self, value):
-        self['max_cmt_bytes'] = value
+    @mapping_cache_bytes.setter
+    def mapping_cache_bytes(self, value):
+        self['mapping_cache_bytes'] = value
 
     @property
     def translation_page_entry_bytes(self):
@@ -802,7 +802,7 @@ class CachedMappingTable(object):
         self.conf = confobj
 
         self.entry_bytes = 8 # lpn + ppn
-        max_bytes = self.conf.max_cmt_bytes
+        max_bytes = self.conf.mapping_cache_bytes
         self.max_n_entries = (max_bytes + self.entry_bytes - 1) / \
             self.entry_bytes
         print 'cache max entries', self.max_n_entries, \
