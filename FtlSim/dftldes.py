@@ -631,7 +631,8 @@ class MappingManager(object):
         if self.conf.keeping_all_tp_entries == True:
             m_vpn = self.conf.lpn_to_m_vpn(lpn)
             entries = self.retrieve_translation_page(m_vpn)
-            self.mapping_table.add_new_entries_softly(entries)
+            self.mapping_table.add_new_entries_if_not_exist(entries,
+                    dirty = False)
             ppn = entries[lpn]
         else:
             # Now we have all the entries of m_ppn in memory, we need to put
@@ -882,37 +883,99 @@ class MappingCache(object):
         self.directory = directory
         self.mapping_on_flash = mapping_on_flash
 
-        self.mapping_table = MappingTable(confobj)
+        self._cached_mappings = MappingTable(confobj)
 
-    def load_trans_page(self, m_vpn):
+    def lpn_to_ppn(self, lpn):
+        ppn = self._lpn_to_ppn_by_cache(lpn)
+        if ppn == MISS:
+            m_vpn = self.conf.lpn_to_m_vpn(lpn)
+            yield self.env.process(
+                self.load(m_vpn))
+        ppn = self._lpn_to_ppn_by_cache(lpn)
+
+        self.env.exit(ppn)
+
+    def _lpn_to_ppn_by_cache(self, lpn):
+        return self._cached_mappings.lpn_to_ppn(lpn)
+
+    def _replace_in_cache(self, lpn, ppn, dirty):
+        return self._cached_mappings.overwrite_entry(lpn, ppn, dirty)
+
+    def update(self, lpn, ppn):
         """
-        Read mapping entries from translation page and put them to
-        mapping_table
+        It may evict to make place for this entry
         """
-        pass
+        if self._cached_mappings.is_full():
+            raise NotImplementedError()
+        else:
+            # it is always dirty if you modify cache directly
+            self._cached_mappings.update(lpn, ppn, dirty = True)
+
+    def load(self, m_vpn):
+        mapping_dict = yield self.env.process(
+                self.read_translation_page(m_vpn))
+
+        self._cached_mappings.add_new_entries_if_not_exist(mapping_dict,
+                dirty = False)
 
     def read_translation_page(self, m_vpn):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
-        d = self.mapping_on_flash.lpns_to_ppns(lpns)
+        mapping_dict = self.mapping_on_flash.lpns_to_ppns(lpns)
 
         # as if we readlly read from flash
         m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
         yield self.env.process(
                 self.flash.rw_ppn_extent(m_ppn, 1, 'read', tag = None))
 
-        self.env.exit(d)
+        self.env.exit(mapping_dict)
 
-    def write_translation_page(self, m_vpn, mapping_dict):
+    def update_mapping_on_flash(self, m_vpn, mapping_dict):
         """
         mapping_dict should only has lpns belonging to m_vpn
         """
+        # mapping_dict has to have all and only the entries of m_vpn
+        lpn_sample = mapping_dict.keys()[0]
+        tmp_m_vpn = self.conf.lpn_to_m_vpn(lpn_sample)
+        assert tmp_m_vpn == m_vpn
+        assert len(mapping_dict) == self.conf.n_mapping_entries_per_page
+
         self.mapping_on_flash.batch_update(mapping_dict)
 
-        m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
+        yield self.env.process(self._program_translation_page(m_vpn))
+
+    def _program_translation_page(self, m_vpn):
+        new_m_ppn = self.block_pool.next_translation_page_to_program()
+        old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
+
         yield self.env.process(
-                self.flash.rw_ppn_extent(m_ppn, 1, 'write', tag = None))
+                self.flash.rw_ppn_extent(new_m_ppn, 1, 'write', tag = None))
 
+        self.oob.new_write(lpn = m_vpn, old_ppn = old_m_ppn,
+            new_ppn = new_m_ppn)
+        self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
 
+        assert self.oob.states.is_page_valid(old_m_ppn) == False
+        assert self.oob.states.is_page_valid(new_m_ppn) == True
+        assert self.oob.ppn_to_lpn_mvpn[new_m_ppn] == m_vpn
+        assert self.directory.m_vpn_to_m_ppn(m_vpn) == new_m_ppn
+
+    def write_back(self, m_vpn):
+        mapping_in_cache = self._cached_mappings.get_m_vpn_mappings(m_vpn)
+
+        if len(mapping_in_cache) < self.conf.n_mapping_entries_per_page:
+            # Not all mappings are in cache
+            mapping_in_flash = yield self.env.process(
+                    self.read_translation_page(m_vpn))
+            latest_mapping = mapping_in_flash
+            latest_mapping.update(mapping_in_cache)
+        else:
+            # all mappings are in cache, no need to read the translation page
+            latest_mapping = mapping_in_cache
+
+        yield self.env.process(
+            self.update_mapping_on_flash(m_vpn, latest_mapping))
+
+        self._cached_mappings.delete_entries_of_m_vpn(m_vpn)
 
 
 class MappingTable(object):
@@ -969,16 +1032,10 @@ class MappingTable(object):
                 lpn, self.entries[lpn].ppn))
         self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
 
-    def add_new_entry_softly(self, lpn, ppn):
-        """
-        If lpn is already in cache, don't add it. Don't change dirty bit.
-        If lpn is not in cache, add it and set dirty to False
-        """
-        if not self.entries.has_key(lpn):
-            self.entries[lpn] = \
-                CacheEntryData(lpn = lpn, ppn = ppn, dirty = False)
+    def update(self, lpn, ppn, dirty):
+        self.entries[lpn] = CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
 
-    def add_new_entries_softly(self, mappings):
+    def add_new_entries_if_not_exist(self, mappings, dirty):
         """
         mappings {
             lpn1: ppn1
@@ -987,7 +1044,28 @@ class MappingTable(object):
             }
         """
         for lpn, ppn in mappings.items():
-            self.add_new_entry_softly(lpn, ppn)
+            self.add_new_entry_if_not_exist(lpn, ppn, dirty)
+
+    def add_new_entry_if_not_exist(self, lpn, ppn, dirty):
+        """
+        If lpn is already in cache, don't add it. Don't change dirty bit.
+        If lpn is not in cache, add it and set dirty to False
+        """
+        if not self.entries.has_key(lpn):
+            self.entries[lpn] = \
+                CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
+
+    def get_m_vpn_mappings(self, m_vpn):
+        """ return all the mappings of m_vpn that are in cache
+        """
+        lpns = self.conf.m_vpn_to_lpns(m_vpn)
+        mapping_dict = MappingDict()
+        for lpn in lpns:
+            ppn = self.lpn_to_ppn(lpn)
+            if ppn != MISS:
+                mapping_dict[lpn] = ppn
+
+        return mapping_dict
 
     def overwrite_entry(self, lpn, ppn, dirty):
         "lpn must exist"
@@ -1007,6 +1085,15 @@ class MappingTable(object):
 
         # lpn, Cacheentrydata
         return lpn, self.entries.peek(lpn)
+
+    def delete_entries_of_m_vpn(self, m_vpn):
+        lpns = self.conf.m_vpn_to_lpns(m_vpn)
+        for lpn in lpns:
+            try:
+                self.remove_entry_by_lpn(lpn)
+            except KeyError:
+                # OK if it is not there
+                pass
 
     def is_full(self):
         n = len(self.entries)
