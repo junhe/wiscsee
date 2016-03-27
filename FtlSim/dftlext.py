@@ -200,7 +200,7 @@ class Config(config.ConfigNCQFTL):
 
         local_itmes = {
             # number of bytes per entry in mapping_on_flash
-            "global_mapping_entry_bytes": 4, # 32 bits
+            "translation_page_entry_bytes": 4, # 32 bits
             "GC_threshold_ratio": 0.95,
             "GC_low_threshold_ratio": 0.9,
             "over_provisioning": 1.28,
@@ -210,7 +210,7 @@ class Config(config.ConfigNCQFTL):
 
     @property
     def n_mapping_entries_per_page(self):
-        return self.page_size / self['global_mapping_entry_bytes']
+        return self.page_size / self['translation_page_entry_bytes']
 
     @property
     def max_cmt_bytes(self):
@@ -221,8 +221,8 @@ class Config(config.ConfigNCQFTL):
         self['max_cmt_bytes'] = value
 
     @property
-    def global_mapping_entry_bytes(self):
-        return self['global_mapping_entry_bytes']
+    def translation_page_entry_bytes(self):
+        return self['translation_page_entry_bytes']
 
     @property
     def over_provisioning(self):
@@ -893,7 +893,7 @@ class MappingOnFlash(object):
         total_entries * entry size / page size
         """
         entries = self.total_entries()
-        entry_bytes = self.conf.global_mapping_entry_bytes
+        entry_bytes = self.conf.translation_page_entry_bytes
         flash_page_size = self.conf.page_size
         # play the ceiling trick
         return (entries * entry_bytes + (flash_page_size -1))/flash_page_size

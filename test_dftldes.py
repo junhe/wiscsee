@@ -23,9 +23,7 @@ def create_config():
     conf['simulator_class'] = 'SimulatorDESSync'
 
     devsize_mb = 64
-    entries_need = int(devsize_mb * 2**20 * 0.03 / conf['flash_config']['page_size'])
-    print 'entries_need', entries_need
-    conf.max_cmt_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
+    conf.max_cmt_bytes = conf.n_mapping_entries_per_page * 8 # 8 bytes (64bits) needed in mem
     conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     utils.runtime_update(conf)
@@ -61,8 +59,7 @@ def create_translation_directory(conf, oob, block_pool):
 def create_mapping_on_flash(conf):
     return FtlSim.dftldes.MappingOnFlash(conf)
 
-def create_obj_set():
-    conf = create_config()
+def create_obj_set(conf):
     rec = create_recorder(conf)
     oob = create_oob(conf)
     block_pool = create_blockpool(conf)
@@ -75,6 +72,18 @@ def create_obj_set():
             'flashctrler':flashctrler, 'env':env, 'directory':directory,
             'mapping_on_flash':gmt}
 
+def create_mapping_cache(objs):
+    mapping_cache = FtlSim.dftldes.MappingCache(
+            confobj = objs['conf'],
+            block_pool = objs['block_pool'],
+            flashobj = objs['flashctrler'],
+            oobobj = objs['oob'],
+            recorderobj = objs['rec'],
+            envobj = objs['env'],
+            directory = objs['directory'],
+            mapping_on_flash = objs['mapping_on_flash'])
+
+    return mapping_cache
 
 class TestMappingTable(unittest.TestCase):
     def test_modification(self):
@@ -104,85 +113,34 @@ class TestMappingTable(unittest.TestCase):
         self.assertEqual(table.lpn_to_ppn(0), FtlSim.dftldes.MISS)
         self.assertEqual(table.lpn_to_ppn(100000), 2)
 
-def create_mapping_cache(objs):
-    mapping_cache = FtlSim.dftldes.MappingCache(
-            confobj = objs['conf'],
-            block_pool = objs['block_pool'],
-            flashobj = objs['flashctrler'],
-            oobobj = objs['oob'],
-            recorderobj = objs['rec'],
-            envobj = objs['env'],
-            directory = objs['directory'],
-            mapping_on_flash = objs['mapping_on_flash'])
+    def test_lru(self):
+        config = create_config()
+        table = FtlSim.dftldes.MappingTable(config)
 
-    return mapping_cache
+        table.add_new_entry(lpn = 0, ppn = 100, dirty = False)
+        table.add_new_entry(lpn = 100000, ppn = 2, dirty = False)
+
+        victim_lpn, _ = table.victim_entry()
+        self.assertEqual(victim_lpn, 0)
+
+        _ = table.lpn_to_ppn(0)
+        victim_lpn, _ = table.victim_entry()
+        self.assertEqual(victim_lpn, 100000)
 
 
 class TestMappingCache(unittest.TestCase):
-    def writing_proc(self, env, mapping_cache, flash, conf, objs):
-        return
-        mapping_dict = FtlSim.dftldes.MappingDict()
-        for lpn in range(conf.n_mapping_entries_per_page):
-            mapping_dict[lpn] = lpn * 100
-        self.assertEqual(len(mapping_dict), conf.n_mapping_entries_per_page)
+    def update_proc(self, objs, mapping_cache):
+        env = objs['env']
+        yield env.timeout(1)
 
-        yield env.process(mapping_cache.update_mapping_on_flash(0,
-            mapping_dict))
-
-        self.assertEqual(flash.channels[0].program_time, env.now)
-        self.assertEqual(100, objs['mapping_on_flash'].lpn_to_ppn(1))
-        self.assertNotEquals(objs['directory'].m_vpn_to_m_ppn(0), 0)
-
-
-    def test_writing(self):
-        objs = create_obj_set()
+    def test_update(self):
+        conf = create_config()
+        objs = create_obj_set(conf)
         mapping_cache = create_mapping_cache(objs)
         env = objs['env']
 
-        env.process(self.writing_proc(env, mapping_cache,
-            objs['flashctrler'], objs['conf'], objs))
+        env.process(self.update_proc(objs, mapping_cache))
         env.run()
-
-    def loading_proc(self, env, mapping_cache, flash, conf):
-        return
-        yield env.process(
-                mapping_cache.load(0))
-        self.assertEqual(flash.channels[0].read_time, env.now)
-
-    def test_loading(self):
-        objs = create_obj_set()
-        mapping_cache = create_mapping_cache(objs)
-        env = objs['env']
-
-        env.process(self.loading_proc(env, mapping_cache,
-            objs['flashctrler'], objs['conf']))
-        env.run()
-
-    def evict_proc(self, env, mapping_cache, flash, conf, objs):
-        return
-        mapping_on_flash = objs['mapping_on_flash']
-
-        ppn = yield env.process( mapping_cache.lpn_to_ppn(0) )
-        self.assertEqual(ppn, FtlSim.dftldes.UNINITIATED)
-
-        mapping_cache.update(lpn = 0, ppn = 1000)
-        ppn = yield env.process( mapping_cache.lpn_to_ppn(0) )
-        self.assertEqual(ppn, 1000)
-
-        self.assertEqual(mapping_on_flash.lpn_to_ppn(0),
-            FtlSim.dftldes.UNINITIATED)
-        yield env.process( mapping_cache.evict(m_vpn = 0) )
-        self.assertEqual(mapping_on_flash.lpn_to_ppn(0), 1000)
-
-    def test_evict(self):
-        objs = create_obj_set()
-        mapping_cache = create_mapping_cache(objs)
-        env = objs['env']
-
-        env.process(self.evict_proc(env, mapping_cache,
-            objs['flashctrler'], objs['conf'], objs))
-        env.run()
-
 
 def main():
     unittest.main()
