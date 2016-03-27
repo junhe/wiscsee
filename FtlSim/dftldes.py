@@ -973,7 +973,8 @@ class MappingCache(object):
             self._update_mapping_on_flash(m_vpn, latest_mapping))
 
         # mark entries in cache as clean
-        self._cached_mappings.batch_update(mapping_in_cache, dirty = False)
+        self._cached_mappings.batch_overwrite_existing(mapping_in_cache,
+                dirty = False)
 
     def _update_mapping_on_flash(self, m_vpn, mapping_dict):
         """
@@ -1104,6 +1105,10 @@ class MappingTable(object):
         "lpn must exist"
         self.entries[lpn].ppn = ppn
         self.entries[lpn].dirty = dirty
+
+    def batch_overwrite_existing(self, mapping_dict, dirty):
+        for lpn, ppn in mapping_dict.items():
+            self.overwrite_quietly(lpn, ppn, dirty)
 
     def overwrite_quietly(self, lpn, ppn, dirty):
         entry_data = self._peek(lpn)
