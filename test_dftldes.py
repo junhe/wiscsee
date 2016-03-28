@@ -64,19 +64,19 @@ def create_obj_set(conf):
     oob = create_oob(conf)
     block_pool = create_blockpool(conf)
     env = create_simpy_env()
-    flashctrler = create_flashcontrolelr(conf, env, rec)
+    flash_controller = create_flashcontrolelr(conf, env, rec)
     directory = create_translation_directory(conf, oob, block_pool)
     gmt = create_mapping_on_flash(conf)
 
     return {'conf':conf, 'rec':rec, 'oob':oob, 'block_pool':block_pool,
-            'flashctrler':flashctrler, 'env':env, 'directory':directory,
+            'flash_controller':flash_controller, 'env':env, 'directory':directory,
             'mapping_on_flash':gmt}
 
 def create_mapping_cache(objs):
     mapping_cache = FtlSim.dftldes.MappingCache(
             confobj = objs['conf'],
             block_pool = objs['block_pool'],
-            flashobj = objs['flashctrler'],
+            flashobj = objs['flash_controller'],
             oobobj = objs['oob'],
             recorderobj = objs['rec'],
             envobj = objs['env'],
@@ -113,6 +113,17 @@ class TestMappingTable(unittest.TestCase):
         self.assertEqual(table.lpn_to_ppn(0), FtlSim.dftldes.MISS)
         self.assertEqual(table.lpn_to_ppn(100000), 2)
 
+    def test_size(self):
+        config = create_config()
+        table = FtlSim.dftldes.MappingTable(config)
+
+        self.assertEqual(config.n_cache_entries, table.max_n_entries)
+        self.assertEqual(table.count(), 0)
+        table.add_new_entry(lpn = 0, ppn = 100, dirty = False)
+        self.assertEqual(table.count(), 1)
+        table.remove_entry_by_lpn(lpn = 0)
+        self.assertEqual(table.count(), 0)
+
     def test_lru(self):
         config = create_config()
         table = FtlSim.dftldes.MappingTable(config)
@@ -147,28 +158,36 @@ class TestMappingTable(unittest.TestCase):
 
 
 class TestMappingCache(unittest.TestCase):
+    def update_m_vpn(self, objs, mapping_cache, m_vpn):
+        conf = objs['conf']
+        env = objs['env']
+        lpns  = conf.m_vpn_to_lpns(m_vpn)
+        for lpn in lpns:
+            ppn = lpn * 1000
+            yield env.process(mapping_cache.update(lpn, ppn))
+            ppn_in_cache = yield env.process(mapping_cache.lpn_to_ppn(lpn))
+            self.assertEqual(ppn, ppn_in_cache)
+
     def update_proc(self, objs, mapping_cache):
         conf = objs['conf']
         env = objs['env']
+        time_read_page = objs['flash_controller'].channels[0].read_time
+        time_program_page = objs['flash_controller'].channels[0].program_time
 
-        m_vpn = 3
-        lpns  = conf.m_vpn_to_lpns(m_vpn)
-        for lpn in lpns:
-            ppn = lpn * 1000
-            yield env.process(mapping_cache.update(lpn, ppn))
-            ppn_in_cache = yield env.process(mapping_cache.lpn_to_ppn(lpn))
-            self.assertEqual(ppn, ppn_in_cache)
-
+        yield env.process(self.update_m_vpn(objs, mapping_cache, m_vpn = 3))
         # it should not take any time
         self.assertEqual(env.now, 0)
 
-        m_vpn = 4
-        lpns  = conf.m_vpn_to_lpns(m_vpn)
-        for lpn in lpns:
-            ppn = lpn * 1000
-            yield env.process(mapping_cache.update(lpn, ppn))
-            ppn_in_cache = yield env.process(mapping_cache.lpn_to_ppn(lpn))
-            self.assertEqual(ppn, ppn_in_cache)
+        yield env.process(self.update_m_vpn(objs, mapping_cache, m_vpn = 4))
+        # it should only write one flash page (m_vpn=3) back to flash
+        self.assertEqual(env.now, time_program_page)
+
+        lpns  = conf.m_vpn_to_lpns(3)
+        lpn = lpns[0]
+        ppn = yield env.process(mapping_cache.lpn_to_ppn(lpn))
+        self.assertEqual(ppn, lpn * 1000)
+        self.assertEqual(env.now, time_program_page + time_program_page + \
+                time_read_page)
 
     def test_update(self):
         conf = create_config()

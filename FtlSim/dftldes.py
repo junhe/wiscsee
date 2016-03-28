@@ -886,12 +886,11 @@ class MappingCache(object):
         self._cached_mappings = MappingTable(confobj)
 
     def lpn_to_ppn(self, lpn):
-        ppn = self._lpn_to_ppn_by_cache(lpn)
+        ppn = self._cached_mappings.lpn_to_ppn(lpn)
         if ppn == MISS:
             m_vpn = self.conf.lpn_to_m_vpn(lpn)
-            yield self.env.process(
-                self._load(m_vpn))
-        ppn = self._lpn_to_ppn_by_cache(lpn)
+            yield self.env.process(self._load(m_vpn))
+            ppn = self._cached_mappings.lpn_to_ppn(lpn)
 
         self.env.exit(ppn)
 
@@ -899,19 +898,12 @@ class MappingCache(object):
         """
         It may evict to make room for this entry
         """
-        if self._lpn_to_ppn_by_cache(lpn) != MISS:
+        if self._cached_mappings.has_lpn(lpn):
             # hit
             self._cached_mappings.overwrite_entry(lpn, ppn, dirty = True)
-            self.env.exit(None)
         else:
             # miss
-            if self._cached_mappings.is_full():
-                yield self.env.process(self._make_room(n_needed = 1))
-            self._cached_mappings.add_new_entry(
-                lpn = lpn, ppn = ppn, dirty = True)
-
-    def _lpn_to_ppn_by_cache(self, lpn):
-        return self._cached_mappings.lpn_to_ppn(lpn)
+            yield self.env.process(self._insert_new_mapping(lpn, ppn))
 
     def _make_room(self, n_needed):
         while self._cached_mappings.count_of_free() < n_needed:
@@ -935,11 +927,27 @@ class MappingCache(object):
         self._cached_mappings.delete_entries_of_m_vpn(m_vpn)
 
     def _load(self, m_vpn):
+        # TODO: entries loaded from trans page should not change recency
+        n_needed = self._cached_mappings.needed_space_for_m_vpn(m_vpn)
+        yield self.env.process(self._make_room(n_needed))
+
         mapping_dict = yield self.env.process(
                 self._read_translation_page(m_vpn))
-
         self._cached_mappings.add_new_entries_if_not_exist(mapping_dict,
                 dirty = False)
+
+        assert not self._cached_mappings.is_overflowed()
+
+    def _insert_new_mapping(self, lpn, ppn):
+        """
+        lpn should not be in cache
+        """
+        assert not self._cached_mappings.has_lpn(lpn)
+
+        if self._cached_mappings.is_full():
+            yield self.env.process(self._make_room(n_needed = 1))
+        self._cached_mappings.add_new_entry(
+            lpn = lpn, ppn = ppn, dirty = True)
 
     def _read_translation_page(self, m_vpn):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
@@ -1089,6 +1097,10 @@ class MappingTable(object):
             self.entries[lpn] = \
                 CacheEntryData(lpn = lpn, ppn = ppn, dirty = dirty)
 
+    def needed_space_for_m_vpn(self, m_vpn):
+        cached_mappings = self.get_m_vpn_mappings(m_vpn)
+        return self.conf.n_mapping_entries_per_page - len(cached_mappings)
+
     def get_m_vpn_mappings(self, m_vpn):
         """ return all the mappings of m_vpn that are in cache
         """
@@ -1132,6 +1144,9 @@ class MappingTable(object):
     def _peek(self, lpn):
         return self.entries.peek(lpn)
 
+    def has_lpn(self, lpn):
+        return self.entries.has_key(lpn)
+
     def delete_entries_of_m_vpn(self, m_vpn):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
         for lpn in lpns:
@@ -1153,6 +1168,9 @@ class MappingTable(object):
 
     def is_full(self):
         return self.count() >= self.max_n_entries
+
+    def is_overflowed(self):
+        return self.count() > self.max_n_entries
 
     def count(self):
         return len(self.entries)
