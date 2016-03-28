@@ -871,6 +871,8 @@ class MappingCache(object):
     """
     This class maintains MappingTable, it evict entries from MappingTable, load
     entries from flash.
+
+    TODO: should separate operations that do/do not change recency
     """
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
             envobj, directory, mapping_on_flash):
@@ -959,10 +961,6 @@ class MappingCache(object):
                 self.flash.rw_ppn_extent(m_ppn, 1, 'read', tag = None))
 
         self.env.exit(mapping_dict)
-
-    def _evict(self, m_vpn):
-        yield self.env.process(self._write_back(m_vpn))
-        self._cached_mappings.delete_entries_of_m_vpn(m_vpn)
 
     def _write_back(self, m_vpn):
         mapping_in_cache = self._cached_mappings.get_m_vpn_mappings(m_vpn)
