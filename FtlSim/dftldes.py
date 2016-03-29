@@ -221,57 +221,116 @@ class Ftl(object):
         self.block_pool = BlockPool(confobj)
         self.oob = OutOfBandAreas(confobj)
 
-        ###### the managers ######
-        self.mapping_manager = MappingManager(
-            confobj = self.conf,
-            block_pool = self.block_pool,
-            flashobj = self.flash,
-            oobobj=self.oob,
-            recorderobj = recorderobj,
-            envobj = env
-            )
+        self._directory = GlobalTranslationDirectory(self.conf,
+                self.oob, self.block_pool)
 
-        self.garbage_collector = GarbageCollector(
+        self._mappings = MappingCache(
             confobj = self.conf,
-            flashobj = self.flash,
-            oobobj=self.oob,
             block_pool = self.block_pool,
-            mapping_manager = self.mapping_manager,
-            recorderobj = recorderobj,
-            envobj = env
-            )
+            flashobj = self.flash,
+            oobobj = self.oob,
+            recorderobj = self.recorder,
+            envobj = self.env,
+            directory = self._directory,
+            mapping_on_flash = MappingOnFlash(self.conf))
 
         self.n_sec_per_page = self.conf.page_size \
                 / self.conf['sector_size']
 
-        # This resource protects all data structures stored in the memory.
-        self.resource_ram = simpy.Resource(self.env, capacity = 1)
-
     def write_ext(self, extent):
-        pass
+        ext_list = split_ext_to_mvpngroups(self.conf, extent)
+
+        procs = []
+        for ext_single_m_vpn in ext_list:
+            p = self.env.process(self._write_single_mvpngroup(ext_single_m_vpn))
+            procs.append(p)
+
+        yield simpy.events.AllOf(self.env, procs)
+
+    def _write_single_mvpngroup(self, ext_single_m_vpn):
+        m_vpn = self.conf.lpn_to_m_vpn(ext_single_m_vpn.lpn_start)
+
+        ppns_to_write = self.block_pool.next_n_data_pages_to_program(
+                ext_single_m_vpn.lpn_count)
+        old_ppns = yield self.env.process(
+                self._mappings.lpns_to_ppns(ext_single_m_vpn.lpn_iter()))
+
+        self._update_metadata_for_relocating_lpns(ext_single_m_vpn.lpn_iter(),
+                old_ppns = old_ppns, new_ppns = ppns_to_write)
+
+        yield self.env.process(
+            self.flash.rw_ppns(ppns_to_write, 'write', tag = 'TAG_FOREGROUND'))
+
+    def _update_metadata_for_relocating_lpns(self, lpns, old_ppns, new_ppns):
+        for lpn, old_ppn, new_ppn in zip(lpns, old_ppns, new_ppns):
+            self._update_metadata_for_relocating_lpn(lpn, old_ppn, new_ppn)
+
+    def _update_metadata_for_relocating_lpn(self, lpn, old_ppn, new_ppn):
+        """
+        contents of lpn used to be in old_ppn, but now it is in new_ppn.
+        This function adjust all metadata to reflect the change.
+
+        ----- template for metadata change --------
+        # mappings in cache
+        raise NotImplementedError()
+
+        # mappings on flash
+        raise NotImplementedError()
+
+        # translation directory
+        raise NotImplementedError()
+
+        # oob state
+        raise NotImplementedError()
+
+        # oob ppn->lpn/vpn
+        raise NotImplementedError()
+
+        # blockpool
+        raise NotImplementedError()
+        """
+        # mappings in cache
+        self._mappings.update(lpn = lpn, ppn = new_ppn)
+
+        # mappings on flash
+        #   handled by _mappings
+
+        # translation directory
+        #   handled by _mappings
+
+        # oob state
+        # oob ppn->lpn/vpn
+        self.oob.new_lba_write(lpn = lpn, old_ppn = old_ppn,
+            new_ppn = new_ppn)
+
+        # blockpool
+        #   should be handled when we got new_ppn
 
     def read_ext(self, extent):
-        ext_list = split_ext_to_mvpngroups(extent)
+        ext_list = split_ext_to_mvpngroups(self.conf, extent)
+        # print [str(x) for x in ext_list]
 
         procs = []
         for ext_single_m_vpn in ext_list:
             p = self.env.process(self._read_single_mvpngroup(ext_single_m_vpn))
             procs.append(p)
+
         yield simpy.events.AllOf(self.env, procs)
 
     def _read_single_mvpngroup(self, ext_single_m_vpn):
         m_vpn = self.conf.lpn_to_m_vpn(ext_single_m_vpn.lpn_start)
 
-        m_vpn_req = self.vpn_res_pool.get_request(m_vpn)
-        yield m_vpn_req # should take no time, usually
+        ppns_to_read = yield self.env.process(
+                self._mappings.lpns_to_ppns(ext_single_m_vpn.lpn_iter()))
+        ppns_to_read = remove_invalid_ppns(ppns_to_read)
+
+        yield self.env.process(
+            self.flash.rw_ppns(ppns_to_read, 'read', tag = 'TAG_FOREGROUND'))
 
 
-        self.vpn_res_pool.release_request(m_vpn, m_vpn_req)
 
-    def _translate_lpns_of_single_vpn(self, lpns):
-        pass
-
-
+def remove_invalid_ppns(ppns):
+    return [ppn for ppn in ppns if not ppn in (UNINITIATED, MISS)]
 
 def split_ext_to_mvpngroups(conf, extent):
     """
@@ -393,6 +452,13 @@ class BlockPool(object):
     def move_used_trans_block_to_free(self, blocknum):
         channel, block_off = block_to_channel_block(self.conf, blocknum)
         self.channel_pools[channel].move_used_trans_block_to_free(block_off)
+
+    def next_n_data_pages_to_program(self, n):
+        ppns = []
+        for i in range(n):
+            ppns.append(self.next_data_page_to_program())
+
+        return ppns
 
     def next_data_page_to_program(self):
         return self.iter_channels("next_data_page_to_program",
@@ -979,8 +1045,13 @@ class MappingCache(object):
 
         self._cached_mappings = MappingTable(confobj)
         self.vpn_res_pool =  VPNResourcePool(self.env)
+        self._load_lock = simpy.Resource(self.env, capacity = 1)
 
     def lpn_to_ppn(self, lpn):
+        """
+        Note that the return can be UNINITIATED
+        TODO: avoid thrashing!
+        """
         ppn = self._cached_mappings.lpn_to_ppn(lpn)
         if ppn == MISS:
             m_vpn = self.conf.lpn_to_m_vpn(lpn)
@@ -989,6 +1060,17 @@ class MappingCache(object):
             assert ppn != MISS
 
         self.env.exit(ppn)
+
+    def lpns_to_ppns(self, lpns):
+        """
+        If lpns are of the same m_vpn, this process will only
+        have one cache miss.
+        """
+        ppns = []
+        for lpn in lpns:
+            ppn = yield self.env.process(self.lpn_to_ppn(lpn))
+            ppns.append(ppn)
+        self.env.exit(ppns)
 
     def update(self, lpn, ppn):
         """
@@ -1026,18 +1108,38 @@ class MappingCache(object):
 
     def _load(self, m_vpn):
         # TODO: entries loaded from trans page should not change recency
+
+        # Need a lock here because another thread may come in and think
+        # the cache has enough space for it. But the space is for this load
+        # TODO: somehow remove the lock to allow more parallelism
+        load_req = self._load_lock.request()
+        yield load_req
+
         n_needed = self._cached_mappings.needed_space_for_m_vpn(m_vpn)
         yield self.env.process(self._make_room(n_needed))
 
         yield self.env.process(self._load_to_free_space(m_vpn))
 
+        self._load_lock.release(load_req)
+
     def _load_to_free_space(self, m_vpn):
+        """
+        It should not call _write_back() directly or indirectly as it
+        will deadlock.
+        """
+        # aquire lock
+        m_vpn_req = self.vpn_res_pool.get_request(m_vpn)
+        yield m_vpn_req # should take no time, usually
+
         mapping_dict = yield self.env.process(
                 self._read_translation_page(m_vpn))
         self._cached_mappings.add_new_entries_if_not_exist(mapping_dict,
                 dirty = False)
 
         assert not self._cached_mappings.is_overflowed()
+
+        # release lock
+        self.vpn_res_pool.release_request(m_vpn, m_vpn_req)
 
     def _read_translation_page(self, m_vpn):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
@@ -1051,6 +1153,14 @@ class MappingCache(object):
         self.env.exit(mapping_dict)
 
     def _write_back(self, m_vpn):
+        """
+        It should not call _load_to_free_space() directly or indirectly as it
+        will deadlock.
+        """
+        # aquire lock
+        m_vpn_req = self.vpn_res_pool.get_request(m_vpn)
+        yield m_vpn_req # should take no time, usually
+
         mapping_in_cache = self._cached_mappings.get_m_vpn_mappings(m_vpn)
 
         # mark entries in cache as clean
@@ -1073,6 +1183,9 @@ class MappingCache(object):
 
         yield self.env.process(
             self._update_mapping_on_flash(m_vpn, latest_mapping))
+
+        # release lock
+        self.vpn_res_pool.release_request(m_vpn, m_vpn_req)
 
     def _update_mapping_on_flash(self, m_vpn, mapping_dict):
         """

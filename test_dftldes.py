@@ -6,6 +6,7 @@ from FtlSim import ftlsim_commons
 import FtlSim
 import utils
 import flashcontroller
+from FtlSim.ftlsim_commons import Extent
 
 def create_config():
     conf = FtlSim.dftldes.Config()
@@ -251,6 +252,99 @@ class TestParallelTranslation(unittest.TestCase):
     def proc_test_write(self, env, dftl):
         pass
 
+class TestWrite(unittest.TestCase):
+    def test_write(self):
+        conf = create_config()
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write(objs, dftl, Extent(0, 1)))
+        env.run()
+
+    def proc_test_write(self, objs, dftl, ext):
+        env = objs['env']
+        time_read_page = objs['flash_controller'].channels[0].read_time
+        time_program_page = objs['flash_controller'].channels[0].program_time
+
+        yield env.process(dftl.write_ext(ext))
+
+        # read translation page, write data page
+        self.assertEqual(env.now, time_read_page + time_program_page)
+
+    def test_write_larger(self):
+        conf = create_config()
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write_larger(objs, dftl, Extent(0, 2)))
+        env.run()
+
+    def proc_test_write_larger(self, objs, dftl, ext):
+        env = objs['env']
+        time_read_page = objs['flash_controller'].channels[0].read_time
+        time_program_page = objs['flash_controller'].channels[0].program_time
+
+        yield env.process(dftl.write_ext(ext))
+
+        # read translation page, then write two data pages at the same time
+        self.assertEqual(env.now, time_read_page + time_program_page)
+
+    def test_write_larger2(self):
+        conf = create_config()
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write_larger2(objs, dftl,
+            Extent(0, 4)))
+        env.run()
+
+    def proc_test_write_larger2(self, objs, dftl, ext):
+        env = objs['env']
+        time_read_page = objs['flash_controller'].channels[0].read_time
+        time_program_page = objs['flash_controller'].channels[0].program_time
+
+        yield env.process(dftl.write_ext(ext))
+
+        # read translation page, then write all 4 data pages at the same time
+        self.assertEqual(env.now, time_read_page + time_program_page)
+
+    def test_write_2vpn(self):
+        conf = create_config()
+        # make sure no cache miss in this test
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 2
+
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write_2vpn(objs, dftl,
+            Extent(0, conf.n_mapping_entries_per_page * 2)))
+        env.run()
+
+    def proc_test_write_2vpn(self, objs, dftl, ext):
+        env = objs['env']
+        time_read_page = objs['flash_controller'].channels[0].read_time
+        time_program_page = objs['flash_controller'].channels[0].program_time
+
+        yield env.process(dftl.write_ext(ext))
+
+        # read translation page, then write all 4 data pages at the same time
+        self.assertEqual(env.now, 2 * time_read_page +
+                (ext.lpn_count/4) * time_program_page)
+
+
+class TestRead(unittest.TestCase):
     def test_read(self):
         conf = create_config()
         objs = create_obj_set(conf)
@@ -259,8 +353,73 @@ class TestParallelTranslation(unittest.TestCase):
         dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
-    def proc_test_read(self, env, dftl):
-        pass
+        env.process(self.proc_test_read(objs, dftl, Extent(0, 1)))
+        env.run()
+
+    def proc_test_read(self, objs, dftl, ext):
+        env = objs['env']
+        time_read_page = objs['flash_controller'].channels[0].read_time
+        time_program_page = objs['flash_controller'].channels[0].program_time
+
+        yield env.process(dftl.read_ext(ext))
+
+        # only read translation page from flash
+        # data page is not read since it is not initialized
+        self.assertEqual(env.now, time_read_page)
+
+    def test_read_larger(self):
+        conf = create_config()
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        # read a whole m_vpn's lpn
+        env.process(self.proc_test_read_larger(objs, dftl,
+            Extent(0, conf.n_mapping_entries_per_page)))
+        env.run()
+
+    def proc_test_read_larger(self, objs, dftl, ext):
+        env = objs['env']
+        time_read_page = objs['flash_controller'].channels[0].read_time
+        time_program_page = objs['flash_controller'].channels[0].program_time
+
+        yield env.process(dftl.read_ext(ext))
+
+        # only read one translation page from flash
+        # data page is not read since it is not initialized
+        self.assertEqual(env.now, time_read_page)
+
+    def _test_read_2tp(self):
+        """
+        This test fails because there is cache thrashing problem
+        The solution should be that we prevent the translation page to be
+        evicted while translating for a mvpn
+        """
+        conf = create_config()
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        # read two m_vpn's lpns
+        env.process(self.proc_test_read_2tp(objs, dftl,
+            Extent(0, 2 * conf.n_mapping_entries_per_page)))
+        env.run()
+
+    def proc_test_read_2tp(self, objs, dftl, ext):
+        env = objs['env']
+        time_read_page = objs['flash_controller'].channels[0].read_time
+        time_program_page = objs['flash_controller'].channels[0].program_time
+
+        yield env.process(dftl.read_ext(ext))
+
+        # read two translation page from flash,
+        # at this time they are serialized
+        # data page is not read since it is not initialized
+        self.assertEqual(env.now, time_read_page * 2)
 
 
 class TestSplit(unittest.TestCase):
@@ -268,14 +427,12 @@ class TestSplit(unittest.TestCase):
         conf = create_config()
         n = conf.n_mapping_entries_per_page
 
-        result = FtlSim.dftldes.split_ext_to_mvpngroups(conf,
-                ftlsim_commons.Extent(0, n))
+        result = FtlSim.dftldes.split_ext_to_mvpngroups(conf, Extent(0, n))
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].lpn_start, 0)
         self.assertEqual(result[0].end_lpn(), n)
 
-        result = FtlSim.dftldes.split_ext_to_mvpngroups(conf,
-                ftlsim_commons.Extent(0, n + 1))
+        result = FtlSim.dftldes.split_ext_to_mvpngroups(conf, Extent(0, n + 1))
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0].lpn_start, 0)
         self.assertEqual(result[0].end_lpn(), n)

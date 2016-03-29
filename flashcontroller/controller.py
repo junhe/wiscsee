@@ -306,6 +306,15 @@ class Controller3(Controller2):
         yield self.env.process(
             self.channels[addr.channel].erase_block(tag = tag, addr = None))
 
+    def rw_ppns(self, ppns, op, tag):
+        procs = []
+        for ppn in ppns:
+            p = self.env.process(
+                    self.rw_ppn_extent(ppn, 1, op, tag))
+            procs.append(p)
+
+        yield simpy.events.AllOf(self.env, procs)
+
     def rw_ppn_extent(self, ppn_start, ppn_count, op, tag):
         """
         op is 'read' or 'write'
