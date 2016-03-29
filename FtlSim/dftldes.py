@@ -17,6 +17,7 @@ import lrulist
 import recorder
 import utils
 from commons import *
+from ftlsim_commons import *
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')
 DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
@@ -75,8 +76,6 @@ class Dftl(object):
         self.recorder = recorderobj
         self.flash = flashcontrollerobj
         self.env = env
-
-        self.vpn_res_pool =  VPNResourcePool(self.env)
 
         self.global_helper = GlobalHelper(confobj)
 
@@ -205,6 +204,99 @@ class Dftl(object):
 
     def get_type(self):
         return "dftldes"
+
+class Ftl(object):
+    def __init__(self, confobj, recorderobj, flashcontrollerobj, env):
+        if not isinstance(confobj, Config):
+            raise TypeError("confobj is not Config. it is {}".
+               format(type(confobj).__name__))
+
+        self.conf = confobj
+        self.recorder = recorderobj
+        self.flash = flashcontrollerobj
+        self.env = env
+
+        self.global_helper = GlobalHelper(confobj)
+
+        self.block_pool = BlockPool(confobj)
+        self.oob = OutOfBandAreas(confobj)
+
+        ###### the managers ######
+        self.mapping_manager = MappingManager(
+            confobj = self.conf,
+            block_pool = self.block_pool,
+            flashobj = self.flash,
+            oobobj=self.oob,
+            recorderobj = recorderobj,
+            envobj = env
+            )
+
+        self.garbage_collector = GarbageCollector(
+            confobj = self.conf,
+            flashobj = self.flash,
+            oobobj=self.oob,
+            block_pool = self.block_pool,
+            mapping_manager = self.mapping_manager,
+            recorderobj = recorderobj,
+            envobj = env
+            )
+
+        self.n_sec_per_page = self.conf.page_size \
+                / self.conf['sector_size']
+
+        # This resource protects all data structures stored in the memory.
+        self.resource_ram = simpy.Resource(self.env, capacity = 1)
+
+    def write_ext(self, extent):
+        pass
+
+    def read_ext(self, extent):
+        ext_list = split_ext_to_mvpngroups(extent)
+
+        procs = []
+        for ext_single_m_vpn in ext_list:
+            p = self.env.process(self._read_single_mvpngroup(ext_single_m_vpn))
+            procs.append(p)
+        yield simpy.events.AllOf(self.env, procs)
+
+    def _read_single_mvpngroup(self, ext_single_m_vpn):
+        m_vpn = self.conf.lpn_to_m_vpn(ext_single_m_vpn.lpn_start)
+
+        m_vpn_req = self.vpn_res_pool.get_request(m_vpn)
+        yield m_vpn_req # should take no time, usually
+
+
+        self.vpn_res_pool.release_request(m_vpn, m_vpn_req)
+
+    def _translate_lpns_of_single_vpn(self, lpns):
+        pass
+
+
+
+def split_ext_to_mvpngroups(conf, extent):
+    """
+    return a list of extents, each belongs to one m_vpn
+    """
+    group_extent_list = []
+    for i, lpn in enumerate(extent.lpn_iter()):
+        cur_m_vpn = conf.lpn_to_m_vpn(lpn)
+        if i == 0:
+            # intialization
+            cur_group_extent = Extent(lpn_start = extent.lpn_start,
+                lpn_count = 1)
+            group_extent_list.append(cur_group_extent)
+        else:
+            if cur_m_vpn == last_m_vpn:
+                cur_group_extent.lpn_count += 1
+            else:
+                cur_group_extent = Extent(lpn_start = lpn,
+                    lpn_count = 1)
+                group_extent_list.append(cur_group_extent)
+
+        last_m_vpn = cur_m_vpn
+
+    return group_extent_list
+
 
 class GlobalHelper(object):
     """
@@ -886,6 +978,7 @@ class MappingCache(object):
         self.mapping_on_flash = mapping_on_flash
 
         self._cached_mappings = MappingTable(confobj)
+        self.vpn_res_pool =  VPNResourcePool(self.env)
 
     def lpn_to_ppn(self, lpn):
         ppn = self._cached_mappings.lpn_to_ppn(lpn)
@@ -893,6 +986,7 @@ class MappingCache(object):
             m_vpn = self.conf.lpn_to_m_vpn(lpn)
             yield self.env.process(self._load(m_vpn))
             ppn = self._cached_mappings.lpn_to_ppn(lpn)
+            assert ppn != MISS
 
         self.env.exit(ppn)
 
@@ -907,6 +1001,17 @@ class MappingCache(object):
             # miss
             yield self.env.process(self._insert_new_mapping(lpn, ppn))
 
+    def _insert_new_mapping(self, lpn, ppn):
+        """
+        lpn should not be in cache
+        """
+        assert not self._cached_mappings.has_lpn(lpn)
+
+        if self._cached_mappings.is_full():
+            yield self.env.process(self._make_room(n_needed = 1))
+        self._cached_mappings.add_new_entry(
+            lpn = lpn, ppn = ppn, dirty = True)
+
     def _make_room(self, n_needed):
         while self._cached_mappings.count_of_free() < n_needed:
             yield self.env.process(self._free_one_entry())
@@ -919,37 +1024,20 @@ class MappingCache(object):
 
         self._cached_mappings.remove_entry_by_lpn(victim_lpn)
 
-    def _free_one_m_vpn(self):
-        victim_lpn, entry_data = self._cached_mappings.victim_entry()
-        m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_lpn)
-
-        if self._cached_mappings.is_m_vpn_dirty(m_vpn):
-            yield self.env.process(self._write_back(m_vpn))
-
-        self._cached_mappings.delete_entries_of_m_vpn(m_vpn)
-
     def _load(self, m_vpn):
         # TODO: entries loaded from trans page should not change recency
         n_needed = self._cached_mappings.needed_space_for_m_vpn(m_vpn)
         yield self.env.process(self._make_room(n_needed))
 
+        yield self.env.process(self._load_to_free_space(m_vpn))
+
+    def _load_to_free_space(self, m_vpn):
         mapping_dict = yield self.env.process(
                 self._read_translation_page(m_vpn))
         self._cached_mappings.add_new_entries_if_not_exist(mapping_dict,
                 dirty = False)
 
         assert not self._cached_mappings.is_overflowed()
-
-    def _insert_new_mapping(self, lpn, ppn):
-        """
-        lpn should not be in cache
-        """
-        assert not self._cached_mappings.has_lpn(lpn)
-
-        if self._cached_mappings.is_full():
-            yield self.env.process(self._make_room(n_needed = 1))
-        self._cached_mappings.add_new_entry(
-            lpn = lpn, ppn = ppn, dirty = True)
 
     def _read_translation_page(self, m_vpn):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
@@ -965,6 +1053,14 @@ class MappingCache(object):
     def _write_back(self, m_vpn):
         mapping_in_cache = self._cached_mappings.get_m_vpn_mappings(m_vpn)
 
+        # mark entries in cache as clean
+        # we are sure that the mapping in flash will be the same as
+        # the mappings in cache, so YES, it is clean now. You don't need
+        # to wait until it is on the flash to say so. At that time
+        # you don't know if cache and flash mapping is the same.
+        self._cached_mappings.batch_overwrite_existing(mapping_in_cache,
+                dirty = False)
+
         if len(mapping_in_cache) < self.conf.n_mapping_entries_per_page:
             # Not all mappings are in cache
             mapping_in_flash = yield self.env.process(
@@ -977,10 +1073,6 @@ class MappingCache(object):
 
         yield self.env.process(
             self._update_mapping_on_flash(m_vpn, latest_mapping))
-
-        # mark entries in cache as clean
-        self._cached_mappings.batch_overwrite_existing(mapping_in_cache,
-                dirty = False)
 
     def _update_mapping_on_flash(self, m_vpn, mapping_dict):
         """
@@ -1126,6 +1218,7 @@ class MappingTable(object):
         entry_data.dirty = dirty
 
     def remove_entry_by_lpn(self, lpn):
+        assert not self._is_dirty(lpn)
         del self.entries[lpn]
 
     def victim_entry(self):

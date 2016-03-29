@@ -1,5 +1,8 @@
 import unittest
 import simpy
+
+from FtlSim import ftlsim_commons
+
 import FtlSim
 import utils
 import flashcontroller
@@ -199,6 +202,85 @@ class TestMappingCache(unittest.TestCase):
         env = objs['env']
         env.process(self.update_proc(objs, mapping_cache))
         env.run()
+
+class TestParallelTranslation(unittest.TestCase):
+    def write_proc(self, env, dftl, extent):
+        yield env.process(dftl.write_ext(extent))
+
+    def read_proc(self, env, dftl, extent):
+        yield env.process(dftl.read_ext(extent))
+
+    def access_same_vpn(self, env, dftl):
+        # assert count of read and write
+
+        # write data page ->
+        writer1 = env.process(self.write_proc(env, dftl, ext))
+        writer2 = env.process(self.write_proc(env, dftl, ext))
+
+        yield env.events.AllOf([writer1, writer2])
+
+        self.assertEqual(tp_read_count, 1)
+        self.assertEqual(env.now, read + write)
+
+    def access_different_vpn(self, env, dftl):
+        # assert count of read and write
+        reader = env.process(self.write_proc(env, dftl, ext1))
+        writer = env.process(self.write_proc(env, dftl, ext2))
+
+        yield env.events.AllOf([reader, writer])
+
+        self.assertEqual(tp_read_count, 2)
+        self.assertEqual(env.now, read + write)
+
+    def test_parallel_translation(self):
+        conf = create_config()
+        objs = create_obj_set(conf)
+
+        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+
+    def test_write(self):
+        conf = create_config()
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+    def proc_test_write(self, env, dftl):
+        pass
+
+    def test_read(self):
+        conf = create_config()
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+    def proc_test_read(self, env, dftl):
+        pass
+
+
+class TestSplit(unittest.TestCase):
+    def test(self):
+        conf = create_config()
+        n = conf.n_mapping_entries_per_page
+
+        result = FtlSim.dftldes.split_ext_to_mvpngroups(conf,
+                ftlsim_commons.Extent(0, n))
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].lpn_start, 0)
+        self.assertEqual(result[0].end_lpn(), n)
+
+        result = FtlSim.dftldes.split_ext_to_mvpngroups(conf,
+                ftlsim_commons.Extent(0, n + 1))
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0].lpn_start, 0)
+        self.assertEqual(result[0].end_lpn(), n)
+        self.assertEqual(result[1].lpn_start, n)
+        self.assertEqual(result[1].end_lpn(), n + 1)
 
 def main():
     unittest.main()

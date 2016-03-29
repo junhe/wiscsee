@@ -1,5 +1,6 @@
 class Extent(object):
     def __init__(self, lpn_start, lpn_count):
+        assert lpn_count > 0
         self.lpn_start = lpn_start
         self.lpn_count = lpn_count
 
@@ -7,12 +8,21 @@ class Extent(object):
     def next_lpn(self):
         return self.lpn_start + self.lpn_count
 
+    def last_lpn(self):
+        return self.end_lpn() - 1
+
+    def end_lpn(self):
+        return self.lpn_start + self.lpn_count
+
     def lpn_iter(self):
-        return range(self.lpn_start, self.lpn_start + self.lpn_count)
+        return range(self.lpn_start, self.end_lpn())
 
     def __str__(self):
         return "lpn_start: {}, lpn_count: {}".format(
                 self.lpn_start, self.lpn_count)
+
+    def __contains__(self, lpn):
+        return lpn >= self.lpn_start and lpn < self.end_lpn()
 
 class CacheExtent(Extent):
     def __init__(self, lpn_start, lpn_count, in_cache):
