@@ -26,17 +26,6 @@ import dftldes
 from WlRunner import blocktrace
 
 
-class NCQSingleQueue(object):
-    """
-    User of the queue can take up to depth # of request without
-    returning
-    """
-    def __init__(self, ncq_depth, simpy_env):
-        self.ncq_depth = ncq_depth
-        self.env = simpy_env
-        self.queue = simpy.Store(self.env)
-
-
 class SsdBase(object):
     def _process(self, pid):
         raise NotImplementedError()
@@ -46,30 +35,30 @@ class SsdBase(object):
 
 
 class Ssd(SsdBase):
-    def __init__(self, conf, recorder_obj, simpy_env, ncq):
+    def __init__(self, conf, simpy_env, ncq, rec_obj):
         self.conf = conf
-        self.recorder = recorder_obj
         self.env = simpy_env
-
-        self.ncq = ncq
+        self.recorder = rec_obj
+        self.ncq = ncq # should be initialized in Simulator
         self.n_processes = self.ncq.ncq_depth
 
         self.flash_controller = flashcontroller.controller.Controller3(
                 self.env, self.conf, self.recorder)
 
-        self.ftl = Ftl(self.conf, self.recorder, self.flash_controller,
-                self.env)
+        self.ftl = eval("{}.Ftl(self.conf, self.recorder, self.flash_controller, "
+                "self.env)".format(self.conf['ftl_type']))
 
     def _process(self, pid):
         for req_i in itertools.count():
             host_event = yield self.ncq.queue.get()
 
             # handle host_event case by case
+            print 'in Ssd', str(host_event)
 
     def run(self):
         procs = []
         for i in range(self.n_processes):
-            p = self.env.process( self.process(i) )
+            p = self.env.process( self._process(i) )
             procs.append(p)
         yield simpy.events.AllOf(self.env, procs)
 

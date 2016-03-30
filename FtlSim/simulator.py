@@ -29,18 +29,6 @@ class Simulator(object):
     def get_sim_type(self):
         return
 
-    @abc.abstractmethod
-    def write(self):
-        return
-
-    @abc.abstractmethod
-    def read(self):
-        return
-
-    @abc.abstractmethod
-    def discard(self):
-        return
-
     def __init__(self, conf, event_iter):
         "conf is class Config"
         if not isinstance(conf, config.Config):
@@ -51,7 +39,7 @@ class Simulator(object):
         self.event_iter = event_iter
 
         # initialize recorder
-        self.rec = recorder.Recorder(output_target = self.conf['output_target'],
+        self.recorder = recorder.Recorder(output_target = self.conf['output_target'],
             output_directory = self.conf['result_dir'],
             verbose_level = self.conf['verbose_level'],
             print_when_finished = self.conf['print_when_finished']
@@ -65,6 +53,38 @@ def random_data(addr):
     randnum = random.randint(0, 10000)
     content = "{}.{}".format(addr, randnum)
     return content
+
+
+class Host(object):
+    def __init__(self, conf, simpy_env, event_iter):
+        self.conf = conf
+        self.env = simpy_env
+        self.event_iter = event_iter
+
+        self._ncq = NCQSingleQueue(
+                ncq_depth = self.conf['SSDFramework']['ncq_depth'],
+                simpy_env = self.env)
+
+    def get_ncq(self):
+        return self._ncq
+
+    def _process(self):
+        for event in self.event_iter:
+            yield self._ncq.queue.put(event)
+
+    def run(self):
+        yield self.env.process(self._process())
+
+
+class NCQSingleQueue(object):
+    """
+    User of the queue can take up to depth # of request without
+    returning
+    """
+    def __init__(self, ncq_depth, simpy_env):
+        self.ncq_depth = ncq_depth
+        self.env = simpy_env
+        self.queue = simpy.Store(self.env)
 
 
 class SimulatorNonDES(Simulator):
@@ -97,8 +117,8 @@ class SimulatorNonDES(Simulator):
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))
 
-        self.ftl = ftl_class(self.conf, self.rec,
-            flash.Flash(recorder = self.rec, confobj = self.conf))
+        self.ftl = ftl_class(self.conf, self.recorder,
+            flash.Flash(recorder = self.recorder, confobj = self.conf))
 
     def run(self):
         """
@@ -275,7 +295,7 @@ class SimulatorDES(Simulator):
         super(SimulatorDES, self).__init__(conf, event_iter)
 
         self.env = simpy.Environment()
-        self.ssdframework = ssdframework.SSDFramework(self.conf, self.rec, self.env)
+        self.ssdframework = ssdframework.SSDFramework(self.conf, self.recorder, self.env)
 
     def host_proc(self):
         """
@@ -326,37 +346,21 @@ class SimulatorDES(Simulator):
 
 class SimulatorDESNew(Simulator):
     def __init__(self, conf, event_iter):
-        super(SimulatorDES, self).__init__(conf, event_iter)
+        super(SimulatorDESNew, self).__init__(conf, event_iter)
 
         self.env = simpy.Environment()
-        self.ncq = NCQSingleQueue(
-                ncq_depth = self.conf['SSDFramework']['ncq_depth'],
-                simpy_env = self.env)
-
-    def _host_proc(self):
-        """
-        This process acts like a producer, putting requests to ncq
-        """
-        for event in self.event_iter:
-            yield self.ssdframework.ncq.queue.put(event)
+        self.host = Host(self.conf, self.env, event_iter)
+        self.ssd = ssdframework.Ssd(self.conf, self.env,
+                self.host.get_ncq(), self.recorder)
 
     def run(self):
-        self.env.process(self.host_proc())
-        self.env.process(self.ssdframework.run())
+        self.env.process(self.host.run())
+        self.env.process(self.ssd.run())
 
         self.env.run()
 
     def get_sim_type(self):
         return "SimulatorDESNew"
-
-    def write(self):
-        raise NotImplementedError()
-
-    def read(self):
-        raise NotImplementedError()
-
-    def discard(self):
-        raise NotImplementedError()
 
 
 class SimulatorDESSync(Simulator):
@@ -372,7 +376,7 @@ class SimulatorDESSync(Simulator):
         self.event_iters = event_iters
 
         self.env = simpy.Environment()
-        self.ssdframework = ssdframework.SSDFramework(self.conf, self.rec, self.env)
+        self.ssdframework = ssdframework.SSDFramework(self.conf, self.recorder, self.env)
 
     def host_proc(self, pid, event_iter):
         """
@@ -429,7 +433,7 @@ class SimulatorDESTime(Simulator):
         self.event_iter = event_iter
 
         self.env = simpy.Environment()
-        self.ssdframework = ssdframework.SSDFramework(self.conf, self.rec,
+        self.ssdframework = ssdframework.SSDFramework(self.conf, self.recorder,
                 self.env)
 
     def host_proc(self, event_iter):
