@@ -1,32 +1,32 @@
 echo ======= config_test =========
-python ./config_test.py
+python -m tests.config_test
 
 echo 
 echo ======= Makefile_test =======
-sudo python ./Makefile_test.py -v
+sudo python -m tests.Makefile_test -v
 
 echo 
 echo ======= flashcontroller_test =======
-sudo python ./flashcontroller_test.py -v
+sudo python -m tests.flashcontroller_test -v
 
 
 echo 
 echo ======= dftlncq_test =======
-sudo python ./ssdframework_test.py -v
+sudo python -m tests.ssdframework_test -v
 
 echo 
 echo ======= recorder_test =======
-sudo python ./recorder_test.py
+sudo python -m tests.recorder_test
 
 echo 
 echo ======= lrulist_test =======
-sudo python ./lrulist_test.py
+sudo python -m tests.lrulist_test
 
 
 echo 
 echo ======= fiounittest_test =======
-sudo python ./fiounittest_test.py
+sudo python -m tests.fiounittest_test
 
 echo 
 echo ======= misc_test =======
-sudo python ./misc_test.py
+sudo python -m tests.misc_test
