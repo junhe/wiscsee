@@ -1,4 +1,4 @@
-import simulator
+from ftlsim_commons import Extent
 
 class EventSimple(object):
     def __init__(self, pid, operation):
@@ -30,6 +30,11 @@ class Event(object):
             self.size, sector_size)
 
         self.sector_count = self.size / sector_size
+
+    def get_lpn_extent(self, conf):
+        lpn_start, lpn_count = conf.off_size_to_page_range(
+                self.offset, self.size)
+        return Extent(lpn_start = lpn_start, lpn_count = lpn_count)
 
     def __str__(self):
         return "Event pid:{pid}, operation:{operation}, offset:{offset}, "\

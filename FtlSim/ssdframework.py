@@ -55,6 +55,21 @@ class Ssd(SsdBase):
             # handle host_event case by case
             print 'in Ssd', str(host_event)
 
+            if host_event.operation == 'enable_recorder':
+                self.recorder.enable()
+            elif host_event.operation == 'read':
+                yield self.env.process(
+                    self.ftl.read_ext(host_event.get_lpn_extent(self.conf)))
+            elif  host_event.operation == 'write':
+                yield self.env.process(
+                    self.ftl.write_ext(host_event.get_lpn_extent(self.conf)))
+            elif  host_event.operation == 'discard':
+                yield self.env.process(
+                    self.ftl.discard_ext(host_event.get_lpn_extent(self.conf)))
+            else:
+                raise NotImplementedError("Operation {} not supported."\
+                        .format(host_event.operation))
+
     def run(self):
         procs = []
         for i in range(self.n_processes):
