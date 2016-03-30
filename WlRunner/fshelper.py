@@ -194,7 +194,7 @@ def partition_disk(dev, part_sizes):
     success = False
     while n_tries > 0:
         n_tries -= 1
-        ret = utils.shcmd("sudo sfdisk {} < my.layout".format(dev),
+        ret = utils.shcmd("sudo sfdisk {} < /tmp/my.layout".format(dev),
                 ignore_error = True)
         if ret == 0:
             success = True
@@ -231,7 +231,7 @@ def create_layout_file(part_sizes):
         lines.append(line)
         cur_sectors += size_in_sector
 
-    with open('my.layout', 'w') as f:
+    with open('/tmp/my.layout', 'w') as f:
         f.write('\n'.join(lines))
         f.write('\n')
 
