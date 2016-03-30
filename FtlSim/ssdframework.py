@@ -45,7 +45,7 @@ class SsdBase(object):
         raise NotImplementedError()
 
 
-class Ssd(Ssdbase):
+class Ssd(SsdBase):
     def __init__(self, conf, recorder_obj, simpy_env, ncq):
         self.conf = conf
         self.recorder = recorder_obj
@@ -68,7 +68,7 @@ class Ssd(Ssdbase):
 
     def run(self):
         procs = []
-        for i in range(self.]):
+        for i in range(self.n_processes):
             p = self.env.process( self.process(i) )
             procs.append(p)
         yield simpy.events.AllOf(self.env, procs)

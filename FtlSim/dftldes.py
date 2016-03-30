@@ -2,6 +2,7 @@ import bitarray
 from collections import deque, Counter
 import csv
 import datetime
+import itertools
 import random
 import os
 import Queue
@@ -18,6 +19,7 @@ import recorder
 import utils
 from commons import *
 from ftlsim_commons import *
+
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')
 DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
@@ -256,15 +258,17 @@ class Ftl(object):
         old_ppns = yield self.env.process(
                 self._mappings.lpns_to_ppns(ext_single_m_vpn.lpn_iter()))
 
-        self._update_metadata_for_relocating_lpns(ext_single_m_vpn.lpn_iter(),
-                old_ppns = old_ppns, new_ppns = ppns_to_write)
+        yield self.env.process(
+            self._update_metadata_for_relocating_lpns(ext_single_m_vpn.lpn_iter(),
+                old_ppns = old_ppns, new_ppns = ppns_to_write))
 
         yield self.env.process(
             self.flash.rw_ppns(ppns_to_write, 'write', tag = 'TAG_FOREGROUND'))
 
     def _update_metadata_for_relocating_lpns(self, lpns, old_ppns, new_ppns):
         for lpn, old_ppn, new_ppn in zip(lpns, old_ppns, new_ppns):
-            self._update_metadata_for_relocating_lpn(lpn, old_ppn, new_ppn)
+            yield self.env.process(
+                self._update_metadata_for_relocating_lpn(lpn, old_ppn, new_ppn))
 
     def _update_metadata_for_relocating_lpn(self, lpn, old_ppn, new_ppn):
         """
@@ -291,7 +295,8 @@ class Ftl(object):
         raise NotImplementedError()
         """
         # mappings in cache
-        self._mappings.update(lpn = lpn, ppn = new_ppn)
+        yield self.env.process(
+                self._mappings.update(lpn = lpn, ppn = new_ppn))
 
         # mappings on flash
         #   handled by _mappings
@@ -328,6 +333,29 @@ class Ftl(object):
         yield self.env.process(
             self.flash.rw_ppns(ppns_to_read, 'read', tag = 'TAG_FOREGROUND'))
 
+    def discard_ext(self, extent):
+        ext_list = split_ext_to_mvpngroups(self.conf, extent)
+
+        procs = []
+        for ext_single_m_vpn in ext_list:
+            p = self.env.process(self._discard_single_mvpngroup(ext_single_m_vpn))
+            procs.append(p)
+
+        yield simpy.events.AllOf(self.env, procs)
+
+    def _discard_single_mvpngroup(self, ext_single_m_vpn):
+        m_vpn = self.conf.lpn_to_m_vpn(ext_single_m_vpn.lpn_start)
+
+        ppns_to_invalidate = yield self.env.process(
+                self._mappings.lpns_to_ppns(ext_single_m_vpn.lpn_iter()))
+
+        ppns_to_invalidate = remove_invalid_ppns(ppns_to_invalidate)
+
+        mapping_dict = dict(itertools.izip_longest(
+            ppns_to_invalidate, (), fillvalue = UNINITIATED))
+        self._mappings.update_batch(mapping_dict)
+
+        self.oob.wipe_ppns(ppns_to_invalidate)
 
 
 def remove_invalid_ppns(ppns):
@@ -1084,6 +1112,10 @@ class MappingCache(object):
             # miss
             yield self.env.process(self._insert_new_mapping(lpn, ppn))
 
+    def update_batch(self, mapping_dict):
+        for lpn, ppn in mapping_dict.items():
+            yield self.env.process(self.update(lpn, ppn))
+
     def _insert_new_mapping(self, lpn, ppn):
         """
         lpn should not be in cache
@@ -1094,6 +1126,8 @@ class MappingCache(object):
             yield self.env.process(self._make_room(n_needed = 1))
         self._cached_mappings.add_new_entry(
             lpn = lpn, ppn = ppn, dirty = True)
+
+        assert not self._cached_mappings.is_overflowed()
 
     def _make_room(self, n_needed):
         while self._cached_mappings.count_of_free() < n_needed:
@@ -2127,6 +2161,10 @@ class OutOfBandAreas(object):
             # # it is OK that the key does not exist, for example,
             # # when discarding without writing to it
             # pass
+
+    def wipe_ppns(self, ppns):
+        for ppn in ppns:
+            self.wipe_ppn(ppn)
 
     def erase_block(self, flash_block):
         self.states.erase_block(flash_block)

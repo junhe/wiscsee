@@ -439,6 +439,47 @@ class TestSplit(unittest.TestCase):
         self.assertEqual(result[1].lpn_start, n)
         self.assertEqual(result[1].end_lpn(), n + 1)
 
+
+class TestDiscard(unittest.TestCase):
+    def test_discard(self):
+        conf = create_config()
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_discard(objs, dftl, Extent(0, 1)))
+        env.run()
+
+    def proc_test_discard(self, objs, dftl, ext):
+        env = objs['env']
+        time_read_page = objs['flash_controller'].channels[0].read_time
+        time_program_page = objs['flash_controller'].channels[0].program_time
+
+        yield env.process(dftl.discard_ext(ext))
+
+        # need to read TP, then we mark the entry as UNINITIATED in mem
+        # (the entry was UNINITIATED before)
+        self.assertEqual(env.now, time_read_page)
+
+        # it takes no time since the page is UNINITIATED
+        yield env.process(dftl.read_ext(ext))
+        self.assertEqual(env.now, time_read_page)
+
+        # the mapping is in cache, you just need to write data page
+        yield env.process(dftl.write_ext(ext))
+        self.assertEqual(env.now, time_read_page + time_program_page)
+
+        # now you need to really read a flash page as it is inintialized
+        yield env.process(dftl.read_ext(ext))
+        self.assertEqual(env.now, 2 * time_read_page + time_program_page)
+
+        # discarding takes no time as mapping is in memory
+        yield env.process(dftl.discard_ext(ext))
+        self.assertEqual(env.now, 2 * time_read_page + time_program_page)
+
+
 def main():
     unittest.main()
 
