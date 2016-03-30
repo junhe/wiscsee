@@ -21,7 +21,6 @@ import string
 import config
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 from environments import *
-import experiment
 import testfio
 import FtlSim
 import WlRunner
