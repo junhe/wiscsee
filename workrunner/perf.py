@@ -1,6 +1,6 @@
 import os
 
-from utils import *
+from utilities.utils import *
 
 def flamegraph_wrap(perf_path, cmd, result_dir, flamegraph_dir):
     """

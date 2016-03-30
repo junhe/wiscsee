@@ -4,7 +4,7 @@ import os
 import time
 
 import nonblockingreader
-import utils
+from utilities import utils
 
 def stats_worker(stop_event):
     """this worker process counts the number of function called in Ftrace"""

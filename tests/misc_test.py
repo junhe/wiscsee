@@ -1,7 +1,7 @@
 import unittest
 import workrunner
 import socket
-import utils
+from utilities import utils
 
 class TestCpuhandler(unittest.TestCase):
     def test_cpu(self):

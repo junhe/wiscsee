@@ -7,7 +7,7 @@ import Queue
 import config
 import ftlbuilder
 import recorder
-import utils
+from utilities import utils
 
 """
 ############## Checklist ###############

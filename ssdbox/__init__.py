@@ -1,5 +1,5 @@
 import simulator
-import utils
+from utilities import utils
 import ssdframework
 import datacache
 import hostevent

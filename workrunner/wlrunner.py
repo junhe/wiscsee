@@ -8,7 +8,7 @@ import filesystem
 import fshelper
 import ftrace
 from ssdbox import hostevent
-import utils
+from utilities import utils
 import workload
 
 

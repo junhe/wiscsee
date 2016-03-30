@@ -2,7 +2,7 @@ import abc
 import os
 
 import fshelper
-import utils
+from utilities import utils
 
 class LoopDevice(object):
     def __init__(self, dev_path, tmpfs_mount_point, size_mb, img_file=None):

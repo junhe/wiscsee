@@ -22,7 +22,7 @@ import config
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 import ssdbox
 import workrunner
-from utils import *
+from utilities.utils import *
 from commons import *
 
 class Experiment(object):

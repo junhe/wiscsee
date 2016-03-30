@@ -5,7 +5,7 @@ import re
 import subprocess
 import time
 
-import utils
+from utilities import utils
 
 def umountFS(mountpoint):
     cmd = ["umount", mountpoint]

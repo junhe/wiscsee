@@ -8,7 +8,7 @@ import config
 import fio
 import multiwriters
 import perf
-import utils
+from utilities import utils
 import workloadlist
 
 class Workload(object):

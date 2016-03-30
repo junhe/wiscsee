@@ -3,7 +3,7 @@ import os
 import pprint
 import sys
 
-import utils
+from utilities import utils
 
 FILE_TARGET, STDOUT_TARGET = ('file', 'stdout')
 

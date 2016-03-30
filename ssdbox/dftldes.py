@@ -16,7 +16,7 @@ import flash
 import ftlbuilder
 import lrulist
 import recorder
-import utils
+from utilities import utils
 from commons import *
 from ftlsim_commons import *
 

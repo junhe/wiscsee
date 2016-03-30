@@ -1,5 +1,5 @@
 import collections
-import utils
+from utilities import utils
 
 NOVALUE, HIDE_ATTR = 'NOVALUE', 'HIDE_ATTR'
 

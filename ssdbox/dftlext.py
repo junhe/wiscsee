@@ -14,7 +14,7 @@ import flash
 import ftlbuilder
 import lrulist
 import recorder
-import utils
+from utilities import utils
 
 """
 This refactors Dftl

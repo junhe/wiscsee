@@ -21,7 +21,7 @@ import flashcontroller
 import ftlbuilder
 import lrulist
 import recorder
-import utils
+from utilities import utils
 import dftldes
 from workrunner import blocktrace
 

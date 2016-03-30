@@ -3,7 +3,7 @@ import re
 import subprocess
 import time
 
-import utils
+from utilities import utils
 
 
 class BlktraceWrapper(object):

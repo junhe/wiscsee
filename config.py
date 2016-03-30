@@ -5,7 +5,7 @@ import pprint
 import re
 
 from commons import *
-import utils
+from utilities import utils
 
 WLRUNNER, LBAGENERATOR, LBAMULTIPROC = ('WLRUNNER', 'LBAGENERATOR',
     'LBAMULTIPROC')

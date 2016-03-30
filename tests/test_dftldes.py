@@ -4,7 +4,7 @@ import simpy
 from ssdbox import ftlsim_commons
 
 import ssdbox
-import utils
+from utilities import utils
 import flashcontroller
 from ssdbox.ftlsim_commons import Extent
 

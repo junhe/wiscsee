@@ -4,7 +4,7 @@ import subprocess
 import shlex
 import sys
 
-import utils
+from utilities import utils
 
 def run_and_get_output(cmd):
     output = []
