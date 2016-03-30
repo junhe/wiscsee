@@ -17,6 +17,7 @@ import hostevent
 import dftldes
 
 from commons import *
+from ftlsim_commons import *
 
 class Simulator(object):
     __metaclass__ = abc.ABCMeta
@@ -74,17 +75,6 @@ class Host(object):
 
     def run(self):
         yield self.env.process(self._process())
-
-
-class NCQSingleQueue(object):
-    """
-    User of the queue can take up to depth # of request without
-    returning
-    """
-    def __init__(self, ncq_depth, simpy_env):
-        self.ncq_depth = ncq_depth
-        self.env = simpy_env
-        self.queue = simpy.Store(self.env)
 
 
 class SimulatorNonDES(Simulator):

@@ -1,3 +1,5 @@
+import simpy
+
 class Extent(object):
     def __init__(self, lpn_start, lpn_count):
         assert lpn_count > 0
@@ -62,6 +64,16 @@ def create_ssd_request_with_cache(conf, event, in_cache):
     req.in_cache(in_cache)
     return req
 
+
+class NCQSingleQueue(object):
+    """
+    User of the queue can take up to depth # of request without
+    returning
+    """
+    def __init__(self, ncq_depth, simpy_env):
+        self.ncq_depth = ncq_depth
+        self.env = simpy_env
+        self.queue = simpy.Store(self.env)
 
 
 
