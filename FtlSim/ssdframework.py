@@ -78,6 +78,46 @@ class Ssd(SsdBase):
         yield simpy.events.AllOf(self.env, procs)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SSDFramework(object):
     """
     The interface of this FTL for the host is a queue (NCQ). The host puts
