@@ -40,14 +40,14 @@ class TestManager(unittest.TestCase):
                 }
             ),
             ("writer", {
-                'group_reporting': WlRunner.fio.NOVALUE,
+                'group_reporting': workrunner.fio.NOVALUE,
                 'numjobs'   : self.para.numjobs,
                 'rw'        : 'write'
                 }
             )
             ]
         self.conf['fio_job_conf'] = {
-                'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                'ini': workrunner.fio.JobConfig(tmp_job_conf),
                 'runner': {
                     'to_json': True
                 }
@@ -66,7 +66,7 @@ class TestManager(unittest.TestCase):
         self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
 
     def run_fio(self):
-        workload = WlRunner.workload.FIONEW(self.conf,
+        workload = workrunner.workload.FIONEW(self.conf,
                 workload_conf_key = self.conf['workload_conf_key'])
         workload.run()
 

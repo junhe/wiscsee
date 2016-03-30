@@ -64,28 +64,28 @@ def stress_n_processes_raw():
                     }
                 ),
                 ("writer", {
-                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'group_reporting': workrunner.fio.NOVALUE,
                     'numjobs'   : self.para.numjobs,
                     'rw'        : 'write'
                     }
                 ),
                 ("reader", {
-                    'stonewall': WlRunner.fio.NOVALUE,
-                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'stonewall': workrunner.fio.NOVALUE,
+                    'group_reporting': workrunner.fio.NOVALUE,
                     'numjobs'   : self.para.numjobs,
                     'rw'        : 'read'
                     }
                 ),
                 ("readandwrite", {
-                    'stonewall': WlRunner.fio.NOVALUE,
-                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'stonewall': workrunner.fio.NOVALUE,
+                    'group_reporting': workrunner.fio.NOVALUE,
                     'numjobs'   : self.para.numjobs,
                     'rw'        : 'rw'
                     }
                 )
                 ]
             self.conf['fio_job_conf'] = {
-                    'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                    'ini': workrunner.fio.JobConfig(tmp_job_conf),
                     'runner': {
                         'to_json': True
                     }
@@ -97,7 +97,7 @@ def stress_n_processes_raw():
             self.conf['enable_simulation'] = False
 
         def run_fio(self):
-            workload = WlRunner.workload.FIONEW(self.conf,
+            workload = workrunner.workload.FIONEW(self.conf,
                     workload_conf_key = self.conf['workload_conf_key'])
             workload.run()
 
@@ -167,25 +167,25 @@ def stress_n_processes():
                     }
                 ),
                 ("writer", {
-                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'group_reporting': workrunner.fio.NOVALUE,
                     'rw'        : self.para.rw[0]
                     }
                 ),
                 ("reader", {
-                    'stonewall': WlRunner.fio.NOVALUE,
-                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'stonewall': workrunner.fio.NOVALUE,
+                    'group_reporting': workrunner.fio.NOVALUE,
                     'rw'        : self.para.rw[1]
                     }
                 ),
                 ("mixedreadandwrite", {
-                    'stonewall': WlRunner.fio.NOVALUE,
-                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'stonewall': workrunner.fio.NOVALUE,
+                    'group_reporting': workrunner.fio.NOVALUE,
                     'rw'        : self.para.rw[2]
                     }
                 )
                 ]
             self.conf['fio_job_conf'] = {
-                    'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                    'ini': workrunner.fio.JobConfig(tmp_job_conf),
                     'runner': {
                         'to_json': True
                     }
@@ -197,7 +197,7 @@ def stress_n_processes():
             self.conf['enable_simulation'] = False
 
         def run_fio(self):
-            workload = WlRunner.workload.FIONEW(self.conf,
+            workload = workrunner.workload.FIONEW(self.conf,
                     workload_conf_key = self.conf['workload_conf_key'])
             workload.run()
 
@@ -309,13 +309,13 @@ def stress_page_cache():
                     }
                 ),
                 ("writer", {
-                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'group_reporting': workrunner.fio.NOVALUE,
                     'rw'        : self.para.rw
                     }
                 )
                 ]
             self.conf['fio_job_conf'] = {
-                    'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                    'ini': workrunner.fio.JobConfig(tmp_job_conf),
                     'runner': {
                         'to_json': True
                     }
@@ -327,7 +327,7 @@ def stress_page_cache():
             self.conf['enable_simulation'] = False
 
         def run_fio(self):
-            workload = WlRunner.workload.FIONEW(self.conf,
+            workload = workrunner.workload.FIONEW(self.conf,
                     workload_conf_key = self.conf['workload_conf_key'])
             workload.run()
 
@@ -419,14 +419,14 @@ def stress_metadata():
                     }
                 ),
                 ("job", {
-                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'group_reporting': workrunner.fio.NOVALUE,
                     'rw'        : self.para.rw,
                     'nrfiles'   : self.para.nrfiles
                     }
                 )
                 ]
             self.conf['fio_job_conf'] = {
-                    'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                    'ini': workrunner.fio.JobConfig(tmp_job_conf),
                     'runner': {
                         'to_json': True
                     }
@@ -438,7 +438,7 @@ def stress_metadata():
             self.conf['enable_simulation'] = False
 
         def run_fio(self):
-            workload = WlRunner.workload.FIONEW(self.conf,
+            workload = workrunner.workload.FIONEW(self.conf,
                     workload_conf_key = self.conf['workload_conf_key'])
             workload.run()
 
@@ -527,13 +527,13 @@ def compare_real_and_sim_w_fs():
                     }
                 ),
                 ("writer", {
-                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'group_reporting': workrunner.fio.NOVALUE,
                     'rw'        : self.para.rw
                     }
                 )
                 ]
             self.conf['fio_job_conf'] = {
-                    'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                    'ini': workrunner.fio.JobConfig(tmp_job_conf),
                     'runner': {
                         'to_json': True
                     }
@@ -650,14 +650,14 @@ def compare_real_and_sim_raw():
                     }
                 ),
                 ("myjob", {
-                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'group_reporting': workrunner.fio.NOVALUE,
                     'numjobs'   : self.para.numjobs,
                     'rw'        : self.para.rw
                     }
                 )
                 ]
             self.conf['fio_job_conf'] = {
-                    'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                    'ini': workrunner.fio.JobConfig(tmp_job_conf),
                     'runner': {
                         'to_json': True
                     }
@@ -771,13 +771,13 @@ def compare_fs():
                     }
                 ),
                 ("writer", {
-                    'group_reporting': WlRunner.fio.NOVALUE,
+                    'group_reporting': workrunner.fio.NOVALUE,
                     'rw'        : self.para.rw
                     }
                 )
                 ]
             self.conf['fio_job_conf'] = {
-                    'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                    'ini': workrunner.fio.JobConfig(tmp_job_conf),
                     'runner': {
                         'to_json': True
                     }

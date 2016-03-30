@@ -42,14 +42,14 @@ class TestManager(unittest.TestCase):
                 }
             ),
             ("writer", {
-                'group_reporting': WlRunner.fio.NOVALUE,
+                'group_reporting': workrunner.fio.NOVALUE,
                 'numjobs'   : self.para.numjobs,
                 'rw'        : 'write'
                 }
             )
             ]
         self.conf['fio_job_conf'] = {
-                'ini': WlRunner.fio.JobConfig(tmp_job_conf),
+                'ini': workrunner.fio.JobConfig(tmp_job_conf),
                 'runner': {
                     'to_json': True
                 }
@@ -63,7 +63,7 @@ class TestManager(unittest.TestCase):
         self.conf['ftl_type'] = 'dftldes'
 
     def run_fio(self):
-        workload = WlRunner.workload.FIONEW(self.conf,
+        workload = workrunner.workload.FIONEW(self.conf,
                 workload_conf_key = self.conf['workload_conf_key'])
         workload.run()
 
@@ -86,7 +86,7 @@ class TestManager(unittest.TestCase):
 class TestBlocktraceResult(unittest.TestCase):
     def test_main(self):
         self.conf = ssdbox.dftldes.Config()
-        blkresult = WlRunner.blocktrace.BlktraceResult(self.conf,
+        blkresult = workrunner.blocktrace.BlktraceResult(self.conf,
                 './testdata/blkparse-output.txt',
                 '/tmp/blkparse-output.txt.parsed')
         blkresult.create_event_file()

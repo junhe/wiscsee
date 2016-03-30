@@ -4,7 +4,7 @@ from Makefile import *
 
 class TestConf(unittest.TestCase):
     def test_conf(self):
-        jobconf = WlRunner.fio.JobConfig()
+        jobconf = workrunner.fio.JobConfig()
 
         jobconf.append_section("global", {'size': 100, 'fsync':12})
         jobconf.append_section("job1",
@@ -18,7 +18,7 @@ class TestFio(unittest.TestCase):
         self.conf = ssdbox.dftldes.Config()
 
     def setup_workload(self):
-        self.fio_job_conf = WlRunner.fio.JobConfig()
+        self.fio_job_conf = workrunner.fio.JobConfig()
         self.fio_job_conf.append_section("global", {'size': '8kb'})
         self.fio_job_conf.append_section("job1",
                 {'rw': 'write', 'filename': '/tmp/tmp.fio.file'})
@@ -37,7 +37,7 @@ class TestFio(unittest.TestCase):
                 subexpname = 'testsubexp')
         runtime_update(self.conf)
 
-        workload = WlRunner.workload.FIONEW(self.conf,
+        workload = workrunner.workload.FIONEW(self.conf,
                 workload_conf_key = 'fio_job_conf')
         workload.run()
 

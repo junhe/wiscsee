@@ -20,7 +20,7 @@ class TestMultipleProcess(unittest.TestCase):
                     (d, 4, 3)]
                     ]}
 
-        lbagen = WlRunner.lbaworkloadgenerator.MultipleProcess(conf)
+        lbagen = workrunner.lbaworkloadgenerator.MultipleProcess(conf)
         iter_list = lbagen.get_iter_list()
         self.assertTrue(isinstance(iter_list, list))
 

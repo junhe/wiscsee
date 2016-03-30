@@ -1,14 +1,14 @@
 import unittest
-import WlRunner
+import workrunner
 import socket
 import utils
 
 class TestCpuhandler(unittest.TestCase):
     def test_cpu(self):
-        possible_cpus = WlRunner.cpuhandler.get_possible_cpus()
-        WlRunner.cpuhandler.enable_all_cpus()
+        possible_cpus = workrunner.cpuhandler.get_possible_cpus()
+        workrunner.cpuhandler.enable_all_cpus()
 
-        online_cpus = WlRunner.cpuhandler.get_online_cpuids()
+        online_cpus = workrunner.cpuhandler.get_online_cpuids()
         self.assertListEqual(possible_cpus, online_cpus)
 
 class TestLinuxNCQDepth(unittest.TestCase):

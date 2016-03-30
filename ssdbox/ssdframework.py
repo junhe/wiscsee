@@ -23,7 +23,7 @@ import lrulist
 import recorder
 import utils
 import dftldes
-from WlRunner import blocktrace
+from workrunner import blocktrace
 
 
 class SsdBase(object):

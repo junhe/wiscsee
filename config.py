@@ -299,7 +299,7 @@ class Config(dict):
             # "output_target" : "stdout",
             "record_bad_victim_block": False,
 
-            ############## For WlRunner ########
+            ############## For workrunner ########
             "linux_ncq_depth"  : 128,
             "linux_io_scheduler" : 'noop',
             "dev_size_mb"      : None,

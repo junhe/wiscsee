@@ -21,7 +21,7 @@ import string
 import config
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 import ssdbox
-import WlRunner
+import workrunner
 from utils import *
 from commons import *
 
@@ -63,14 +63,14 @@ def run_workload(conf):
     # run the workload
     workload_src = conf['workload_src']
     if workload_src == WLRUNNER:
-        runner = WlRunner.wlrunner.WorkloadRunner(conf)
+        runner = workrunner.wlrunner.WorkloadRunner(conf)
         event_iter = runner.run()
     elif workload_src == LBAGENERATOR:
-        lbagen = eval("""WlRunner.lbaworkloadgenerator.{classname}(conf)""".\
+        lbagen = eval("""workrunner.lbaworkloadgenerator.{classname}(conf)""".\
             format(classname=conf['lba_workload_class']))
         event_iter = lbagen
     elif workload_src == LBAMULTIPROC:
-        lbagen = eval("""WlRunner.lbaworkloadgenerator.{classname}(conf)""".\
+        lbagen = eval("""workrunner.lbaworkloadgenerator.{classname}(conf)""".\
             format(classname=conf['lba_workload_class']))
         event_iter = lbagen.get_iter_list()
     else:
@@ -167,7 +167,7 @@ def test_fio():
         conf['enable_blktrace'] = True
         conf['enable_simulation'] = True
 
-        MOpt = WlRunner.filesystem.MountOption
+        MOpt = workrunner.filesystem.MountOption
         conf["mnt_opts"]["ext4"]['discard'] = MOpt(opt_name = "discard",
                                          value = "nodiscard",
                                          include_name = False)
@@ -185,7 +185,7 @@ def test_fio():
             workflow(conf)
         else:
             runtime_update(conf)
-            fio = WlRunner.workload.FIO(conf, 'workload_conf')
+            fio = workrunner.workload.FIO(conf, 'workload_conf')
             save_conf(conf)
 
             print '-------------------------'
@@ -258,7 +258,7 @@ def reproduce_slowness_with_blktrace():
     replay_dir = '/tmp/blk-replay' + suf
     fio_replay_dir = '/tmp/fio' + suf
 
-    wrapper = WlRunner.traceandreplay.BlktraceWrapper(
+    wrapper = workrunner.traceandreplay.BlktraceWrapper(
             "/dev/sdc1", "", record_dir, "BlktraceRunnerAlone")
     wrapper.wrapped_run(test_func_run)
 
@@ -295,7 +295,7 @@ class DftlextExp001(Experiment):
                 traffic_size = 32*MB,
                 file_size = filesize,
                 fdatasync = 1,
-                bssplit = WlRunner.fio.HIDE_ATTR
+                bssplit = workrunner.fio.HIDE_ATTR
                 )
         assert filesize < self.devsize_mb * MB
 
@@ -390,7 +390,7 @@ class FIO_DFTLDES(object):
                 traffic_size = 64*MB,
                 file_size = filesize,
                 fdatasync = 1,
-                bssplit = WlRunner.fio.HIDE_ATTR
+                bssplit = workrunner.fio.HIDE_ATTR
                 )
         assert filesize < self.devsize_mb * MB
 
