@@ -20,7 +20,7 @@ import string
 
 import config
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
-import FtlSim
+import ssdbox
 import WlRunner
 from utils import *
 from commons import *
@@ -87,7 +87,7 @@ def run_simulator(conf, event_iter):
     simulator.run()
 
 def create_simulator(simulator_class, conf, event_iter):
-    return eval("FtlSim.simulator.{sim_class}(conf, event_iter)".format(
+    return eval("ssdbox.simulator.{sim_class}(conf, event_iter)".format(
         sim_class = simulator_class))
 
 def get_dev_by_hostname():
@@ -268,7 +268,7 @@ def reproduce_slowness_with_blktrace():
 class DftlextExp001(Experiment):
     def __init__(self):
         # Get default setting
-        self.conf = FtlSim.dftlext.Config()
+        self.conf = ssdbox.dftlext.Config()
         self.devsize_mb = 128
 
     def setup_environment(self):
@@ -351,7 +351,7 @@ def get_expname():
 class FIO_DFTLDES(object):
     def __init__(self, parameters):
         # Get default setting
-        self.conf = FtlSim.dftldes.Config()
+        self.conf = ssdbox.dftldes.Config()
         self.devsize_mb = 256
         self.parameters = parameters
         print self.parameters
@@ -449,7 +449,7 @@ def run_ncqexp():
             self.devsize_mb = devsize_mb
 
         def setup_config(self):
-            self.conf = FtlSim.dftldes.Config()
+            self.conf = ssdbox.dftldes.Config()
             self.conf['SSDFramework']['ncq_depth'] = self.ncq_depth
 
             self.conf['flash_config']['page_size'] = 2048

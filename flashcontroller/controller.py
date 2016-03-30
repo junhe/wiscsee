@@ -1,5 +1,5 @@
 import simpy
-import FtlSim
+import ssdbox
 from collections import Counter
 from commons import *
 

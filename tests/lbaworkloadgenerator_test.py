@@ -4,7 +4,7 @@ from Makefile import *
 
 class TestMultipleProcess(unittest.TestCase):
     def test_main(self):
-        conf = FtlSim.dftldes.Config()
+        conf = ssdbox.dftldes.Config()
 
         w = 'write'
         r = 'read'

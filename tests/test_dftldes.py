@@ -1,15 +1,15 @@
 import unittest
 import simpy
 
-from FtlSim import ftlsim_commons
+from ssdbox import ftlsim_commons
 
-import FtlSim
+import ssdbox
 import utils
 import flashcontroller
-from FtlSim.ftlsim_commons import Extent
+from ssdbox.ftlsim_commons import Extent
 
 def create_config():
-    conf = FtlSim.dftldes.Config()
+    conf = ssdbox.dftldes.Config()
     conf['SSDFramework']['ncq_depth'] = 1
 
     conf['flash_config']['n_pages_per_block'] = 64
@@ -36,7 +36,7 @@ def create_config():
 
 
 def create_recorder(conf):
-    rec = FtlSim.recorder.Recorder(output_target = conf['output_target'],
+    rec = ssdbox.recorder.Recorder(output_target = conf['output_target'],
         output_directory = conf['result_dir'],
         verbose_level = conf['verbose_level'],
         print_when_finished = conf['print_when_finished']
@@ -45,11 +45,11 @@ def create_recorder(conf):
     return rec
 
 def create_oob(conf):
-    oob = FtlSim.dftldes.OutOfBandAreas(conf)
+    oob = ssdbox.dftldes.OutOfBandAreas(conf)
     return oob
 
 def create_blockpool(conf):
-    return FtlSim.dftldes.BlockPool(conf)
+    return ssdbox.dftldes.BlockPool(conf)
 
 def create_flashcontrolelr(conf, env, rec):
     return flashcontroller.controller.Controller3(env, conf, rec)
@@ -58,10 +58,10 @@ def create_simpy_env():
     return simpy.Environment()
 
 def create_translation_directory(conf, oob, block_pool):
-    return FtlSim.dftldes.GlobalTranslationDirectory(conf, oob, block_pool)
+    return ssdbox.dftldes.GlobalTranslationDirectory(conf, oob, block_pool)
 
 def create_mapping_on_flash(conf):
-    return FtlSim.dftldes.MappingOnFlash(conf)
+    return ssdbox.dftldes.MappingOnFlash(conf)
 
 def create_obj_set(conf):
     rec = create_recorder(conf)
@@ -77,7 +77,7 @@ def create_obj_set(conf):
             'mapping_on_flash':gmt}
 
 def create_mapping_cache(objs):
-    mapping_cache = FtlSim.dftldes.MappingCache(
+    mapping_cache = ssdbox.dftldes.MappingCache(
             confobj = objs['conf'],
             block_pool = objs['block_pool'],
             flashobj = objs['flash_controller'],
@@ -92,10 +92,10 @@ def create_mapping_cache(objs):
 class TestMappingTable(unittest.TestCase):
     def test_modification(self):
         config = create_config()
-        table = FtlSim.dftldes.MappingTable(config)
+        table = ssdbox.dftldes.MappingTable(config)
 
         ppn = table.lpn_to_ppn(100)
-        self.assertEqual(ppn, FtlSim.dftldes.MISS)
+        self.assertEqual(ppn, ssdbox.dftldes.MISS)
 
         table.add_new_entry(lpn = 100, ppn = 200, dirty = False)
         ppn = table.lpn_to_ppn(100)
@@ -107,19 +107,19 @@ class TestMappingTable(unittest.TestCase):
 
     def test_deleting_mvpn(self):
         config = create_config()
-        table = FtlSim.dftldes.MappingTable(config)
+        table = ssdbox.dftldes.MappingTable(config)
 
         table.add_new_entry(lpn = 0, ppn = 100, dirty = False)
         # add an entry of another m_vpn
         table.add_new_entry(lpn = 100000, ppn = 2, dirty = False)
 
         table.delete_entries_of_m_vpn(m_vpn = 0)
-        self.assertEqual(table.lpn_to_ppn(0), FtlSim.dftldes.MISS)
+        self.assertEqual(table.lpn_to_ppn(0), ssdbox.dftldes.MISS)
         self.assertEqual(table.lpn_to_ppn(100000), 2)
 
     def test_size(self):
         config = create_config()
-        table = FtlSim.dftldes.MappingTable(config)
+        table = ssdbox.dftldes.MappingTable(config)
 
         self.assertEqual(config.n_cache_entries, table.max_n_entries)
         self.assertEqual(table.count(), 0)
@@ -130,7 +130,7 @@ class TestMappingTable(unittest.TestCase):
 
     def test_lru(self):
         config = create_config()
-        table = FtlSim.dftldes.MappingTable(config)
+        table = ssdbox.dftldes.MappingTable(config)
 
         table.add_new_entry(lpn = 0, ppn = 100, dirty = False)
         table.add_new_entry(lpn = 100000, ppn = 2, dirty = False)
@@ -144,7 +144,7 @@ class TestMappingTable(unittest.TestCase):
 
     def test_quiet_overwrite(self):
         config = create_config()
-        table = FtlSim.dftldes.MappingTable(config)
+        table = ssdbox.dftldes.MappingTable(config)
 
         table.add_new_entry(lpn = 0, ppn = 100, dirty = False)
         table.add_new_entry(lpn = 100000, ppn = 2, dirty = False)
@@ -237,7 +237,7 @@ class TestParallelTranslation(unittest.TestCase):
         conf = create_config()
         objs = create_obj_set(conf)
 
-        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
 
@@ -246,7 +246,7 @@ class TestParallelTranslation(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
     def proc_test_write(self, env, dftl):
@@ -258,7 +258,7 @@ class TestWrite(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write(objs, dftl, Extent(0, 1)))
@@ -279,7 +279,7 @@ class TestWrite(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write_larger(objs, dftl, Extent(0, 2)))
@@ -300,7 +300,7 @@ class TestWrite(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write_larger2(objs, dftl,
@@ -325,7 +325,7 @@ class TestWrite(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write_2vpn(objs, dftl,
@@ -350,7 +350,7 @@ class TestRead(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_read(objs, dftl, Extent(0, 1)))
@@ -372,7 +372,7 @@ class TestRead(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         # read a whole m_vpn's lpn
@@ -401,7 +401,7 @@ class TestRead(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         # read two m_vpn's lpns
@@ -427,12 +427,12 @@ class TestSplit(unittest.TestCase):
         conf = create_config()
         n = conf.n_mapping_entries_per_page
 
-        result = FtlSim.dftldes.split_ext_to_mvpngroups(conf, Extent(0, n))
+        result = ssdbox.dftldes.split_ext_to_mvpngroups(conf, Extent(0, n))
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].lpn_start, 0)
         self.assertEqual(result[0].end_lpn(), n)
 
-        result = FtlSim.dftldes.split_ext_to_mvpngroups(conf, Extent(0, n + 1))
+        result = ssdbox.dftldes.split_ext_to_mvpngroups(conf, Extent(0, n + 1))
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0].lpn_start, 0)
         self.assertEqual(result[0].end_lpn(), n)
@@ -446,7 +446,7 @@ class TestDiscard(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = FtlSim.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_discard(objs, dftl, Extent(0, 1)))

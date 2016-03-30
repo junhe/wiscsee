@@ -7,7 +7,7 @@ import cpuhandler
 import filesystem
 import fshelper
 import ftrace
-from FtlSim import hostevent
+from ssdbox import hostevent
 import utils
 import workload
 

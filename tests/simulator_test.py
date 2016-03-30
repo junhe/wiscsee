@@ -5,7 +5,7 @@ from Makefile import *
 class TestManager(unittest.TestCase):
     def init(self):
         # Get default setting
-        self.conf = FtlSim.dftldes.Config()
+        self.conf = ssdbox.dftldes.Config()
 
         Parameters = collections.namedtuple("Parameters",
             "numjobs, bs, iodepth, expname, size")

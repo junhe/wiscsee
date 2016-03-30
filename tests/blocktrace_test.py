@@ -7,7 +7,7 @@ from Makefile import *
 class TestManager(unittest.TestCase):
     def init(self):
         # Get default setting
-        self.conf = FtlSim.dftldes.Config()
+        self.conf = ssdbox.dftldes.Config()
 
         Parameters = collections.namedtuple("Parameters",
             "numjobs, bs, iodepth, expname, size")
@@ -85,7 +85,7 @@ class TestManager(unittest.TestCase):
 
 class TestBlocktraceResult(unittest.TestCase):
     def test_main(self):
-        self.conf = FtlSim.dftldes.Config()
+        self.conf = ssdbox.dftldes.Config()
         blkresult = WlRunner.blocktrace.BlktraceResult(self.conf,
                 './testdata/blkparse-output.txt',
                 '/tmp/blkparse-output.txt.parsed')

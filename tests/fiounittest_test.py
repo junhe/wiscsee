@@ -15,7 +15,7 @@ class TestConf(unittest.TestCase):
 
 class TestFio(unittest.TestCase):
     def setup_environment(self):
-        self.conf = FtlSim.dftldes.Config()
+        self.conf = ssdbox.dftldes.Config()
 
     def setup_workload(self):
         self.fio_job_conf = WlRunner.fio.JobConfig()

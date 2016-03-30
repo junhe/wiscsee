@@ -497,7 +497,7 @@ def compare_real_and_sim_w_fs():
     class Experimenter(object):
         def __init__(self, para):
             # Get default setting
-            self.conf = FtlSim.dftldes.Config()
+            self.conf = ssdbox.dftldes.Config()
             self.para = para
             self.conf['exp_parameters'] = self.para._asdict()
 
@@ -620,7 +620,7 @@ def compare_real_and_sim_raw():
     class Experimenter(object):
         def __init__(self, para):
             # Get default setting
-            self.conf = FtlSim.dftldes.Config()
+            self.conf = ssdbox.dftldes.Config()
             self.para = para
             self.conf['exp_parameters'] = self.para._asdict()
 
@@ -738,7 +738,7 @@ def compare_real_and_sim_raw():
 def compare_fs():
     class Experimenter(object):
         def __init__(self, para):
-            self.conf = FtlSim.dftldes.Config()
+            self.conf = ssdbox.dftldes.Config()
             self.para = para
             self.conf['exp_parameters'] = self.para._asdict()
 

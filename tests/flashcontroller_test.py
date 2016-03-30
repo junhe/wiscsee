@@ -3,7 +3,7 @@ import unittest
 import simpy
 
 import flashcontroller
-import FtlSim
+import ssdbox
 from commons import *
 from Makefile import *
 
@@ -422,7 +422,7 @@ class TestControllerTag(unittest.TestCase):
                 expname = 'default',
                 subexpname = 'default-sub')
         runtime_update(self.conf)
-        rec = FtlSim.recorder.Recorder(output_target = self.conf['output_target'],
+        rec = ssdbox.recorder.Recorder(output_target = self.conf['output_target'],
             output_directory = self.conf['result_dir'],
             verbose_level = self.conf['verbose_level'],
             print_when_finished = False

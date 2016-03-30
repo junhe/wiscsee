@@ -266,7 +266,7 @@ class Config(dict):
             "ftl_type"              : "nkftl2",
             "sector_size"           : 512,
 
-            ############## For FtlSim ######
+            ############## For ssdbox ######
             "enable_simulation"     : True,
             "flash_page_size"       : 4096,
             "flash_npage_per_block" : 4,

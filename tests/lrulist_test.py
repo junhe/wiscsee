@@ -1,11 +1,11 @@
 import unittest
 
-import FtlSim
+import ssdbox
 
 
 class Test_lrucache(unittest.TestCase):
     def test1(self):
-        lrucache = FtlSim.lrulist.LruCache()
+        lrucache = ssdbox.lrulist.LruCache()
         lrucache[1] = 11
         lrucache[2] = 22
         lrucache[3] = 33
