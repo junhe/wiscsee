@@ -37,6 +37,43 @@ class NCQSingleQueue(object):
         self.queue = simpy.Store(self.env)
 
 
+class SsdBase(object):
+    def _process(self, pid):
+        raise NotImplementedError()
+
+    def run(self):
+        raise NotImplementedError()
+
+
+class Ssd(Ssdbase):
+    def __init__(self, conf, recorder_obj, simpy_env, ncq):
+        self.conf = conf
+        self.recorder = recorder_obj
+        self.env = simpy_env
+
+        self.ncq = ncq
+        self.n_processes = self.ncq.ncq_depth
+
+        self.flash_controller = flashcontroller.controller.Controller3(
+                self.env, self.conf, self.recorder)
+
+        self.ftl = Ftl(self.conf, self.recorder, self.flash_controller,
+                self.env)
+
+    def _process(self, pid):
+        for req_i in itertools.count():
+            host_event = yield self.ncq.queue.get()
+
+            # handle host_event case by case
+
+    def run(self):
+        procs = []
+        for i in range(self.]):
+            p = self.env.process( self.process(i) )
+            procs.append(p)
+        yield simpy.events.AllOf(self.env, procs)
+
+
 class SSDFramework(object):
     """
     The interface of this FTL for the host is a queue (NCQ). The host puts

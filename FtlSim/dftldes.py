@@ -205,6 +205,7 @@ class Dftl(object):
     def get_type(self):
         return "dftldes"
 
+
 class Ftl(object):
     def __init__(self, confobj, recorderobj, flashcontrollerobj, env):
         if not isinstance(confobj, Config):

@@ -14,6 +14,7 @@ import flash
 import nkftl2
 import recorder
 import hostevent
+import dftldes
 
 from commons import *
 
@@ -321,6 +322,42 @@ class SimulatorDES(Simulator):
 
     def discard(self):
         raise NotImplementedError()
+
+
+class SimulatorDESNew(Simulator):
+    def __init__(self, conf, event_iter):
+        super(SimulatorDES, self).__init__(conf, event_iter)
+
+        self.env = simpy.Environment()
+        self.ncq = NCQSingleQueue(
+                ncq_depth = self.conf['SSDFramework']['ncq_depth'],
+                simpy_env = self.env)
+
+    def _host_proc(self):
+        """
+        This process acts like a producer, putting requests to ncq
+        """
+        for event in self.event_iter:
+            yield self.ssdframework.ncq.queue.put(event)
+
+    def run(self):
+        self.env.process(self.host_proc())
+        self.env.process(self.ssdframework.run())
+
+        self.env.run()
+
+    def get_sim_type(self):
+        return "SimulatorDESNew"
+
+    def write(self):
+        raise NotImplementedError()
+
+    def read(self):
+        raise NotImplementedError()
+
+    def discard(self):
+        raise NotImplementedError()
+
 
 class SimulatorDESSync(Simulator):
     def __init__(self, conf, event_iters):

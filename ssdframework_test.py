@@ -625,6 +625,7 @@ class TestSimulatorSync(unittest.TestCase):
         self.setup_ftl()
         self.my_run()
 
+
 class TestVPNResourcePool(unittest.TestCase):
 
     def access_vpn(self, env, respool, vpn):
