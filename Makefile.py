@@ -20,7 +20,6 @@ import string
 
 import config
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
-from environments import *
 import FtlSim
 import WlRunner
 from utils import *
