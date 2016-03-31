@@ -77,7 +77,7 @@ class Recorder(object):
         counter_set_path = os.path.join(self.output_directory,
             'accumulator_table.txt')
         utils.prepare_dir_for_path(counter_set_path)
-        general_accumulator_table = self.parse_accumulator(
+        general_accumulator_table = self._parse_accumulator(
                 self.general_accumulator)
         utils.table_to_file(general_accumulator_table, counter_set_path)
 
@@ -90,6 +90,12 @@ class Recorder(object):
         else:
             sys.stdout.write(line)
 
+    def get_result_summary(self):
+        return self.result_dict
+
+    def set_result_by_one_key(self, key, value):
+        self.result_dict[key] = value
+
     @switchable
     def count_me(self, counter_name, item):
         """
@@ -97,14 +103,8 @@ class Recorder(object):
         """
         self.add_to_general_accumulater(counter_name, item, 1)
 
-    def get_result_summary(self):
-        return self.result_dict
-
     def get_count_me(self, counter_name, item):
         return self.get_general_accumulater_cnt(counter_name, item)
-
-    def set_result_by_one_key(self, key, value):
-        self.result_dict[key] = value
 
     def get_general_accumulater_cnt(self,
             counter_set_name, item_name):
@@ -129,7 +129,7 @@ class Recorder(object):
     def add_to_timer(self, counter_set_name, item_name, addition):
         self.add_to_general_accumulater(counter_set_name, item_name, addition)
 
-    def parse_accumulator(self, counter_sets):
+    def _parse_accumulator(self, counter_sets):
         """
         counter sets
         {counter set 1:

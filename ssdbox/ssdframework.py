@@ -53,17 +53,19 @@ class Ssd(SsdBase):
             host_event = yield self.ncq.queue.get()
 
             # handle host_event case by case
-            print 'in Ssd', str(host_event)
+            operation = host_event.operation
 
-            if host_event.operation == 'enable_recorder':
+            if operation == 'enable_recorder':
                 self.recorder.enable()
-            elif host_event.operation == 'read':
+            elif operation == 'end_process':
+                break
+            elif operation == 'read':
                 yield self.env.process(
                     self.ftl.read_ext(host_event.get_lpn_extent(self.conf)))
-            elif  host_event.operation == 'write':
+            elif  operation == 'write':
                 yield self.env.process(
                     self.ftl.write_ext(host_event.get_lpn_extent(self.conf)))
-            elif  host_event.operation == 'discard':
+            elif  operation == 'discard':
                 yield self.env.process(
                     self.ftl.discard_ext(host_event.get_lpn_extent(self.conf)))
             else:
@@ -75,7 +77,17 @@ class Ssd(SsdBase):
         for i in range(self.n_processes):
             p = self.env.process( self._process(i) )
             procs.append(p)
+
         yield simpy.events.AllOf(self.env, procs)
+
+        self._record_post_run_stats()
+
+    def _record_post_run_stats(self):
+        self.recorder.set_result_by_one_key(
+                'simulation_duration', self.env.now)
+        print self.recorder.get_result_summary()
+
+
 
 
 

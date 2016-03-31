@@ -6,6 +6,7 @@ import re
 import subprocess
 import os
 import sys
+import string
 import shlex
 import time
 import glob
@@ -248,6 +249,20 @@ def set_exp_metadata(conf, save_data, expname, subexpname):
     conf['expname'] = expname
     conf['subexpname'] = subexpname
 
+def chain_items_as_str(iterator):
+    return '.'.join([str(x) for x in iterator])
+
+def chain_items_as_filename(iterator):
+    s = chain_items_as_str(iterator)
+    return str_as_filename(s)
+
+def str_as_filename(s):
+    """
+    valid_chars
+    '-_.abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    """
+    valid_chars = "-_.%s%s" % (string.ascii_letters, string.digits)
+    return ''.join(c for c in s if c in valid_chars)
 
 
 if __name__ == '__main__':

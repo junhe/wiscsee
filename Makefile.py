@@ -326,8 +326,6 @@ def DftlextExp001_run():
     obj = DftlextExp001()
     obj.main()
 
-def chain_items_as_str(iterator):
-    return '.'.join([str(x) for x in iterator])
 
 def str_as_filename(s):
     """
@@ -336,10 +334,6 @@ def str_as_filename(s):
     """
     valid_chars = "-_.%s%s" % (string.ascii_letters, string.digits)
     return ''.join(c for c in s if c in valid_chars)
-
-def chain_items_as_filename(iterator):
-    s = chain_items_as_str(iterator)
-    return str_as_filename(s)
 
 def get_expname():
     ret = raw_input("Enter expname (default-expname):")

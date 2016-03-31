@@ -1,35 +1,5 @@
 from Makefile import *
 
-def get_fio_conf():
-    """
-    format
-    {
-        experiment_name: [
-                            ("jobname", { ... }),
-                            ("jobname", { ... }),
-                            ...
-                         ],
-        experiment_name: [
-                            ("jobname", { ... }),
-                            ("jobname", { ... }),
-                            ...
-                         ],
-        .
-    }
-    """
-    job_conf = {}
-
-    # stress_n_processes
-    job_conf['stress_n_processes'] = [
-        ("global", {
-            'direct' : 1
-            }
-        ),
-        ("job1", {
-            "rw": "write"
-            }
-        )]
-
 def stress_n_processes_raw():
     """
     stress the number of processes on file system
