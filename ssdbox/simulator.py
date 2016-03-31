@@ -73,7 +73,7 @@ class Host(object):
         for event in self.event_iter:
             yield self._ncq.queue.put(event)
 
-        yield self._ncq.queue.put(hostevent.EventSimple(0, "end_process"))
+        yield self._ncq.queue.put(hostevent.EventSimple(0, "shut_ssd"))
 
     def run(self):
         yield self.env.process(self._process())
@@ -308,7 +308,7 @@ class SimulatorDES(Simulator):
             yield self.ssdframework.ncq.queue.put(event)
 
         for i in range(self.conf['SSDFramework']['ncq_depth']):
-            event = hostevent.EventSimple(0, "end_process")
+            event = hostevent.EventSimple(0, "shut_ssd")
 
             event.token = token
             event.token_req = event.token.request()
@@ -389,7 +389,7 @@ class SimulatorDESSync(Simulator):
             yield self.ssdframework.ncq.queue.put(event)
 
         for i in range(self.conf['SSDFramework']['ncq_depth']):
-            event = hostevent.EventSimple(0, "end_process")
+            event = hostevent.EventSimple(0, "shut_ssd")
 
             event.token = token
             event.token_req = event.token.request()
@@ -449,7 +449,7 @@ class SimulatorDESTime(Simulator):
             yield self.ssdframework.ncq.queue.put(event)
 
         for i in range(self.conf['SSDFramework']['ncq_depth']):
-            event = hostevent.EventSimple(0, "end_process")
+            event = hostevent.EventSimple(0, "shut_ssd")
 
             event.token = token
             event.token_req = event.token.request()

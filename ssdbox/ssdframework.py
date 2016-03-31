@@ -19,6 +19,7 @@ import datacache
 import flash
 import flashcontroller
 import ftlbuilder
+import hostevent
 import lrulist
 import recorder
 from utilities import utils
@@ -57,7 +58,10 @@ class Ssd(SsdBase):
 
             if operation == 'enable_recorder':
                 self.recorder.enable()
-            elif operation == 'end_process':
+            elif operation == 'shut_ssd':
+                yield self.env.process(
+                    self._end_all_processes())
+            elif operation == 'end_ssd_process':
                 break
             elif operation == 'read':
                 yield self.env.process(
@@ -71,6 +75,11 @@ class Ssd(SsdBase):
             else:
                 raise NotImplementedError("Operation {} not supported."\
                         .format(host_event.operation))
+
+    def _end_all_processes(self):
+        for i in range(self.n_processes):
+            yield self.ncq.queue.put(
+                hostevent.EventSimple(0, "end_ssd_process"))
 
     def run(self):
         procs = []
@@ -188,7 +197,7 @@ class SSDFramework(object):
         for req_index in itertools.count():
             host_event = yield self.ncq.queue.get()
 
-            if host_event.operation == 'end_process':
+            if host_event.operation == 'shut_ssd':
                 self.release_token(host_event)
                 break
 
