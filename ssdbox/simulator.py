@@ -73,10 +73,9 @@ class Host(object):
         for event in self.event_iter:
             yield self._ncq.queue.put(event)
 
-        yield self._ncq.queue.put(hostevent.EventSimple(0, "shut_ssd"))
-
     def run(self):
         yield self.env.process(self._process())
+        yield self._ncq.queue.put(hostevent.EventSimple(0, "shut_ssd"))
 
 
 class SimulatorNonDES(Simulator):

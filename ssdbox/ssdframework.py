@@ -59,6 +59,8 @@ class Ssd(SsdBase):
             if operation == 'enable_recorder':
                 self.recorder.enable()
             elif operation == 'shut_ssd':
+                print 'got shut_ssd'
+                sys.stdout.flush()
                 yield self.env.process(
                     self._end_all_processes())
             elif operation == 'end_ssd_process':
@@ -75,6 +77,10 @@ class Ssd(SsdBase):
             else:
                 raise NotImplementedError("Operation {} not supported."\
                         .format(host_event.operation))
+
+            if req_i % 1000 == 0:
+                print '.',
+                sys.stdout.flush()
 
     def _end_all_processes(self):
         for i in range(self.n_processes):

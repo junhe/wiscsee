@@ -2270,6 +2270,17 @@ class Config(config.ConfigNCQFTL):
         self.mapping_cache_bytes = value * self['cache_entry_bytes']
 
     @property
+    def cache_mapped_data_bytes(self):
+        return self.n_cache_entries * self.page_size
+
+    @cache_mapped_data_bytes.setter
+    def cache_mapped_data_bytes(self, data_bytes):
+        self.n_cache_entries = data_bytes / self.page_size
+        if self.n_cache_entries % self.n_mapping_entries_per_page != 0:
+            print "WARNING: size of mapping cache is not aligned with "\
+                "translation page size."
+
+    @property
     def translation_page_entry_bytes(self):
         return self['translation_page_entry_bytes']
 
