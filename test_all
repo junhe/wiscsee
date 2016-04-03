@@ -33,7 +33,7 @@ sudo python -m tests.misc_test
 
 echo 
 echo ======= test_dftldes =======
-sudo python -m tests.dftldes
+sudo python -m tests.test_dftldes
 
 echo 
 echo ======= test_blockpool =======
