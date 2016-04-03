@@ -35,3 +35,8 @@ echo
 echo ======= test_dftldes =======
 sudo python -m tests.dftldes
 
+echo 
+echo ======= test_blockpool =======
+sudo python -m tests.test_blockpool
+
+
