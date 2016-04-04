@@ -109,10 +109,11 @@ def qdepth_pattern():
         def setup_ftl(self):
             self.conf['ftl_type'] = 'dftldes'
             self.conf['simulator_class'] = 'SimulatorDESNew'
+            self.conf['stripe_size'] = self.para.stripe_size
 
             devsize_mb = self.para.devsize_mb
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
-            self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+            self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.00))
 
         def my_run(self):
             runtime_update(self.conf)
@@ -129,12 +130,13 @@ def qdepth_pattern():
         expname = get_expname()
         para_dict = {
                 'expname'        : [expname],
-                'ncq_depth'      : [8, 16],
-                'chunk_size'     : [2*KB],
+                'ncq_depth'      : [1, 8],
+                'chunk_size'     : [2*KB, 16*KB],
                 'traffic'        : [8*MB],
                 'devsize_mb'     : [128],
-                'cache_mapped_data_bytes' :[128*MB, 64*MB, 32*MB, 16*MB],
-                'pattern'        : ['random', 'sequential']
+                'cache_mapped_data_bytes' :[16*MB, 128*MB],
+                'pattern'        : ['sequential', 'random'],
+                'stripe_size'    : [1, float('inf')]
                 }
         parameter_combs = ParameterCombinations(para_dict)
 
