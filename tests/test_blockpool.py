@@ -340,6 +340,21 @@ class TestBlockPool_stripping(unittest.TestCase):
         self.assertEqual(self.ppn_to_channel(ppns_to_write[3]), 3)
         self.assertEqual(self.ppn_to_channel(ppns_to_write[4]), 0)
 
+    def my_run3_inf_stripesize(self):
+        runtime_update(self.conf)
+
+        self.conf['stripe_size'] = float('inf')
+        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        n_channels = block_pool.n_channels
+        n_blocks_per_channel = self.conf.n_blocks_per_channel
+
+        n = 5
+        ppns_to_write = block_pool.next_n_data_pages_to_program_striped(
+                n = n)
+        self.assertEqual(len(ppns_to_write), n)
+        for i in range(n):
+            self.assertEqual(self.ppn_to_channel(ppns_to_write[i]), 0)
+
     def test_main(self):
         self.setup_config()
         self.setup_environment()
@@ -347,6 +362,7 @@ class TestBlockPool_stripping(unittest.TestCase):
         self.setup_ftl()
         self.my_run1()
         self.my_run2()
+        self.my_run3_inf_stripesize()
 
 
 class TestBlockPool_outofspace(unittest.TestCase):
@@ -395,6 +411,19 @@ class TestBlockPool_outofspace(unittest.TestCase):
             ppns_to_write = block_pool.next_n_data_pages_to_program_striped(
                     n = n)
 
+    def my_run_3(self):
+        runtime_update(self.conf)
+        self.conf['stripe_size'] = float('inf')
+        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        n_channels = block_pool.n_channels
+        n_blocks_per_channel = self.conf.n_blocks_per_channel
+
+        n = self.conf.total_num_pages() + 1
+
+        with self.assertRaises(ssdbox.blkpool.OutOfSpaceError):
+            ppns_to_write = block_pool.next_n_data_pages_to_program_striped(
+                n = n)
+
     def test_main(self):
         self.setup_config()
         self.setup_environment()
@@ -402,6 +431,7 @@ class TestBlockPool_outofspace(unittest.TestCase):
         self.setup_ftl()
         self.my_run_1()
         self.my_run_2()
+        self.my_run_3()
 
 
 

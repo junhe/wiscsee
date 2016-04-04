@@ -94,6 +94,42 @@ class BlockPool(object):
 
         return ppns
 
+    def next_n_data_pages_to_program_striped(self, n):
+        return self._next_n_data_pages_to_program_striped(n,
+                self.stripe_size)
+
+    def _next_n_data_pages_to_program_striped(self, n, stripe_size):
+        """
+        For example, n = 5, there are 4 channel, stripe size 2,
+        then page 0,1 are in channel 0, page 2,3 are in channel 1,
+        page 4 is in channel 2. Next request will be put to channel 2
+        first.
+
+        Stripe_size is in pages
+        """
+        n_pages_left = n
+        ppns = []
+        outofspace_channels = set()
+        while n_pages_left > 0:
+            needed_on_channel = min(stripe_size, n_pages_left)
+            ppns_on_channel = self._grab_n_pages_on_channel(
+                    n = needed_on_channel, channel_id = self.cur_channel,
+                    page_type = 'data')
+
+            ppns.extend(ppns_on_channel)
+
+            #ppns_on_channel can be less than stripe size
+            n_pages_left -= len(ppns_on_channel)
+            if len(ppns_on_channel) == 0:
+                outofspace_channels.add(self.cur_channel)
+
+            if len(outofspace_channels) == self.n_channels:
+                raise OutOfSpaceError
+
+            self.cur_channel = (self.cur_channel + 1) % self.n_channels
+
+        return ppns
+
     def _grab_n_pages_on_channel(self, n, channel_id, page_type):
         ppns = []
         for i in range(n):
@@ -123,38 +159,6 @@ class BlockPool(object):
                     .format(page_type))
         ppn = self._convert_offset(channel_id, offset, 'page')
         return ppn
-
-    def next_n_data_pages_to_program_striped(self, n):
-        """
-        For example, n = 5, there are 4 channel, stripe size 2,
-        then page 0,1 are in channel 0, page 2,3 are in channel 1,
-        page 4 is in channel 2. Next request will be put to channel 2
-        first.
-
-        Stripe_size is in pages
-        """
-        n_pages_left = n
-        ppns = []
-        outofspace_channels = set()
-        while n_pages_left > 0:
-            needed_on_channel = min(self.stripe_size, n_pages_left)
-            ppns_on_channel = self._grab_n_pages_on_channel(
-                    n = needed_on_channel, channel_id = self.cur_channel,
-                    page_type = 'data')
-
-            ppns.extend(ppns_on_channel)
-
-            #ppns_on_channel can be less than stripe size
-            n_pages_left -= len(ppns_on_channel)
-            if len(ppns_on_channel) == 0:
-                outofspace_channels.add(self.cur_channel)
-
-            if len(outofspace_channels) == self.n_channels:
-                raise OutOfSpaceError
-
-            self.cur_channel = (self.cur_channel + 1) % self.n_channels
-
-        return ppns
 
     def next_data_page_to_program(self):
         return self.iter_channels("next_data_page_to_program",
