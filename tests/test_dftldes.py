@@ -269,10 +269,15 @@ class TestWrite(unittest.TestCase):
         time_read_page = objs['flash_controller'].channels[0].read_time
         time_program_page = objs['flash_controller'].channels[0].program_time
 
+        rec = objs['rec']
+        rec.enable()
+
         yield env.process(dftl.write_ext(ext))
 
         # read translation page, write data page
         self.assertEqual(env.now, time_read_page + time_program_page)
+        self.assertEqual(rec.get_count_me("Mapping_Cache", "hit"), 0)
+        self.assertEqual(rec.get_count_me("Mapping_Cache", "miss"), 1)
 
     def test_write_larger(self):
         conf = create_config()
@@ -292,10 +297,17 @@ class TestWrite(unittest.TestCase):
         time_read_page = objs['flash_controller'].channels[0].read_time
         time_program_page = objs['flash_controller'].channels[0].program_time
 
+        rec = objs['rec']
+        rec.enable()
+
         yield env.process(dftl.write_ext(ext))
 
         # read translation page, then write two data pages at the same time
         self.assertEqual(env.now, time_read_page + time_program_page)
+
+        self.assertEqual(rec.get_count_me("Mapping_Cache", "miss"), 1)
+        # The second lpn is a hit
+        self.assertEqual(rec.get_count_me("Mapping_Cache", "hit"), 1)
 
     def test_write_larger2(self):
         conf = create_config()
@@ -315,10 +327,16 @@ class TestWrite(unittest.TestCase):
         time_read_page = objs['flash_controller'].channels[0].read_time
         time_program_page = objs['flash_controller'].channels[0].program_time
 
+        rec = objs['rec']
+        rec.enable()
+
         yield env.process(dftl.write_ext(ext))
 
         # read translation page, then write all 4 data pages at the same time
         self.assertEqual(env.now, time_read_page + time_program_page)
+
+        self.assertEqual(rec.get_count_me("Mapping_Cache", "miss"), 1)
+        self.assertEqual(rec.get_count_me("Mapping_Cache", "hit"), 3)
 
     def test_write_2vpn(self):
         conf = create_config()
@@ -341,11 +359,18 @@ class TestWrite(unittest.TestCase):
         time_read_page = objs['flash_controller'].channels[0].read_time
         time_program_page = objs['flash_controller'].channels[0].program_time
 
+        rec = objs['rec']
+        rec.enable()
+
         yield env.process(dftl.write_ext(ext))
 
         # read translation page, then write all 4 data pages at the same time
         self.assertEqual(env.now, 2 * time_read_page +
                 (ext.lpn_count/4) * time_program_page)
+
+        self.assertEqual(rec.get_count_me("Mapping_Cache", "miss"), 2)
+        self.assertEqual(rec.get_count_me("Mapping_Cache", "hit"),
+                objs['conf'].n_mapping_entries_per_page * 2 - 2)
 
     def test_write_outofspace(self):
         conf = create_config()

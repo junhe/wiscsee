@@ -108,7 +108,9 @@ class Recorder(object):
 
     def get_general_accumulater_cnt(self,
             counter_set_name, item_name):
-        return self.general_accumulator[counter_set_name][item_name]
+        counter_dict = self.general_accumulator.setdefault(counter_set_name,
+                collections.Counter())
+        return counter_dict[item_name]
 
     def add_to_general_accumulater(self,
             counter_set_name, item_name, addition):

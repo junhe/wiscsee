@@ -758,6 +758,9 @@ class MappingCache(object):
             yield self.env.process(self._load(m_vpn))
             ppn = self._cached_mappings.lpn_to_ppn(lpn)
             assert ppn != MISS
+            self.recorder.count_me("Mapping_Cache", "miss")
+        else:
+            self.recorder.count_me("Mapping_Cache", "hit")
 
         self.env.exit(ppn)
 
