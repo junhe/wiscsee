@@ -273,6 +273,7 @@ class Config(dict):
             "flash_num_blocks"      : 64,
             # "enable_e2e_test"       : False,
             "simulation_processor"  : 'e2e', # regular, extent
+            "stripe_size"           : 4,  # unit: page
 
             ############## NKFTL (SAST) ############
             "nkftl": {

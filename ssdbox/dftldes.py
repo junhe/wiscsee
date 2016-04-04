@@ -244,6 +244,8 @@ class Ftl(object):
     def write_ext(self, extent):
         ext_list = split_ext_to_mvpngroups(self.conf, extent)
 
+        ppns_to_write = self.blockpool.next_n_data_pages_to_program_striped(
+                n = extent.lpn_count)
         procs = []
         for ext_single_m_vpn in ext_list:
             p = self.env.process(self._write_single_mvpngroup(ext_single_m_vpn))

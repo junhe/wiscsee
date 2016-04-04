@@ -8,6 +8,7 @@ class BlockPool(object):
                 for i in range(self.n_channels)]
 
         self.cur_channel = 0
+        self.stripe_size = self.conf['stripe_size']
 
     @property
     def freeblocks(self):
@@ -123,7 +124,7 @@ class BlockPool(object):
         ppn = self._convert_offset(channel_id, offset, 'page')
         return ppn
 
-    def next_n_data_pages_to_program_striped(self, n, stripe_size):
+    def next_n_data_pages_to_program_striped(self, n):
         """
         For example, n = 5, there are 4 channel, stripe size 2,
         then page 0,1 are in channel 0, page 2,3 are in channel 1,
@@ -136,7 +137,7 @@ class BlockPool(object):
         ppns = []
         outofspace_channels = set()
         while n_pages_left > 0:
-            needed_on_channel = min(stripe_size, n_pages_left)
+            needed_on_channel = min(self.stripe_size, n_pages_left)
             ppns_on_channel = self._grab_n_pages_on_channel(
                     n = needed_on_channel, channel_id = self.cur_channel,
                     page_type = 'data')
