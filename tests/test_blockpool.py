@@ -306,23 +306,32 @@ class TestBlockPool_stripping(unittest.TestCase):
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
 
-        return
-
         n = 3
         stripe_size = 2
         ppns_to_write = block_pool.next_n_data_pages_to_program_striped(
                 n = n, stripe_size = stripe_size)
         self.assertEqual(len(ppns_to_write), n)
-        self.assertEqual(self.ppn_to_channel(ppns_for_write[0]), 0)
-        self.assertEqual(self.ppn_to_channel(ppns_for_write[1]), 0)
-        self.assertEqual(self.ppn_to_channel(ppns_for_write[2]), 1)
+        self.assertEqual(self.ppn_to_channel(ppns_to_write[0]), 0)
+        self.assertEqual(self.ppn_to_channel(ppns_to_write[1]), 0)
+        self.assertEqual(self.ppn_to_channel(ppns_to_write[2]), 1)
 
         ppns_to_write = block_pool.next_n_data_pages_to_program_striped(
                 n = n, stripe_size = stripe_size)
         self.assertEqual(len(ppns_to_write), n)
-        self.assertEqual(self.ppn_to_channel(ppns_for_write[0]), 1)
-        self.assertEqual(self.ppn_to_channel(ppns_for_write[1]), 2)
-        self.assertEqual(self.ppn_to_channel(ppns_for_write[2]), 2)
+        self.assertEqual(self.ppn_to_channel(ppns_to_write[0]), 2)
+        self.assertEqual(self.ppn_to_channel(ppns_to_write[1]), 2)
+        self.assertEqual(self.ppn_to_channel(ppns_to_write[2]), 3)
+
+        n = 5
+        stripe_size = 1
+        ppns_to_write = block_pool.next_n_data_pages_to_program_striped(
+                n = n, stripe_size = stripe_size)
+        self.assertEqual(len(ppns_to_write), n)
+        self.assertEqual(self.ppn_to_channel(ppns_to_write[0]), 0)
+        self.assertEqual(self.ppn_to_channel(ppns_to_write[1]), 1)
+        self.assertEqual(self.ppn_to_channel(ppns_to_write[2]), 2)
+        self.assertEqual(self.ppn_to_channel(ppns_to_write[3]), 3)
+        self.assertEqual(self.ppn_to_channel(ppns_to_write[4]), 0)
 
     def test_main(self):
         self.setup_config()
@@ -331,6 +340,61 @@ class TestBlockPool_stripping(unittest.TestCase):
         self.setup_ftl()
         self.my_run()
 
+
+class TestBlockPool_outofspace(unittest.TestCase):
+    """
+    Test pop_a_free_block_data
+    """
+    def setup_config(self):
+        self.conf = create_config()
+
+    def setup_environment(self):
+        metadata_dic = choose_exp_metadata(self.conf, interactive = False)
+        self.conf.update(metadata_dic)
+
+    def setup_workload(self):
+        pass
+
+    def setup_ftl(self):
+        pass
+
+    def ppn_to_channel(self, ppn):
+        return ppn / self.conf.n_pages_per_channel
+
+    def my_run_1(self):
+        runtime_update(self.conf)
+        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        n_channels = block_pool.n_channels
+        n_blocks_per_channel = self.conf.n_blocks_per_channel
+
+        n = self.conf.total_num_pages()
+        stripe_size = 2
+
+        ppns_to_write = block_pool.next_n_data_pages_to_program_striped(
+                n = n, stripe_size = stripe_size)
+
+        # should not have exception
+
+    def my_run_2(self):
+        runtime_update(self.conf)
+        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        n_channels = block_pool.n_channels
+        n_blocks_per_channel = self.conf.n_blocks_per_channel
+
+        n = self.conf.total_num_pages() + 1
+        stripe_size = 2
+
+        with self.assertRaises(ssdbox.blkpool.OutOfSpaceError):
+            ppns_to_write = block_pool.next_n_data_pages_to_program_striped(
+                    n = n, stripe_size = stripe_size)
+
+    def test_main(self):
+        self.setup_config()
+        self.setup_environment()
+        self.setup_workload()
+        self.setup_ftl()
+        self.my_run_1()
+        self.my_run_2()
 
 
 
