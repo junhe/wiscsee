@@ -276,6 +276,8 @@ class TestWrite(unittest.TestCase):
 
     def test_write_larger(self):
         conf = create_config()
+        conf['stripe_size'] = 1
+
         objs = create_obj_set(conf)
         env = objs['env']
 
@@ -297,6 +299,7 @@ class TestWrite(unittest.TestCase):
 
     def test_write_larger2(self):
         conf = create_config()
+        conf['stripe_size'] = 1
         objs = create_obj_set(conf)
         env = objs['env']
 
@@ -319,6 +322,7 @@ class TestWrite(unittest.TestCase):
 
     def test_write_2vpn(self):
         conf = create_config()
+        conf['stripe_size'] = 1
         # make sure no cache miss in this test
         conf.n_cache_entries = conf.n_mapping_entries_per_page * 2
 
@@ -342,6 +346,27 @@ class TestWrite(unittest.TestCase):
         # read translation page, then write all 4 data pages at the same time
         self.assertEqual(env.now, 2 * time_read_page +
                 (ext.lpn_count/4) * time_program_page)
+
+    def test_write_outofspace(self):
+        conf = create_config()
+        conf['stripe_size'] = 1
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write_outofspace(objs, dftl,
+            Extent(0, conf.total_num_pages())))
+        env.run()
+
+    def proc_test_write_outofspace(self, objs, dftl, ext):
+        env = objs['env']
+        time_read_page = objs['flash_controller'].channels[0].read_time
+        time_program_page = objs['flash_controller'].channels[0].program_time
+
+        with self.assertRaises(ssdbox.blkpool.OutOfSpaceError):
+            yield env.process(dftl.write_ext(ext))
 
 
 class TestRead(unittest.TestCase):

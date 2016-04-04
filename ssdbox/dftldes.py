@@ -241,23 +241,34 @@ class Ftl(object):
         self.n_sec_per_page = self.conf.page_size \
                 / self.conf['sector_size']
 
-    def write_ext(self, extent):
-        ext_list = split_ext_to_mvpngroups(self.conf, extent)
 
-        ppns_to_write = self.blockpool.next_n_data_pages_to_program_striped(
+    def _ppns_to_write(self, ext, new_mappings):
+        ppns = []
+        for lpn in ext.lpn_iter():
+            ppns.append(new_mappings[lpn])
+
+        return ppns
+
+    def write_ext(self, extent):
+        exts_in_mvpngroup = split_ext_to_mvpngroups(self.conf, extent)
+
+        ppns_to_write = self.block_pool.next_n_data_pages_to_program_striped(
                 n = extent.lpn_count)
+        assert len(ppns_to_write) == extent.lpn_count
+        new_mappings = dict(zip(extent.lpn_iter(), ppns_to_write))
+
         procs = []
-        for ext_single_m_vpn in ext_list:
-            p = self.env.process(self._write_single_mvpngroup(ext_single_m_vpn))
+        for ext_single_m_vpn in exts_in_mvpngroup:
+            ppns_of_ext = self._ppns_to_write(ext_single_m_vpn, new_mappings)
+            p = self.env.process(
+                self._write_single_mvpngroup(ext_single_m_vpn, ppns_of_ext))
             procs.append(p)
 
         yield simpy.events.AllOf(self.env, procs)
 
-    def _write_single_mvpngroup(self, ext_single_m_vpn):
+    def _write_single_mvpngroup(self, ext_single_m_vpn, ppns_to_write):
         m_vpn = self.conf.lpn_to_m_vpn(ext_single_m_vpn.lpn_start)
 
-        ppns_to_write = self.block_pool.next_n_data_pages_to_program(
-                ext_single_m_vpn.lpn_count)
         old_ppns = yield self.env.process(
                 self._mappings.lpns_to_ppns(ext_single_m_vpn.lpn_iter()))
 

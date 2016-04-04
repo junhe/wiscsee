@@ -157,7 +157,6 @@ class BlockPool(object):
         return ppns
 
     def next_data_page_to_program(self):
-        print 'in next_data_page_to_program()'
         return self.iter_channels("next_data_page_to_program",
             addr_type = 'page')
 
