@@ -857,7 +857,8 @@ class MappingCache(object):
         # as if we readlly read from flash
         m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
         yield self.env.process(
-                self.flash.rw_ppn_extent(m_ppn, 1, 'read', tag = None))
+                self.flash.rw_ppn_extent(m_ppn, 1, 'read',
+                tag = TAG_BACKGROUND))
 
         self.env.exit(mapping_dict)
 
@@ -915,7 +916,8 @@ class MappingCache(object):
         old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
 
         yield self.env.process(
-                self.flash.rw_ppn_extent(new_m_ppn, 1, 'write', tag = None))
+                self.flash.rw_ppn_extent(new_m_ppn, 1, 'write',
+                tag = TAG_BACKGROUND))
 
         self.oob.new_write(lpn = m_vpn, old_ppn = old_m_ppn,
             new_ppn = new_m_ppn)
