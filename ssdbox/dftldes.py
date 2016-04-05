@@ -753,11 +753,17 @@ class MappingCache(object):
         TODO: avoid thrashing!
         """
         ppn = self._cached_mappings.lpn_to_ppn(lpn)
+        m_vpn = self.conf.lpn_to_m_vpn(lpn)
         if ppn == MISS:
             m_vpn = self.conf.lpn_to_m_vpn(lpn)
-            yield self.env.process(self._load(m_vpn))
+            loaded = yield self.env.process(
+                self._load(m_vpn, target_lpn = lpn))
             ppn = self._cached_mappings.lpn_to_ppn(lpn)
             assert ppn != MISS
+        else:
+            loaded = False
+
+        if loaded == True:
             self.recorder.count_me("Mapping_Cache", "miss")
         else:
             self.recorder.count_me("Mapping_Cache", "hit")
@@ -815,7 +821,10 @@ class MappingCache(object):
 
         self._cached_mappings.remove_entry_by_lpn(victim_lpn)
 
-    def _load(self, m_vpn):
+    def _load(self, m_vpn, target_lpn = None):
+        """
+        Return True if we really load flash page
+        """
         # TODO: entries loaded from trans page should not change recency
 
         # Need a lock here because another thread may come in and think
@@ -824,12 +833,20 @@ class MappingCache(object):
         load_req = self._load_lock.request()
         yield load_req
 
-        n_needed = self._cached_mappings.needed_space_for_m_vpn(m_vpn)
-        yield self.env.process(self._make_room(n_needed))
+        # check again before really loading
+        if target_lpn == None or \
+                (target_lpn != None and \
+                not self._cached_mappings.has_lpn(target_lpn)):
+            n_needed = self._cached_mappings.needed_space_for_m_vpn(m_vpn)
+            yield self.env.process(self._make_room(n_needed))
+            yield self.env.process(self._load_to_free_space(m_vpn))
 
-        yield self.env.process(self._load_to_free_space(m_vpn))
+            loaded = True
+        else:
+            loaded = False
 
         self._load_lock.release(load_req)
+        self.env.exit(loaded)
 
     def _load_to_free_space(self, m_vpn):
         """
