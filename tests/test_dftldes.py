@@ -556,14 +556,12 @@ class TestLpnTable(unittest.TestCase):
         self.assertEqual(table.n_locked_rows(), 0)
         self.assertEqual(table.n_used_rows(), 1)
 
-
         table.overwrite_lpn(lpn = 8, ppn = 89, dirty = False)
         self.assertEqual(table.lpn_to_ppn(8), 89)
         self.assertEqual(table.is_dirty(8), False)
         self.assertEqual(table.n_free_rows(), 7)
         self.assertEqual(table.n_locked_rows(), 0)
         self.assertEqual(table.n_used_rows(), 1)
-
 
         deleted_rowid = table.delete_lpn_locked(lpn = 8)
         self.assertEqual(rowid, deleted_rowid)
@@ -576,6 +574,27 @@ class TestLpnTable(unittest.TestCase):
         self.assertEqual(table.n_free_rows(), 8)
         self.assertEqual(table.n_locked_rows(), 0)
         self.assertEqual(table.n_used_rows(), 0)
+
+    def test_boundaries(self):
+        table = LpnTable(8)
+
+        for i in range(8):
+            table.lock_row()
+
+        self.assertEqual(table.lock_row(), None)
+
+    def test_victim(self):
+        table = LpnTable(8)
+
+        rowid = table.lock_row()
+        table.add_lpn(rowid = rowid, lpn = 8, ppn = 88, dirty = True)
+
+        rowid = table.lock_row()
+        table.add_lpn(rowid = rowid, lpn = 9, ppn = 99, dirty = True)
+
+        victim_row = table.victim_row()
+
+        self.assertEqual(victim_row.lpn, 8)
 
 
 def main():

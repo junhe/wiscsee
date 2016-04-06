@@ -984,7 +984,7 @@ class LpnTable(object):
             if row.state == FREE:
                 row.state = LOCKED
                 return row.rowid
-        raise RuntimeError("Cannot find FREE row to unlock")
+        return None
 
     def unlock_row(self, rowid):
         """LOCKED -> FREE"""
@@ -993,6 +993,8 @@ class LpnTable(object):
         row.state = FREE
 
     def add_lpn(self, rowid, lpn, ppn, dirty):
+        assert self.has_lpn(lpn) == False
+
         row = self._rows[rowid]
         assert row.state == LOCKED # you have to lock a rwo before adding
 
@@ -1037,6 +1039,21 @@ class LpnTable(object):
             return False
         else:
             return True
+
+    def victim_row(self):
+        lpn = self._lpn_to_row.victim_key()
+        return self._lpn_to_row[lpn]
+
+
+class LpnTableMvpn(LpnTable):
+    """
+    With addition supports related to m_vpn
+    """
+    def __init__(self, conf):
+        super(LpnTableMvpn, self).__init__(conf.n_cache_entries)
+
+        self.conf = conf
+
 
 
 class Row(object):
@@ -1093,8 +1110,6 @@ class MappingTable(object):
                     self.conf.n_mapping_entries_per_page,
                     self.max_n_entries))
 
-        # self.entries = {}
-        # self.entries = lrulist.LruCache()
         self.entries = lrulist.SegmentedLruCache(self.max_n_entries, 0.5)
 
     def lpn_to_ppn(self, lpn):
