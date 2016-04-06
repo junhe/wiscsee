@@ -7,6 +7,7 @@ import ssdbox
 from utilities import utils
 import flashcontroller
 from ssdbox.ftlsim_commons import Extent
+from ssdbox.dftldes import LpnTable
 
 def create_config():
     conf = ssdbox.dftldes.Config()
@@ -528,6 +529,53 @@ class TestDiscard(unittest.TestCase):
         # discarding takes no time as mapping is in memory
         yield env.process(dftl.discard_ext(ext))
         self.assertEqual(env.now, 2 * time_read_page + time_program_page)
+
+
+class TestLpnTable(unittest.TestCase):
+    def test_init(self):
+        table = LpnTable(8)
+        self.assertEqual(table.n_free_rows(), 8)
+        self.assertEqual(table.n_locked_rows(), 0)
+        self.assertEqual(table.n_used_rows(), 0)
+
+    def test_ops(self):
+        """
+        lock before adding, also you need to tell it which row you add to
+        """
+        table = LpnTable(8)
+
+        rowid = table.lock_row()
+        self.assertEqual(table.n_free_rows(), 7)
+        self.assertEqual(table.n_locked_rows(), 1)
+        self.assertEqual(table.n_used_rows(), 0)
+
+        table.add_lpn(rowid = rowid, lpn = 8, ppn = 88, dirty = True)
+        self.assertEqual(table.lpn_to_ppn(8), 88)
+        self.assertEqual(table.is_dirty(8), True)
+        self.assertEqual(table.n_free_rows(), 7)
+        self.assertEqual(table.n_locked_rows(), 0)
+        self.assertEqual(table.n_used_rows(), 1)
+
+
+        table.overwrite_lpn(lpn = 8, ppn = 89, dirty = False)
+        self.assertEqual(table.lpn_to_ppn(8), 89)
+        self.assertEqual(table.is_dirty(8), False)
+        self.assertEqual(table.n_free_rows(), 7)
+        self.assertEqual(table.n_locked_rows(), 0)
+        self.assertEqual(table.n_used_rows(), 1)
+
+
+        deleted_rowid = table.delete_lpn_locked(lpn = 8)
+        self.assertEqual(rowid, deleted_rowid)
+        self.assertEqual(table.has_lpn(8), False)
+        self.assertEqual(table.n_free_rows(), 7)
+        self.assertEqual(table.n_locked_rows(), 1)
+        self.assertEqual(table.n_used_rows(), 0)
+
+        table.unlock_row(rowid = deleted_rowid)
+        self.assertEqual(table.n_free_rows(), 8)
+        self.assertEqual(table.n_locked_rows(), 0)
+        self.assertEqual(table.n_used_rows(), 0)
 
 
 def main():

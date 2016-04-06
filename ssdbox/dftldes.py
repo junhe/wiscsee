@@ -946,6 +946,117 @@ class MappingCache(object):
         assert self.directory.m_vpn_to_m_ppn(m_vpn) == new_m_ppn
 
 
+FREE, LOCKED, USED = 'FREE', 'LOCKED', 'USED'
+
+class LpnTable(object):
+    def __init__(self, n_rows):
+        self._n_rows = n_rows
+
+        self._rows = [
+            Row(lpn = None, ppn = None, dirty = False, state = FREE, rowid = i)
+            for i in range(self._n_rows) ]
+
+        # lpns to Row instances, it is a dict
+        # {lpn1: row1, lpn2: row2, ...}
+        self._lpn_to_row = lrulist.SegmentedLruCache(n_rows, 0.5)
+
+    def _count_states(self):
+        """
+        slower but reduces duplication
+        """
+        counter = Counter()
+        for row in self._rows:
+            counter[row.state] += 1
+        return counter
+
+    def n_free_rows(self):
+        return self._count_states()[FREE]
+
+    def n_locked_rows(self):
+        return self._count_states()[LOCKED]
+
+    def n_used_rows(self):
+        return self._count_states()[USED]
+
+    def lock_row(self):
+        """FREE TO LOCKED"""
+        for row in self._rows:
+            if row.state == FREE:
+                row.state = LOCKED
+                return row.rowid
+        raise RuntimeError("Cannot find FREE row to unlock")
+
+    def unlock_row(self, rowid):
+        """LOCKED -> FREE"""
+        row = self._rows[rowid]
+        assert row.state == LOCKED
+        row.state = FREE
+
+    def add_lpn(self, rowid, lpn, ppn, dirty):
+        row = self._rows[rowid]
+        assert row.state == LOCKED # you have to lock a rwo before adding
+
+        row.lpn = lpn
+        row.ppn = ppn
+        row.dirty = dirty
+        row.state = USED
+
+        self._lpn_to_row[lpn] = row
+
+    def lpn_to_ppn(self, lpn):
+        try:
+            row = self._lpn_to_row[lpn]
+        except KeyError:
+            return MISS
+        else:
+            return row.ppn
+
+    def overwrite_lpn(self, lpn, ppn, dirty):
+        row = self._lpn_to_row[lpn]
+        row.lpn = lpn
+        row.ppn = ppn
+        row.dirty = dirty
+
+    def is_dirty(self, lpn):
+        row = self._lpn_to_row.peek(lpn)
+        return row.dirty
+
+    def delete_lpn_locked(self, lpn):
+        row = self._lpn_to_row.peek(lpn)
+        del self._lpn_to_row[lpn]
+        row.clear()
+        assert row.state == USED
+        row.state = LOCKED
+
+        return row.rowid
+
+    def has_lpn(self, lpn):
+        try:
+            row = self._lpn_to_row.peek(lpn)
+        except KeyError:
+            return False
+        else:
+            return True
+
+
+class Row(object):
+    def __init__(self, lpn, ppn, dirty, state, rowid):
+        self.lpn = lpn
+        self.ppn = ppn
+        self.dirty = dirty
+        self.state = state
+        self.rowid = rowid
+
+    def clear(self):
+        self.lpn = None
+        self.ppn = None
+        self.dirty = None
+
+    def __repr__(self):
+        return "lpn:{}, ppn:{}, dirty:{}, locked:{}, rowid:{}".format(self.lpn,
+            self.ppn, self.dirty, self.locked)
+
+
 
 class MappingTable(object):
     """
@@ -1112,6 +1223,7 @@ class MappingTable(object):
 
     def __repr__(self):
         return repr(self.entries)
+
 
 class CacheEntryData(object):
     """
