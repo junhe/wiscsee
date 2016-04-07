@@ -997,11 +997,14 @@ class LpnTable(object):
     def n_free_rows(self):
         return self._count_states()[FREE]
 
-    def n_locked_rows(self):
+    def n_locked_free_rows(self):
         return self._count_states()[FREE_AND_LOCKED]
 
     def n_used_rows(self):
         return self._count_states()[USED]
+
+    def n_locked_used_rows(self):
+        return self._count_states()[USED_AND_LOCKED]
 
     def lock_free_row(self):
         """FREE TO FREE_AND_LOCKED"""
@@ -1019,6 +1022,12 @@ class LpnTable(object):
                 row_ids.append(row_id)
         return row_ids
 
+    def unlock_free_row(self, rowid):
+        """FREE_AND_LOCKED -> FREE"""
+        row = self._rows[rowid]
+        assert row.state == FREE_AND_LOCKED
+        row.state = FREE
+
     def lock_lpn(self, lpn):
         row = self._lpn_to_row[lpn]
         assert row.state == USED
@@ -1028,12 +1037,6 @@ class LpnTable(object):
         row = self._lpn_to_row[lpn]
         assert row.state == USED_AND_LOCKED
         row.state = USED
-
-    def unlock_free_row(self, rowid):
-        """FREE_AND_LOCKED -> FREE"""
-        row = self._rows[rowid]
-        assert row.state == FREE_AND_LOCKED
-        row.state = FREE
 
     def add_lpn(self, rowid, lpn, ppn, dirty):
         assert self.has_lpn(lpn) == False
@@ -1067,11 +1070,14 @@ class LpnTable(object):
 
     def mark_clean(self, lpn):
         row = self._lpn_to_row.peek(lpn)
+        assert row.state != USED_AND_LOCKED
+        assert row.state == USED
         row.dirty = False
 
     def overwrite_lpn(self, lpn, ppn, dirty):
         row = self._lpn_to_row[lpn]
         assert row.state == USED
+        assert row.state != USED_AND_LOCKED
         row.lpn = lpn
         row.ppn = ppn
         row.dirty = dirty
@@ -1083,9 +1089,9 @@ class LpnTable(object):
     def delete_lpn_and_lock(self, lpn):
         row = self._lpn_to_row.peek(lpn)
         assert row.state == USED
+        assert row.state != USED_AND_LOCKED
         del self._lpn_to_row[lpn]
         row.clear_data()
-        assert row.state == USED
         row.state = FREE_AND_LOCKED
 
         return row.rowid
