@@ -142,7 +142,10 @@ def qdepth_pattern():
 
         return parameter_combs
 
-    for para in gen_parameters():
+    for i, para in enumerate(gen_parameters()):
+        print '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', i
+        if i != 16:
+            continue
         Parameters = collections.namedtuple("Parameters",
                 ','.join(para.keys()))
         exp = Experiment( Parameters(**para) )
@@ -176,8 +179,8 @@ def _main():
         # because you have to remember what argument you used!
         targets = args.target.split(';')
         for target in targets:
-            eval(target)
-            # profile.run(target)
+            # eval(target)
+            profile.run(target)
 
 if __name__ == '__main__':
     _main()

@@ -535,7 +535,7 @@ class TestLpnTable(unittest.TestCase):
     def test_init(self):
         table = LpnTable(8)
         self.assertEqual(table.n_free_rows(), 8)
-        self.assertEqual(table.n_locked_rows(), 0)
+        self.assertEqual(table.n_locked_free_rows(), 0)
         self.assertEqual(table.n_used_rows(), 0)
 
     def test_ops(self):
@@ -544,57 +544,88 @@ class TestLpnTable(unittest.TestCase):
         """
         table = LpnTable(8)
 
-        rowid = table.lock_row()
+        rowid = table.lock_free_row()
         self.assertEqual(table.n_free_rows(), 7)
-        self.assertEqual(table.n_locked_rows(), 1)
+        self.assertEqual(table.n_locked_free_rows(), 1)
         self.assertEqual(table.n_used_rows(), 0)
 
         table.add_lpn(rowid = rowid, lpn = 8, ppn = 88, dirty = True)
         self.assertEqual(table.lpn_to_ppn(8), 88)
         self.assertEqual(table.is_dirty(8), True)
         self.assertEqual(table.n_free_rows(), 7)
-        self.assertEqual(table.n_locked_rows(), 0)
+        self.assertEqual(table.n_locked_free_rows(), 0)
         self.assertEqual(table.n_used_rows(), 1)
 
         table.overwrite_lpn(lpn = 8, ppn = 89, dirty = False)
         self.assertEqual(table.lpn_to_ppn(8), 89)
         self.assertEqual(table.is_dirty(8), False)
         self.assertEqual(table.n_free_rows(), 7)
-        self.assertEqual(table.n_locked_rows(), 0)
+        self.assertEqual(table.n_locked_free_rows(), 0)
         self.assertEqual(table.n_used_rows(), 1)
 
         deleted_rowid = table.delete_lpn_and_lock(lpn = 8)
         self.assertEqual(rowid, deleted_rowid)
         self.assertEqual(table.has_lpn(8), False)
         self.assertEqual(table.n_free_rows(), 7)
-        self.assertEqual(table.n_locked_rows(), 1)
+        self.assertEqual(table.n_locked_free_rows(), 1)
         self.assertEqual(table.n_used_rows(), 0)
 
-        table.unlock_row(rowid = deleted_rowid)
+        table.unlock_free_row(rowid = deleted_rowid)
         self.assertEqual(table.n_free_rows(), 8)
-        self.assertEqual(table.n_locked_rows(), 0)
+        self.assertEqual(table.n_locked_free_rows(), 0)
         self.assertEqual(table.n_used_rows(), 0)
 
     def test_boundaries(self):
         table = LpnTable(8)
 
         for i in range(8):
-            table.lock_row()
+            table.lock_free_row()
 
-        self.assertEqual(table.lock_row(), None)
+        self.assertEqual(table.lock_free_row(), None)
 
     def test_victim(self):
         table = LpnTable(8)
 
-        rowid = table.lock_row()
+        rowid = table.lock_free_row()
         table.add_lpn(rowid = rowid, lpn = 8, ppn = 88, dirty = True)
 
-        rowid = table.lock_row()
+        rowid = table.lock_free_row()
         table.add_lpn(rowid = rowid, lpn = 9, ppn = 99, dirty = True)
 
         victim_row = table.victim_row()
 
         self.assertEqual(victim_row.lpn, 8)
+
+    def test_multiple_adds(self):
+        table = LpnTable(8)
+
+        locked_rows = table.lock_free_rows(3)
+        self.assertEqual(len(locked_rows), 3)
+
+        table.add_lpns(locked_rows, {1:11, 2:22, 3:33}, False)
+
+        self.assertEqual(table.n_free_rows(), 5)
+        self.assertEqual(table.n_locked_free_rows(), 0)
+        self.assertEqual(table.n_used_rows(), 3)
+
+        self.assertEqual(table.lpn_to_ppn(1), 11)
+        self.assertEqual(table.lpn_to_ppn(2), 22)
+        self.assertEqual(table.lpn_to_ppn(3), 33)
+
+    def test_locking_lpn(self):
+        table = LpnTable(8)
+
+        locked_rows = table.lock_free_rows(3)
+        self.assertEqual(len(locked_rows), 3)
+        self.assertListEqual(locked_rows, [0,1,2])
+
+        table.add_lpns(locked_rows, {1:11, 2:22, 3:33}, False)
+
+        table.lock_lpn(1)
+        self.assertEqual(table.n_free_rows(), 5)
+        self.assertEqual(table.n_locked_free_rows(), 0)
+        self.assertEqual(table.n_used_rows(), 2)
+        self.assertEqual(table.n_locked_used_rows(), 1)
 
 
 def main():

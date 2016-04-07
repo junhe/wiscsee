@@ -14,7 +14,7 @@ import bidict
 import config
 import flash
 import ftlbuilder
-import lrulist
+from lrulist import LruDict, SegmentedLruCache
 import recorder
 from utilities import utils
 from commons import *
@@ -250,6 +250,7 @@ class Ftl(object):
         return ppns
 
     def write_ext(self, extent):
+        print 'write_ext', str(extent)
         exts_in_mvpngroup = split_ext_to_mvpngroups(self.conf, extent)
 
         ppns_to_write = self.block_pool.next_n_data_pages_to_program_striped(
@@ -757,7 +758,7 @@ class MappingCache(object):
         if ppn == MISS:
             m_vpn = self.conf.lpn_to_m_vpn(lpn)
             loaded = yield self.env.process(
-                self._load(m_vpn, target_lpn = lpn))
+                self._load(m_vpn, wanted_lpn = lpn))
             ppn = self._lpn_table.lpn_to_ppn(lpn)
             assert ppn != MISS
         else:
@@ -815,7 +816,6 @@ class MappingCache(object):
 
     def _add_locked_room(self, n_needed):
         locked_row_ids = []
-        print 'need', n_needed, self._lpn_table.stats()
         for i in range(n_needed):
             row_id = yield self.env.process(self._free_one_entry_and_lock())
             locked_row_ids.append(row_id)
@@ -832,7 +832,7 @@ class MappingCache(object):
 
         self.env.exit(locked_row_id)
 
-    def _load(self, m_vpn, target_lpn = None):
+    def _load(self, m_vpn, wanted_lpn = None):
         """
         Return True if we really load flash page
         """
@@ -845,20 +845,25 @@ class MappingCache(object):
         yield load_req
 
         # check again before really loading
-        if target_lpn == None or \
-                (target_lpn != None and \
-                not self._lpn_table.has_lpn(target_lpn)):
+        if wanted_lpn == None or \
+                (wanted_lpn != None and \
+                not self._lpn_table.has_lpn(wanted_lpn)):
+            # we need to lock all the entries beloinging to m_vpn
+            # self._lpn_table.lock_m_vpn(m_vpn)
+
             n_needed = self._lpn_table.needed_space_for_m_vpn(m_vpn)
             locked_rows = self._lpn_table.lock_free_rows(n_needed)
             n_more = n_needed - len(locked_rows)
 
             if n_more > 0:
                 more_locked_rows = yield self.env.process(
-                    self._add_locked_room(n_needed))
+                    self._add_locked_room(n_more))
                 locked_rows += more_locked_rows
 
             yield self.env.process(
                 self._load_to_locked_space(m_vpn, locked_rows))
+
+            # self._lpn_table.unlock_m_vpn(m_vpn)
 
             loaded = True
         else:
@@ -983,7 +988,7 @@ class LpnTable(object):
 
         # lpns to Row instances, it is a dict
         # {lpn1: row1, lpn2: row2, ...}
-        self._lpn_to_row = lrulist.SegmentedLruCache(n_rows, 0.5)
+        self._lpn_to_row = SegmentedLruCache(n_rows, 0.5)
 
     def _count_states(self):
         """
@@ -1028,11 +1033,11 @@ class LpnTable(object):
         row.state = FREE
 
     def lock_lpn(self, lpn):
-        row = self._lpn_to_row[lpn]
+        row = self._lpn_to_row.peek(lpn)
         row.state = USED_AND_LOCKED
 
     def unlock_lpn(self, lpn):
-        row = self._lpn_to_row[lpn]
+        row = self._lpn_to_row.peek(lpn)
         row.state = USED
 
     def add_lpn(self, rowid, lpn, ppn, dirty):
@@ -1048,7 +1053,8 @@ class LpnTable(object):
         self._lpn_to_row[lpn] = row
 
     def add_lpns(self, row_ids, mapping_dict, dirty):
-        assert len(row_ids) == len(mapping_dict)
+        assert len(row_ids) == len(mapping_dict), \
+                "{} == {}".format(len(row_ids), len(mapping_dict))
         for row_id, (lpn, ppn) in zip(row_ids, mapping_dict.items()):
             self.add_lpn(row_id, lpn, ppn, dirty)
 
@@ -1079,6 +1085,9 @@ class LpnTable(object):
     def is_dirty(self, lpn):
         row = self._lpn_to_row.peek(lpn)
         return row.dirty
+
+    def row_state(self, rowid):
+        return self._rows[rowid].state
 
     def delete_lpn_and_lock(self, lpn):
         row = self._lpn_to_row.peek(lpn)
@@ -1114,6 +1123,16 @@ class LpnTableMvpn(LpnTable):
 
         self.conf = conf
 
+    def lock_m_vpn(self, m_vpn):
+        lpns = self.conf.m_vpn_to_lpns(m_vpn)
+        for lpn in lpns:
+            self.lock_lpn(lpn)
+
+    def unlock_m_vpn(self, m_vpn):
+        lpns = self.conf.m_vpn_to_lpns(m_vpn)
+        for lpn in lpns:
+            self.unlock_lpn(lpn)
+
     def needed_space_for_m_vpn(self, m_vpn):
         cached_mappings = self.get_m_vpn_mappings(m_vpn)
         return self.conf.n_mapping_entries_per_page - len(cached_mappings)
@@ -1140,6 +1159,20 @@ class LpnTableMvpn(LpnTable):
         return uncached_lpns
 
 
+class _Row(object):
+    def __init__(self, lpn, ppn, dirty, state, rowid):
+        self.lpn = lpn
+        self.ppn = ppn
+        self.dirty = dirty
+        self.state = state
+        self.rowid = rowid
+
+    def clear_data(self):
+        self.lpn = None
+        self.ppn = None
+        self.dirty = None
+
+
 class Row(object):
     def __init__(self, lpn, ppn, dirty, state, rowid):
         self._lpn = lpn
@@ -1152,7 +1185,8 @@ class Row(object):
     def lpn(self):
         return self._lpn
 
-    @lpn.setter(self, lpn):
+    @lpn.setter
+    def lpn(self, lpn):
         assert self._state != USED_AND_LOCKED
         self._lpn = lpn
 
@@ -1186,16 +1220,17 @@ class Row(object):
         """
         # check state transition
         if state_value == FREE:
-            assert self._state == FREE_AND_LOCKED
+            assert self._state == FREE_AND_LOCKED, self._state
         elif state_value == FREE_AND_LOCKED:
-            assert self._state == FREE or self._state == USED
+            assert self._state == FREE or self._state == USED, self._state
         elif state_value == USED:
             assert self._state == FREE_AND_LOCKED or \
-                    self._state == USED_AND_LOCKED
+                    self._state == USED_AND_LOCKED, self._state
         elif state_value == USED_AND_LOCKED:
-            assert self._state == USED
+            assert self._state == USED, self._state
         else:
             raise RuntimeError("{} is not a valid state".format(state_value))
+        self._state = state_value
 
     @property
     def rowid(self):
@@ -1247,7 +1282,7 @@ class MappingTable(object):
                     self.conf.n_mapping_entries_per_page,
                     self.max_n_entries))
 
-        self.entries = lrulist.SegmentedLruCache(self.max_n_entries, 0.5)
+        self.entries = SegmentedLruCache(self.max_n_entries, 0.5)
 
     def lpn_to_ppn(self, lpn):
         "Try to find ppn of the given lpn in cache"
