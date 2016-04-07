@@ -878,16 +878,19 @@ class MappingCache(object):
 
         mapping_dict = yield self.env.process(
                 self._read_translation_page(m_vpn))
+        uncached_mapping = self._get_uncached_mappings(mapping_dict)
 
-        for lpn, ppn in mapping_dict.items():
-            if not self._lpn_table.has_lpn(lpn):
-                to_rowid = locked_rows.pop()
-                self._lpn_table.add_lpn(rowid = to_rowid,
-                        lpn = lpn, ppn = ppn, dirty = False)
-        assert len(locked_rows) == 0
+        self._lpn_table.add_lpns(locked_rows, uncached_mapping, False)
 
         # release lock
         self.vpn_res_pool.release_request(m_vpn, m_vpn_req)
+
+    def _get_uncached_mappings(self, mapping_dict):
+        uncached_mapping = {}
+        for lpn, ppn in mapping_dict.items():
+            if not self._lpn_table.has_lpn(lpn):
+                uncached_mapping[lpn] = ppn
+        return uncached_mapping
 
     def _read_translation_page(self, m_vpn):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
@@ -1034,6 +1037,11 @@ class LpnTable(object):
 
         self._lpn_to_row[lpn] = row
 
+    def add_lpns(self, row_ids, mapping_dict, dirty):
+        assert len(row_ids) == len(mapping_dict)
+        for row_id, (lpn, ppn) in zip(row_ids, mapping_dict.items()):
+            self.add_lpn(row_id, lpn, ppn, dirty)
+
     def lpn_to_ppn(self, lpn):
         try:
             row = self._lpn_to_row[lpn]
@@ -1115,7 +1123,11 @@ class LpnTableMvpn(LpnTable):
 
         return mapping_dict
 
-
+    def get_un_cached_lpn_of_m_vpn(self, m_vpn):
+        lpns = self.conf.m_vpn_to_lpns(m_vpn)
+        cached_dict = self.get_m_vpn_mappings(m_vpn)
+        uncached_lpns = set(lpns) - set(cached_dict.keys())
+        return uncached_lpns
 
 
 class Row(object):
