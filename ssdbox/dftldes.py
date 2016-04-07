@@ -849,7 +849,8 @@ class MappingCache(object):
                 (wanted_lpn != None and \
                 not self._lpn_table.has_lpn(wanted_lpn)):
             # we need to lock all the entries beloinging to m_vpn
-            # self._lpn_table.lock_m_vpn(m_vpn)
+            m_vpn_row_ids = self._lpn_table.row_ids_of_m_vpn(m_vpn)
+            self._lpn_table.lock_used_rows(m_vpn_row_ids)
 
             n_needed = self._lpn_table.needed_space_for_m_vpn(m_vpn)
             locked_rows = self._lpn_table.lock_free_rows(n_needed)
@@ -863,7 +864,7 @@ class MappingCache(object):
             yield self.env.process(
                 self._load_to_locked_space(m_vpn, locked_rows))
 
-            # self._lpn_table.unlock_m_vpn(m_vpn)
+            self._lpn_table.unlock_used_rows(m_vpn_row_ids)
 
             loaded = True
         else:
@@ -1019,6 +1020,22 @@ class LpnTable(object):
                 return row.rowid
         return None
 
+    def lock_used_rows(self, row_ids):
+        for row_id in row_ids:
+            self.lock_used_row(row_id)
+
+    def lock_used_row(self, row_id):
+        row = self._rows[row_id]
+        row.state = USED_AND_LOCKED
+
+    def unlock_used_rows(self, row_ids):
+        for row_id in row_ids:
+            self.unlock_used_row(row_id)
+
+    def unlock_used_row(self, row_id):
+        row = self._rows[row_id]
+        row.state = USED
+
     def lock_free_rows(self, n):
         row_ids = []
         for i in range(n):
@@ -1038,6 +1055,7 @@ class LpnTable(object):
 
     def unlock_lpn(self, lpn):
         row = self._lpn_to_row.peek(lpn)
+        assert row.state == USED_AND_LOCKED
         row.state = USED
 
     def add_lpn(self, rowid, lpn, ppn, dirty):
@@ -1123,16 +1141,6 @@ class LpnTableMvpn(LpnTable):
 
         self.conf = conf
 
-    def lock_m_vpn(self, m_vpn):
-        lpns = self.conf.m_vpn_to_lpns(m_vpn)
-        for lpn in lpns:
-            self.lock_lpn(lpn)
-
-    def unlock_m_vpn(self, m_vpn):
-        lpns = self.conf.m_vpn_to_lpns(m_vpn)
-        for lpn in lpns:
-            self.unlock_lpn(lpn)
-
     def needed_space_for_m_vpn(self, m_vpn):
         cached_mappings = self.get_m_vpn_mappings(m_vpn)
         return self.conf.n_mapping_entries_per_page - len(cached_mappings)
@@ -1140,17 +1148,34 @@ class LpnTableMvpn(LpnTable):
     def get_m_vpn_mappings(self, m_vpn):
         """ return all the mappings of m_vpn that are in cache
         """
+        rows = self._rows_of_m_vpn(m_vpn)
+        mapping_dict = {}
+        for row in rows:
+            mapping_dict[row.lpn] = row.ppn
+
+        return mapping_dict
+
+    def row_ids_of_m_vpn(self, m_vpn):
+        rows = self._rows_of_m_vpn(m_vpn)
+
+        row_ids = []
+        for row in rows:
+            row_ids.append(row.rowid)
+
+        return row_ids
+
+    def _rows_of_m_vpn(self, m_vpn):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
-        mapping_dict = MappingDict()
+        rows = []
         for lpn in lpns:
             try:
                 row = self._lpn_to_row.peek(lpn)
             except KeyError:
                 pass
             else:
-                mapping_dict[lpn] = row.ppn
+                rows.append(row)
 
-        return mapping_dict
+        return rows
 
     def get_un_cached_lpn_of_m_vpn(self, m_vpn):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
