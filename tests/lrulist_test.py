@@ -86,6 +86,29 @@ class Test_LruDict(unittest.TestCase):
             l.append(k)
         self.assertListEqual(l, [2, 1])
 
+    def test_hits(self):
+        d = self.get_lrudict()
+        a = d[2]
+
+        self.assertEqual(d.victim_key(), 0)
+        self.assertEqual(d.most_recent(), 2)
+
+        d[2] = 22
+        self.assertEqual(d.victim_key(), 0)
+        self.assertEqual(d.most_recent(), 2)
+
+        d[3] = 333
+        self.assertEqual(d.victim_key(), 0)
+        self.assertEqual(d.most_recent(), 3)
+
+    def test_peek(self):
+        d = self.get_lrudict()
+
+        a = d.peek(2)
+        self.assertEqual(a, 20)
+        self.assertEqual(d.victim_key(), 0)
+        self.assertEqual(d.most_recent(), 9)
+
 
 def main():
     unittest.main()
