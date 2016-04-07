@@ -743,7 +743,7 @@ class MappingCache(object):
         self.directory = directory
         self.mapping_on_flash = mapping_on_flash
 
-        self._cached_mappings = MappingTable(confobj)
+        self._lpn_table = LpnTableMvpn(confobj)
         self.vpn_res_pool =  VPNResourcePool(self.env)
         self._load_lock = simpy.Resource(self.env, capacity = 1)
 
@@ -752,13 +752,13 @@ class MappingCache(object):
         Note that the return can be UNINITIATED
         TODO: avoid thrashing!
         """
-        ppn = self._cached_mappings.lpn_to_ppn(lpn)
+        ppn = self._lpn_table.lpn_to_ppn(lpn)
         m_vpn = self.conf.lpn_to_m_vpn(lpn)
         if ppn == MISS:
             m_vpn = self.conf.lpn_to_m_vpn(lpn)
             loaded = yield self.env.process(
                 self._load(m_vpn, target_lpn = lpn))
-            ppn = self._cached_mappings.lpn_to_ppn(lpn)
+            ppn = self._lpn_table.lpn_to_ppn(lpn)
             assert ppn != MISS
         else:
             loaded = False
@@ -781,45 +781,56 @@ class MappingCache(object):
             ppns.append(ppn)
         self.env.exit(ppns)
 
+    def update_batch(self, mapping_dict):
+        for lpn, ppn in mapping_dict.items():
+            yield self.env.process(self.update(lpn, ppn))
+
     def update(self, lpn, ppn):
         """
         It may evict to make room for this entry
         """
-        if self._cached_mappings.has_lpn(lpn):
+        if self._lpn_table.has_lpn(lpn):
             # hit
-            self._cached_mappings.overwrite_entry(lpn, ppn, dirty = True)
+            self._lpn_table.overwrite_lpn(lpn, ppn, dirty = True)
         else:
             # miss
             yield self.env.process(self._insert_new_mapping(lpn, ppn))
-
-    def update_batch(self, mapping_dict):
-        for lpn, ppn in mapping_dict.items():
-            yield self.env.process(self.update(lpn, ppn))
 
     def _insert_new_mapping(self, lpn, ppn):
         """
         lpn should not be in cache
         """
-        assert not self._cached_mappings.has_lpn(lpn)
+        assert not self._lpn_table.has_lpn(lpn)
 
-        if self._cached_mappings.is_full():
-            yield self.env.process(self._make_room(n_needed = 1))
-        self._cached_mappings.add_new_entry(
-            lpn = lpn, ppn = ppn, dirty = True)
+        if self._lpn_table.n_free_rows() == 0:
+            # no free space for this insertion, free and lock 1
+            locked_rows = yield self.env.process(
+                self._add_locked_room(n_needed = 1))
+            locked_row_id = locked_rows[0]
+        else:
+            locked_row_id = self._lpn_table.lock_row()
 
-        assert not self._cached_mappings.is_overflowed()
+        self._lpn_table.add_lpn(rowid = locked_row_id,
+                lpn = lpn, ppn = ppn, dirty = True)
 
-    def _make_room(self, n_needed):
-        while self._cached_mappings.count_of_free() < n_needed:
-            yield self.env.process(self._free_one_entry())
+    def _add_locked_room(self, n_needed):
+        locked_row_ids = []
+        print 'need', n_needed, self._lpn_table.stats()
+        for i in range(n_needed):
+            row_id = yield self.env.process(self._free_one_entry_and_lock())
+            locked_row_ids.append(row_id)
 
-    def _free_one_entry(self):
-        victim_lpn, entry_data = self._cached_mappings.victim_entry()
-        if entry_data.dirty == True:
-            m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_lpn)
+        self.env.exit(locked_row_ids)
+
+    def _free_one_entry_and_lock(self):
+        victim_row = self._lpn_table.victim_row()
+        if victim_row.dirty == True:
+            m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
             yield self.env.process(self._write_back(m_vpn))
 
-        self._cached_mappings.remove_entry_by_lpn(victim_lpn)
+        locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
+
+        self.env.exit(locked_row_id)
 
     def _load(self, m_vpn, target_lpn = None):
         """
@@ -836,10 +847,18 @@ class MappingCache(object):
         # check again before really loading
         if target_lpn == None or \
                 (target_lpn != None and \
-                not self._cached_mappings.has_lpn(target_lpn)):
-            n_needed = self._cached_mappings.needed_space_for_m_vpn(m_vpn)
-            yield self.env.process(self._make_room(n_needed))
-            yield self.env.process(self._load_to_free_space(m_vpn))
+                not self._lpn_table.has_lpn(target_lpn)):
+            n_needed = self._lpn_table.needed_space_for_m_vpn(m_vpn)
+            locked_rows = self._lpn_table.lock_rows(n_needed)
+            n_more = n_needed - len(locked_rows)
+
+            if n_more > 0:
+                more_locked_rows = yield self.env.process(
+                    self._add_locked_room(n_needed))
+                locked_rows += more_locked_rows
+
+            yield self.env.process(
+                self._load_to_locked_space(m_vpn, locked_rows))
 
             loaded = True
         else:
@@ -848,7 +867,7 @@ class MappingCache(object):
         self._load_lock.release(load_req)
         self.env.exit(loaded)
 
-    def _load_to_free_space(self, m_vpn):
+    def _load_to_locked_space(self, m_vpn, locked_rows):
         """
         It should not call _write_back() directly or indirectly as it
         will deadlock.
@@ -859,10 +878,13 @@ class MappingCache(object):
 
         mapping_dict = yield self.env.process(
                 self._read_translation_page(m_vpn))
-        self._cached_mappings.add_new_entries_if_not_exist(mapping_dict,
-                dirty = False)
 
-        assert not self._cached_mappings.is_overflowed()
+        for lpn, ppn in mapping_dict.items():
+            if not self._lpn_table.has_lpn(lpn):
+                to_rowid = locked_rows.pop()
+                self._lpn_table.add_lpn(rowid = to_rowid,
+                        lpn = lpn, ppn = ppn, dirty = False)
+        assert len(locked_rows) == 0
 
         # release lock
         self.vpn_res_pool.release_request(m_vpn, m_vpn_req)
@@ -881,22 +903,21 @@ class MappingCache(object):
 
     def _write_back(self, m_vpn):
         """
-        It should not call _load_to_free_space() directly or indirectly as it
+        It should not call _load_to_locked_space() directly or indirectly as it
         will deadlock.
         """
         # aquire lock
         m_vpn_req = self.vpn_res_pool.get_request(m_vpn)
         yield m_vpn_req # should take no time, usually
 
-        mapping_in_cache = self._cached_mappings.get_m_vpn_mappings(m_vpn)
+        mapping_in_cache = self._lpn_table.get_m_vpn_mappings(m_vpn)
 
         # mark entries in cache as clean
         # we are sure that the mapping in flash will be the same as
         # the mappings in cache, so YES, it is clean now. You don't need
         # to wait until it is on the flash to say so. At that time
         # you don't know if cache and flash mapping is the same.
-        self._cached_mappings.batch_overwrite_existing(mapping_in_cache,
-                dirty = False)
+        self._lpn_table.mark_clean_multiple(mapping_in_cache.keys())
 
         if len(mapping_in_cache) < self.conf.n_mapping_entries_per_page:
             # Not all mappings are in cache
@@ -986,6 +1007,14 @@ class LpnTable(object):
                 return row.rowid
         return None
 
+    def lock_rows(self, n):
+        row_ids = []
+        for i in range(n):
+            row_id = self.lock_row()
+            if row_id != None:
+                row_ids.append(row_id)
+        return row_ids
+
     def unlock_row(self, rowid):
         """LOCKED -> FREE"""
         row = self._rows[rowid]
@@ -1013,8 +1042,17 @@ class LpnTable(object):
         else:
             return row.ppn
 
+    def mark_clean_multiple(self, lpns):
+        for lpn in lpns:
+            self.mark_clean(lpn)
+
+    def mark_clean(self, lpn):
+        row = self._lpn_to_row.peek(lpn)
+        row.dirty = False
+
     def overwrite_lpn(self, lpn, ppn, dirty):
         row = self._lpn_to_row[lpn]
+        assert row.state == USED
         row.lpn = lpn
         row.ppn = ppn
         row.dirty = dirty
@@ -1023,10 +1061,11 @@ class LpnTable(object):
         row = self._lpn_to_row.peek(lpn)
         return row.dirty
 
-    def delete_lpn_locked(self, lpn):
+    def delete_lpn_and_lock(self, lpn):
         row = self._lpn_to_row.peek(lpn)
+        assert row.state == USED
         del self._lpn_to_row[lpn]
-        row.clear()
+        row.clear_data()
         assert row.state == USED
         row.state = LOCKED
 
@@ -1044,6 +1083,9 @@ class LpnTable(object):
         lpn = self._lpn_to_row.victim_key()
         return self._lpn_to_row[lpn]
 
+    def stats(self):
+        return self._count_states()
+
 
 class LpnTableMvpn(LpnTable):
     """
@@ -1053,6 +1095,26 @@ class LpnTableMvpn(LpnTable):
         super(LpnTableMvpn, self).__init__(conf.n_cache_entries)
 
         self.conf = conf
+
+    def needed_space_for_m_vpn(self, m_vpn):
+        cached_mappings = self.get_m_vpn_mappings(m_vpn)
+        return self.conf.n_mapping_entries_per_page - len(cached_mappings)
+
+    def get_m_vpn_mappings(self, m_vpn):
+        """ return all the mappings of m_vpn that are in cache
+        """
+        lpns = self.conf.m_vpn_to_lpns(m_vpn)
+        mapping_dict = MappingDict()
+        for lpn in lpns:
+            try:
+                row = self._lpn_to_row.peek(lpn)
+            except KeyError:
+                pass
+            else:
+                mapping_dict[lpn] = row.ppn
+
+        return mapping_dict
+
 
 
 
@@ -1064,7 +1126,7 @@ class Row(object):
         self.state = state
         self.rowid = rowid
 
-    def clear(self):
+    def clear_data(self):
         self.lpn = None
         self.ppn = None
         self.dirty = None

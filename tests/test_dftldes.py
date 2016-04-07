@@ -563,7 +563,7 @@ class TestLpnTable(unittest.TestCase):
         self.assertEqual(table.n_locked_rows(), 0)
         self.assertEqual(table.n_used_rows(), 1)
 
-        deleted_rowid = table.delete_lpn_locked(lpn = 8)
+        deleted_rowid = table.delete_lpn_and_lock(lpn = 8)
         self.assertEqual(rowid, deleted_rowid)
         self.assertEqual(table.has_lpn(8), False)
         self.assertEqual(table.n_free_rows(), 7)
