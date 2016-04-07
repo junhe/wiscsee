@@ -506,21 +506,18 @@ class LruDict(collections.MutableMapping):
         for k, v in self._store.items():
             yield k, v
 
-def main():
-    sl = SegmentedLruCache(4, 0.5)
-    sl[0] = 11
-    sl[1] = 11
-    sl[2] = 11
-    sl[0] = 11
-    sl[1] = 11
-    sl[2] = 11
-    sl[3] = 11
+    def victim_key(self):
+        return self.least_recent()
 
-    print sl
-    print sl.victim_key()
+    def most_recent(self):
+        it = self.most_to_least_iter()
+        return it.next()
 
+    def least_recent(self):
+        it = self.least_to_most_iter()
+        return it.next()
 
-if __name__ == '__main__':
-    main()
+    def peek(self, key):
+        return self._store[key]
 
 
