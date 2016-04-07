@@ -149,6 +149,12 @@ class LinkedList(object):
             node = self._end_guard.prev
             return node
 
+    def reversed_items(self):
+        node = self.tail()
+        while node is not self._end_guard:
+            yield node
+            node = node.prev
+
     def __iter__(self):
         node = self._head
         while node is not self._end_guard:
@@ -167,6 +173,7 @@ class LinkedList(object):
         listview = '->'.join(listview)
 
         return listview
+
 
 
 class DictByLinkedList(collections.MutableMapping):
@@ -442,6 +449,62 @@ class SegmentedLruCache(object):
         return 'Protected List:' + repr(self.protected_list) + '\n' + \
             'Probationary List:' + repr(self.probationary_list)
 
+
+class LruDict(collections.MutableMapping):
+    # __getitem__, __setitem__, __delitem__, __iter__, __len__
+    """
+    All [] operations will change order of the key
+    """
+    def __init__(self, data=None, **kwargs):
+        """
+        This is a regular constructor of dict. data can be mapping or an
+        iterable. kwargs will become k-v pairs in the dict.
+        """
+        self._store = collections.OrderedDict()
+        if data is None:
+            data = {}
+        self.update(data, **kwargs)
+
+    def __getitem__(self, key):
+        # will change order
+        self._hit(key)
+        return self._store[key]
+
+    def __setitem__(self, key, value):
+        # will change order
+        self._store[key] = value
+        self._hit(key)
+
+    def _hit(self, key):
+        value = self._store[key]
+        del self._store[key]
+        self._store[key] = value
+
+    def __delitem__(self, key):
+        del self._store[key]
+
+    def least_to_most_iter(self):
+        return self.__iter__()
+
+    def __iter__(self):
+        for k in self._store:
+            yield k
+
+    def most_to_least_iter(self):
+        return self.__reversed__()
+
+    def __reversed__(self):
+        return reversed(self._store)
+
+    def __len__(self):
+        return len(self._store)
+
+    def has_key(self, key):
+        return self._store.has_key(key)
+
+    def items(self):
+        for k, v in self._store.items():
+            yield k, v
 
 def main():
     sl = SegmentedLruCache(4, 0.5)
