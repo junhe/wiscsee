@@ -808,7 +808,7 @@ class MappingCache(object):
                 self._add_locked_room(n_needed = 1))
             locked_row_id = locked_rows[0]
         else:
-            locked_row_id = self._lpn_table.lock_row()
+            locked_row_id = self._lpn_table.lock_free_row()
 
         self._lpn_table.add_lpn(rowid = locked_row_id,
                 lpn = lpn, ppn = ppn, dirty = True)
@@ -849,7 +849,7 @@ class MappingCache(object):
                 (target_lpn != None and \
                 not self._lpn_table.has_lpn(target_lpn)):
             n_needed = self._lpn_table.needed_space_for_m_vpn(m_vpn)
-            locked_rows = self._lpn_table.lock_rows(n_needed)
+            locked_rows = self._lpn_table.lock_free_rows(n_needed)
             n_more = n_needed - len(locked_rows)
 
             if n_more > 0:
@@ -970,7 +970,8 @@ class MappingCache(object):
         assert self.directory.m_vpn_to_m_ppn(m_vpn) == new_m_ppn
 
 
-FREE, LOCKED, USED = 'FREE', 'LOCKED', 'USED'
+FREE, FREE_AND_LOCKED, USED, USED_AND_LOCKED = \
+        'FREE', 'FREE_AND_LOCKED', 'USED', 'USED_AND_LOCKED'
 
 class LpnTable(object):
     def __init__(self, n_rows):
@@ -997,38 +998,48 @@ class LpnTable(object):
         return self._count_states()[FREE]
 
     def n_locked_rows(self):
-        return self._count_states()[LOCKED]
+        return self._count_states()[FREE_AND_LOCKED]
 
     def n_used_rows(self):
         return self._count_states()[USED]
 
-    def lock_row(self):
-        """FREE TO LOCKED"""
+    def lock_free_row(self):
+        """FREE TO FREE_AND_LOCKED"""
         for row in self._rows:
             if row.state == FREE:
-                row.state = LOCKED
+                row.state = FREE_AND_LOCKED
                 return row.rowid
         return None
 
-    def lock_rows(self, n):
+    def lock_free_rows(self, n):
         row_ids = []
         for i in range(n):
-            row_id = self.lock_row()
+            row_id = self.lock_free_row()
             if row_id != None:
                 row_ids.append(row_id)
         return row_ids
 
-    def unlock_row(self, rowid):
-        """LOCKED -> FREE"""
+    def lock_lpn(self, lpn):
+        row = self._lpn_to_row[lpn]
+        assert row.state == USED
+        row.state = USED_AND_LOCKED
+
+    def unlock_lpn(self, lpn):
+        row = self._lpn_to_row[lpn]
+        assert row.state == USED_AND_LOCKED
+        row.state = USED
+
+    def unlock_free_row(self, rowid):
+        """FREE_AND_LOCKED -> FREE"""
         row = self._rows[rowid]
-        assert row.state == LOCKED
+        assert row.state == FREE_AND_LOCKED
         row.state = FREE
 
     def add_lpn(self, rowid, lpn, ppn, dirty):
         assert self.has_lpn(lpn) == False
 
         row = self._rows[rowid]
-        assert row.state == LOCKED # you have to lock a rwo before adding
+        assert row.state == FREE_AND_LOCKED # you have to lock a rwo before adding
 
         row.lpn = lpn
         row.ppn = ppn
@@ -1075,7 +1086,7 @@ class LpnTable(object):
         del self._lpn_to_row[lpn]
         row.clear_data()
         assert row.state == USED
-        row.state = LOCKED
+        row.state = FREE_AND_LOCKED
 
         return row.rowid
 
