@@ -1025,24 +1025,20 @@ class LpnTable(object):
     def unlock_free_row(self, rowid):
         """FREE_AND_LOCKED -> FREE"""
         row = self._rows[rowid]
-        assert row.state == FREE_AND_LOCKED
         row.state = FREE
 
     def lock_lpn(self, lpn):
         row = self._lpn_to_row[lpn]
-        assert row.state == USED
         row.state = USED_AND_LOCKED
 
     def unlock_lpn(self, lpn):
         row = self._lpn_to_row[lpn]
-        assert row.state == USED_AND_LOCKED
         row.state = USED
 
     def add_lpn(self, rowid, lpn, ppn, dirty):
         assert self.has_lpn(lpn) == False
 
         row = self._rows[rowid]
-        assert row.state == FREE_AND_LOCKED # you have to lock a rwo before adding
 
         row.lpn = lpn
         row.ppn = ppn
@@ -1070,14 +1066,12 @@ class LpnTable(object):
 
     def mark_clean(self, lpn):
         row = self._lpn_to_row.peek(lpn)
-        assert row.state != USED_AND_LOCKED
         assert row.state == USED
         row.dirty = False
 
     def overwrite_lpn(self, lpn, ppn, dirty):
         row = self._lpn_to_row[lpn]
         assert row.state == USED
-        assert row.state != USED_AND_LOCKED
         row.lpn = lpn
         row.ppn = ppn
         row.dirty = dirty
@@ -1089,7 +1083,6 @@ class LpnTable(object):
     def delete_lpn_and_lock(self, lpn):
         row = self._lpn_to_row.peek(lpn)
         assert row.state == USED
-        assert row.state != USED_AND_LOCKED
         del self._lpn_to_row[lpn]
         row.clear_data()
         row.state = FREE_AND_LOCKED
@@ -1149,11 +1142,64 @@ class LpnTableMvpn(LpnTable):
 
 class Row(object):
     def __init__(self, lpn, ppn, dirty, state, rowid):
-        self.lpn = lpn
-        self.ppn = ppn
-        self.dirty = dirty
-        self.state = state
-        self.rowid = rowid
+        self._lpn = lpn
+        self._ppn = ppn
+        self._dirty = dirty
+        self._state = state
+        self._rowid = rowid
+
+    @property
+    def lpn(self):
+        return self._lpn
+
+    @lpn.setter(self, lpn):
+        assert self._state != USED_AND_LOCKED
+        self._lpn = lpn
+
+    @property
+    def ppn(self):
+        return self._ppn
+
+    @ppn.setter
+    def ppn(self, ppn):
+        assert self._state != USED_AND_LOCKED
+        self._ppn = ppn
+
+    @property
+    def dirty(self):
+        return self._dirty
+
+    @dirty.setter
+    def dirty(self, dirty):
+        assert self._state != USED_AND_LOCKED
+        self._dirty = dirty
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, state_value):
+        """
+        State graph:
+            FREE <----> FREE & LOCKED <----> USED <----> USED & LOCKED
+        """
+        # check state transition
+        if state_value == FREE:
+            assert self._state == FREE_AND_LOCKED
+        elif state_value == FREE_AND_LOCKED:
+            assert self._state == FREE or self._state == USED
+        elif state_value == USED:
+            assert self._state == FREE_AND_LOCKED or \
+                    self._state == USED_AND_LOCKED
+        elif state_value == USED_AND_LOCKED:
+            assert self._state == USED
+        else:
+            raise RuntimeError("{} is not a valid state".format(state_value))
+
+    @property
+    def rowid(self):
+        return self._rowid
 
     def clear_data(self):
         self.lpn = None
