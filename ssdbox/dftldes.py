@@ -1038,10 +1038,15 @@ class LpnTable(object):
 
     def lock_free_rows(self, n):
         row_ids = []
-        for i in range(n):
-            row_id = self.lock_free_row()
-            if row_id != None:
-                row_ids.append(row_id)
+        got = 0
+        for row in self._rows:
+            if row.state == FREE:
+                row.state = FREE_AND_LOCKED
+                row_ids.append(row.rowid)
+                got += 1
+
+                if got == n:
+                    break
         return row_ids
 
     def unlock_free_row(self, rowid):
