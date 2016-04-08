@@ -250,7 +250,7 @@ class Ftl(object):
         return ppns
 
     def write_ext(self, extent):
-        print 'write_ext', str(extent)
+        # print 'write_ext', str(extent)
         exts_in_mvpngroup = split_ext_to_mvpngroups(self.conf, extent)
 
         ppns_to_write = self.block_pool.next_n_data_pages_to_program_striped(

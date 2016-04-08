@@ -313,7 +313,7 @@ class LruCache(collections.MutableMapping):
         node.value = value
 
     def least_to_most_items(self):
-        for node in self.linked_list:
+        for node in reversed(self.linked_list):
             yield node.key, node.value
 
     def least_recently_used_key(self):

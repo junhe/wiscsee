@@ -66,10 +66,11 @@ class Test_LruCache(unittest.TestCase):
         lk = []
         lv = []
         for k, v in d.items():
+            # suppose to go from least to most recently
             lk.append(k)
             lv.append(v)
-        self.assertListEqual(lk, list(reversed(range(10))))
-        self.assertListEqual(lv, list(reversed(range(0, 100, 10))))
+        self.assertListEqual(lk, list(range(10)))
+        self.assertListEqual(lv, list(range(0, 100, 10)))
 
     def test_recency_iter(self):
         d = LruDict()
