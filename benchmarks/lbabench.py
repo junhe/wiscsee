@@ -179,8 +179,8 @@ def _main():
         # because you have to remember what argument you used!
         targets = args.target.split(';')
         for target in targets:
-            # eval(target)
-            profile.run(target)
+            eval(target)
+            # profile.run(target)
 
 if __name__ == '__main__':
     _main()
