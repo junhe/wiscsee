@@ -111,12 +111,11 @@ class Test_LruCache(unittest.TestCase):
         self.assertEqual(d.victim_key(), 0)
         self.assertEqual(d.most_recently_used_key(), 9)
 
-    def test_performance(self):
+    def _test_performance(self):
         d = LruDict()
         for i in range(2048):
             d[i] = i+1
 
-        profile.run(self.go_through(d))
 
     def go_through(self, d):
         for k, v in d.least_to_most_items():
@@ -208,7 +207,7 @@ class Test_LruDict(unittest.TestCase):
         self.assertEqual(d.victim_key(), 0)
         self.assertEqual(d.most_recent(), 9)
 
-    def test_performance(self):
+    def _test_performance(self):
         d = LruDict()
         for i in range(2048):
             d[i] = i+1
