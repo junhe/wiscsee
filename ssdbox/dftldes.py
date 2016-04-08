@@ -14,7 +14,7 @@ import bidict
 import config
 import flash
 import ftlbuilder
-from lrulist import LruDict, SegmentedLruCache
+from lrulist import LruDict, SegmentedLruCache, LruCache
 import recorder
 from utilities import utils
 from commons import *
@@ -989,7 +989,9 @@ class LpnTable(object):
 
         # lpns to Row instances, it is a dict
         # {lpn1: row1, lpn2: row2, ...}
-        self._lpn_to_row = SegmentedLruCache(n_rows, 0.5)
+        # self._lpn_to_row = SegmentedLruCache(n_rows, 0.5)
+        # self._lpn_to_row = LruDict()
+        self._lpn_to_row = LruCache()
 
     def _count_states(self):
         """
@@ -1063,6 +1065,12 @@ class LpnTable(object):
         assert row.state == USED_AND_LOCKED
         row.state = USED
 
+    def add_lpns(self, row_ids, mapping_dict, dirty):
+        assert len(row_ids) == len(mapping_dict), \
+                "{} == {}".format(len(row_ids), len(mapping_dict))
+        for row_id, (lpn, ppn) in zip(row_ids, mapping_dict.items()):
+            self.add_lpn(row_id, lpn, ppn, dirty)
+
     def add_lpn(self, rowid, lpn, ppn, dirty):
         assert self.has_lpn(lpn) == False
 
@@ -1074,12 +1082,6 @@ class LpnTable(object):
         row.state = USED
 
         self._lpn_to_row[lpn] = row
-
-    def add_lpns(self, row_ids, mapping_dict, dirty):
-        assert len(row_ids) == len(mapping_dict), \
-                "{} == {}".format(len(row_ids), len(mapping_dict))
-        for row_id, (lpn, ppn) in zip(row_ids, mapping_dict.items()):
-            self.add_lpn(row_id, lpn, ppn, dirty)
 
     def lpn_to_ppn(self, lpn):
         try:
@@ -1130,8 +1132,10 @@ class LpnTable(object):
             return True
 
     def victim_row(self):
-        lpn = self._lpn_to_row.victim_key()
-        return self._lpn_to_row[lpn]
+        for lpn, row in self._lpn_to_row.least_to_most_items():
+            if row.state == USED: # and not locked
+                return row
+        raise RuntimeError("Cannot find a victim.")
 
     def stats(self):
         return self._count_states()

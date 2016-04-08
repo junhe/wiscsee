@@ -1,7 +1,7 @@
 import unittest
 
 import ssdbox
-from ssdbox.lrulist import LinkedList, Node, LruDict
+from ssdbox.lrulist import LinkedList, Node, LruDict, LruCache
 
 
 class Test_lrucache(unittest.TestCase):
@@ -25,6 +25,103 @@ class Test_lrucache(unittest.TestCase):
 
         del lrucache[1]
         self.assertEqual(lrucache.has_key(1), False)
+
+class Test_LruCache(unittest.TestCase):
+    def get_lrucache(self):
+        d = LruCache()
+        for i in range(10):
+            d[i] = i*10
+        return d
+
+    def test_init(self):
+        d = LruCache()
+        d = LruCache({1:2})
+        d = LruCache(((1, 2), (2, 3)))
+        d = LruCache(a = 1, b = 2)
+
+    def test1(self):
+        d = self.get_lrucache()
+
+    def test_size(self):
+        d = self.get_lrucache()
+        self.assertEqual(len(d), 10)
+
+    def test_del(self):
+        d = self.get_lrucache()
+
+        del d[2]
+        self.assertEqual(len(d), 9)
+        self.assertEqual(d.has_key(2), False)
+
+    def test_iter(self):
+        d = self.get_lrucache()
+        self.assertListEqual(list(d), list(reversed(range(10))))
+
+    def test_reversed(self):
+        d = self.get_lrucache()
+        self.assertListEqual(list(reversed(d)), list(range(10)))
+
+    def test_items(self):
+        d = self.get_lrucache()
+        lk = []
+        lv = []
+        for k, v in d.items():
+            lk.append(k)
+            lv.append(v)
+        self.assertListEqual(lk, list(reversed(range(10))))
+        self.assertListEqual(lv, list(reversed(range(0, 100, 10))))
+
+    def test_recency_iter(self):
+        d = LruDict()
+        d[1] = 11
+        d[2] = 22
+
+        l = []
+        for k in d.least_to_most_iter():
+            l.append(k)
+        self.assertListEqual(l, [1, 2])
+
+        l = []
+        for k in d.most_to_least_iter():
+            l.append(k)
+        self.assertListEqual(l, [2, 1])
+
+    def test_hits(self):
+        d = self.get_lrucache()
+        a = d[2]
+
+        self.assertEqual(d.victim_key(), 0)
+        self.assertEqual(d.most_recently_used_key(), 2)
+
+        d[2] = 22
+        self.assertEqual(d.victim_key(), 0)
+        self.assertEqual(d.most_recently_used_key(), 2)
+
+        d[3] = 333
+        self.assertEqual(d.victim_key(), 0)
+        self.assertEqual(d.most_recently_used_key(), 3)
+
+    def test_peek(self):
+        d = self.get_lrucache()
+
+        a = d.peek(2)
+        self.assertEqual(a, 20)
+        self.assertEqual(d.victim_key(), 0)
+        self.assertEqual(d.most_recently_used_key(), 9)
+
+    def test_performance(self):
+        d = LruDict()
+        for i in range(2048):
+            d[i] = i+1
+
+        self.go_through(d)
+
+    def go_through(self, d):
+        for k, v in d.least_to_most_items():
+            v = 1
+
+
+
 
 class Test_LruDict(unittest.TestCase):
     def get_lrudict(self):
@@ -108,6 +205,18 @@ class Test_LruDict(unittest.TestCase):
         self.assertEqual(a, 20)
         self.assertEqual(d.victim_key(), 0)
         self.assertEqual(d.most_recent(), 9)
+
+    def test_performance(self):
+        d = LruDict()
+        for i in range(2048):
+            d[i] = i+1
+
+        self.go_through(d)
+
+    def go_through(self, d):
+        for k, v in d.least_to_most_items():
+            v != 1
+
 
 
 def main():

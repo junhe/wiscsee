@@ -1,4 +1,5 @@
 import collections
+import ordereddict
 
 class Node(object):
     def __init__(self, key = None, value = None, empty = False):
@@ -149,17 +150,17 @@ class LinkedList(object):
             node = self._end_guard.prev
             return node
 
-    def reversed_items(self):
-        node = self.tail()
-        while node is not self._end_guard:
-            yield node
-            node = node.prev
-
     def __iter__(self):
         node = self._head
         while node is not self._end_guard:
             yield node
             node = node.next
+
+    def __reversed__(self):
+        node = self.tail()
+        while node is not self._end_guard:
+            yield node
+            node = node.prev
 
     def __len__(self):
         return self.size
@@ -175,12 +176,15 @@ class LinkedList(object):
         return listview
 
 
-
 class DictByLinkedList(collections.MutableMapping):
-    def __init__(self):
+    def __init__(self, data = None, **kwargs):
         self.table = {}
         # node must be type 'class Node'
         self.linked_list = LinkedList()
+
+        if data == None:
+            data = {}
+        self.update(data, **kwargs)
 
     def __getitem__(self, key):
         node = self.table[key]
@@ -217,7 +221,7 @@ class DictByLinkedList(collections.MutableMapping):
         self.linked_list.delete(node)
 
     def __iter__(self):
-        return self.table.keys()
+        return iter(self.table)
 
     def __len__(self):
         return len(self.linked_list)
@@ -234,15 +238,44 @@ class DictByLinkedList(collections.MutableMapping):
 
         return listview
 
-class LruCache(DictByLinkedList):
+class LruCache(collections.MutableMapping):
     """
     Geting and setting (recent use) a value will move it to the head
     of the list. It provides mapping interfaces like dict.
     """
+    def __init__(self, data = None, **kwargs):
+        self.table = {}
+        # node must be type 'class Node'
+        self.linked_list = LinkedList()
+
+        if data == None:
+            data = {}
+        self.update(data, **kwargs)
+
+    def has_key(self, key):
+        return self.table.has_key(key)
+
+    def keys(self):
+        return self.table.keys()
+
+    def get(self, key, default = None):
+        if self.table.has_key(key):
+            # will affect list order
+            return self.__getitem__(key)
+        else:
+            # will not affect list order
+            return default
+
     def __getitem__(self, key):
         node = self.table[key]
         self.linked_list.move_to_head(node)
         return node.value
+
+    def __delitem__(self, key):
+        node = self.table[key]
+        del self.table[key]
+
+        self.linked_list.delete(node)
 
     def __setitem__(self, key, value):
         if self.table.has_key(key):
@@ -256,6 +289,21 @@ class LruCache(DictByLinkedList):
             self.linked_list.add_to_head(node)
             self.table[key] = node
 
+    def __iter__(self):
+        # most recent -> least recent
+        for node in self.linked_list:
+            yield node.key
+
+    def __reversed__(self):
+        for node in reversed(self.linked_list):
+            yield node.key
+
+    def items(self):
+        return self.least_to_most_items()
+
+    def __len__(self):
+        return len(self.linked_list)
+
     def peek(self, key):
         node = self.table[key]
         return node.value
@@ -263,6 +311,10 @@ class LruCache(DictByLinkedList):
     def orderless_update(self, key, value):
         node = self.table[key]
         node.value = value
+
+    def least_to_most_items(self):
+        for node in self.linked_list:
+            yield node.key, node.value
 
     def least_recently_used_key(self):
         return self.linked_list.tail().key
@@ -272,6 +324,12 @@ class LruCache(DictByLinkedList):
 
     def victim_key(self):
         return self.linked_list.tail().key
+
+    def __repr__(self):
+        t = []
+        for node in self.linked_list:
+            t.append((node.key, node.value))
+        return str(t)
 
 
 
@@ -454,6 +512,9 @@ class LruDict(collections.MutableMapping):
     # __getitem__, __setitem__, __delitem__, __iter__, __len__
     """
     All [] operations will change order of the key
+
+    WARNING: If used with simpy, OrderedDict.items() and related functions
+    are very slow (5 secs for a few thousands of items).
     """
     def __init__(self, data=None, **kwargs):
         """
@@ -461,6 +522,7 @@ class LruDict(collections.MutableMapping):
         iterable. kwargs will become k-v pairs in the dict.
         """
         self._store = collections.OrderedDict()
+        # self._store = dict()
         if data is None:
             data = {}
         self.update(data, **kwargs)
@@ -505,6 +567,9 @@ class LruDict(collections.MutableMapping):
     def items(self):
         for k, v in self._store.items():
             yield k, v
+
+    def least_to_most_items(self):
+        return self._store.items()
 
     def victim_key(self):
         return self.least_recent()
