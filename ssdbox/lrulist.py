@@ -289,6 +289,12 @@ class LruCache(collections.MutableMapping):
             self.linked_list.add_to_head(node)
             self.table[key] = node
 
+    def add_as_least_used(self, key, value):
+        assert not self.table.has_key(key)
+        node = Node(key = key, value = value)
+        self.linked_list.add_to_tail(node)
+        self.table[key] = node
+
     def __iter__(self):
         # most recent -> least recent
         for node in self.linked_list:
@@ -300,6 +306,7 @@ class LruCache(collections.MutableMapping):
 
     def items(self):
         return self.least_to_most_items()
+
 
     def __len__(self):
         return len(self.linked_list)

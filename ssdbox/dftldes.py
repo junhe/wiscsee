@@ -1065,13 +1065,13 @@ class LpnTable(object):
         assert row.state == USED_AND_LOCKED
         row.state = USED
 
-    def add_lpns(self, row_ids, mapping_dict, dirty):
+    def add_lpns(self, row_ids, mapping_dict, dirty, as_least_recent = False):
         assert len(row_ids) == len(mapping_dict), \
                 "{} == {}".format(len(row_ids), len(mapping_dict))
         for row_id, (lpn, ppn) in zip(row_ids, mapping_dict.items()):
-            self.add_lpn(row_id, lpn, ppn, dirty)
+            self.add_lpn(row_id, lpn, ppn, dirty, as_least_recent)
 
-    def add_lpn(self, rowid, lpn, ppn, dirty):
+    def add_lpn(self, rowid, lpn, ppn, dirty, as_least_recent = False):
         assert self.has_lpn(lpn) == False
 
         row = self._rows[rowid]
@@ -1081,7 +1081,10 @@ class LpnTable(object):
         row.dirty = dirty
         row.state = USED
 
-        self._lpn_to_row[lpn] = row
+        if as_least_recent:
+            self._lpn_to_row.add_as_least_used(lpn, row)
+        else:
+            self._lpn_to_row[lpn] = row
 
     def lpn_to_ppn(self, lpn):
         try:

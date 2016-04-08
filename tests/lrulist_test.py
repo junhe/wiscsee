@@ -111,6 +111,13 @@ class Test_LruCache(unittest.TestCase):
         self.assertEqual(d.victim_key(), 0)
         self.assertEqual(d.most_recently_used_key(), 9)
 
+    def test_add_to_least_used(self):
+        d = self.get_lrucache()
+
+        d.add_as_least_used(10, 100)
+        self.assertEqual(d.victim_key(), 10)
+        self.assertEqual(d.most_recently_used_key(), 9)
+
     def _test_performance(self):
         d = LruDict()
         for i in range(2048):
