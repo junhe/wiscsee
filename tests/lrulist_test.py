@@ -2,6 +2,7 @@ import unittest
 
 import ssdbox
 from ssdbox.lrulist import LinkedList, Node, LruDict, LruCache
+import profile
 
 
 class Test_lrucache(unittest.TestCase):
@@ -115,7 +116,7 @@ class Test_LruCache(unittest.TestCase):
         for i in range(2048):
             d[i] = i+1
 
-        self.go_through(d)
+        profile.run(self.go_through(d))
 
     def go_through(self, d):
         for k, v in d.least_to_most_items():
@@ -219,15 +220,25 @@ class Test_LruDict(unittest.TestCase):
             v != 1
 
 
+def has_key(d, key):
+    return d.has_key(key)
+
+def compare_dict_performance():
+    # d = LruCache()
+    d = dict()
+    for i in range(40000):
+        d[i] = i
+
+    for i in range(200000):
+        # d.has_key(i)
+        has_key(d, i)
 
 def main():
     unittest.main()
 
+
+
 if __name__ == '__main__':
     main()
-
-
-
-
 
 
