@@ -366,7 +366,7 @@ class TestWrite(unittest.TestCase):
         yield env.process(dftl.write_ext(ext))
 
         # read translation page, then write all 4 data pages at the same time
-        self.assertEqual(env.now, 2 * time_read_page +
+        self.assertEqual(env.now, time_read_page +
                 (ext.lpn_count/4) * time_program_page)
 
         self.assertEqual(rec.get_count_me("Mapping_Cache", "miss"), 2)
