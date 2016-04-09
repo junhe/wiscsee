@@ -157,7 +157,7 @@ class LinkedList(object):
             node = node.next
 
     def __reversed__(self):
-        node = self.tail()
+        node = self._end_guard.prev
         while node is not self._end_guard:
             yield node
             node = node.prev
