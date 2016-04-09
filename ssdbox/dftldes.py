@@ -745,7 +745,7 @@ class MappingCache(object):
         self.mapping_on_flash = mapping_on_flash
 
         self._lpn_table = LpnTableMvpn(confobj)
-        self.vpn_res_pool =  VPNResourcePool(self.env)
+        self.trans_page_load_wb_locks =  VPNResourcePool(self.env)
         self._load_lock = simpy.Resource(self.env, capacity = 1)
 
     def lpn_to_ppn(self, lpn):
@@ -758,7 +758,7 @@ class MappingCache(object):
         if ppn == MISS:
             m_vpn = self.conf.lpn_to_m_vpn(lpn)
             loaded = yield self.env.process(
-                self._load(m_vpn, wanted_lpn = lpn))
+                self._load_missing(m_vpn, wanted_lpn = lpn))
             ppn = self._lpn_table.lpn_to_ppn(lpn)
             assert ppn != MISS
         else:
@@ -823,16 +823,37 @@ class MappingCache(object):
         self.env.exit(locked_row_ids)
 
     def _free_one_entry_and_lock(self):
+        """
+        For an entry to be deleted, it must first become a victim_row.
+        To become a victim_row, it must has state USED. Existing victim_row
+        has state USED_AND_HOLD, so the same row cannot become victim
+        and the same time.
+
+        Becoming a victim is the only approach for an entry to be deleted.
+        """
         victim_row = self._lpn_table.victim_row()
+        victim_row.state = USED_AND_HOLD
+
+        print 'freeing', victim_row.lpn
         if victim_row.dirty == True:
+            print 'writing back....'
             m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
             yield self.env.process(self._write_back(m_vpn))
 
+        # after writing back, this lpn could already been deleted
+        # by another _free_one_entry_and_lock()?
+        assert self._lpn_table.has_lpn(victim_row.lpn), \
+                "lpn_table does not has lpn {}.".format(victim_row.lpn)
+        assert victim_row.dirty == False
+        assert victim_row.state == USED_AND_HOLD
+        victim_row.state = USED
+
+        # This is the only place that we delete a lpn
         locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
 
         self.env.exit(locked_row_id)
 
-    def _load(self, m_vpn, wanted_lpn = None):
+    def _load_missing(self, m_vpn, wanted_lpn = None):
         """
         Return True if we really load flash page
         """
@@ -879,17 +900,18 @@ class MappingCache(object):
         will deadlock.
         """
         # aquire lock
-        m_vpn_req = self.vpn_res_pool.get_request(m_vpn)
+        m_vpn_req = self.trans_page_load_wb_locks.get_request(m_vpn)
         yield m_vpn_req # should take no time, usually
 
         mapping_dict = yield self.env.process(
                 self._read_translation_page(m_vpn))
         uncached_mapping = self._get_uncached_mappings(mapping_dict)
 
-        self._lpn_table.add_lpns(locked_rows, uncached_mapping, False)
+        self._lpn_table.add_lpns(locked_rows, uncached_mapping, False,
+                as_least_recent = True)
 
         # release lock
-        self.vpn_res_pool.release_request(m_vpn, m_vpn_req)
+        self.trans_page_load_wb_locks.release_request(m_vpn, m_vpn_req)
 
     def _get_uncached_mappings(self, mapping_dict):
         uncached_mapping = {}
@@ -915,17 +937,20 @@ class MappingCache(object):
         It should not call _load_to_locked_space() directly or indirectly as it
         will deadlock.
         """
+        # TODO: check again to see if we really need to write back after
+        # acquring the lock
+
         # aquire lock
-        m_vpn_req = self.vpn_res_pool.get_request(m_vpn)
+        m_vpn_req = self.trans_page_load_wb_locks.get_request(m_vpn)
         yield m_vpn_req # should take no time, usually
 
+        print 'write back'
         mapping_in_cache = self._lpn_table.get_m_vpn_mappings(m_vpn)
+        print 'mapping in cache 1', mapping_in_cache
+        print '==================================================================='
 
-        # mark entries in cache as clean
-        # we are sure that the mapping in flash will be the same as
-        # the mappings in cache, so YES, it is clean now. You don't need
-        # to wait until it is on the flash to say so. At that time
-        # you don't know if cache and flash mapping is the same.
+        # We have to mark it clean before writing it back because
+        # if we do it after writing flash, the cache may already changed
         self._lpn_table.mark_clean_multiple(mapping_in_cache.keys())
 
         if len(mapping_in_cache) < self.conf.n_mapping_entries_per_page:
@@ -942,7 +967,7 @@ class MappingCache(object):
             self._update_mapping_on_flash(m_vpn, latest_mapping))
 
         # release lock
-        self.vpn_res_pool.release_request(m_vpn, m_vpn_req)
+        self.trans_page_load_wb_locks.release_request(m_vpn, m_vpn_req)
 
     def _update_mapping_on_flash(self, m_vpn, mapping_dict):
         """
@@ -976,8 +1001,8 @@ class MappingCache(object):
         assert self.directory.m_vpn_to_m_ppn(m_vpn) == new_m_ppn
 
 
-FREE, FREE_AND_LOCKED, USED, USED_AND_LOCKED = \
-        'FREE', 'FREE_AND_LOCKED', 'USED', 'USED_AND_LOCKED'
+FREE, FREE_AND_LOCKED, USED, USED_AND_LOCKED, USED_AND_HOLD = \
+        'FREE', 'FREE_AND_LOCKED', 'USED', 'USED_AND_LOCKED', 'USED_AND_HOLD'
 
 class LpnTable(object):
     def __init__(self, n_rows):
@@ -1100,7 +1125,7 @@ class LpnTable(object):
 
     def mark_clean(self, lpn):
         row = self._lpn_to_row.peek(lpn)
-        assert row.state == USED
+        assert row.state in (USED, USED_AND_HOLD)
         row.dirty = False
 
     def overwrite_lpn(self, lpn, ppn, dirty):
@@ -1118,6 +1143,7 @@ class LpnTable(object):
         return self._rows[rowid].state
 
     def delete_lpn_and_lock(self, lpn):
+        assert self.has_lpn(lpn)
         row = self._lpn_to_row.peek(lpn)
         assert row.state == USED
         del self._lpn_to_row[lpn]
@@ -1136,7 +1162,8 @@ class LpnTable(object):
 
     def victim_row(self):
         for lpn, row in self._lpn_to_row.least_to_most_items():
-            if row.state == USED: # and not locked
+            if row.state == USED:
+                assert self.has_lpn(row.lpn)
                 return row
         raise RuntimeError("Cannot find a victim.")
 
@@ -1254,17 +1281,22 @@ class Row(object):
         """
         State graph:
             FREE <----> FREE & LOCKED <----> USED <----> USED & LOCKED
+                                              ^
+                                              |
+                                              v
+                                        USED & HOLD
         """
         # check state transition
         if state_value == FREE:
-            assert self._state == FREE_AND_LOCKED, self._state
+            assert self._state == FREE_AND_LOCKED
         elif state_value == FREE_AND_LOCKED:
-            assert self._state == FREE or self._state == USED, self._state
+            assert self._state in (FREE, USED)
         elif state_value == USED:
-            assert self._state == FREE_AND_LOCKED or \
-                    self._state == USED_AND_LOCKED, self._state
+            assert self._state in (FREE_AND_LOCKED, USED_AND_LOCKED, USED_AND_HOLD)
         elif state_value == USED_AND_LOCKED:
-            assert self._state == USED, self._state
+            assert self._state == USED
+        elif state_value == USED_AND_HOLD:
+            assert self._state == USED
         else:
             raise RuntimeError("{} is not a valid state".format(state_value))
         self._state = state_value
