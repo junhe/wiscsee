@@ -728,7 +728,7 @@ class MappingDict(dict):
 
 class MappingCache(object):
     """
-    This class maintains MappingTable, it evict entries from MappingTable, load
+    This class maintains MappingTable, it evicts entries from MappingTable, load
     entries from flash.
 
     TODO: should separate operations that do/do not change recency
@@ -746,7 +746,7 @@ class MappingCache(object):
 
         self._lpn_table = LpnTableMvpn(confobj)
         self.trans_page_load_wb_locks =  VPNResourcePool(self.env)
-        self._load_lock = simpy.Resource(self.env, capacity = 1)
+        self.trans_page_load_locks =  VPNResourcePool(self.env)
 
     def lpn_to_ppn(self, lpn):
         """
@@ -817,7 +817,8 @@ class MappingCache(object):
     def _add_locked_room(self, n_needed):
         locked_row_ids = []
         for i in range(n_needed):
-            row_id = yield self.env.process(self._free_one_entry_and_lock())
+            row_id = yield self.env.process(
+                    self._free_one_entry_and_lock())
             locked_row_ids.append(row_id)
 
         self.env.exit(locked_row_ids)
@@ -834,7 +835,6 @@ class MappingCache(object):
         victim_row = self._lpn_table.victim_row()
         victim_row.state = USED_AND_HOLD
 
-        print 'freeing', victim_row.lpn
         if victim_row.dirty == True:
             print 'writing back....'
             m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
@@ -853,25 +853,55 @@ class MappingCache(object):
 
         self.env.exit(locked_row_id)
 
-    def _load_missing(self, m_vpn, wanted_lpn = None):
+    def _write_back(self, m_vpn):
+        """
+        It should not call _load_to_locked_space() directly or indirectly as it
+        will deadlock.
+        """
+        # TODO: check again to see if we really need to write back after
+        # acquring the lock
+
+        # aquire lock
+        m_vpn_req = self.trans_page_load_wb_locks.get_request(m_vpn)
+        yield m_vpn_req # should take no time, usually
+
+        print 'write back'
+        mapping_in_cache = self._lpn_table.get_m_vpn_mappings(m_vpn)
+        print 'mapping in cache 1', mapping_in_cache
+        print '==================================================================='
+
+        # We have to mark it clean before writing it back because
+        # if we do it after writing flash, the cache may already changed
+        self._lpn_table.mark_clean_multiple(mapping_in_cache.keys())
+
+        if len(mapping_in_cache) < self.conf.n_mapping_entries_per_page:
+            # Not all mappings are in cache
+            mapping_in_flash = yield self.env.process(
+                    self._read_translation_page(m_vpn))
+            latest_mapping = mapping_in_flash
+            latest_mapping.update(mapping_in_cache)
+        else:
+            # all mappings are in cache, no need to read the translation page
+            latest_mapping = mapping_in_cache
+
+        yield self.env.process(
+            self._update_mapping_on_flash(m_vpn, latest_mapping))
+
+        # release lock
+        self.trans_page_load_wb_locks.release_request(m_vpn, m_vpn_req)
+
+    def _load_missing(self, m_vpn, wanted_lpn):
         """
         Return True if we really load flash page
         """
-        # TODO: entries loaded from trans page should not change recency
-
-        # Need a lock here because another thread may come in and think
-        # the cache has enough space for it. But the space is for this load
-        # TODO: somehow remove the lock to allow more parallelism
-        load_req = self._load_lock.request()
+        load_req = self.trans_page_load_locks.get_request(m_vpn)
         yield load_req
 
         # check again before really loading
-        if wanted_lpn == None or \
-                (wanted_lpn != None and \
-                not self._lpn_table.has_lpn(wanted_lpn)):
+        if wanted_lpn != None and not self._lpn_table.has_lpn(wanted_lpn):
             # we need to lock all the entries beloinging to m_vpn
             m_vpn_row_ids = self._lpn_table.row_ids_of_m_vpn(m_vpn)
-            self._lpn_table.lock_used_rows(m_vpn_row_ids)
+            self._lpn_table.hold_used_rows(m_vpn_row_ids)
 
             n_needed = self._lpn_table.needed_space_for_m_vpn(m_vpn)
             locked_rows = self._lpn_table.lock_free_rows(n_needed)
@@ -885,13 +915,14 @@ class MappingCache(object):
             yield self.env.process(
                 self._load_to_locked_space(m_vpn, locked_rows))
 
-            self._lpn_table.unlock_used_rows(m_vpn_row_ids)
+            self._lpn_table.unhold_used_rows(m_vpn_row_ids)
 
             loaded = True
         else:
             loaded = False
 
-        self._load_lock.release(load_req)
+        self.trans_page_load_locks.release_request(m_vpn, load_req)
+
         self.env.exit(loaded)
 
     def _load_to_locked_space(self, m_vpn, locked_rows):
@@ -931,43 +962,6 @@ class MappingCache(object):
                 tag = TAG_BACKGROUND))
 
         self.env.exit(mapping_dict)
-
-    def _write_back(self, m_vpn):
-        """
-        It should not call _load_to_locked_space() directly or indirectly as it
-        will deadlock.
-        """
-        # TODO: check again to see if we really need to write back after
-        # acquring the lock
-
-        # aquire lock
-        m_vpn_req = self.trans_page_load_wb_locks.get_request(m_vpn)
-        yield m_vpn_req # should take no time, usually
-
-        print 'write back'
-        mapping_in_cache = self._lpn_table.get_m_vpn_mappings(m_vpn)
-        print 'mapping in cache 1', mapping_in_cache
-        print '==================================================================='
-
-        # We have to mark it clean before writing it back because
-        # if we do it after writing flash, the cache may already changed
-        self._lpn_table.mark_clean_multiple(mapping_in_cache.keys())
-
-        if len(mapping_in_cache) < self.conf.n_mapping_entries_per_page:
-            # Not all mappings are in cache
-            mapping_in_flash = yield self.env.process(
-                    self._read_translation_page(m_vpn))
-            latest_mapping = mapping_in_flash
-            latest_mapping.update(mapping_in_cache)
-        else:
-            # all mappings are in cache, no need to read the translation page
-            latest_mapping = mapping_in_cache
-
-        yield self.env.process(
-            self._update_mapping_on_flash(m_vpn, latest_mapping))
-
-        # release lock
-        self.trans_page_load_wb_locks.release_request(m_vpn, m_vpn_req)
 
     def _update_mapping_on_flash(self, m_vpn, mapping_dict):
         """
@@ -1090,6 +1084,22 @@ class LpnTable(object):
         assert row.state == USED_AND_LOCKED
         row.state = USED
 
+    def hold_used_row(self, rowid):
+        row = self._rows[rowid]
+        row.state = USED_AND_HOLD
+
+    def hold_used_rows(self, row_ids):
+        for rowid in row_ids:
+            self.hold_used_row(rowid)
+
+    def unhold_used_row(self, rowid):
+        row = self._rows[rowid]
+        row.state = USED
+
+    def unhold_used_rows(self, row_ids):
+        for rowid in row_ids:
+            self.unhold_used_row(rowid)
+
     def add_lpns(self, row_ids, mapping_dict, dirty, as_least_recent = False):
         assert len(row_ids) == len(mapping_dict), \
                 "{} == {}".format(len(row_ids), len(mapping_dict))
@@ -1130,7 +1140,6 @@ class LpnTable(object):
 
     def overwrite_lpn(self, lpn, ppn, dirty):
         row = self._lpn_to_row[lpn]
-        assert row.state == USED
         row.lpn = lpn
         row.ppn = ppn
         row.dirty = dirty
@@ -1163,9 +1172,9 @@ class LpnTable(object):
     def victim_row(self):
         for lpn, row in self._lpn_to_row.least_to_most_items():
             if row.state == USED:
-                assert self.has_lpn(row.lpn)
                 return row
-        raise RuntimeError("Cannot find a victim.")
+        raise RuntimeError("Cannot find a victim. Current stats: {}"\
+                .format(str(self.stats())))
 
     def stats(self):
         return self._count_states()
@@ -1245,13 +1254,17 @@ class Row(object):
         self._state = state
         self._rowid = rowid
 
+    def _assert_modification_allowed(self):
+         assert self._state in (FREE_AND_LOCKED, USED, USED_AND_HOLD), \
+                "current state {}".format(self._state)
+
     @property
     def lpn(self):
         return self._lpn
 
     @lpn.setter
     def lpn(self, lpn):
-        assert self._state != USED_AND_LOCKED
+        self._assert_modification_allowed()
         self._lpn = lpn
 
     @property
@@ -1260,7 +1273,7 @@ class Row(object):
 
     @ppn.setter
     def ppn(self, ppn):
-        assert self._state != USED_AND_LOCKED
+        self._assert_modification_allowed()
         self._ppn = ppn
 
     @property
@@ -1269,7 +1282,7 @@ class Row(object):
 
     @dirty.setter
     def dirty(self, dirty):
-        assert self._state != USED_AND_LOCKED
+        self._assert_modification_allowed()
         self._dirty = dirty
 
     @property
@@ -1288,15 +1301,20 @@ class Row(object):
         """
         # check state transition
         if state_value == FREE:
-            assert self._state == FREE_AND_LOCKED
+            assert self._state == FREE_AND_LOCKED, \
+                    "current state {}".format(self._state)
         elif state_value == FREE_AND_LOCKED:
-            assert self._state in (FREE, USED)
+            assert self._state in (FREE, USED), \
+                    "current state {}".format(self._state)
         elif state_value == USED:
-            assert self._state in (FREE_AND_LOCKED, USED_AND_LOCKED, USED_AND_HOLD)
+            assert self._state in (FREE_AND_LOCKED, USED_AND_LOCKED, USED_AND_HOLD), \
+                    "current state {}".format(self._state)
         elif state_value == USED_AND_LOCKED:
-            assert self._state == USED
+            assert self._state == USED, \
+                    "current state {}".format(self._state)
         elif state_value == USED_AND_HOLD:
-            assert self._state == USED
+            assert self._state == USED, \
+                    "current state {}".format(self._state)
         else:
             raise RuntimeError("{} is not a valid state".format(state_value))
         self._state = state_value
