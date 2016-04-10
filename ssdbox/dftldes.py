@@ -833,16 +833,14 @@ class MappingCache(object):
         Becoming a victim is the only approach for an entry to be deleted.
         """
         victim_row = self._lpn_table.victim_row(loading_m_vpn)
-        m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
+        victim_row.state = USED_AND_HOLD
 
         # avoid loading and evicting
+        m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
         tp_req = self.trans_page_locks.get_request(m_vpn)
         yield tp_req
 
-        victim_row.state = USED_AND_HOLD
-
         if victim_row.dirty == True:
-            print 'writing back....'
             yield self.env.process(self._write_back(m_vpn))
 
         # after writing back, this lpn could already been deleted
@@ -865,13 +863,7 @@ class MappingCache(object):
         It should not call _load_to_locked_space() directly or indirectly as it
         will deadlock.
         """
-        # TODO: check again to see if we really need to write back after
-        # acquring the lock
-
-        print 'write back'
         mapping_in_cache = self._lpn_table.get_m_vpn_mappings(m_vpn)
-        print 'mapping in cache 1', mapping_in_cache
-        print '==================================================================='
 
         # We have to mark it clean before writing it back because
         # if we do it after writing flash, the cache may already changed
@@ -904,8 +896,8 @@ class MappingCache(object):
         # check again before really loading
         if wanted_lpn != None and not self._lpn_table.has_lpn(wanted_lpn):
             # we need to lock all the entries beloinging to m_vpn
-            m_vpn_row_ids = self._lpn_table.row_ids_of_m_vpn(m_vpn)
-            self._lpn_table.hold_used_rows(m_vpn_row_ids)
+            # m_vpn_row_ids = self._lpn_table.row_ids_of_m_vpn(m_vpn)
+            # self._lpn_table.hold_used_rows(m_vpn_row_ids)
 
             n_needed = self._lpn_table.needed_space_for_m_vpn(m_vpn)
             locked_rows = self._lpn_table.lock_free_rows(n_needed)
@@ -918,8 +910,6 @@ class MappingCache(object):
 
             yield self.env.process(
                 self._load_to_locked_space(m_vpn, locked_rows))
-
-            self._lpn_table.unhold_used_rows(m_vpn_row_ids)
 
             loaded = True
         else:
@@ -938,8 +928,13 @@ class MappingCache(object):
                 self._read_translation_page(m_vpn))
         uncached_mapping = self._get_uncached_mappings(mapping_dict)
 
-        self._lpn_table.add_lpns(locked_rows, uncached_mapping, False,
+        n_needed = len(uncached_mapping)
+        needed_rows = locked_rows[:n_needed]
+        unused_rows = locked_rows[n_needed:]
+
+        self._lpn_table.add_lpns(needed_rows, uncached_mapping, False,
                 as_least_recent = True)
+        self._lpn_table.unlock_free_rows(unused_rows)
 
     def _get_uncached_mappings(self, mapping_dict):
         uncached_mapping = {}
@@ -1071,6 +1066,10 @@ class LpnTable(object):
         """FREE_AND_LOCKED -> FREE"""
         row = self._rows[rowid]
         row.state = FREE
+
+    def unlock_free_rows(self, row_ids):
+        for row_id in row_ids:
+            self.unlock_free_row(row_id)
 
     def lock_lpn(self, lpn):
         row = self._lpn_to_row.peek(lpn)
