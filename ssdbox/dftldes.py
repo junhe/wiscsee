@@ -745,8 +745,8 @@ class MappingCache(object):
         self.mapping_on_flash = mapping_on_flash
 
         self._lpn_table = LpnTableMvpn(confobj)
-        self.trans_page_load_wb_locks =  VPNResourcePool(self.env)
-        self.trans_page_load_locks =  VPNResourcePool(self.env)
+
+        self.trans_page_locks =  VPNResourcePool(self.env)
 
     def lpn_to_ppn(self, lpn):
         """
@@ -806,7 +806,7 @@ class MappingCache(object):
         if self._lpn_table.n_free_rows() == 0:
             # no free space for this insertion, free and lock 1
             locked_rows = yield self.env.process(
-                self._add_locked_room(n_needed = 1))
+                self._add_locked_room(n_needed = 1, loading_m_vpn = None))
             locked_row_id = locked_rows[0]
         else:
             locked_row_id = self._lpn_table.lock_free_row()
@@ -814,16 +814,16 @@ class MappingCache(object):
         self._lpn_table.add_lpn(rowid = locked_row_id,
                 lpn = lpn, ppn = ppn, dirty = True)
 
-    def _add_locked_room(self, n_needed):
+    def _add_locked_room(self, n_needed, loading_m_vpn):
         locked_row_ids = []
         for i in range(n_needed):
             row_id = yield self.env.process(
-                    self._free_one_entry_and_lock())
+                    self._evict_entry(loading_m_vpn))
             locked_row_ids.append(row_id)
 
         self.env.exit(locked_row_ids)
 
-    def _free_one_entry_and_lock(self):
+    def _evict_entry(self, loading_m_vpn):
         """
         For an entry to be deleted, it must first become a victim_row.
         To become a victim_row, it must has state USED. Existing victim_row
@@ -832,16 +832,21 @@ class MappingCache(object):
 
         Becoming a victim is the only approach for an entry to be deleted.
         """
-        victim_row = self._lpn_table.victim_row()
+        victim_row = self._lpn_table.victim_row(loading_m_vpn)
+        m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
+
+        # avoid loading and evicting
+        tp_req = self.trans_page_locks.get_request(m_vpn)
+        yield tp_req
+
         victim_row.state = USED_AND_HOLD
 
         if victim_row.dirty == True:
             print 'writing back....'
-            m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
             yield self.env.process(self._write_back(m_vpn))
 
         # after writing back, this lpn could already been deleted
-        # by another _free_one_entry_and_lock()?
+        # by another _evict_entry()?
         assert self._lpn_table.has_lpn(victim_row.lpn), \
                 "lpn_table does not has lpn {}.".format(victim_row.lpn)
         assert victim_row.dirty == False
@@ -850,6 +855,8 @@ class MappingCache(object):
 
         # This is the only place that we delete a lpn
         locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
+
+        self.trans_page_locks.release_request(m_vpn, tp_req)
 
         self.env.exit(locked_row_id)
 
@@ -860,10 +867,6 @@ class MappingCache(object):
         """
         # TODO: check again to see if we really need to write back after
         # acquring the lock
-
-        # aquire lock
-        m_vpn_req = self.trans_page_load_wb_locks.get_request(m_vpn)
-        yield m_vpn_req # should take no time, usually
 
         print 'write back'
         mapping_in_cache = self._lpn_table.get_m_vpn_mappings(m_vpn)
@@ -887,15 +890,16 @@ class MappingCache(object):
         yield self.env.process(
             self._update_mapping_on_flash(m_vpn, latest_mapping))
 
-        # release lock
-        self.trans_page_load_wb_locks.release_request(m_vpn, m_vpn_req)
-
     def _load_missing(self, m_vpn, wanted_lpn):
         """
         Return True if we really load flash page
         """
-        load_req = self.trans_page_load_locks.get_request(m_vpn)
-        yield load_req
+        # By holding this lock, you ensure nobody will delete
+        # anything of this m_vpn in cache
+        # WARNING: eviction called by this _load_missing(m_vpn) should
+        # not try to lock the same m_vpn,  otherwise it will deadlock!
+        tp_req = self.trans_page_locks.get_request(m_vpn)
+        yield tp_req
 
         # check again before really loading
         if wanted_lpn != None and not self._lpn_table.has_lpn(wanted_lpn):
@@ -909,7 +913,7 @@ class MappingCache(object):
 
             if n_more > 0:
                 more_locked_rows = yield self.env.process(
-                    self._add_locked_room(n_more))
+                    self._add_locked_room(n_more, loading_m_vpn = m_vpn))
                 locked_rows += more_locked_rows
 
             yield self.env.process(
@@ -921,7 +925,7 @@ class MappingCache(object):
         else:
             loaded = False
 
-        self.trans_page_load_locks.release_request(m_vpn, load_req)
+        self.trans_page_locks.release_request(m_vpn, tp_req)
 
         self.env.exit(loaded)
 
@@ -930,19 +934,12 @@ class MappingCache(object):
         It should not call _write_back() directly or indirectly as it
         will deadlock.
         """
-        # aquire lock
-        m_vpn_req = self.trans_page_load_wb_locks.get_request(m_vpn)
-        yield m_vpn_req # should take no time, usually
-
         mapping_dict = yield self.env.process(
                 self._read_translation_page(m_vpn))
         uncached_mapping = self._get_uncached_mappings(mapping_dict)
 
         self._lpn_table.add_lpns(locked_rows, uncached_mapping, False,
                 as_least_recent = True)
-
-        # release lock
-        self.trans_page_load_wb_locks.release_request(m_vpn, m_vpn_req)
 
     def _get_uncached_mappings(self, mapping_dict):
         uncached_mapping = {}
@@ -1169,13 +1166,6 @@ class LpnTable(object):
         else:
             return True
 
-    def victim_row(self):
-        for lpn, row in self._lpn_to_row.least_to_most_items():
-            if row.state == USED:
-                return row
-        raise RuntimeError("Cannot find a victim. Current stats: {}"\
-                .format(str(self.stats())))
-
     def stats(self):
         return self._count_states()
 
@@ -1188,6 +1178,14 @@ class LpnTableMvpn(LpnTable):
         super(LpnTableMvpn, self).__init__(conf.n_cache_entries)
 
         self.conf = conf
+
+    def victim_row(self, loading_m_vpn):
+        for lpn, row in self._lpn_to_row.least_to_most_items():
+            if row.state == USED and \
+                    self.conf.lpn_to_m_vpn(lpn) != loading_m_vpn:
+                return row
+        raise RuntimeError("Cannot find a victim. Current stats: {}"\
+                .format(str(self.stats())))
 
     def needed_space_for_m_vpn(self, m_vpn):
         cached_mappings = self.get_m_vpn_mappings(m_vpn)

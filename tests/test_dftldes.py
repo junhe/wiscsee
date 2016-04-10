@@ -7,7 +7,7 @@ import ssdbox
 from utilities import utils
 import flashcontroller
 from ssdbox.ftlsim_commons import Extent
-from ssdbox.dftldes import LpnTable
+from ssdbox.dftldes import LpnTable, LpnTableMvpn
 
 def create_config():
     conf = ssdbox.dftldes.Config()
@@ -584,7 +584,8 @@ class TestLpnTable(unittest.TestCase):
         self.assertEqual(table.lock_free_row(), None)
 
     def test_victim(self):
-        table = LpnTable(8)
+        conf = create_config()
+        table = LpnTableMvpn(conf)
 
         rowid = table.lock_free_row()
         table.add_lpn(rowid = rowid, lpn = 8, ppn = 88, dirty = True)
@@ -592,7 +593,7 @@ class TestLpnTable(unittest.TestCase):
         rowid = table.lock_free_row()
         table.add_lpn(rowid = rowid, lpn = 9, ppn = 99, dirty = True)
 
-        victim_row = table.victim_row()
+        victim_row = table.victim_row(None)
 
         self.assertEqual(victim_row.lpn, 8)
 
