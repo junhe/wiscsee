@@ -413,6 +413,7 @@ class VPNResourcePool(object):
     def __init__(self, simpy_env):
         self.resources = {} # lpn: lock
         self.env = simpy_env
+        self.locked_vpns = set()
 
     def get_request(self, vpn):
         res = self.resources.setdefault(vpn,
@@ -832,13 +833,15 @@ class MappingCache(object):
 
         Becoming a victim is the only approach for an entry to be deleted.
         """
-        victim_row = self._lpn_table.victim_row(loading_m_vpn)
+        victim_row = self._lpn_table.victim_row(loading_m_vpn,
+                self.trans_page_locks.locked_vpns)
         victim_row.state = USED_AND_HOLD
 
         # avoid loading and evicting
         m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
         tp_req = self.trans_page_locks.get_request(m_vpn)
         yield tp_req
+        self.trans_page_locks.locked_vpns.add(m_vpn)
 
         if victim_row.dirty == True:
             yield self.env.process(self._write_back(m_vpn))
@@ -855,6 +858,7 @@ class MappingCache(object):
         locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
 
         self.trans_page_locks.release_request(m_vpn, tp_req)
+        self.trans_page_locks.locked_vpns.remove(m_vpn)
 
         self.env.exit(locked_row_id)
 
@@ -892,6 +896,7 @@ class MappingCache(object):
         # not try to lock the same m_vpn,  otherwise it will deadlock!
         tp_req = self.trans_page_locks.get_request(m_vpn)
         yield tp_req
+        self.trans_page_locks.locked_vpns.add(m_vpn)
 
         # check again before really loading
         if wanted_lpn != None and not self._lpn_table.has_lpn(wanted_lpn):
@@ -916,6 +921,7 @@ class MappingCache(object):
             loaded = False
 
         self.trans_page_locks.release_request(m_vpn, tp_req)
+        self.trans_page_locks.locked_vpns.remove(m_vpn)
 
         self.env.exit(loaded)
 
@@ -1178,11 +1184,12 @@ class LpnTableMvpn(LpnTable):
 
         self.conf = conf
 
-    def victim_row(self, loading_m_vpn):
+    def victim_row(self, loading_m_vpn, avoid_m_vpns):
         for lpn, row in self._lpn_to_row.least_to_most_items():
-            if row.state == USED and \
-                    self.conf.lpn_to_m_vpn(lpn) != loading_m_vpn:
-                return row
+            if row.state == USED:
+                m_vpn = self.conf.lpn_to_m_vpn(lpn)
+                if m_vpn != loading_m_vpn and not m_vpn in avoid_m_vpns:
+                    return row
         raise RuntimeError("Cannot find a victim. Current stats: {}"\
                 .format(str(self.stats())))
 
