@@ -142,10 +142,10 @@ def qdepth_pattern():
                 'expname'        : [expname],
                 'ncq_depth'      : [8],
                 'chunk_size'     : [2*KB],
-                'traffic'        : [8*1024*KB], # 1 4 7
+                'traffic'        : [128*KB], # 1 4 7
                 'devsize_mb'     : [128],
                 'cache_mapped_data_bytes' :[16*MB],
-                'pattern'        : ['random'],
+                'pattern'        : ['random', 'sequential'],
                 'stripe_size'    : [1]
                 }
 
