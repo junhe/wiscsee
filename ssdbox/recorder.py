@@ -45,6 +45,8 @@ class Recorder(object):
 
         self.__open_log_file()
 
+        self._unique_num = 0
+
     def __del__(self):
         self.__close_log_file()
         self.__save_accumulator()
@@ -130,6 +132,11 @@ class Recorder(object):
     @switchable
     def add_to_timer(self, counter_set_name, item_name, addition):
         self.add_to_general_accumulater(counter_set_name, item_name, addition)
+
+    def get_unique_num(self):
+        num = self._unique_num
+        self._unique_num += 1
+        return num
 
     def _parse_accumulator(self, counter_sets):
         """

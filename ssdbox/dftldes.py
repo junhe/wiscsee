@@ -250,7 +250,11 @@ class Ftl(object):
         return ppns
 
     def write_ext(self, extent):
-        # print 'write_ext', str(extent)
+        op_id = self.recorder.get_unique_num()
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'write_ext', arg = extent.lpn_start,
+            tag = 'start', timestamp = self.env.now)
+
         exts_in_mvpngroup = split_ext_to_mvpngroups(self.conf, extent)
 
         ppns_to_write = self.block_pool.next_n_data_pages_to_program_striped(
@@ -267,6 +271,10 @@ class Ftl(object):
 
         yield simpy.events.AllOf(self.env, procs)
 
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'write_ext', arg = extent.lpn_start,
+            tag = 'end', timestamp = self.env.now)
+
     def _write_single_mvpngroup(self, ext_single_m_vpn, ppns_to_write):
         m_vpn = self.conf.lpn_to_m_vpn(ext_single_m_vpn.lpn_start)
 
@@ -277,8 +285,18 @@ class Ftl(object):
             self._update_metadata_for_relocating_lpns(ext_single_m_vpn.lpn_iter(),
                 old_ppns = old_ppns, new_ppns = ppns_to_write))
 
+
+        op_id = self.recorder.get_unique_num()
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'write_user_data', arg = len(ppns_to_write),
+            tag = 'start', timestamp = self.env.now)
+
         yield self.env.process(
             self.flash.rw_ppns(ppns_to_write, 'write', tag = 'TAG_FOREGROUND'))
+
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'write_user_data', arg = len(ppns_to_write),
+            tag = 'end', timestamp = self.env.now)
 
     def _update_metadata_for_relocating_lpns(self, lpns, old_ppns, new_ppns):
         for lpn, old_ppn, new_ppn in zip(lpns, old_ppns, new_ppns):
@@ -345,8 +363,17 @@ class Ftl(object):
                 self._mappings.lpns_to_ppns(ext_single_m_vpn.lpn_iter()))
         ppns_to_read = remove_invalid_ppns(ppns_to_read)
 
+        op_id = self.recorder.get_unique_num()
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'read_user_data', arg = len(ppns_to_read),
+            tag = 'start', timestamp = self.env.now)
+
         yield self.env.process(
             self.flash.rw_ppns(ppns_to_read, 'read', tag = 'TAG_FOREGROUND'))
+
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'read_user_data', arg = len(ppns_to_read),
+            tag = 'end', timestamp = self.env.now)
 
     def discard_ext(self, extent):
         ext_list = split_ext_to_mvpngroups(self.conf, extent)
@@ -955,9 +982,19 @@ class MappingCache(object):
 
         # as if we readlly read from flash
         m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
+
+        op_id = self.recorder.get_unique_num()
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'read_trans_page', arg = m_vpn,
+            tag = 'start', timestamp = self.env.now)
+
         yield self.env.process(
                 self.flash.rw_ppn_extent(m_ppn, 1, 'read',
                 tag = TAG_BACKGROUND))
+
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'read_trans_page', arg = m_vpn,
+            tag = 'end', timestamp = self.env.now)
 
         self.env.exit(mapping_dict)
 
@@ -979,9 +1016,18 @@ class MappingCache(object):
         new_m_ppn = self.block_pool.next_translation_page_to_program()
         old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
 
+        op_id = self.recorder.get_unique_num()
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'prog_trans_page', arg = m_vpn,
+            tag = 'start', timestamp = self.env.now)
+
         yield self.env.process(
                 self.flash.rw_ppn_extent(new_m_ppn, 1, 'write',
                 tag = TAG_BACKGROUND))
+
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'prog_trans_page', arg = m_vpn,
+            tag = 'end', timestamp = self.env.now)
 
         self.oob.new_write(lpn = m_vpn, old_ppn = old_m_ppn,
             new_ppn = new_m_ppn)
