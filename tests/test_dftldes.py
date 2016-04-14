@@ -593,7 +593,7 @@ class TestLpnTable(unittest.TestCase):
         rowid = table.lock_free_row()
         table.add_lpn(rowid = rowid, lpn = 9, ppn = 99, dirty = True)
 
-        victim_row = table.victim_row(None)
+        victim_row = table.victim_row(None, [])
 
         self.assertEqual(victim_row.lpn, 8)
 
