@@ -251,9 +251,7 @@ class Ftl(object):
 
     def write_ext(self, extent):
         op_id = self.recorder.get_unique_num()
-        self.recorder.write_file('timeline.txt',
-            op_id = op_id, op = 'write_ext', arg = extent.lpn_start,
-            tag = 'start', timestamp = self.env.now)
+        start_time = self.env.now # <----- start
 
         exts_in_mvpngroup = split_ext_to_mvpngroups(self.conf, extent)
 
@@ -266,44 +264,50 @@ class Ftl(object):
         for ext_single_m_vpn in exts_in_mvpngroup:
             ppns_of_ext = self._ppns_to_write(ext_single_m_vpn, new_mappings)
             p = self.env.process(
-                self._write_single_mvpngroup(ext_single_m_vpn, ppns_of_ext))
+                self._write_single_mvpngroup(ext_single_m_vpn, ppns_of_ext,
+                    tag = op_id))
             procs.append(p)
 
         yield simpy.events.AllOf(self.env, procs)
 
         self.recorder.write_file('timeline.txt',
             op_id = op_id, op = 'write_ext', arg = extent.lpn_start,
-            tag = 'end', timestamp = self.env.now)
+            start_time = start_time, end_time = self.env.now)
 
-    def _write_single_mvpngroup(self, ext_single_m_vpn, ppns_to_write):
+    def _write_single_mvpngroup(self, ext_single_m_vpn, ppns_to_write,
+            tag=None):
         m_vpn = self.conf.lpn_to_m_vpn(ext_single_m_vpn.lpn_start)
 
         old_ppns = yield self.env.process(
-                self._mappings.lpns_to_ppns(ext_single_m_vpn.lpn_iter()))
+                self._mappings.lpns_to_ppns(ext_single_m_vpn.lpn_iter(), tag))
 
         yield self.env.process(
-            self._update_metadata_for_relocating_lpns(ext_single_m_vpn.lpn_iter(),
-                old_ppns = old_ppns, new_ppns = ppns_to_write))
+            self._update_metadata_for_relocating_lpns(
+                ext_single_m_vpn.lpn_iter(),
+                old_ppns=old_ppns, new_ppns=ppns_to_write, tag=tag))
 
 
+        start_time = self.env.now
         op_id = self.recorder.get_unique_num()
-        self.recorder.write_file('timeline.txt',
-            op_id = op_id, op = 'write_user_data', arg = len(ppns_to_write),
-            tag = 'start', timestamp = self.env.now)
 
+        channel_tag = self.recorder.get_tag('write_user', tag)
         yield self.env.process(
-            self.flash.rw_ppns(ppns_to_write, 'write', tag = 'TAG_FOREGROUND'))
+            self.flash.rw_ppns(ppns_to_write, 'write',
+                tag = channel_tag))
 
         self.recorder.write_file('timeline.txt',
             op_id = op_id, op = 'write_user_data', arg = len(ppns_to_write),
-            tag = 'end', timestamp = self.env.now)
+            start_time = start_time, end_time = self.env.now)
 
-    def _update_metadata_for_relocating_lpns(self, lpns, old_ppns, new_ppns):
+    def _update_metadata_for_relocating_lpns(self, lpns, old_ppns, new_ppns,
+            tag=None):
         for lpn, old_ppn, new_ppn in zip(lpns, old_ppns, new_ppns):
             yield self.env.process(
-                self._update_metadata_for_relocating_lpn(lpn, old_ppn, new_ppn))
+                self._update_metadata_for_relocating_lpn(
+                    lpn, old_ppn, new_ppn, tag))
 
-    def _update_metadata_for_relocating_lpn(self, lpn, old_ppn, new_ppn):
+    def _update_metadata_for_relocating_lpn(self, lpn, old_ppn, new_ppn,
+            tag=None):
         """
         contents of lpn used to be in old_ppn, but now it is in new_ppn.
         This function adjust all metadata to reflect the change.
@@ -329,7 +333,7 @@ class Ftl(object):
         """
         # mappings in cache
         yield self.env.process(
-                self._mappings.update(lpn = lpn, ppn = new_ppn))
+                self._mappings.update(lpn=lpn, ppn=new_ppn, tag=tag))
 
         # mappings on flash
         #   handled by _mappings
@@ -349,31 +353,42 @@ class Ftl(object):
         ext_list = split_ext_to_mvpngroups(self.conf, extent)
         # print [str(x) for x in ext_list]
 
+        op_id = self.recorder.get_unique_num()
+        start_time = self.env.now
+
         procs = []
         for ext_single_m_vpn in ext_list:
-            p = self.env.process(self._read_single_mvpngroup(ext_single_m_vpn))
+            p = self.env.process(
+                    self._read_single_mvpngroup(ext_single_m_vpn, tag=op_id))
             procs.append(p)
 
         yield simpy.events.AllOf(self.env, procs)
 
-    def _read_single_mvpngroup(self, ext_single_m_vpn):
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'read_ext', arg = extent.lpn_start,
+            start_time = start_time, end_time = self.env.now)
+
+
+    def _read_single_mvpngroup(self, ext_single_m_vpn, tag=None):
         m_vpn = self.conf.lpn_to_m_vpn(ext_single_m_vpn.lpn_start)
 
+
         ppns_to_read = yield self.env.process(
-                self._mappings.lpns_to_ppns(ext_single_m_vpn.lpn_iter()))
+                self._mappings.lpns_to_ppns(ext_single_m_vpn.lpn_iter(),
+                    tag=tag))
         ppns_to_read = remove_invalid_ppns(ppns_to_read)
 
+
         op_id = self.recorder.get_unique_num()
-        self.recorder.write_file('timeline.txt',
-            op_id = op_id, op = 'read_user_data', arg = len(ppns_to_read),
-            tag = 'start', timestamp = self.env.now)
+        start_time = self.env.now
 
         yield self.env.process(
-            self.flash.rw_ppns(ppns_to_read, 'read', tag = 'TAG_FOREGROUND'))
+            self.flash.rw_ppns(ppns_to_read, 'read',
+                tag=self.recorder.get_tag('read_user', tag)))
 
         self.recorder.write_file('timeline.txt',
-            op_id = op_id, op = 'read_user_data', arg = len(ppns_to_read),
-            tag = 'end', timestamp = self.env.now)
+            op_id=op_id, op='read_user_data', arg=len(ppns_to_read),
+            start_time = start_time, end_time = self.env.now)
 
     def discard_ext(self, extent):
         ext_list = split_ext_to_mvpngroups(self.conf, extent)
@@ -776,7 +791,7 @@ class MappingCache(object):
 
         self.trans_page_locks =  VPNResourcePool(self.env)
 
-    def lpn_to_ppn(self, lpn):
+    def lpn_to_ppn(self, lpn, tag=None):
         """
         Note that the return can be UNINITIATED
         TODO: avoid thrashing!
@@ -786,7 +801,7 @@ class MappingCache(object):
         if ppn == MISS:
             m_vpn = self.conf.lpn_to_m_vpn(lpn)
             loaded = yield self.env.process(
-                self._load_missing(m_vpn, wanted_lpn = lpn))
+                self._load_missing(m_vpn, wanted_lpn=lpn, tag=tag))
             ppn = self._lpn_table.lpn_to_ppn(lpn)
             assert ppn != MISS
         else:
@@ -799,33 +814,33 @@ class MappingCache(object):
 
         self.env.exit(ppn)
 
-    def lpns_to_ppns(self, lpns):
+    def lpns_to_ppns(self, lpns, tag=None):
         """
         If lpns are of the same m_vpn, this process will only
         have one cache miss.
         """
         ppns = []
         for lpn in lpns:
-            ppn = yield self.env.process(self.lpn_to_ppn(lpn))
+            ppn = yield self.env.process(self.lpn_to_ppn(lpn, tag))
             ppns.append(ppn)
         self.env.exit(ppns)
 
-    def update_batch(self, mapping_dict):
+    def update_batch(self, mapping_dict, tag=None):
         for lpn, ppn in mapping_dict.items():
-            yield self.env.process(self.update(lpn, ppn))
+            yield self.env.process(self.update(lpn, ppn, tag))
 
-    def update(self, lpn, ppn):
+    def update(self, lpn, ppn, tag=None):
         """
         It may evict to make room for this entry
         """
         if self._lpn_table.has_lpn(lpn):
             # hit
-            self._lpn_table.overwrite_lpn(lpn, ppn, dirty = True)
+            self._lpn_table.overwrite_lpn(lpn, ppn, dirty=True)
         else:
             # miss
-            yield self.env.process(self._insert_new_mapping(lpn, ppn))
+            yield self.env.process(self._insert_new_mapping(lpn, ppn, tag))
 
-    def _insert_new_mapping(self, lpn, ppn):
+    def _insert_new_mapping(self, lpn, ppn, tag=None):
         """
         lpn should not be in cache
         """
@@ -834,7 +849,7 @@ class MappingCache(object):
         if self._lpn_table.n_free_rows() == 0:
             # no free space for this insertion, free and lock 1
             locked_rows = yield self.env.process(
-                self._add_locked_room(n_needed = 1, loading_m_vpn = None))
+                self._add_locked_room(n_needed=1, loading_m_vpn=None, tag=tag))
             locked_row_id = locked_rows[0]
         else:
             locked_row_id = self._lpn_table.lock_free_row()
@@ -842,16 +857,16 @@ class MappingCache(object):
         self._lpn_table.add_lpn(rowid = locked_row_id,
                 lpn = lpn, ppn = ppn, dirty = True)
 
-    def _add_locked_room(self, n_needed, loading_m_vpn):
+    def _add_locked_room(self, n_needed, loading_m_vpn, tag=None):
         locked_row_ids = []
         for i in range(n_needed):
             row_id = yield self.env.process(
-                    self._evict_entry(loading_m_vpn))
+                    self._evict_entry(loading_m_vpn, tag))
             locked_row_ids.append(row_id)
 
         self.env.exit(locked_row_ids)
 
-    def _evict_entry(self, loading_m_vpn):
+    def _evict_entry(self, loading_m_vpn, tag=None):
         """
         For an entry to be deleted, it must first become a victim_row.
         To become a victim_row, it must has state USED. Existing victim_row
@@ -871,7 +886,7 @@ class MappingCache(object):
         self.trans_page_locks.locked_vpns.add(m_vpn)
 
         if victim_row.dirty == True:
-            yield self.env.process(self._write_back(m_vpn))
+            yield self.env.process(self._write_back(m_vpn, tag))
 
         # after writing back, this lpn could already been deleted
         # by another _evict_entry()?
@@ -889,7 +904,7 @@ class MappingCache(object):
 
         self.env.exit(locked_row_id)
 
-    def _write_back(self, m_vpn):
+    def _write_back(self, m_vpn, tag=None):
         """
         It should not call _load_to_locked_space() directly or indirectly as it
         will deadlock.
@@ -903,7 +918,7 @@ class MappingCache(object):
         if len(mapping_in_cache) < self.conf.n_mapping_entries_per_page:
             # Not all mappings are in cache
             mapping_in_flash = yield self.env.process(
-                    self._read_translation_page(m_vpn))
+                    self._read_translation_page(m_vpn, tag))
             latest_mapping = mapping_in_flash
             latest_mapping.update(mapping_in_cache)
         else:
@@ -913,7 +928,7 @@ class MappingCache(object):
         yield self.env.process(
             self._update_mapping_on_flash(m_vpn, latest_mapping))
 
-    def _load_missing(self, m_vpn, wanted_lpn):
+    def _load_missing(self, m_vpn, wanted_lpn, tag=None):
         """
         Return True if we really load flash page
         """
@@ -937,11 +952,12 @@ class MappingCache(object):
 
             if n_more > 0:
                 more_locked_rows = yield self.env.process(
-                    self._add_locked_room(n_more, loading_m_vpn = m_vpn))
+                    self._add_locked_room(n_more, loading_m_vpn=m_vpn,
+                        tag=tag))
                 locked_rows += more_locked_rows
 
             yield self.env.process(
-                self._load_to_locked_space(m_vpn, locked_rows))
+                self._load_to_locked_space(m_vpn, locked_rows, tag=tag))
 
             loaded = True
         else:
@@ -952,13 +968,13 @@ class MappingCache(object):
 
         self.env.exit(loaded)
 
-    def _load_to_locked_space(self, m_vpn, locked_rows):
+    def _load_to_locked_space(self, m_vpn, locked_rows, tag=None):
         """
         It should not call _write_back() directly or indirectly as it
         will deadlock.
         """
         mapping_dict = yield self.env.process(
-                self._read_translation_page(m_vpn))
+                self._read_translation_page(m_vpn, tag))
         uncached_mapping = self._get_uncached_mappings(mapping_dict)
 
         n_needed = len(uncached_mapping)
@@ -976,7 +992,7 @@ class MappingCache(object):
                 uncached_mapping[lpn] = ppn
         return uncached_mapping
 
-    def _read_translation_page(self, m_vpn):
+    def _read_translation_page(self, m_vpn, tag=None):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
         mapping_dict = self.mapping_on_flash.lpns_to_ppns(lpns)
 
@@ -984,21 +1000,19 @@ class MappingCache(object):
         m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
 
         op_id = self.recorder.get_unique_num()
-        self.recorder.write_file('timeline.txt',
-            op_id = op_id, op = 'read_trans_page', arg = m_vpn,
-            tag = 'start', timestamp = self.env.now)
+        start_time = self.env.now
 
         yield self.env.process(
                 self.flash.rw_ppn_extent(m_ppn, 1, 'read',
-                tag = TAG_BACKGROUND))
+                tag = self.recorder.get_tag('read_trans', tag)))
 
         self.recorder.write_file('timeline.txt',
             op_id = op_id, op = 'read_trans_page', arg = m_vpn,
-            tag = 'end', timestamp = self.env.now)
+            start_time = start_time, end_time = self.env.now)
 
         self.env.exit(mapping_dict)
 
-    def _update_mapping_on_flash(self, m_vpn, mapping_dict):
+    def _update_mapping_on_flash(self, m_vpn, mapping_dict, tag=None):
         """
         mapping_dict should only has lpns belonging to m_vpn
         """
@@ -1010,24 +1024,22 @@ class MappingCache(object):
 
         self.mapping_on_flash.batch_update(mapping_dict)
 
-        yield self.env.process(self._program_translation_page(m_vpn))
+        yield self.env.process(self._program_translation_page(m_vpn, tag))
 
-    def _program_translation_page(self, m_vpn):
+    def _program_translation_page(self, m_vpn, tag=None):
         new_m_ppn = self.block_pool.next_translation_page_to_program()
         old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
 
         op_id = self.recorder.get_unique_num()
-        self.recorder.write_file('timeline.txt',
-            op_id = op_id, op = 'prog_trans_page', arg = m_vpn,
-            tag = 'start', timestamp = self.env.now)
+        start_time = self.env.now
 
         yield self.env.process(
                 self.flash.rw_ppn_extent(new_m_ppn, 1, 'write',
-                tag = TAG_BACKGROUND))
+                tag = self.recorder.get_tag('prog_trans', tag)))
 
         self.recorder.write_file('timeline.txt',
             op_id = op_id, op = 'prog_trans_page', arg = m_vpn,
-            tag = 'end', timestamp = self.env.now)
+            start_time = start_time, end_time = self.env.now)
 
         self.oob.new_write(lpn = m_vpn, old_ppn = old_m_ppn,
             new_ppn = new_m_ppn)

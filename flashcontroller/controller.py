@@ -468,6 +468,10 @@ class Channel3(Channel2):
                 "channel_{id}-write-{tag}".format(id = self.channel_id,
                     tag = tag),
                 e - s)
+            print tag
+            self.recorder.write_file('channel_timeline.txt',
+                channel=self.channel_id, start_time=s, end_time=e, **tag)
+
 
     def read_page(self, tag, addr = None):
         with self.resource.request() as request:
@@ -480,6 +484,9 @@ class Channel3(Channel2):
                 "channel_{id}-read-{tag}".format(id = self.channel_id,
                     tag = tag),
                 e - s)
+            self.recorder.write_file('channel_timeline.txt',
+                channel=self.channel_id, start_time=s, end_time=e, **tag)
+
 
     def erase_block(self, tag, addr = None):
         with self.resource.request() as request:
@@ -492,4 +499,6 @@ class Channel3(Channel2):
                 "channel_{id}-erase-{tag}".format(id = self.channel_id,
                     tag = tag),
                 e - s)
+            self.recorder.write_file('channel_timeline.txt',
+                channel=self.channel_id, start_time=s, end_time=e, **tag)
 

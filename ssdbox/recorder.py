@@ -138,6 +138,10 @@ class Recorder(object):
         self._unique_num += 1
         return num
 
+    def get_tag(self, op, op_id):
+        # return '-'.join([op, str(op_id)])
+        return {'op': op, 'op_id':op_id}
+
     def _parse_accumulator(self, counter_sets):
         """
         counter sets
