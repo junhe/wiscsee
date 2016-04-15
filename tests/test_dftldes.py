@@ -275,8 +275,8 @@ class TestWrite(unittest.TestCase):
 
         yield env.process(dftl.write_ext(ext))
 
-        # read translation page, write data page
-        self.assertEqual(env.now, time_read_page + time_program_page)
+        # read translation page and write data page in the same time
+        self.assertEqual(env.now, max(time_read_page, time_program_page))
         self.assertEqual(rec.get_count_me("Mapping_Cache", "hit"), 0)
         self.assertEqual(rec.get_count_me("Mapping_Cache", "miss"), 1)
 
@@ -303,8 +303,8 @@ class TestWrite(unittest.TestCase):
 
         yield env.process(dftl.write_ext(ext))
 
-        # read translation page, then write two data pages at the same time
-        self.assertEqual(env.now, time_read_page + time_program_page)
+        # writing 2 data page and reading trans page happens at the same time
+        self.assertEqual(env.now, max(time_read_page, time_program_page))
 
         self.assertEqual(rec.get_count_me("Mapping_Cache", "miss"), 1)
         # The second lpn is a hit
@@ -333,7 +333,9 @@ class TestWrite(unittest.TestCase):
 
         yield env.process(dftl.write_ext(ext))
 
-        # read translation page, then write all 4 data pages at the same time
+        # writing 4 data page and reading 1 trans page at the same time,
+        # since there are only 4 channels, 1 trans read and one data page
+        # write compete for one channel
         self.assertEqual(env.now, time_read_page + time_program_page)
 
         self.assertEqual(rec.get_count_me("Mapping_Cache", "miss"), 1)
