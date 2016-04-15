@@ -278,15 +278,16 @@ class Ftl(object):
             tag=None):
         m_vpn = self.conf.lpn_to_m_vpn(ext_single_m_vpn.lpn_start)
 
-        old_ppns = yield self.env.process(
-                self._mappings.lpns_to_ppns(ext_single_m_vpn.lpn_iter(), tag))
-
-        yield self.env.process(
+        p_relocate = self.env.process(
             self._update_metadata_for_relocating_lpns(
                 ext_single_m_vpn.lpn_iter(),
-                old_ppns=old_ppns, new_ppns=ppns_to_write, tag=tag))
+                new_ppns=ppns_to_write, tag=tag))
 
+        p_w_user = self.env.process(self._program_user_data(ppns_to_write, tag))
 
+        yield simpy.events.AllOf(self.env, [p_relocate, p_w_user])
+
+    def _program_user_data(self, ppns_to_write, tag=None):
         start_time = self.env.now
         op_id = self.recorder.get_unique_num()
 
@@ -299,8 +300,13 @@ class Ftl(object):
             op_id = op_id, op = 'write_user_data', arg = len(ppns_to_write),
             start_time = start_time, end_time = self.env.now)
 
-    def _update_metadata_for_relocating_lpns(self, lpns, old_ppns, new_ppns,
-            tag=None):
+    def _update_metadata_for_relocating_lpns(self, lpns, new_ppns, tag=None):
+        """
+        This may be parallelized.
+        """
+        old_ppns = yield self.env.process(
+                self._mappings.lpns_to_ppns(lpns, tag))
+
         for lpn, old_ppn, new_ppn in zip(lpns, old_ppns, new_ppns):
             yield self.env.process(
                 self._update_metadata_for_relocating_lpn(
@@ -926,7 +932,7 @@ class MappingCache(object):
             latest_mapping = mapping_in_cache
 
         yield self.env.process(
-            self._update_mapping_on_flash(m_vpn, latest_mapping))
+            self._update_mapping_on_flash(m_vpn, latest_mapping, tag))
 
     def _load_missing(self, m_vpn, wanted_lpn, tag=None):
         """
