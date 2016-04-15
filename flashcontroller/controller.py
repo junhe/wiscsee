@@ -452,6 +452,12 @@ class Channel3(Channel2):
     def counter_set_name(self):
         return "channel_busy_time"
 
+    def _convert_tag(self, tag):
+        if isinstance(tag, dict):
+            return tag
+        elif isinstance(tag, str):
+            return {'tag':tag}
+
     def write_page(self, tag, addr = None , data = None):
         """
         If you want to when this operation is finished, just print env.now.
@@ -468,7 +474,7 @@ class Channel3(Channel2):
                 "channel_{id}-write-{tag}".format(id = self.channel_id,
                     tag = tag),
                 e - s)
-            print tag
+            tag = self._convert_tag(tag)
             self.recorder.write_file('channel_timeline.txt',
                 channel=self.channel_id, start_time=s, end_time=e, **tag)
 
@@ -484,6 +490,7 @@ class Channel3(Channel2):
                 "channel_{id}-read-{tag}".format(id = self.channel_id,
                     tag = tag),
                 e - s)
+            tag = self._convert_tag(tag)
             self.recorder.write_file('channel_timeline.txt',
                 channel=self.channel_id, start_time=s, end_time=e, **tag)
 
@@ -499,6 +506,7 @@ class Channel3(Channel2):
                 "channel_{id}-erase-{tag}".format(id = self.channel_id,
                     tag = tag),
                 e - s)
+            tag = self._convert_tag(tag)
             self.recorder.write_file('channel_timeline.txt',
                 channel=self.channel_id, start_time=s, end_time=e, **tag)
 
