@@ -110,6 +110,8 @@ class BlockPool(object):
         n_pages_left = n
         ppns = []
         outofspace_channels = set()
+        stipe_size = float('inf') if stripe_size == 'infinity' else stripe_size
+
         while n_pages_left > 0:
             needed_on_channel = min(stripe_size, n_pages_left)
             ppns_on_channel = self._grab_n_pages_on_channel(

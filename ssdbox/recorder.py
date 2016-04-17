@@ -47,6 +47,12 @@ class Recorder(object):
 
         self._unique_num = 0
 
+        self._tag_groups = {
+            'read_user': 'foreground',
+            'write_user': 'foreground',
+            'read_trans': 'background',
+            'prog_trans': 'background'}
+
     def __del__(self):
         self.__close_log_file()
         self.__save_accumulator()
@@ -141,6 +147,12 @@ class Recorder(object):
     def get_tag(self, op, op_id):
         # return '-'.join([op, str(op_id)])
         return {'op': op, 'op_id':op_id}
+
+    def tag_group(self, tag):
+        try:
+            return self._tag_groups[tag['op']]
+        except KeyError:
+            return 'TagGroupUnknown'
 
     def _parse_accumulator(self, counter_sets):
         """

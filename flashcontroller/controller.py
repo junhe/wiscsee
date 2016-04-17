@@ -472,7 +472,7 @@ class Channel3(Channel2):
             self.recorder.add_to_timer(
                 self.counter_set_name(),
                 "channel_{id}-write-{tag}".format(id = self.channel_id,
-                    tag = tag),
+                    tag = self.recorder.tag_group(tag)),
                 e - s)
             tag = self._convert_tag(tag)
             self.recorder.write_file('channel_timeline.txt',
@@ -488,7 +488,7 @@ class Channel3(Channel2):
             self.recorder.add_to_timer(
                 self.counter_set_name(),
                 "channel_{id}-read-{tag}".format(id = self.channel_id,
-                    tag = tag),
+                    tag = self.recorder.tag_group(tag)),
                 e - s)
             tag = self._convert_tag(tag)
             self.recorder.write_file('channel_timeline.txt',
@@ -504,7 +504,7 @@ class Channel3(Channel2):
             self.recorder.add_to_timer(
                 self.counter_set_name(),
                 "channel_{id}-erase-{tag}".format(id = self.channel_id,
-                    tag = tag),
+                    tag = self.recorder.tag_group(tag)),
                 e - s)
             tag = self._convert_tag(tag)
             self.recorder.write_file('channel_timeline.txt',
