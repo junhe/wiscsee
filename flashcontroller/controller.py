@@ -76,37 +76,6 @@ class FlashRequest(object):
         lines.append( str(self.addr) )
         return '\n'.join(lines)
 
-class FlatFlashPageRequest(object):
-    def __init__(self, page_start, page_count, op):
-        """
-        op is one of OP_READ, OP_WRITE
-        """
-        assert op != OP_ERASE
-        self.page_start = page_start
-        self.page_count = page_count
-        self.op = op
-
-    def get_range(self):
-        return self.page_start, self, page_count
-
-class FlatFlashBlockRequest(object):
-    def __init__(self, block_start, block_count, op):
-        """
-        op is one of OP_ERASE
-        """
-        assert op == OP_ERASE
-        self.block_start = block_start
-        self.block_count = block_count
-        self.op = op
-
-    def get_range(self):
-        return self.block_start, self, block_count
-
-
-def display_flash_requests(requests):
-    reqs = [str(req) for req in requests]
-    print '\n'.join(reqs)
-
 
 def create_flashrequest(addr, op):
     req = FlashRequest()
@@ -125,10 +94,15 @@ def create_flashrequest(addr, op):
 
 
 class Controller(object):
+    """
+    This base class implements the core functions of a flash controller.
+    It should not have those side functions like recording
+    """
     def __init__(self, simpy_env, conf):
         self.env = simpy_env
         self.conf = conf
 
+        # TODO: should these be in config?
         self.page_size = self.conf['flash_config']['page_size']
         self.n_pages_per_block = self.conf['flash_config']['n_pages_per_block']
         self.n_blocks_per_plane = self.conf['flash_config']['n_blocks_per_plane']
@@ -262,25 +236,14 @@ class Controller(object):
         yield event
 
 
-class Controller2(Controller):
+class Controller3(Controller):
     """
-    This controller has a recorder
-    So far it also has functions from ParallelFlash
+    With tag, and recorder
     """
     def __init__(self, simpy_env, conf, recorderobj):
-        super(Controller2, self).__init__(simpy_env, conf)
+        super(Controller3, self).__init__(self, simpy_env, conf)
+
         self.recorder = recorderobj
-        self.channels = [Channel2(self.env, conf, self.recorder, i)
-                for i in range( self.n_channels_per_dev)]
-
-
-class Controller3(Controller2):
-    """
-    With tag
-    """
-    def __init__(self, simpy_env, conf, recorderobj):
-        super(Controller3, self).__init__(simpy_env, conf, recorderobj)
-
         self.channels = [Channel3(self.env, conf, self.recorder, i)
                 for i in range( self.n_channels_per_dev)]
 
