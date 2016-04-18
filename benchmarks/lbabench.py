@@ -136,7 +136,7 @@ def qdepth_pattern():
                 # 'devsize_mb'     : [128],
                 # 'cache_mapped_data_bytes' :[16*MB, 128*MB],
                 # 'pattern'        : ['sequential', 'random'],
-                # 'stripe_size'    : [1, float('inf')]
+                # 'stripe_size'    : [1, 'infinity']
                 # }
         para_dict = {
                 'expname'        : [expname],
