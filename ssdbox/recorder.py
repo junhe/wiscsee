@@ -151,8 +151,9 @@ class Recorder(object):
     def tag_group(self, tag):
         try:
             return self._tag_groups[tag['op']]
-        except KeyError:
-            return 'TagGroupUnknown'
+        except (KeyError, TypeError):
+            return tag
+            # return 'TagGroupUnknown'
 
     def _parse_accumulator(self, counter_sets):
         """

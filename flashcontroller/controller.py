@@ -127,6 +127,10 @@ class Controller(object):
                 for i in range( self.n_channels_per_dev)]
 
     def get_flash_requests_for_pbns(self, block_start, block_count, op):
+        """
+        Mapping pbn seen by FTL to hierarchical address used by flash
+        controller
+        """
         ret_requests = []
         for block in range(block_start, block_start + block_count):
             machine_block_addr = self.physical_to_machine_block(block)
@@ -134,6 +138,18 @@ class Controller(object):
             ret_requests.append(flash_req)
 
         return ret_requests
+
+    def physical_to_machine_block(self, block):
+        """
+        We first translate block to the page number of its first page,
+        so we can use the existing physical_to_machine_page
+        """
+        page = block * self.n_pages_per_block
+
+        addr = self.physical_to_machine_page(page)
+        addr.page = None # so we dont' mistakely use it for other purposes
+
+        return addr
 
     def get_flash_requests_for_ppns(self, page_start, page_count, op):
         """
@@ -147,28 +163,15 @@ class Controller(object):
 
         return ret_requests
 
-    def physical_to_machine_page(self, page):
+    def physical_to_machine_page(self, page_no):
         addr = FlashAddress()
 
-        no = page
         # page_hierarchy has [channel, package, ..., block]
         # location has       [channel, package, ..., block, page]
         for i, count in enumerate(self.page_hierarchy):
-            addr.location[i] = no / count
-            no = no % count
-        addr.location[-1] = no
-
-        return addr
-
-    def physical_to_machine_block(self, block):
-        """
-        We first translate block to the page number of its first page,
-        so we can use the existing physical_to_machine_page
-        """
-        page = block * self.n_pages_per_block
-
-        addr = self.physical_to_machine_page(page)
-        addr.page = None # so we dont' mistakely use it for other purposes
+            addr.location[i] = page_no / count
+            page_no = page_no % count
+        addr.location[-1] = page_no
 
         return addr
 
@@ -241,7 +244,7 @@ class Controller3(Controller):
     With tag, and recorder
     """
     def __init__(self, simpy_env, conf, recorderobj):
-        super(Controller3, self).__init__(self, simpy_env, conf)
+        super(Controller3, self).__init__(simpy_env, conf)
 
         self.recorder = recorderobj
         self.channels = [Channel3(self.env, conf, self.recorder, i)
