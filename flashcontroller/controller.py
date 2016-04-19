@@ -188,6 +188,28 @@ class Controller(object):
                 op = 'erase')
         yield self.env.process( self.execute_request_list(flash_reqs) )
 
+    def execute_request(self, flash_request):
+        if flash_request.operation == OP_READ:
+            yield self.env.process(
+                    self.read_page(flash_request.addr))
+        elif flash_request.operation == OP_WRITE:
+            yield self.env.process(
+                self.write_page(flash_request.addr))
+        elif flash_request.operation == OP_ERASE:
+            yield self.env.process(
+                self.erase_block(flash_request.addr))
+        else:
+            raise RuntimeError("operation {} is not supported".format(
+                flash_request.operation))
+
+    def execute_request_list(self, flash_request_list):
+        procs = []
+        for request in flash_request_list:
+            p = self.env.process(self.execute_request(request))
+            procs.append(p)
+        event = simpy.events.AllOf(self.env, procs)
+        yield event
+
     def write_page(self, addr, data = None):
         """
         Usage:
@@ -215,28 +237,6 @@ class Controller(object):
     def erase_block(self, addr):
         yield self.env.process(
             self.channels[addr.channel].erase_block(None))
-
-    def execute_request(self, flash_request):
-        if flash_request.operation == OP_READ:
-            yield self.env.process(
-                    self.read_page(flash_request.addr))
-        elif flash_request.operation == OP_WRITE:
-            yield self.env.process(
-                self.write_page(flash_request.addr))
-        elif flash_request.operation == OP_ERASE:
-            yield self.env.process(
-                self.erase_block(flash_request.addr))
-        else:
-            raise RuntimeError("operation {} is not supported".format(
-                flash_request.operation))
-
-    def execute_request_list(self, flash_request_list):
-        procs = []
-        for request in flash_request_list:
-            p = self.env.process(self.execute_request(request))
-            procs.append(p)
-        event = simpy.events.AllOf(self.env, procs)
-        yield event
 
 
 class Controller3(Controller):
