@@ -11,10 +11,6 @@ sudo python -m tests.flashcontroller_test -v
 
 
 echo 
-echo ======= dftlncq_test =======
-sudo python -m tests.ssdframework_test -v
-
-echo 
 echo ======= recorder_test =======
 sudo python -m tests.recorder_test
 

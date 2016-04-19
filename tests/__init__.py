@@ -9,5 +9,4 @@ import Makefile_test
 import misc_test
 import recorder_test
 import simulator_test
-import ssdframework_test
 import test_dftldes
