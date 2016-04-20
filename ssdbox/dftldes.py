@@ -1847,10 +1847,6 @@ class OutOfBandAreas(object):
     def ppn_to_lpn_or_mvpn(self, ppn):
         return self.ppn_to_lpn_mvpn[ppn]
 
-    def invalidate_ppns(self, ppns):
-        for ppn in ppns:
-            self.invalidate_ppn(ppn)
-
     def erase_block(self, flash_block):
         self.states.erase_block(flash_block)
 
@@ -1881,6 +1877,10 @@ class OutOfBandAreas(object):
         if old_ppn != UNINITIATED:
             # the lpn has mapping before this write
             self.invalidate_ppn(old_ppn)
+
+    def invalidate_ppns(self, ppns):
+        for ppn in ppns:
+            self.invalidate_ppn(ppn)
 
     def invalidate_ppn(self, ppn):
         self.states.invalidate_page(ppn)
