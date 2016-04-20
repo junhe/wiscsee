@@ -65,149 +65,6 @@ DATA_USER = "data.user"
 DATA_CLEANING = "data.cleaning"
 
 
-class Dftl(object):
-    """
-    The implementation literally follows DFtl paper.
-    This class is a coordinator of other coordinators and data structures
-    """
-    def __init__(self, confobj, recorderobj, flashcontrollerobj, env):
-        if not isinstance(confobj, Config):
-            raise TypeError("confobj is not Config. it is {}".
-               format(type(confobj).__name__))
-
-        self.conf = confobj
-        self.recorder = recorderobj
-        self.flash = flashcontrollerobj
-        self.env = env
-
-        self.global_helper = GlobalHelper(confobj)
-
-        self.block_pool = BlockPool(confobj)
-        self.oob = OutOfBandAreas(confobj)
-
-        ###### the managers ######
-        self.mapping_manager = MappingManager(
-            confobj = self.conf,
-            block_pool = self.block_pool,
-            flashobj = self.flash,
-            oobobj=self.oob,
-            recorderobj = recorderobj,
-            envobj = env
-            )
-
-        self.garbage_collector = GarbageCollector(
-            confobj = self.conf,
-            flashobj = self.flash,
-            oobobj=self.oob,
-            block_pool = self.block_pool,
-            mapping_manager = self.mapping_manager,
-            recorderobj = recorderobj,
-            envobj = env
-            )
-
-        self.n_sec_per_page = self.conf.page_size \
-                / self.conf['sector_size']
-
-        # This resource protects all data structures stored in the memory.
-        self.resource_ram = simpy.Resource(self.env, capacity = 1)
-
-    def translate(self, ssd_req, pid):
-        """
-        Our job here is to find the corresponding physical flat address
-        of the address in ssd_req. The during the translation, we may
-        need to synchronizely access flash.
-
-        We do the following here:
-        Read:
-            1. find out the range of logical pages
-            2. for each logical page:
-                if mapping is in cache, just translate it
-                else bring mapping to cache and possibly evict a mapping entry
-        """
-        with self.resource_ram.request() as ram_request:
-            yield ram_request # serialize all access to data structures
-
-            s = self.env.now
-            flash_reqs = yield self.env.process(
-                    self.handle_ssd_requests(ssd_req))
-            e = self.env.now
-            self.recorder.add_to_timer("translation_time-wo_wait", pid, e - s)
-
-            self.env.exit(flash_reqs)
-
-    def handle_ssd_requests(self, ssd_req):
-        lpns = ssd_req.lpn_iter()
-
-        if ssd_req.operation == 'read':
-            ppns = yield self.env.process(
-                    self.mapping_manager.ppns_for_reading(lpns))
-        elif ssd_req.operation == 'write':
-            ppns = yield self.env.process(
-                    self.mapping_manager.ppns_for_writing(lpns))
-        elif ssd_req.operation == 'discard':
-            yield self.env.process(
-                    self.mapping_manager.discard_lpns(lpns))
-            ppns = []
-        else:
-            print 'io operation', ssd_req.operation, 'is not processed'
-            ppns = []
-
-        flash_reqs = []
-        for ppn in ppns:
-            if ppn == 'UNINIT':
-                continue
-
-            req = self.flash.get_flash_requests_for_ppns(ppn, 1,
-                    op = ssd_req.operation)
-            flash_reqs.extend(req)
-
-        self.env.exit(flash_reqs)
-
-    def clean_garbage(self):
-        with self.resource_ram.request() as ram_request:
-            yield ram_request # serialize all access to data structures
-            yield self.env.process(
-                    self.garbage_collector.gc_process())
-
-
-    def page_to_sec_items(self, data):
-        ret = []
-        for page_data in data:
-            if page_data == None:
-                page_data = [None] * self.n_sec_per_page
-            for item in page_data:
-                ret.append(item)
-
-        return ret
-
-    def sec_to_page_items(self, data):
-        if data == None:
-            return None
-
-        sec_per_page = self.conf.page_size / self.conf['sector_size']
-        n_pages = len(data) / sec_per_page
-
-        new_data = []
-        for page in range(n_pages):
-            page_items = []
-            for sec in range(sec_per_page):
-                page_items.append(data[page * sec_per_page + sec])
-            new_data.append(page_items)
-
-        return new_data
-
-    def pre_workload(self):
-        pass
-
-    def post_processing(self):
-        """
-        This function is called after the simulation.
-        """
-        pass
-
-    def get_type(self):
-        return "dftldes"
-
 
 class Ftl(object):
     def __init__(self, confobj, recorderobj, flashcontrollerobj, env):
@@ -219,8 +76,6 @@ class Ftl(object):
         self.recorder = recorderobj
         self.flash = flashcontrollerobj
         self.env = env
-
-        self.global_helper = GlobalHelper(confobj)
 
         self.block_pool = BlockPool(confobj)
         self.oob = OutOfBandAreas(confobj)
@@ -349,8 +204,8 @@ class Ftl(object):
 
         # oob state
         # oob ppn->lpn/vpn
-        self.oob.new_lba_write(lpn = lpn, old_ppn = old_ppn,
-            new_ppn = new_ppn)
+        self.oob.relocate_page(lpn=lpn, old_ppn=old_ppn, new_ppn=new_ppn,
+                update_time=True)
 
         # blockpool
         #   should be handled when we got new_ppn
@@ -418,7 +273,7 @@ class Ftl(object):
             ppns_to_invalidate, (), fillvalue = UNINITIATED))
         self._mappings.update_batch(mapping_dict)
 
-        self.oob.wipe_ppns(ppns_to_invalidate)
+        self.oob.invalidate_ppns(ppns_to_invalidate)
 
 
 def remove_invalid_ppns(ppns):
@@ -449,14 +304,6 @@ def split_ext_to_mvpngroups(conf, extent):
     return group_extent_list
 
 
-class GlobalHelper(object):
-    """
-    In case you need some global variables. We put all global stuff here so
-    it is easier to manage. (And you know all the bad things you did :)
-    """
-    def __init__(self, confobj):
-        pass
-
 class VPNResourcePool(object):
     def __init__(self, simpy_env):
         self.resources = {} # lpn: lock
@@ -472,302 +319,6 @@ class VPNResourcePool(object):
         res = self.resources[vpn]
         res.release(request)
 
-class MappingManager(object):
-    """
-    This class is the supervisor of all the mappings. When initializing, it
-    register CMT and GMT with it and provides higher level operations on top of
-    them.
-    This class should act as a coordinator of all the mapping data structures.
-    """
-    def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
-            envobj):
-        self.conf = confobj
-        self.flash = flashobj
-        self.oob = oobobj
-        self.block_pool = block_pool
-        self.recorder = recorderobj
-        self.env = envobj
-
-        # managed and owned by Mappingmanager
-        self.mapping_on_flash = MappingOnFlash(confobj)
-        self.mapping_table = MappingTable(confobj)
-        self.directory = GlobalTranslationDirectory(confobj, oobobj,
-                block_pool)
-
-    def ppns_for_writing(self, lpns):
-        """
-        This function returns ppns that can be written.
-
-        The ppns returned are mapped by lpns, one to one
-        """
-        ppns = []
-        for lpn in lpns:
-            old_ppn = yield self.env.process( self.lpn_to_ppn(lpn) )
-            new_ppn = self.block_pool.next_data_page_to_program()
-            ppns.append(new_ppn)
-            # CMT
-            # lpn must be in cache thanks to self.mapping_manager.lpn_to_ppn()
-            self.mapping_table.overwrite_entry(
-                lpn = lpn, ppn = new_ppn, dirty = True)
-            # OOB
-            self.oob.new_lba_write(lpn = lpn, old_ppn = old_ppn,
-                new_ppn = new_ppn)
-
-        self.env.exit(ppns)
-
-    def ppns_for_reading(self, lpns):
-        """
-        """
-        ppns = []
-        for lpn in lpns:
-            ppn = yield self.env.process( self.lpn_to_ppn(lpn) )
-            ppns.append(ppn)
-
-        self.env.exit(ppns)
-
-    def lpn_to_ppn(self, lpn):
-        """
-        This method does not fail. It will try everything to find the ppn of
-        the given lpn.
-        return: real PPN or UNINITIATED
-        """
-        # try cached mapping table first.
-        ppn = self.mapping_table.lpn_to_ppn(lpn)
-        if ppn == MISS:
-            # cache miss
-            while self.mapping_table.is_full():
-                yield self.env.process(self.evict_cache_entry())
-
-            # find the physical translation page holding lpn's mapping in GTD
-            ppn = yield self.env.process(
-                    self.load_mapping_entry_to_cache(lpn))
-
-            self.recorder.count_me("cache", "miss")
-        else:
-            self.recorder.count_me("cache", "hit")
-
-        self.env.exit(ppn)
-
-    def load_mapping_entry_to_cache(self, lpn):
-        """
-        When a mapping entry is not in cache, you need to read the entry from
-        flash and put it to cache. This function does this.
-        Output: it return the ppn of lpn read from entry on flash.
-        """
-        # find the location of the translation page
-        m_ppn = self.directory.lpn_to_m_ppn(lpn)
-
-        # read it up, this operation is just for statistics
-        yield self.env.process(
-                self.flash.rw_ppn_extent(m_ppn, 1, op = 'read',
-                tag = TAG_BACKGROUND))
-
-        if self.conf.keeping_all_tp_entries == True:
-            m_vpn = self.conf.lpn_to_m_vpn(lpn)
-            entries = self.retrieve_translation_page(m_vpn)
-            self.mapping_table.add_new_entries_if_not_exist(entries,
-                    dirty = False)
-            ppn = entries[lpn]
-        else:
-            # Now we have all the entries of m_ppn in memory, we need to put
-            # the mapping of lpn->ppn to CMT
-            ppn = self.mapping_on_flash.lpn_to_ppn(lpn)
-            self.mapping_table.add_new_entry(lpn = lpn, ppn = ppn,
-                dirty = False)
-
-        self.env.exit(ppn)
-
-    def retrieve_translation_page(self, m_vpn):
-        """
-        m_vpn is mapping virtual page number
-
-        This function does not actually read flash. It just gets the mappings
-        from global mapping table.
-        """
-        entries = {}
-        for lpn in self.conf.m_vpn_to_lpns(m_vpn):
-            entries[lpn] = self.mapping_on_flash.lpn_to_ppn(lpn)
-
-        return entries
-
-    def update_entry(self, lpn, new_ppn, tag = "NA"):
-        """
-        Update mapping of lpn to be lpn->new_ppn everywhere if necessary.
-
-        if lpn is not in cache, it will NOT be added to it.
-
-        block_pool:
-            it may be affect because we need a new page
-        CMT:
-            if lpn is in cache, we need to update it and mark it as clean
-            since after this function the cache will be consistent with GMT
-        GMT:
-            we need to read the old translation page, update it and write it
-            to a new flash page
-        OOB:
-            we need to wipe out the old_ppn and fill the new_ppn
-        GTD:
-            we need to update m_vpn to new m_ppn
-        """
-        cached_ppn = self.mapping_table.lpn_to_ppn(lpn)
-        if cached_ppn != MISS:
-            # in cache
-            self.mapping_table.overwrite_entry(lpn = lpn,
-                ppn = new_ppn, dirty = False)
-
-        m_vpn = self.conf.lpn_to_m_vpn(lpn)
-
-        # batch_entries may be empty
-        batch_entries = self.dirty_entries_of_translation_page(m_vpn)
-
-        new_mappings = {lpn:new_ppn} # lpn->new_ppn may not be in cache
-        for entry in batch_entries:
-            new_mappings[entry.lpn] = entry.ppn
-
-        # update translation page
-        yield self.env.process(
-            self.update_translation_page_on_flash(m_vpn, new_mappings, tag))
-
-        # mark as clean
-        for entry in batch_entries:
-            entry.dirty = False
-
-    def evict_cache_entry(self):
-        """
-        Select one entry in cache
-        If the entry is dirty, write it back to GMT.
-        If it is not dirty, simply remove it.
-        """
-        self.recorder.count_me('cache', 'evict')
-
-        vic_lpn, vic_entrydata = self.mapping_table.victim_entry()
-
-        if vic_entrydata.dirty == True:
-            # If we have to write to flash, we write in batch
-            m_vpn = self.conf.lpn_to_m_vpn(vic_lpn)
-            yield self.env.process(self.batch_write_back(m_vpn))
-
-        # remove only the victim entry
-        self.mapping_table.remove_entry_by_lpn(vic_lpn)
-
-    def batch_write_back(self, m_vpn):
-        """
-        Write dirty entries in a translation page with a flash read and a flash write.
-        """
-        self.recorder.count_me('cache', 'batch_write_back')
-
-        batch_entries = self.dirty_entries_of_translation_page(m_vpn)
-
-        new_mappings = {}
-        for entry in batch_entries:
-            new_mappings[entry.lpn] = entry.ppn
-
-        # update translation page
-        self.recorder.count_me('batch.size', len(new_mappings))
-        yield self.env.process(
-                self.update_translation_page_on_flash(m_vpn, new_mappings,
-                    TRANS_CACHE))
-
-        # mark them as clean
-        for entry in batch_entries:
-            entry.dirty = False
-
-    def dirty_entries_of_translation_page(self, m_vpn):
-        """
-        Get all dirty entries in translation page m_vpn.
-        """
-        retlist = []
-        for entry_lpn, dataentry in self.mapping_table.entries.items():
-            if dataentry.dirty == True:
-                tmp_m_vpn = self.conf.lpn_to_m_vpn(entry_lpn)
-                if tmp_m_vpn == m_vpn:
-                    retlist.append(dataentry)
-
-        return retlist
-
-    def update_translation_page_on_flash(self, m_vpn, new_mappings, tag):
-        """
-        Use new_mappings to replace their corresponding mappings in m_vpn
-
-        read translationo page
-        modify it with new_mappings
-        write translation page to new location
-        update related data structures
-
-        Notes:
-        - Note that it does not modify cached mapping table
-        """
-        old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
-
-        # update GMT on flash
-        if len(new_mappings) < self.conf.n_mapping_entries_per_page:
-            # need to read some mappings
-            yield self.env.process(
-                self.flash.rw_ppn_extent(old_m_ppn, 1, op = 'read',
-                    tag = TAG_BACKGROUND) )
-        else:
-            self.recorder.count_me('cache', 'saved.1.read')
-
-        pass # modify in memory. Since we are a simulator, we don't do anything
-        new_m_ppn = self.block_pool.next_translation_page_to_program()
-
-        # update flash
-        yield self.env.process(
-            self.flash.rw_ppn_extent(new_m_ppn, 1, op = 'write',
-                tag = TAG_BACKGROUND))
-
-        # update our fake 'on-flash' GMT
-        for lpn, new_ppn in new_mappings.items():
-            self.mapping_on_flash.update(lpn = lpn, ppn = new_ppn)
-
-        # OOB, keep m_vpn as lpn
-        self.oob.new_write(lpn = m_vpn, old_ppn = old_m_ppn,
-            new_ppn = new_m_ppn)
-
-        # update GTD so we can find it
-        self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
-
-    def discard_lpn(self, lpn):
-        ppn = yield self.env.process(self.lpn_to_ppn(lpn))
-        if ppn == UNINITIATED:
-            return
-
-        # flash page ppn has valid data
-        self.mapping_table.overwrite_entry(lpn = lpn,
-            ppn = UNINITIATED, dirty = True)
-
-        # OOB
-        self.oob.wipe_ppn(ppn)
-
-    def discard_lpns(self, lpns):
-        for lpn in lpns:
-            yield self.env.process(self.discard_lpn(lpn))
-
-
-    def __translate_lpns_by_cache(self, lpns):
-        """
-        Return: Found all?, mappings
-        """
-        mappings = MappingDict()
-        for lpn in lpns:
-            ppn = self.mapping_table.lpn_to_ppn(lpn)
-            if ppn == MISS:
-                return False, None
-            mappings[lpn] = ppn
-
-        return True, mappings
-
-    def translate_lpns_of_single_m_vpn(self, lpns):
-        """
-        lpns must be in the same m_vpn
-        """
-        found, mappings = self.__translate_lpns_by_cache(lpns)
-
-        if found == True:
-            return mappings
-
-        # not in cache, we now need to make some room in cache for new
-        # mappings
 
 class MappingDict(dict):
     """
@@ -1047,8 +598,8 @@ class MappingCache(object):
             op_id = op_id, op = 'prog_trans_page', arg = m_vpn,
             start_time = start_time, end_time = self.env.now)
 
-        self.oob.new_write(lpn = m_vpn, old_ppn = old_m_ppn,
-            new_ppn = new_m_ppn)
+        self.oob.relocate_page(lpn=m_vpn, old_ppn=old_m_ppn,
+            new_ppn = new_m_ppn, update_time=True)
         self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
 
         assert self.oob.states.is_page_valid(old_m_ppn) == False
@@ -1666,8 +1217,8 @@ class GlobalTranslationDirectory(object):
             # Note that we don't actually read or write flash
             self.add_mapping(m_vpn=m_vpn, m_ppn=m_ppn)
             # update oob of the translation page
-            self.oob.new_write(lpn = m_vpn, old_ppn = UNINITIATED,
-                new_ppn = m_ppn)
+            self.oob.relocate_page(lpn=m_vpn, old_ppn=UNINITIATED,
+                new_ppn=m_ppn, update_time=True)
 
     def m_vpn_to_m_ppn(self, m_vpn):
         """
@@ -1814,7 +1365,7 @@ class GarbageCollector(object):
                     tag = TAG_BACKGROUND))
 
         # find the mapping
-        lpn = self.oob.translate_ppn_to_lpn(old_ppn)
+        lpn = self.oob.ppn_to_lpn_or_mvpn(old_ppn)
 
         # write to new page
         new_ppn = self.block_pool.next_gc_data_page_to_program()
@@ -1942,7 +1493,7 @@ class GarbageCollector(object):
         """
         old_m_ppn = m_ppn
 
-        m_vpn = self.oob.translate_ppn_to_lpn(old_m_ppn)
+        m_vpn = self.oob.ppn_to_lpn_or_mvpn(old_m_ppn)
 
         yield self.env.process(
             self.flash.rw_ppn_extent(old_m_ppn, 1, op = 'read',
@@ -1955,7 +1506,7 @@ class GarbageCollector(object):
                 tag = TAG_BACKGROUND))
 
         # update new page and old page's OOB
-        self.oob.new_write(m_vpn, old_m_ppn, new_m_ppn)
+        self.oob.relocate_page(m_vpn, old_m_ppn, new_m_ppn)
 
         # update GTD
         self.mapping_manager.directory.update_mapping(m_vpn = m_vpn,
@@ -2279,7 +1830,7 @@ class OutOfBandAreas(object):
         self.last_inv_time_of_block = {}
 
     ############# Time stamp related ############
-    def timestamp(self):
+    def _incr_timestamp(self):
         """
         This function will advance timestamp
         """
@@ -2287,31 +1838,18 @@ class OutOfBandAreas(object):
         self.cur_timestamp += 1
         return t
 
-    def timestamp_set_ppn(self, ppn):
-        self.timestamp_table[ppn] = self.timestamp()
+    def set_timestamp_of_ppn(self, ppn):
+        self.timestamp_table[ppn] = self._incr_timestamp()
 
-    def timestamp_copy(self, src_ppn, dst_ppn):
+    def copy_timestamp(self, src_ppn, dst_ppn):
         self.timestamp_table[dst_ppn] = self.timestamp_table[src_ppn]
 
-    def translate_ppn_to_lpn(self, ppn):
+    def ppn_to_lpn_or_mvpn(self, ppn):
         return self.ppn_to_lpn_mvpn[ppn]
 
-    def wipe_ppn(self, ppn):
-        self.states.invalidate_page(ppn)
-        block, _ = self.conf.page_to_block_off(ppn)
-        self.last_inv_time_of_block[block] = datetime.datetime.now()
-
-        # It is OK to delay it until we erase the block
-        # try:
-            # del self.ppn_to_lpn_mvpn[ppn]
-        # except KeyError:
-            # # it is OK that the key does not exist, for example,
-            # # when discarding without writing to it
-            # pass
-
-    def wipe_ppns(self, ppns):
+    def invalidate_ppns(self, ppns):
         for ppn in ppns:
-            self.wipe_ppn(ppn)
+            self.invalidate_ppn(ppn)
 
     def erase_block(self, flash_block):
         self.states.erase_block(flash_block)
@@ -2328,31 +1866,32 @@ class OutOfBandAreas(object):
 
         del self.last_inv_time_of_block[flash_block]
 
-    def new_write(self, lpn, old_ppn, new_ppn):
+    def relocate_page(self, lpn, old_ppn, new_ppn, update_time=True):
         """
         mark the new_ppn as valid
         update the LPN in new page's OOB to lpn
         invalidate the old_ppn, so cleaner can GC it
         """
+        if update_time is True:
+            self.set_timestamp_of_ppn(new_ppn)
+
         self.states.validate_page(new_ppn)
         self.ppn_to_lpn_mvpn[new_ppn] = lpn
 
         if old_ppn != UNINITIATED:
             # the lpn has mapping before this write
-            self.wipe_ppn(old_ppn)
+            self.invalidate_ppn(old_ppn)
 
-    def new_lba_write(self, lpn, old_ppn, new_ppn):
-        """
-        This is exclusively for lba_write(), so far
-        """
-        self.timestamp_set_ppn(new_ppn)
-        self.new_write(lpn, old_ppn, new_ppn)
+    def invalidate_ppn(self, ppn):
+        self.states.invalidate_page(ppn)
+        block, _ = self.conf.page_to_block_off(ppn)
+        self.last_inv_time_of_block[block] = datetime.datetime.now()
 
     def data_page_move(self, lpn, old_ppn, new_ppn):
         # move data page does not change the content's timestamp, so
         # we copy
-        self.timestamp_copy(src_ppn = old_ppn, dst_ppn = new_ppn)
-        self.new_write(lpn, old_ppn, new_ppn)
+        self.copy_timestamp(src_ppn = old_ppn, dst_ppn = new_ppn)
+        self.relocate_page(lpn, old_ppn, new_ppn, update_time=False)
 
     def lpns_of_block(self, flash_block):
         s, e = self.conf.block_to_page_range(flash_block)
@@ -2362,13 +1901,6 @@ class OutOfBandAreas(object):
 
         return lpns
 
-def dec_debug(function):
-    def wrapper(self, lpn):
-        ret = function(self, lpn)
-        if lpn == 38356:
-            print function.__name__, 'lpn:', lpn, 'ret:', ret
-        return ret
-    return wrapper
 
 class Config(config.ConfigNCQFTL):
     def __init__(self, confdic = None):
