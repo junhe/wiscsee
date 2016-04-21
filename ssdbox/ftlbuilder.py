@@ -4,69 +4,6 @@ import config
 import flash
 import recorder
 
-class FlashBitmap1(object):
-    "Using one bit to represent state of a page"
-    VALID, INVALID, ERASED = (True, False, False)
-
-    def __init__(self, conf):
-        if not isinstance(conf, config.Config):
-            raise TypeError("conf is not conf.Config. it is {}".
-               format(type(conf).__name__))
-
-        self.conf  = conf
-
-        self.bitmap = bitarray.bitarray(conf.total_num_pages())
-
-    def validate_page(self, pagenum):
-        self.bitmap[pagenum] = self.VALID
-
-    def invalidate_page(self, pagenum):
-        self.bitmap[pagenum] = self.INVALID
-
-    def validate_block(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        self.bitmap[start : end] = self.VALID
-
-    def invalidate_block(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        self.bitmap[start : end] = self.INVALID
-
-    def erase_block(self, blocknum):
-        self.invalidate_block(blocknum)
-
-    def block_invalid_ratio(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        return self.bitmap[start:end].count(self.INVALID) / \
-            float(self.conf.n_pages_per_block)
-
-    def block_valid_ratio(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        return self.bitmap[start:end].count(self.VALID) / \
-            float(self.conf.n_pages_per_block)
-
-    def is_page_valid(self, pagenum):
-        return self.bitmap[pagenum]
-
-    def page_bits(self, pagenum):
-        return self.bitmap[pagenum]
-
-    def block_bits(self, blocknum):
-        start, end = self.conf.block_to_page_range(blocknum)
-        return self.bitmap[start : end]
-
-    def page_state(self, pagenum):
-        return self.page_bits(pagenum)
-
-    def page_state_human(self, pagenum):
-        state = self.page_state(pagenum)
-        if state == self.VALID:
-            return "VALID"
-        elif state == self.INVALID:
-            return "INVALID/ERASED"
-
-    def initialize(self):
-        self.bitmap.setall(self.INVALID)
-
 class FlashBitmap2(object):
     "Using two bit to represent state of a page"
     ERASED, VALID, INVALID = (bitarray.bitarray('00'),
