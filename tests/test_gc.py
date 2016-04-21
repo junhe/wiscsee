@@ -100,18 +100,26 @@ class TestVictimBlocks(unittest.TestCase):
         block_pool = create_blockpool(conf)
         oob = create_oob(conf)
 
-        # use n-2 pages
+        # invalidate n-2 pages
         n = conf.n_pages_per_block
         ppns = block_pool.next_n_data_pages_to_program_striped(n)
+        block0, _ = conf.page_to_block_off(ppns[0])
+        for ppn in ppns:
+            oob.states.validate_page(ppn)
         oob.invalidate_ppns(ppns[:-2])
 
-        # use n-1 pages
+        # invalidate n-1 pages
         ppns = block_pool.next_n_data_pages_to_program_striped(n)
         block1, _ = conf.page_to_block_off(ppns[0])
+        for ppn in ppns:
+            oob.states.validate_page(ppn)
         oob.invalidate_ppns(ppns[:-1])
 
-        # use n-3 pages
+        # invalidate n-3 pages
         ppns = block_pool.next_n_data_pages_to_program_striped(n)
+        block2, _ = conf.page_to_block_off(ppns[0])
+        for ppn in ppns:
+            oob.states.validate_page(ppn)
         oob.invalidate_ppns(ppns[:-3])
 
         # use one more
@@ -121,18 +129,7 @@ class TestVictimBlocks(unittest.TestCase):
 
         victims = list(vbs.iterator())
 
-        self.assertEqual(victims[0], block1)
-
-
-
-
-
-
-
-
-
-
-
+        self.assertListEqual(victims, [block1, block0, block2])
 
 
 def main():
