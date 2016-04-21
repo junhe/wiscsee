@@ -31,6 +31,10 @@ class BlockPool(object):
             used.extend( channel.trans_usedblocks_global )
         return used
 
+    @property
+    def used_blocks(self):
+        return self.data_usedblocks + self.trans_usedblocks
+
     def _exec_on_channel(self, func_name, channel_id):
         """
         The type of in_channel_offset depends on the function you call
@@ -86,13 +90,6 @@ class BlockPool(object):
     def move_used_trans_block_to_free(self, blocknum):
         channel, block_off = block_to_channel_block(self.conf, blocknum)
         self.channel_pools[channel].move_used_trans_block_to_free(block_off)
-
-    def next_n_data_pages_to_program(self, n):
-        ppns = []
-        for i in range(n):
-            ppns.append(self.next_data_page_to_program())
-
-        return ppns
 
     def next_n_data_pages_to_program_striped(self, n):
         return self._next_n_data_pages_to_program_striped(n,
@@ -247,9 +244,7 @@ class ChannelBlockPool(object):
 
         global_cur_blocks = []
         for block in local_cur_blocks:
-            if block == None:
-                global_cur_blocks.append(block)
-            else:
+            if block is not None:
                 global_cur_blocks.append(
                     channel_block_to_block(self.conf, self.channel_no, block) )
 
