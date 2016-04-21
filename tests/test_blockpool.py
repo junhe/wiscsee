@@ -3,33 +3,43 @@ import unittest
 from Makefile import *
 from utilities import utils
 
+def create_config():
+    conf = ssdbox.dftldes.Config()
+    conf['SSDFramework']['ncq_depth'] = 1
+
+    conf['flash_config']['n_pages_per_block'] = 64
+    conf['flash_config']['n_blocks_per_plane'] = 2
+    conf['flash_config']['n_planes_per_chip'] = 1
+    conf['flash_config']['n_chips_per_package'] = 1
+    conf['flash_config']['n_packages_per_channel'] = 1
+    conf['flash_config']['n_channels_per_dev'] = 4
+
+    utils.set_exp_metadata(conf, save_data = False,
+            expname = 'test_expname',
+            subexpname = 'test_subexpname')
+
+    conf['ftl_type'] = 'dftldes'
+    conf['simulator_class'] = 'SimulatorDESSync'
+
+    devsize_mb = 64
+    conf.n_cache_entries = conf.n_mapping_entries_per_page
+    conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+
+    utils.runtime_update(conf)
+
+    return conf
+
+
+def create_blockpool(conf):
+    return ssdbox.dftldes.BlockPool(conf)
+
 
 class TestChannelBlockPool(unittest.TestCase):
-    def setup_config(self):
-        self.conf = ssdbox.dftlext.Config()
-
-    def setup_environment(self):
-        metadata_dic = choose_exp_metadata(self.conf, interactive = False)
-        self.conf.update(metadata_dic)
-
-    def setup_workload(self):
-        pass
-
-    def setup_ftl(self):
-        pass
-
-    def my_run(self):
-        runtime_update(self.conf)
-        channel_pool = ssdbox.blkpool.ChannelBlockPool(self.conf, 0)
+    def test_pop(self):
+        conf = create_config()
+        channel_pool = ssdbox.blkpool.ChannelBlockPool(conf, 0)
         channel_pool.pop_a_free_block_to_trans()
         self.assertEqual(len(channel_pool.trans_usedblocks), 1)
-
-    def test_main(self):
-        self.setup_config()
-        self.setup_environment()
-        self.setup_workload()
-        self.setup_ftl()
-        self.my_run()
 
 
 class TestBlockPool_freeblocks(unittest.TestCase):
@@ -432,7 +442,6 @@ class TestBlockPool_outofspace(unittest.TestCase):
         self.my_run_1()
         self.my_run_2()
         self.my_run_3()
-
 
 
 
