@@ -67,6 +67,15 @@ def create_translation_directory(conf, oob, block_pool):
 def create_mapping_on_flash(conf):
     return ssdbox.dftldes.MappingOnFlash(conf)
 
+def create_vbs():
+    conf = create_config()
+    block_pool = create_blockpool(conf)
+    oob = create_oob(conf)
+
+    vbs = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
+
+    return vbs
+
 def create_obj_set(conf):
     rec = create_recorder(conf)
     oob = create_oob(conf)
@@ -773,6 +782,119 @@ class TestFTLwithMoreData(unittest.TestCase):
         self.setup_workload()
         self.setup_ftl()
         self.my_run()
+
+
+class TestVictimBlocks(unittest.TestCase):
+    def test_entry(self):
+        ssdbox.dftldes.VictimBlocks
+
+    def test_init(self):
+        create_vbs()
+
+    def test_empty(self):
+        vbs = create_vbs()
+        self.assertEqual(len(list(vbs.iterator())), 0)
+
+    def test_cur_blocks(self):
+        """
+        cur blocks should not be victim
+        """
+        conf = create_config()
+        block_pool = create_blockpool(conf)
+        oob = create_oob(conf)
+
+        vbs = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
+
+        ppn = block_pool.next_data_page_to_program()
+
+        self.assertEqual(len(list(vbs.iterator())), 0)
+
+    def test_one_victim_candidate(self):
+        conf = create_config()
+        conf['flash_config']['n_channels_per_dev'] = 1
+        conf['stripe_size'] = 'infinity'
+        block_pool = create_blockpool(conf)
+        oob = create_oob(conf)
+
+        # use a whole block
+        n = conf.n_pages_per_block
+        ppns = block_pool.next_n_data_pages_to_program_striped(n)
+        oob.invalidate_ppns(ppns)
+
+        # use one more
+        ppns = block_pool.next_n_data_pages_to_program_striped(1)
+
+        vbs = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
+
+        victims = list(vbs.iterator())
+        self.assertEqual(victims, [0])
+
+    def test_3_victim_candidates(self):
+        conf = create_config()
+        conf['flash_config']['n_channels_per_dev'] = 1
+        conf['stripe_size'] = 'infinity'
+        block_pool = create_blockpool(conf)
+        oob = create_oob(conf)
+
+        # invalidate n-2 pages
+        n = conf.n_pages_per_block
+        ppns = block_pool.next_n_data_pages_to_program_striped(n)
+        block0, _ = conf.page_to_block_off(ppns[0])
+        for ppn in ppns:
+            oob.states.validate_page(ppn)
+        oob.invalidate_ppns(ppns[:-2])
+
+        # invalidate n-1 pages
+        ppns = block_pool.next_n_data_pages_to_program_striped(n)
+        block1, _ = conf.page_to_block_off(ppns[0])
+        for ppn in ppns:
+            oob.states.validate_page(ppn)
+        oob.invalidate_ppns(ppns[:-1])
+
+        # invalidate n-3 pages
+        ppns = block_pool.next_n_data_pages_to_program_striped(n)
+        block2, _ = conf.page_to_block_off(ppns[0])
+        for ppn in ppns:
+            oob.states.validate_page(ppn)
+        oob.invalidate_ppns(ppns[:-3])
+
+        # use one more
+        ppns = block_pool.next_n_data_pages_to_program_striped(1)
+
+        vbs = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
+
+        victims = list(vbs.iterator())
+
+        self.assertListEqual(victims, [block1, block0, block2])
+
+
+class TestGC(unittest.TestCase):
+    def test_write(self):
+        conf = create_config()
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write(objs, dftl, Extent(0, 1)))
+        env.run()
+
+    def proc_test_write(self, objs, dftl, ext):
+        env = objs['env']
+        time_read_page = objs['flash_controller'].channels[0].read_time
+        time_program_page = objs['flash_controller'].channels[0].program_time
+
+        rec = objs['rec']
+        rec.enable()
+
+        yield env.process(dftl.write_ext(ext))
+
+        # read translation page and write data page in the same time
+        self.assertEqual(env.now, max(time_read_page, time_program_page))
+        self.assertEqual(rec.get_count_me("Mapping_Cache", "hit"), 0)
+        self.assertEqual(rec.get_count_me("Mapping_Cache", "miss"), 1)
+
 
 
 

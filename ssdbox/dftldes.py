@@ -1926,6 +1926,13 @@ class OutOfBandAreas(object):
         block, _ = self.conf.page_to_block_off(ppn)
         self.last_inv_time_of_block[block] = datetime.datetime.now()
 
+    def validate_ppns(self, ppns):
+        for ppn in ppns:
+            self.validate_ppn(ppn)
+
+    def validate_ppn(self, ppn):
+        self.states.validate_page(ppn)
+
     def data_page_move(self, lpn, old_ppn, new_ppn):
         # move data page does not change the content's timestamp, so
         # we copy
