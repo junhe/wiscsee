@@ -18,7 +18,6 @@ echo
 echo ======= lrulist_test =======
 sudo python -m tests.lrulist_test
 
-
 echo 
 echo ======= fiounittest_test =======
 sudo python -m tests.fiounittest_test
@@ -35,4 +34,8 @@ echo
 echo ======= test_blockpool =======
 sudo python -m tests.test_blockpool
 
+echo 
+echo ======= test_bitmap =======
+sudo python -m tests.test_bitmap
 
+# sudo python -m unittest discover -s tests -p '*test*.py'

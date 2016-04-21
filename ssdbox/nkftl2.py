@@ -8,6 +8,7 @@ import config
 import ftlbuilder
 import recorder
 from utilities import utils
+from .bitmap import FlashBitmap2
 
 """
 ############## Checklist ###############
@@ -77,7 +78,7 @@ class OutOfBandAreas(object):
         self.total_pages = self.flash_num_blocks * self.flash_npage_per_block
 
         # Key data structures
-        self.states = ftlbuilder.FlashBitmap2(confobj)
+        self.states = FlashBitmap2(confobj)
         # ppn->lpn mapping stored in OOB, Note that for translation pages, this
         # mapping is ppn -> m_vpn
         self.ppn_to_lpn = {}

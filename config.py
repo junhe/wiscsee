@@ -57,9 +57,6 @@ class Config(dict):
         self.load_from_dict(decoded)
 
     def dump_to_file(self, file_path):
-        if self['stripe_size'] == float('Inf'):
-            self['stripe_size'] = "Infinity"
-
         with open(file_path, "w") as f:
             json.dump(self, f, indent=4)
 

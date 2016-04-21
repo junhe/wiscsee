@@ -2,6 +2,7 @@ import unittest
 
 import ssdbox
 from utilities import utils
+from ssdbox.bitmap import FlashBitmap2
 
 def create_config():
     conf = ssdbox.dftldes.Config()
@@ -30,7 +31,7 @@ def create_config():
     return conf
 
 def create_bitmap(conf):
-    bitmap = ssdbox.ftlbuilder.FlashBitmap2(conf)
+    bitmap = FlashBitmap2(conf)
     return bitmap
 
 

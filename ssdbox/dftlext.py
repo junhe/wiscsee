@@ -16,6 +16,7 @@ import lrulist
 import recorder
 from utilities import utils
 from .blkpool import BlockPool
+from .bitmap import FlashBitmap2
 
 """
 This refactors Dftl
@@ -355,7 +356,7 @@ class OutOfBandAreas(object):
         self.total_pages = self.flash_num_blocks * self.flash_npage_per_block
 
         # Key data structures
-        self.states = ftlbuilder.FlashBitmap2(confobj)
+        self.states = FlashBitmap2(confobj)
         # ppn->lpn mapping stored in OOB, Note that for translation pages, this
         # mapping is ppn -> m_vpn
         self.ppn_to_lpn_mvpn = {}
