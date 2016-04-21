@@ -2,6 +2,7 @@ import bitarray
 from collections import deque, Counter
 import csv
 import datetime
+import heapq
 import itertools
 import random
 import os
@@ -1245,6 +1246,43 @@ class GlobalTranslationDirectory(object):
 
     def __repr__(self):
         return repr(self.mapping)
+
+
+
+class VictimBlocks(object):
+    def __init__(self, conf, block_pool, oob):
+        self._conf = conf
+        self._block_pool = block_pool
+        self._oob = oob
+
+    def iterator(self):
+        candidate_tuples = self._candidate_priorityq()
+        while True:
+            try:
+                _, block_num = heapq.heappop(candidate_tuples)
+                yield block_num
+            except IndexError:
+                # Out of victim blocks
+                raise StopIteration
+
+    def _candidate_priorityq(self):
+        candidate_tuples = self._victim_candidates()
+        heapq.heapify(candidate_tuples)
+        return candidate_tuples
+
+    def _victim_candidates(self):
+        used_blocks = self._block_pool.used_blocks
+        cur_blocks = self._block_pool.current_blocks()
+        print 'cur_blocks', cur_blocks
+
+        victim_candidates = []
+        for block in used_blocks:
+            if block not in cur_blocks:
+                valid_ratio = self._oob.states.block_valid_ratio(block)
+                if valid_ratio < 1:
+                    victim_candidates.append( (valid_ratio, block) )
+
+        return victim_candidates
 
 
 class GarbageCollector(object):
