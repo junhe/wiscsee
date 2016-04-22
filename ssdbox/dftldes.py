@@ -1257,11 +1257,15 @@ class VictimBlocks(object):
         self._oob = oob
 
     def iterator(self):
+        for (_, block_num) in self.iterator_verbose():
+            yield block_num
+
+    def iterator_verbose(self):
         candidate_tuples = self._candidate_priorityq()
         while True:
             try:
-                _, block_num = heapq.heappop(candidate_tuples)
-                yield block_num
+                valid_ratio, block_num = heapq.heappop(candidate_tuples)
+                yield valid_ratio, block_num
             except IndexError:
                 # Out of victim blocks
                 raise StopIteration
@@ -1274,7 +1278,6 @@ class VictimBlocks(object):
     def _victim_candidates(self):
         used_blocks = self._block_pool.used_blocks
         cur_blocks = self._block_pool.current_blocks()
-        print 'cur_blocks', cur_blocks
 
         victim_candidates = []
         for block in used_blocks:
@@ -1284,6 +1287,72 @@ class VictimBlocks(object):
                     victim_candidates.append( (valid_ratio, block) )
 
         return victim_candidates
+
+
+
+class DataBlockCleaner(object):
+    def __init__(self, conf, flash, oob, block_pool, mappings, rec, env):
+        self.conf = conf
+        self.flash = flash
+        self.oob = oob
+        self.block_pool = block_pool
+        self.mappings = mappings
+        self.recorder = rec
+        self.env = env
+
+    def clean(self, blocknum):
+        '''
+        for each valid page, move it to another block
+        invalidate pages in blocknum and erase block
+        '''
+        assert blocknum in self.block_pool.used_blocks
+        assert blocknum not in self.block_pool.current_blocks()
+
+        ppn_start, ppn_end = self.conf.block_to_page_range(blocknum)
+        for ppn in range(ppn_start, ppn_end):
+            if self.oob.states.is_page_valid(ppn):
+                yield self.env.process(self._clean_page(ppn))
+
+        self.oob.erase_block(blocknum)
+        self.block_pool.move_used_data_block_to_free(blocknum)
+
+    def _clean_page(self, ppn):
+        """
+        read ppn, write to new ppn, update metadata
+        """
+        assert self.oob.states.is_page_valid(ppn) is True
+
+        yield self.env.process(
+            self.flash.rw_ppn_extent(ppn, 1, 'read',
+                tag=self.recorder.get_tag('read.data.gc', None)))
+
+        new_ppn = self.block_pool.next_gc_data_page_to_program()
+
+        yield self.env.process(
+            self.flash.rw_ppn_extent(new_ppn, 1, 'write',
+                tag=self.recorder.get_tag('read.data.gc', None)))
+
+        lpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
+
+        # mappings in cache
+        yield self.env.process(
+            self.mappings.update(lpn=lpn, ppn=ppn, tag=None))
+
+        # mappings on flash
+        # handled by self.mappings
+
+        # translation directory
+        # handled by self.mappings
+
+        # oob state
+        self.oob.relocate_page(lpn=lpn, old_ppn=ppn, new_ppn=new_ppn,
+                update_time=False)
+
+        # oob ppn->lpn/vpn
+        # handled above
+
+        # blockpool
+        # handled by next_gc_data_page_to_program
 
 
 class GarbageCollector(object):
@@ -1909,6 +1978,8 @@ class OutOfBandAreas(object):
         """
         if update_time is True:
             self.set_timestamp_of_ppn(new_ppn)
+        else:
+            self.copy_timestamp(old_ppn, new_ppn)
 
         self.states.validate_page(new_ppn)
         self.ppn_to_lpn_mvpn[new_ppn] = lpn

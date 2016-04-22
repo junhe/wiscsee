@@ -12,6 +12,10 @@ from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 from commons import *
 from Makefile import workflow
 
+class FtlTest(ssdbox.dftldes.Ftl):
+    def get_mappings(self):
+        return self._mappings
+
 def create_config():
     conf = ssdbox.dftldes.Config()
     conf['SSDFramework']['ncq_depth'] = 1
@@ -67,7 +71,7 @@ def create_translation_directory(conf, oob, block_pool):
 def create_mapping_on_flash(conf):
     return ssdbox.dftldes.MappingOnFlash(conf)
 
-def create_vbs():
+def create_victimblocks():
     conf = create_config()
     block_pool = create_blockpool(conf)
     oob = create_oob(conf)
@@ -84,10 +88,12 @@ def create_obj_set(conf):
     flash_controller = create_flashcontrolelr(conf, env, rec)
     directory = create_translation_directory(conf, oob, block_pool)
     gmt = create_mapping_on_flash(conf)
+    victimblocks = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
 
     return {'conf':conf, 'rec':rec, 'oob':oob, 'block_pool':block_pool,
             'flash_controller':flash_controller, 'env':env, 'directory':directory,
-            'mapping_on_flash':gmt}
+            'mapping_on_flash':gmt, 'victimblocks':victimblocks}
+
 
 def create_mapping_cache(objs):
     mapping_cache = ssdbox.dftldes.MappingCache(
@@ -101,6 +107,20 @@ def create_mapping_cache(objs):
             mapping_on_flash = objs['mapping_on_flash'])
 
     return mapping_cache
+
+
+def create_datablockcleaner(objs):
+    mappings = create_mapping_cache(objs)
+    datablockcleaner = ssdbox.dftldes.DataBlockCleaner(
+            conf = objs['conf'],
+            flash = objs['flash_controller'],
+            oob = objs['oob'],
+            block_pool = objs['block_pool'],
+            mappings = mappings,
+            rec = objs['rec'],
+            env = objs['env'])
+    return datablockcleaner
+
 
 class TestMappingTable(unittest.TestCase):
     def test_modification(self):
@@ -789,10 +809,10 @@ class TestVictimBlocks(unittest.TestCase):
         ssdbox.dftldes.VictimBlocks
 
     def test_init(self):
-        create_vbs()
+        create_victimblocks()
 
     def test_empty(self):
-        vbs = create_vbs()
+        vbs = create_victimblocks()
         self.assertEqual(len(list(vbs.iterator())), 0)
 
     def test_cur_blocks(self):
@@ -869,18 +889,20 @@ class TestVictimBlocks(unittest.TestCase):
 
 
 class TestGC(unittest.TestCase):
-    def test_write(self):
+    def test_valid_ratio(self):
         conf = create_config()
+        conf['flash_config']['n_channels_per_dev'] = 1
+        conf['stripe_size'] = 'infinity'
         objs = create_obj_set(conf)
         env = objs['env']
 
         dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
-        env.process(self.proc_test_write(objs, dftl, Extent(0, 1)))
+        env.process(self.proc_test_write(objs, dftl))
         env.run()
 
-    def proc_test_write(self, objs, dftl, ext):
+    def proc_test_write(self, objs, dftl):
         env = objs['env']
         time_read_page = objs['flash_controller'].channels[0].read_time
         time_program_page = objs['flash_controller'].channels[0].program_time
@@ -888,14 +910,143 @@ class TestGC(unittest.TestCase):
         rec = objs['rec']
         rec.enable()
 
-        yield env.process(dftl.write_ext(ext))
+        block_pool = dftl.block_pool
+        oob = dftl.oob
 
-        # read translation page and write data page in the same time
-        self.assertEqual(env.now, max(time_read_page, time_program_page))
-        self.assertEqual(rec.get_count_me("Mapping_Cache", "hit"), 0)
-        self.assertEqual(rec.get_count_me("Mapping_Cache", "miss"), 1)
+        victims = ssdbox.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
 
 
+        conf = objs['conf']
+        n = conf.n_pages_per_block
+        yield env.process(dftl.write_ext(Extent(0, n)))
+        self.assertEqual(len(list(victims.iterator_verbose())), 0)
+
+        yield env.process(dftl.write_ext(Extent(0, 1)))
+
+        victim_blocks = list(victims.iterator_verbose())
+        valid_ratio, block_num = victim_blocks[0]
+        self.assertEqual(valid_ratio, (n-1.0)/n)
+
+        yield env.process(dftl.write_ext(Extent(0, n)))
+
+        victim_blocks = list(victims.iterator_verbose())
+        valid_ratio, block_num = victim_blocks[0]
+        self.assertEqual(valid_ratio, 0)
+
+
+class _TestDataBlockCleaner(unittest.TestCase):
+    def test_init(self):
+        conf = create_config()
+        objs = create_obj_set(conf)
+        datablockcleaner = create_datablockcleaner(objs)
+
+    def test_moving_clean_one_block(self):
+        conf = create_config()
+        conf['flash_config']['n_channels_per_dev'] = 1
+        conf['stripe_size'] = 'infinity'
+
+        objs = create_obj_set(conf)
+        datablockcleaner = create_datablockcleaner(objs)
+
+        env = objs['env']
+
+        env.process(
+            self.proc_of_moving(objs, datablockcleaner))
+        env.run()
+
+    def proc_of_moving(self, objs, datablockcleaner):
+        env = objs['env']
+        conf = objs['conf']
+        oob = objs['oob']
+        block_pool = objs['block_pool']
+
+        # fake write
+        n = conf.n_pages_per_block
+        ppns = block_pool.next_n_data_pages_to_program_striped(n)
+        block, _ = conf.page_to_block_off(ppns[0])
+        oob.validate_ppns(ppns)
+        oob.invalidate_ppn(ppns[0])
+        self.assertEqual(oob.states.block_valid_ratio(block), (n-1.0)/n)
+
+        # so 'block' is not in the current blocks
+        ppns = block_pool.next_n_data_pages_to_program_striped(1)
+
+        yield env.process(datablockcleaner.clean(block))
+
+        self.assertEqual(oob.states.block_valid_ratio(block), 0)
+        ppn_s, ppn_e = conf.block_to_page_range(0)
+        for ppn in range(ppn_s, ppn_e):
+            self.assertEqual(oob.states.is_page_erased(ppn), True)
+
+        # should moved n-1 data pages
+
+
+class TestDataBlockCleaner(unittest.TestCase):
+    def test_valid_ratio(self):
+        conf = create_config()
+        conf['flash_config']['n_channels_per_dev'] = 1
+        conf['stripe_size'] = 'infinity'
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = FtlTest(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write(objs, dftl))
+        env.run()
+
+    def proc_test_write(self, objs, dftl):
+        conf = objs['conf']
+        env = objs['env']
+        rec = objs['rec']
+        rec.enable()
+
+        time_read_page = objs['flash_controller'].channels[0].read_time
+        time_program_page = objs['flash_controller'].channels[0].program_time
+
+        block_pool = dftl.block_pool
+        oob = dftl.oob
+        mappings = dftl.get_mappings()
+
+        victims = ssdbox.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
+        datablockcleaner = ssdbox.dftldes.DataBlockCleaner(
+            conf = objs['conf'],
+            flash = objs['flash_controller'],
+            oob = oob,
+            block_pool = block_pool,
+            mappings = mappings,
+            rec = objs['rec'],
+            env = objs['env'])
+
+        n = conf.n_pages_per_block
+        yield env.process(dftl.write_ext(Extent(0, n)))
+        yield env.process(dftl.write_ext(Extent(0, 1)))
+
+        victim_blocks = list(victims.iterator_verbose())
+        valid_ratio, victim_block = victim_blocks[0]
+        self.assertEqual(oob.states.block_valid_ratio(victim_block), (n-1.0)/n)
+
+        s = env.now
+        yield env.process(datablockcleaner.clean(victim_block))
+
+        # check the time to move n-1 valid pages
+        self.assertEqual(env.now, s + (n-1)*(time_read_page+time_program_page))
+
+        # check validation
+        self.assertEqual(oob.states.block_valid_ratio(victim_block), 0)
+        ppn_s, ppn_e = conf.block_to_page_range(victim_block)
+        for ppn in range(ppn_s, ppn_e):
+            self.assertEqual(oob.states.is_page_erased(ppn), True)
+
+        # check blockpool
+        self.assertNotIn(victim_block, block_pool.current_blocks())
+        self.assertNotIn(victim_block, block_pool.used_blocks)
+        self.assertIn(victim_block, block_pool.freeblocks)
+
+        # check mapping
+        ppn = yield env.process(mappings.lpn_to_ppn(0))
+        block, _ = conf.page_to_block_off(ppn)
+        self.assertNotEqual(block, victim_block)
 
 
 def main():
