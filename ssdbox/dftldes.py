@@ -1291,6 +1291,10 @@ class VictimBlocks(object):
 
 
 class DataBlockCleaner(object):
+    """
+    Note that this class does not maintain any private state.
+    It is a set of methods to change other states.
+    """
     def __init__(self, conf, flash, oob, block_pool, mappings, rec, env):
         self.conf = conf
         self.flash = flash
@@ -1345,7 +1349,7 @@ class DataBlockCleaner(object):
         # handled by self.mappings
 
         # oob state
-        self.oob.relocate_page(lpn=lpn, old_ppn=ppn, new_ppn=new_ppn,
+        self.oob.relocate_data_page(lpn=lpn, old_ppn=ppn, new_ppn=new_ppn,
                 update_time=False)
 
         # oob ppn->lpn/vpn
@@ -1353,6 +1357,71 @@ class DataBlockCleaner(object):
 
         # blockpool
         # handled by next_gc_data_page_to_program
+
+
+class TransBlockCleaner(object):
+    """
+    Note that this class does not maintain any private state.
+    It is a set of methods to change other states.
+    TODO: some code is duplicated with DataBlockCleaner
+    """
+    def __init__(self, conf, flash, oob, block_pool, mappings, directory, rec,
+            env):
+        self.conf = conf
+        self.flash = flash
+        self.oob = oob
+        self.block_pool = block_pool
+        self.mappings = mappings
+        self.directory = directory
+        self.recorder = rec
+        self.env = env
+
+    def clean(self, blocknum):
+        assert blocknum in self.block_pool.used_blocks
+        assert blocknum not in self.block_pool.current_blocks()
+
+        ppn_start, ppn_end = self.conf.block_to_page_range(blocknum)
+        for ppn in range(ppn_start, ppn_end):
+            if self.oob.states.is_page_valid(ppn):
+                yield self.env.process(self._clean_page(ppn))
+
+        self.oob.erase_block(blocknum)
+        self.block_pool.move_used_trans_block_to_free(blocknum)
+
+    def _clean_page(self, ppn):
+        assert self.oob.states.is_page_valid(ppn) is True
+
+        yield self.env.process(
+            self.flash.rw_ppn_extent(ppn, 1, 'read',
+                tag=self.recorder.get_tag('read.trans.gc', None)))
+
+        new_ppn = self.block_pool.next_gc_translation_page_to_program()
+
+        yield self.env.process(
+            self.flash.rw_ppn_extent(new_ppn, 1, 'write',
+                tag=self.recorder.get_tag('read.trans.gc', None)))
+
+        m_vpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
+
+        # mappings in cache
+        # mapping cache is only for data pages, so we don't need to update
+
+        # mappings on flash
+        # this is for data pages only
+
+        # translation directory
+        self.directory.update_mapping(m_vpn=m_vpn, m_ppn=new_ppn)
+
+        # oob state
+        self.oob.relocate_trans_page(m_vpn=m_vpn, old_ppn=ppn, new_ppn=new_ppn,
+                update_time=False)
+
+        # oob ppn->lpn/vpn
+        # handled above
+
+        # blockpool
+        # handled by next_gc_trans_page_to_program
+
 
 
 class GarbageCollector(object):
