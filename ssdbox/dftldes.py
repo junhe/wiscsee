@@ -206,7 +206,7 @@ class Ftl(object):
 
         # oob state
         # oob ppn->lpn/vpn
-        self.oob.relocate_page(lpn=lpn, old_ppn=old_ppn, new_ppn=new_ppn,
+        self.oob.relocate_data_page(lpn=lpn, old_ppn=old_ppn, new_ppn=new_ppn,
                 update_time=True)
 
         # blockpool
@@ -600,7 +600,7 @@ class MappingCache(object):
             op_id = op_id, op = 'prog_trans_page', arg = m_vpn,
             start_time = start_time, end_time = self.env.now)
 
-        self.oob.relocate_page(lpn=m_vpn, old_ppn=old_m_ppn,
+        self.oob.relocate_trans_page(m_vpn=m_vpn, old_ppn=old_m_ppn,
             new_ppn = new_m_ppn, update_time=True)
         self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
 
@@ -1219,7 +1219,7 @@ class GlobalTranslationDirectory(object):
             # Note that we don't actually read or write flash
             self.add_mapping(m_vpn=m_vpn, m_ppn=m_ppn)
             # update oob of the translation page
-            self.oob.relocate_page(lpn=m_vpn, old_ppn=UNINITIATED,
+            self.oob.relocate_trans_page(m_vpn=m_vpn, old_ppn=UNINITIATED,
                 new_ppn=m_ppn, update_time=True)
 
     def m_vpn_to_m_ppn(self, m_vpn):
@@ -1970,10 +1970,18 @@ class OutOfBandAreas(object):
 
         del self.last_inv_time_of_block[flash_block]
 
-    def relocate_page(self, lpn, old_ppn, new_ppn, update_time=True):
+    def relocate_data_page(self, lpn, old_ppn, new_ppn, update_time=True):
+        self._relocate_page(virtual_pn=lpn, old_ppn=old_ppn, new_ppn=new_ppn,
+                update_time=update_time)
+
+    def relocate_trans_page(self, m_vpn, old_ppn, new_ppn, update_time=True):
+        self._relocate_page(virtual_pn=m_vpn, old_ppn=old_ppn, new_ppn=new_ppn,
+                update_time=update_time)
+
+    def _relocate_page(self, virtual_pn, old_ppn, new_ppn, update_time=True):
         """
         mark the new_ppn as valid
-        update the LPN in new page's OOB to lpn
+        update the virtual page number in new page's OOB to virtual_pn
         invalidate the old_ppn, so cleaner can GC it
         """
         if update_time is True:
@@ -1982,11 +1990,11 @@ class OutOfBandAreas(object):
             self.copy_timestamp(old_ppn, new_ppn)
 
         self.states.validate_page(new_ppn)
-        self.ppn_to_lpn_mvpn[new_ppn] = lpn
+        self.ppn_to_lpn_mvpn[new_ppn] = virtual_pn
 
         if old_ppn != UNINITIATED:
-            # the lpn has mapping before this write
             self.invalidate_ppn(old_ppn)
+
 
     def invalidate_ppns(self, ppns):
         for ppn in ppns:
@@ -2008,7 +2016,7 @@ class OutOfBandAreas(object):
         # move data page does not change the content's timestamp, so
         # we copy
         self.copy_timestamp(src_ppn = old_ppn, dst_ppn = new_ppn)
-        self.relocate_page(lpn, old_ppn, new_ppn, update_time=False)
+        self.relocate_data_page(lpn, old_ppn, new_ppn, update_time=False)
 
     def lpns_of_block(self, flash_block):
         s, e = self.conf.block_to_page_range(flash_block)
