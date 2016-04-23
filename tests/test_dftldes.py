@@ -928,13 +928,13 @@ class TestGC(unittest.TestCase):
         yield env.process(dftl.write_ext(Extent(0, 1)))
 
         victim_blocks = list(victims.iterator_verbose())
-        valid_ratio, block_num = victim_blocks[0]
+        valid_ratio, block_type, block_num = victim_blocks[0]
         self.assertEqual(valid_ratio, (n-1.0)/n)
 
         yield env.process(dftl.write_ext(Extent(0, n)))
 
         victim_blocks = list(victims.iterator_verbose())
-        valid_ratio, block_num = victim_blocks[0]
+        valid_ratio, block_type, block_num = victim_blocks[0]
         self.assertEqual(valid_ratio, 0)
 
 
@@ -980,7 +980,7 @@ class TestDataBlockCleaner(unittest.TestCase):
         yield env.process(dftl.write_ext(Extent(0, 1)))
 
         victim_blocks = list(victims.iterator_verbose())
-        valid_ratio, victim_block = victim_blocks[0]
+        valid_ratio, block_type, victim_block = victim_blocks[0]
         self.assertEqual(oob.states.block_valid_ratio(victim_block), (n-1.0)/n)
 
         s = env.now
@@ -1075,7 +1075,7 @@ class TestTransBlockCleaner(unittest.TestCase):
         yield env.process(self.evict(env, mappings, 0, k, n))
 
         victim_blocks = list(victims.iterator_verbose())
-        valid_ratio, victim_block = victim_blocks[0]
+        valid_ratio, block_type, victim_block = victim_blocks[0]
 
         self.assertEqual(valid_ratio, (n_tp - 2.0) / n)
 

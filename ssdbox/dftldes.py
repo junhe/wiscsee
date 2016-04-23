@@ -1251,21 +1251,23 @@ class GlobalTranslationDirectory(object):
 
 
 class VictimBlocks(object):
+    TYPE_DATA = 'TYPE_DATA'
+    TYPE_TRANS = 'TYPE_TRANS'
     def __init__(self, conf, block_pool, oob):
         self._conf = conf
         self._block_pool = block_pool
         self._oob = oob
 
     def iterator(self):
-        for (_, block_num) in self.iterator_verbose():
+        for (_, _, block_num) in self.iterator_verbose():
             yield block_num
 
     def iterator_verbose(self):
         candidate_tuples = self._candidate_priorityq()
         while True:
             try:
-                valid_ratio, block_num = heapq.heappop(candidate_tuples)
-                yield valid_ratio, block_num
+                valid_ratio, block_type, block_num = heapq.heappop(candidate_tuples)
+                yield valid_ratio, block_type, block_num
             except IndexError:
                 # Out of victim blocks
                 raise StopIteration
@@ -1275,8 +1277,9 @@ class VictimBlocks(object):
         heapq.heapify(candidate_tuples)
         return candidate_tuples
 
-    def _victim_candidates(self):
-        used_blocks = self._block_pool.used_blocks
+    def _form_tuples(self, used_blocks, block_type):
+        assert block_type in (self.TYPE_DATA, self.TYPE_TRANS)
+
         cur_blocks = self._block_pool.current_blocks()
 
         victim_candidates = []
