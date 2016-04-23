@@ -98,6 +98,15 @@ class Ftl(object):
         self.n_sec_per_page = self.conf.page_size \
                 / self.conf['sector_size']
 
+        self._cleaner = Cleaner(
+            conf = self.conf,
+            flash = self.flash,
+            oob = self.oob,
+            block_pool = self.block_pool,
+            mappings = self._mappings,
+            directory = self._directory,
+            rec = self.recorder,
+            env = self.env)
 
     def _ppns_to_write(self, ext, new_mappings):
         ppns = []
@@ -1287,10 +1296,95 @@ class VictimBlocks(object):
             if block not in cur_blocks:
                 valid_ratio = self._oob.states.block_valid_ratio(block)
                 if valid_ratio < 1:
-                    victim_candidates.append( (valid_ratio, block) )
+                    victim_candidates.append( (valid_ratio, block_type, block) )
 
         return victim_candidates
 
+    def _victim_candidates(self):
+        used_data_blocks = self._block_pool.data_usedblocks
+        used_trans_blocks = self._block_pool.trans_usedblocks
+
+        candidate_tuples = self._form_tuples(used_data_blocks, self.TYPE_DATA) + \
+            self._form_tuples(used_trans_blocks, self.TYPE_TRANS)
+
+        return candidate_tuples
+
+
+class Cleaner(object):
+    def __init__(self, conf, flash, oob, block_pool, mappings, directory, rec,
+            env):
+        self.conf = conf
+        self.flash = flash
+        self.oob = oob
+        self.block_pool = block_pool
+        self.mappings = mappings
+        self.directory = directory
+        self.recorder = rec
+        self.env = env
+
+        self.assert_threshold_sanity()
+
+        self._datablockcleaner = DataBlockCleaner(
+            conf = self.conf,
+            flash = self.flash,
+            oob = self.oob,
+            block_pool = self.block_pool,
+            mappings = self.mappings,
+            rec = self.recorder,
+            env = self.env)
+
+        self._transblockcleaner = TransBlockCleaner(
+            conf = self.conf,
+            flash = self.flash,
+            oob = self.oob,
+            block_pool = self.block_pool,
+            mappings = self.mappings,
+            directory = self.directory,
+            rec = self.recorder,
+            env = self.env)
+
+    def assert_threshold_sanity(self):
+        # check high threshold
+        min_high = 1 / float(self.conf.over_provisioning)
+        if self.conf.GC_high_threshold_ratio < min_high:
+            raise RuntimeError("GC_high_threshold_ratio is too low. "\
+                "When file system is full, we will consistently try to "\
+                "collect garbage. Too much overhead.")
+
+        # check minimum spare blocks
+        # we need some free blocks to use for GC
+        n_spare_blocks = (1.0 - self.conf.GC_high_threshold_ratio) * \
+                self.conf.n_blocks_per_dev
+        if n_spare_blocks < 32:
+            raise RuntimeError("We may not have spare blocks to use when "\
+                    "cleaning (for translation page, etc.). # of spare blocks:" \
+                    " {}.".format(n_spare_blocks))
+
+    def is_cleaning_needed(self):
+        return self.block_pool.used_ratio() > self.conf.GC_high_threshold_ratio
+
+    def is_stopping_needed(self):
+        return self.block_pool.used_ratio() < self.conf.GC_low_threshold_ratio
+
+    def clean(self):
+        """
+        cleaning WILL start if you call this function. So make sure you check
+        if you need cleaning before calling.
+        """
+        victim_blocks = VictimBlocks(self.conf, self.block_pool, self.oob)
+
+        print 'to clean', list(victim_blocks.iterator_verbose())
+
+        for valid_ratio, block_type, block_num in victim_blocks.iterator_verbose():
+            if self.is_stopping_needed():
+                break
+            yield self.env.process(self._clean_block(block_type, block_num))
+
+    def _clean_block(self, block_type, block_num):
+        if block_type == VictimBlocks.TYPE_DATA:
+            yield self.env.process(self._datablockcleaner.clean(block_num))
+        elif block_type == VictimBlocks.TYPE_TRANS:
+            yield self.env.process(self._transblockcleaner.clean(block_num))
 
 
 class DataBlockCleaner(object):
@@ -1845,12 +1939,12 @@ class GcDecider(object):
         # because if the file system is full you have to constantly GC and
         # cannot get more space
         min_high = 1 / float(self.conf.over_provisioning)
-        if self.conf.GC_threshold_ratio < min_high:
+        if self.conf.GC_high_threshold_ratio < min_high:
             hi_watermark_ratio = min_high
             print 'High watermark is reset to {}. It was {}'.format(
-                hi_watermark_ratio, self.conf.GC_threshold_ratio)
+                hi_watermark_ratio, self.conf.GC_high_threshold_ratio)
         else:
-            hi_watermark_ratio = self.conf.GC_threshold_ratio
+            hi_watermark_ratio = self.conf.GC_high_threshold_ratio
             print 'Using user defined high watermark', hi_watermark_ratio
 
         self.high_watermark = hi_watermark_ratio * \
@@ -2107,7 +2201,7 @@ class Config(config.ConfigNCQFTL):
             # number of bytes per entry in mapping_on_flash
             "translation_page_entry_bytes": 4, # 32 bits
             "cache_entry_bytes": 8, # 4 bytes for lpn, 4 bytes for ppn
-            "GC_threshold_ratio": 0.95,
+            "GC_high_threshold_ratio": 0.95,
             "GC_low_threshold_ratio": 0.9,
             "over_provisioning": 1.28,
             "mapping_cache_bytes": None # cmt: cached mapping table
@@ -2164,13 +2258,25 @@ class Config(config.ConfigNCQFTL):
     def over_provisioning(self):
         return self['over_provisioning']
 
+    @over_provisioning.setter
+    def over_provisioning(self, value):
+        self['over_provisioning'] = value
+
     @property
-    def GC_threshold_ratio(self):
-        return self['GC_threshold_ratio']
+    def GC_high_threshold_ratio(self):
+        return self['GC_high_threshold_ratio']
+
+    @GC_high_threshold_ratio.setter
+    def GC_high_threshold_ratio(self, value):
+        self['GC_high_threshold_ratio'] = value
 
     @property
     def GC_low_threshold_ratio(self):
         return self['GC_low_threshold_ratio']
+
+    @GC_low_threshold_ratio.setter
+    def GC_low_threshold_ratio(self, value):
+        self['GC_low_threshold_ratio'] = value
 
     def sec_ext_to_page_ext(self, sector, count):
         """
