@@ -51,6 +51,8 @@ class Ssd(SsdBase):
 
     def _process(self, pid):
         for req_i in itertools.count():
+            slot_req = self.ncq.slots.request()
+            yield slot_req
             host_event = yield self.ncq.queue.get()
 
             # handle host_event case by case
@@ -81,6 +83,8 @@ class Ssd(SsdBase):
             if req_i % 1000 == 0:
                 print '.',
                 sys.stdout.flush()
+
+            self.ncq.slots.release(slot_req)
 
     def _end_all_processes(self):
         for i in range(self.n_processes):

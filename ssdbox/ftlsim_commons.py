@@ -74,6 +74,8 @@ class NCQSingleQueue(object):
         self.ncq_depth = ncq_depth
         self.env = simpy_env
         self.queue = simpy.Store(self.env)
+        # ssd need to grab a slot before get item from queue
+        self.slots = simpy.Resource(self.env, capacity=1)
 
 
 

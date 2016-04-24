@@ -1345,6 +1345,8 @@ class Cleaner(object):
 
     def assert_threshold_sanity(self):
         # check high threshold
+        # TODO: this check is not sufficient. We may use more pages
+        # than the file system size because the translation page overhead
         min_high = 1 / float(self.conf.over_provisioning)
         if self.conf.GC_high_threshold_ratio < min_high:
             raise RuntimeError("GC_high_threshold_ratio is too low. "\
