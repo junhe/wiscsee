@@ -963,6 +963,7 @@ class TestDataBlockCleaner(unittest.TestCase):
 
         time_read_page = objs['flash_controller'].channels[0].read_time
         time_program_page = objs['flash_controller'].channels[0].program_time
+        time_erase_block = objs['flash_controller'].channels[0].erase_time
 
         block_pool = dftl.block_pool
         oob = dftl.oob
@@ -990,7 +991,8 @@ class TestDataBlockCleaner(unittest.TestCase):
         yield env.process(datablockcleaner.clean(victim_block))
 
         # check the time to move n-1 valid pages
-        self.assertEqual(env.now, s + (n-1)*(time_read_page+time_program_page))
+        self.assertEqual(env.now,
+                s + (n-1)*(time_read_page+time_program_page) + time_erase_block)
 
         # check validation
         self.assertEqual(oob.states.block_valid_ratio(victim_block), 0)
@@ -1051,6 +1053,7 @@ class TestTransBlockCleaner(unittest.TestCase):
 
         time_read_page = objs['flash_controller'].channels[0].read_time
         time_program_page = objs['flash_controller'].channels[0].program_time
+        time_erase_block = objs['flash_controller'].channels[0].erase_time
 
         block_pool = dftl.block_pool
         oob = dftl.oob
@@ -1081,7 +1084,6 @@ class TestTransBlockCleaner(unittest.TestCase):
         victim_blocks = list(victims.iterator_verbose())
         valid_ratio, block_type, victim_block = victim_blocks[0]
 
-        print n_tp, n, '<__________________'
         self.assertEqual(valid_ratio,
                 (min(n_tp, conf.n_pages_per_block) - 2.0) / n)
 
@@ -1089,7 +1091,9 @@ class TestTransBlockCleaner(unittest.TestCase):
         yield env.process(transblockcleaner.clean(victim_block))
 
         # check the time to move n-1 valid pages
-        self.assertEqual(env.now, s + (min(n_tp, conf.n_pages_per_block)-2)*(time_read_page+time_program_page))
+        self.assertEqual(env.now,
+                s + (min(n_tp, conf.n_pages_per_block)-2)*\
+                (time_read_page+time_program_page) + time_erase_block)
 
         # check validation
         self.assertEqual(oob.states.block_valid_ratio(victim_block), 0)
@@ -1181,6 +1185,7 @@ class TestCleaningDataBlocksByCleaner(unittest.TestCase):
 
         time_read_page = objs['flash_controller'].channels[0].read_time
         time_program_page = objs['flash_controller'].channels[0].program_time
+        time_erase_block = objs['flash_controller'].channels[0].erase_time
 
         block_pool = dftl.block_pool
         oob = dftl.oob
@@ -1199,18 +1204,22 @@ class TestCleaningDataBlocksByCleaner(unittest.TestCase):
 
         n = conf.n_pages_per_block
         yield env.process(dftl.write_ext(Extent(0, n)))
+        old_ppn = yield env.process(mappings.lpn_to_ppn(lpn=0))
         yield env.process(dftl.write_ext(Extent(0, 1)))
+        new_ppn = yield env.process(mappings.lpn_to_ppn(lpn=0))
+
+        self.assertNotEqual(old_ppn, new_ppn)
 
         victim_blocks = list(victims.iterator_verbose())
         valid_ratio, block_type, victim_block = victim_blocks[0]
         self.assertEqual(oob.states.block_valid_ratio(victim_block), (n-1.0)/n)
 
         s = env.now
-        # yield env.process(datablockcleaner.clean(victim_block))
         yield env.process(cleaner.clean())
 
         # check the time to move n-1 valid pages
-        self.assertEqual(env.now, s + (n-1)*(time_read_page+time_program_page))
+        self.assertEqual(env.now,
+            s + (n-1)*(time_read_page+time_program_page) + time_erase_block)
 
         # check validation
         self.assertEqual(oob.states.block_valid_ratio(victim_block), 0)
@@ -1270,6 +1279,7 @@ class TestCleaningTransBlocksByCleaner(unittest.TestCase):
 
         time_read_page = objs['flash_controller'].channels[0].read_time
         time_program_page = objs['flash_controller'].channels[0].program_time
+        time_erase_block = objs['flash_controller'].channels[0].erase_time
 
         block_pool = dftl.block_pool
         oob = dftl.oob
@@ -1308,7 +1318,9 @@ class TestCleaningTransBlocksByCleaner(unittest.TestCase):
         yield env.process(cleaner.clean())
 
         # check the time to move n-1 valid pages
-        self.assertEqual(env.now, s + (min(n_tp, conf.n_pages_per_block)-2)*(time_read_page+time_program_page))
+        self.assertEqual(env.now,
+                s + (min(n_tp, conf.n_pages_per_block)-2)*\
+                        (time_read_page+time_program_page)+time_erase_block)
 
         # check validation
         self.assertEqual(oob.states.block_valid_ratio(victim_block), 0)
@@ -1350,6 +1362,7 @@ class TestCleaning(unittest.TestCase):
 
         time_read_page = objs['flash_controller'].channels[0].read_time
         time_program_page = objs['flash_controller'].channels[0].program_time
+        time_erase_block = objs['flash_controller'].channels[0].erase_time
 
         block_pool = dftl.block_pool
         oob = dftl.oob
@@ -1366,7 +1379,7 @@ class TestCleaning(unittest.TestCase):
             rec = objs['rec'],
             env = objs['env'])
 
-        n_data_used_blocks = len(self.block_pool.data_usedblocks)
+        n_data_used_blocks = len(block_pool.data_usedblocks)
 
         # create 3 blocks with no valid pages, 1 with full valid pages
         n = conf.n_pages_per_block
@@ -1375,11 +1388,14 @@ class TestCleaning(unittest.TestCase):
         yield env.process(dftl.write_ext(Extent(0, n)))
         yield env.process(dftl.write_ext(Extent(0, n)))
 
+        victim_blocks = list(victims.iterator_verbose())
+        valid_ratio, block_type, victim_block = victim_blocks[0]
+
         s = env.now
         # yield env.process(datablockcleaner.clean(victim_block))
         yield env.process(cleaner.clean())
-        # check the time to move n-1 valid pages
-        self.assertEqual(env.now, s + (n-1)*(time_read_page+time_program_page))
+        # check the time to move 0 valid pages and erase 3 blocks
+        self.assertEqual(env.now, s + 3*time_erase_block)
 
         # check validation
         self.assertEqual(oob.states.block_valid_ratio(victim_block), 0)

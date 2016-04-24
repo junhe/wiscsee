@@ -1406,6 +1406,7 @@ class DataBlockCleaner(object):
         for each valid page, move it to another block
         invalidate pages in blocknum and erase block
         '''
+        print 'clean data block'
         assert blocknum in self.block_pool.used_blocks
         assert blocknum not in self.block_pool.current_blocks()
 
@@ -1414,6 +1415,9 @@ class DataBlockCleaner(object):
             if self.oob.states.is_page_valid(ppn):
                 yield self.env.process(self._clean_page(ppn))
 
+        yield self.env.process(
+            self.flash.erase_pbn_extent(blocknum, 1,
+                tag=self.recorder.get_tag('erase.data.gc', None)))
         self.oob.erase_block(blocknum)
         self.block_pool.move_used_data_block_to_free(blocknum)
 
@@ -1421,6 +1425,7 @@ class DataBlockCleaner(object):
         """
         read ppn, write to new ppn, update metadata
         """
+        print 'clean page', ppn
         assert self.oob.states.is_page_valid(ppn) is True
 
         yield self.env.process(
@@ -1437,7 +1442,7 @@ class DataBlockCleaner(object):
 
         # mappings in cache
         yield self.env.process(
-            self.mappings.update(lpn=lpn, ppn=ppn, tag=None))
+            self.mappings.update(lpn=lpn, ppn=new_ppn, tag=None))
 
         # mappings on flash
         # handled by self.mappings
@@ -1474,6 +1479,7 @@ class TransBlockCleaner(object):
         self.env = env
 
     def clean(self, blocknum):
+        print 'clean trans block'
         assert blocknum in self.block_pool.used_blocks
         assert blocknum not in self.block_pool.current_blocks()
 
@@ -1482,6 +1488,9 @@ class TransBlockCleaner(object):
             if self.oob.states.is_page_valid(ppn):
                 yield self.env.process(self._clean_page(ppn))
 
+        yield self.env.process(
+            self.flash.erase_pbn_extent(blocknum, 1,
+                tag=self.recorder.get_tag('erase.trans.gc', None)))
         self.oob.erase_block(blocknum)
         self.block_pool.move_used_trans_block_to_free(blocknum)
 
