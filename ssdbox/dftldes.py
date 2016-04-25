@@ -110,7 +110,9 @@ class Ftl(object):
             mappings = self._mappings,
             directory = self._directory,
             rec = self.recorder,
-            env = self.env)
+            env = self.env,
+            trans_page_locks = self._trans_page_locks
+            )
 
     def _ppns_to_write(self, ext, new_mappings):
         ppns = []
@@ -1322,7 +1324,7 @@ class VictimBlocks(object):
 
 class Cleaner(object):
     def __init__(self, conf, flash, oob, block_pool, mappings, directory, rec,
-            env):
+            env, trans_page_locks):
         self.conf = conf
         self.flash = flash
         self.oob = oob
@@ -1333,6 +1335,8 @@ class Cleaner(object):
         self.env = env
 
         self.assert_threshold_sanity()
+
+        self._trans_page_locks = trans_page_locks
 
         self._datablockcleaner = DataBlockCleaner(
             conf = self.conf,
