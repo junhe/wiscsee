@@ -69,6 +69,10 @@ class Ssd(SsdBase):
             elif operation == 'end_ssd_process':
                 self.ncq.slots.release(slot_req)
                 break
+            elif operation == 'clean':
+                self.env.process(self._cleaner_process_forced())
+                self.ncq.slots.release(slot_req)
+                break
             elif operation == 'read':
                 yield self.env.process(
                     self.ftl.read_ext(host_event.get_lpn_extent(self.conf)))
@@ -104,6 +108,11 @@ class Ssd(SsdBase):
         if self.ftl.is_cleaning_needed():
             yield self.env.process(self.ftl.clean())
 
+        self.ncq.release_all_slots(held_slot_reqs)
+
+    def _cleaner_process_forced(self):
+        held_slot_reqs = yield self.env.process(self.ncq.hold_all_slots())
+        yield self.env.process(self.ftl.clean())
         self.ncq.release_all_slots(held_slot_reqs)
 
     def run(self):
