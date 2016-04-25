@@ -188,6 +188,14 @@ class Controller(object):
                 op = 'erase')
         yield self.env.process( self.execute_request_list(flash_reqs) )
 
+    def execute_request_list(self, flash_request_list):
+        procs = []
+        for request in flash_request_list:
+            p = self.env.process(self.execute_request(request))
+            procs.append(p)
+        event = simpy.events.AllOf(self.env, procs)
+        yield event
+
     def execute_request(self, flash_request):
         if flash_request.operation == OP_READ:
             yield self.env.process(
@@ -201,14 +209,6 @@ class Controller(object):
         else:
             raise RuntimeError("operation {} is not supported".format(
                 flash_request.operation))
-
-    def execute_request_list(self, flash_request_list):
-        procs = []
-        for request in flash_request_list:
-            p = self.env.process(self.execute_request(request))
-            procs.append(p)
-        event = simpy.events.AllOf(self.env, procs)
-        yield event
 
     def write_page(self, addr, data = None):
         """
