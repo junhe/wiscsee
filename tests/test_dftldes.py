@@ -97,10 +97,13 @@ def create_obj_set(conf):
     directory = create_translation_directory(conf, oob, block_pool)
     gmt = create_mapping_on_flash(conf)
     victimblocks = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
+    trans_page_locks = ssdbox.dftldes.VPNResourcePool(env)
 
     return {'conf':conf, 'rec':rec, 'oob':oob, 'block_pool':block_pool,
             'flash_controller':flash_controller, 'env':env, 'directory':directory,
-            'mapping_on_flash':gmt, 'victimblocks':victimblocks}
+            'mapping_on_flash':gmt, 'victimblocks':victimblocks,
+            'trans_page_locks':trans_page_locks
+            }
 
 
 def create_mapping_cache(objs):
@@ -112,7 +115,9 @@ def create_mapping_cache(objs):
             recorderobj = objs['rec'],
             envobj = objs['env'],
             directory = objs['directory'],
-            mapping_on_flash = objs['mapping_on_flash'])
+            mapping_on_flash = objs['mapping_on_flash'],
+            trans_page_locks = objs['trans_page_locks']
+            )
 
     return mapping_cache
 

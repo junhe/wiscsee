@@ -85,6 +85,8 @@ class Ftl(object):
         self._directory = GlobalTranslationDirectory(self.conf,
                 self.oob, self.block_pool)
 
+        self._trans_page_locks =  VPNResourcePool(self.env)
+
         self._mappings = MappingCache(
             confobj = self.conf,
             block_pool = self.block_pool,
@@ -93,7 +95,9 @@ class Ftl(object):
             recorderobj = self.recorder,
             envobj = self.env,
             directory = self._directory,
-            mapping_on_flash = MappingOnFlash(self.conf))
+            mapping_on_flash = MappingOnFlash(self.conf),
+            trans_page_locks = self._trans_page_locks
+            )
 
         self.n_sec_per_page = self.conf.page_size \
                 / self.conf['sector_size']
@@ -351,7 +355,7 @@ class MappingCache(object):
     TODO: should separate operations that do/do not change recency
     """
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
-            envobj, directory, mapping_on_flash):
+            envobj, directory, mapping_on_flash, trans_page_locks):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
@@ -363,7 +367,7 @@ class MappingCache(object):
 
         self._lpn_table = LpnTableMvpn(confobj)
 
-        self._trans_page_locks =  VPNResourcePool(self.env)
+        self._trans_page_locks = trans_page_locks
 
     def lpn_to_ppn(self, lpn, tag=None):
         """
