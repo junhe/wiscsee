@@ -1456,6 +1456,8 @@ class Experiment(object):
         self.conf["lba_workload_configs"]["ExtentTestWorkloadFLEX2"] = {
                 "events": [
                     (w, 0, n_pages_per_block),
+                    (w, 0, n_pages_per_block),
+                    (w, 0, n_pages_per_block),
                     (w, 0, n_pages_per_block)
                     ]}
         self.conf["age_workload_class"] = "NoOp"

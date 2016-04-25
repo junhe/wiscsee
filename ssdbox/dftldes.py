@@ -1433,7 +1433,6 @@ class DataBlockCleaner(object):
         """
         read ppn, write to new ppn, update metadata
         """
-        print 'clean page', ppn
         assert self.oob.states.is_page_valid(ppn) is True
 
         yield self.env.process(
