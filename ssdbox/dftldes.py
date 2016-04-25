@@ -1443,7 +1443,7 @@ class DataBlockCleaner(object):
 
         yield self.env.process(
             self.flash.rw_ppn_extent(new_ppn, 1, 'write',
-                tag=self.recorder.get_tag('read.data.gc', None)))
+                tag=self.recorder.get_tag('write.data.gc', None)))
 
         lpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
 
