@@ -1512,7 +1512,7 @@ class TransBlockCleaner(object):
 
         yield self.env.process(
             self.flash.rw_ppn_extent(new_ppn, 1, 'write',
-                tag=self.recorder.get_tag('read.trans.gc', None)))
+                tag=self.recorder.get_tag('write.trans.gc', None)))
 
         m_vpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
 
