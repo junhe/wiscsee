@@ -51,9 +51,10 @@ class Ssd(SsdBase):
 
     def _process(self, pid):
         for req_i in itertools.count():
+            host_event = yield self.ncq.queue.get()
+
             slot_req = self.ncq.slots.request()
             yield slot_req
-            host_event = yield self.ncq.queue.get()
 
             # handle host_event case by case
             operation = host_event.operation
@@ -66,6 +67,7 @@ class Ssd(SsdBase):
                 yield self.env.process(
                     self._end_all_processes())
             elif operation == 'end_ssd_process':
+                self.ncq.slots.release(slot_req)
                 break
             elif operation == 'read':
                 yield self.env.process(
@@ -85,6 +87,7 @@ class Ssd(SsdBase):
                 sys.stdout.flush()
 
             if self.ftl.is_cleaning_needed() is True:
+                pass
                 self.env.process(self._cleaner_process())
 
             self.ncq.slots.release(slot_req)
@@ -110,6 +113,7 @@ class Ssd(SsdBase):
             procs.append(p)
 
         yield simpy.events.AllOf(self.env, procs)
+
 
         self._record_post_run_stats()
 

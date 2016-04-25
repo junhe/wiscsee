@@ -1420,7 +1420,7 @@ class Experiment(object):
         self.para = para
     def setup_config(self):
         self.conf = ssdbox.dftldes.Config()
-        self.conf['SSDFramework']['ncq_depth'] = 1
+        self.conf['SSDFramework']['ncq_depth'] = 4
 
         self.conf['flash_config']['n_pages_per_block'] = 2
         self.conf['flash_config']['n_blocks_per_plane'] = 2
@@ -1488,8 +1488,6 @@ class TestSimpleGC(unittest.TestCase):
 
         exp = Experiment( Parameters(expname = expname) )
         exp.main()
-
-
 
 
 
