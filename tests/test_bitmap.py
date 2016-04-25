@@ -22,9 +22,9 @@ def create_config():
     conf['ftl_type'] = 'dftldes'
     conf['simulator_class'] = 'SimulatorDESSync'
 
-    devsize_mb = 64
+    logicsize_mb = 64
     conf.n_cache_entries = conf.n_mapping_entries_per_page
-    conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+    conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
     utils.runtime_update(conf)
 

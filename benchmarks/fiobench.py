@@ -532,10 +532,10 @@ def compare_real_and_sim_w_fs():
             self.conf['simulator_class'] = 'SimulatorDESTime'
             self.conf['ftl_type'] = 'dftldes'
 
-            devsize_mb = self.conf['dev_size_mb']
-            entries_need = int(devsize_mb * 2**20 * 0.1 / self.conf['flash_config']['page_size'])
+            logicsize_mb = self.conf['dev_size_mb']
+            entries_need = int(logicsize_mb * 2**20 * 0.1 / self.conf['flash_config']['page_size'])
             self.conf.mapping_cache_bytes = int(entries_need * self.conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
-            self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
         def run(self):
             set_exp_metadata(self.conf, save_data = True,
@@ -655,10 +655,10 @@ def compare_real_and_sim_raw():
             self.conf['simulator_class'] = 'SimulatorDESTime'
             self.conf['ftl_type'] = 'dftldes'
 
-            devsize_mb = self.conf['dev_size_mb']
-            entries_need = int(devsize_mb * 2**20 * 2 / self.conf['flash_config']['page_size'])
+            logicsize_mb = self.conf['dev_size_mb']
+            entries_need = int(logicsize_mb * 2**20 * 2 / self.conf['flash_config']['page_size'])
             self.conf.mapping_cache_bytes = int(entries_need * self.conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
-            self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
         def run(self):
             set_exp_metadata(self.conf, save_data = True,

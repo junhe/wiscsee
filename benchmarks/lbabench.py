@@ -42,10 +42,10 @@ def simplest():
             self.conf['ftl_type'] = 'dftldes'
             self.conf['simulator_class'] = 'SimulatorDESNew'
 
-            devsize_mb = 2
+            logicsize_mb = 2
             self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page \
                     * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
-            self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
         def my_run(self):
             runtime_update(self.conf)
@@ -111,9 +111,9 @@ def qdepth_pattern():
             self.conf['simulator_class'] = 'SimulatorDESNew'
             self.conf['stripe_size'] = self.para.stripe_size
 
-            devsize_mb = self.para.devsize_mb
+            logicsize_mb = self.para.logicsize_mb
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
-            self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.00))
+            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.00))
 
         def my_run(self):
             runtime_update(self.conf)
@@ -133,18 +133,18 @@ def qdepth_pattern():
                 # 'ncq_depth'      : [1, 8],
                 # 'chunk_size'     : [2*KB, 16*KB],
                 # 'traffic'        : [8*MB],
-                # 'devsize_mb'     : [128],
+                # 'logicsize_mb'     : [128],
                 # 'cache_mapped_data_bytes' :[16*MB, 128*MB],
                 # 'pattern'        : ['sequential', 'random'],
                 # 'stripe_size'    : [1, 'infinity']
                 # }
         para_dict = {
                 'expname'        : [expname],
-                'ncq_depth'      : [1, 8],
-                'chunk_size'     : [2*KB, 16*KB],
+                'ncq_depth'      : [8],
+                'chunk_size'     : [2*KB],
                 'traffic'        : [1*MB], # 1 4 7
-                'devsize_mb'     : [128],
-                'cache_mapped_data_bytes' :[16*MB, 128*MB],
+                'logicsize_mb'     : [128],
+                'cache_mapped_data_bytes' :[128*MB],
                 'pattern'        : ['sequential', 'random'],
                 'stripe_size'    : [1, 'infinity']
                 }

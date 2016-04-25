@@ -51,10 +51,10 @@ class DftlextExp(Experiment):
         self.conf['ftl_type'] = 'dftlext'
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
-        devsize_mb = 16
-        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf.page_size)
+        logicsize_mb = 16
+        entries_need = int(logicsize_mb * 2**20 * 0.03 / self.conf.page_size)
         self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
-        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+        self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
     def run(self):
         runtime_update(self.conf)
@@ -87,10 +87,10 @@ class DftlextExp2(Experiment):
         self.conf['ftl_type'] = 'dftlext'
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
-        devsize_mb = 16
-        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf.page_size)
+        logicsize_mb = 16
+        entries_need = int(logicsize_mb * 2**20 * 0.03 / self.conf.page_size)
         self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
-        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+        self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
     def run(self):
         runtime_update(self.conf)
@@ -122,10 +122,10 @@ class DftlextExpE2e(Experiment):
         self.conf['ftl_type'] = 'dftlext'
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
-        devsize_mb = 16
-        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
+        logicsize_mb = 16
+        entries_need = int(logicsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
         self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
-        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+        self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
     def run(self):
         runtime_update(self.conf)
@@ -169,10 +169,10 @@ class TestDftextGC(unittest.TestCase):
         self.conf['ftl_type'] = 'dftlext'
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
-        devsize_mb = 16
-        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
+        logicsize_mb = 16
+        entries_need = int(logicsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
         self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
-        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+        self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
     def my_run(self):
         runtime_update(self.conf)
@@ -210,10 +210,10 @@ class TestDftextGCSingleChannel(unittest.TestCase):
         self.conf['ftl_type'] = 'dftlext'
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
-        devsize_mb = 1
-        entries_need = int(devsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
+        logicsize_mb = 1
+        entries_need = int(logicsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
         self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
-        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+        self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
     def my_run(self):
         runtime_update(self.conf)
@@ -341,11 +341,11 @@ class TestTimelineAndFlash(unittest.TestCase):
         self.conf['ftl_type'] = 'dftlext'
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
-        devsize_mb = 16
-        entries_need = int(devsize_mb * 2**20 * 0.03 / \
+        logicsize_mb = 16
+        entries_need = int(logicsize_mb * 2**20 * 0.03 / \
                 self.conf['flash_config']['page_size'])
         self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
-        self.conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+        self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
         runtime_update(self.conf)
 

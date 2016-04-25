@@ -154,10 +154,10 @@ def test_fio():
         conf['ftl_type'] = "dftlext"
 
         conf['flash_config']['page_size'] = 1024
-        devsize_mb = 1024
-        entries_need = int(devsize_mb * 2**20 * 0.03 / conf.page_size)
+        logicsize_mb = 1024
+        entries_need = int(logicsize_mb * 2**20 * 0.03 / conf.page_size)
         conf['dftl']['mapping_cache_bytes'] = int(entries_need * conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
-        conf.set_flash_num_blocks_by_bytes(int(devsize_mb * 2**20 * 1.28))
+        conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
         # perf
         conf['wrap_by_perf'] = False
@@ -269,7 +269,7 @@ class DftlextExp001(Experiment):
     def __init__(self):
         # Get default setting
         self.conf = ssdbox.dftlext.Config()
-        self.devsize_mb = 128
+        self.logicsize_mb = 128
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = True)
@@ -279,7 +279,7 @@ class DftlextExp001(Experiment):
         self.conf['enable_simulation'] = True
 
         self.conf['filesystem'] = 'ext4'
-        self.conf['dev_size_mb'] = self.devsize_mb
+        self.conf['dev_size_mb'] = self.logicsize_mb
 
         self.conf['device_path'] = "/dev/loop0"
 
@@ -297,7 +297,7 @@ class DftlextExp001(Experiment):
                 fdatasync = 1,
                 bssplit = workrunner.fio.HIDE_ATTR
                 )
-        assert filesize < self.devsize_mb * MB
+        assert filesize < self.logicsize_mb * MB
 
         self.conf['workload_conf'] = job_desc
         self.conf['workload_conf_key'] = 'workload_conf'
@@ -314,9 +314,9 @@ class DftlextExp001(Experiment):
         self.conf['ftl_type'] = 'dftlext'
         self.conf['simulator_class'] = 'SimulatorNonDESe2e'
 
-        entries_need = int(self.devsize_mb * 2**20 * 0.03 / self.conf.page_size)
+        entries_need = int(self.logicsize_mb * 2**20 * 0.03 / self.conf.page_size)
         self.conf.mapping_cache_bytes = int(entries_need * self.conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
-        self.conf.set_flash_num_blocks_by_bytes(int(self.devsize_mb * 2**20 * 1.28))
+        self.conf.set_flash_num_blocks_by_bytes(int(self.logicsize_mb * 2**20 * 1.28))
 
     def run(self):
         runtime_update(self.conf)
@@ -346,7 +346,7 @@ class FIO_DFTLDES(object):
     def __init__(self, parameters):
         # Get default setting
         self.conf = ssdbox.dftldes.Config()
-        self.devsize_mb = 256
+        self.logicsize_mb = 256
         self.parameters = parameters
         print self.parameters
 
@@ -359,7 +359,7 @@ class FIO_DFTLDES(object):
         self.conf['enable_simulation'] = True
 
         self.conf['filesystem'] = self.parameters.filesystem
-        self.conf['dev_size_mb'] = self.devsize_mb
+        self.conf['dev_size_mb'] = self.logicsize_mb
 
         self.conf['device_path'] = "/dev/loop0"
 
@@ -386,7 +386,7 @@ class FIO_DFTLDES(object):
                 fdatasync = 1,
                 bssplit = workrunner.fio.HIDE_ATTR
                 )
-        assert filesize < self.devsize_mb * MB
+        assert filesize < self.logicsize_mb * MB
 
         self.conf['workload_conf'] = job_desc
         self.conf['workload_conf_key'] = 'workload_conf'
@@ -404,9 +404,9 @@ class FIO_DFTLDES(object):
 
         self.conf['SSDFramework']['ncq_depth'] = 16
 
-        entries_need = int(self.devsize_mb * 2**20 * 0.03 / self.conf.page_size)
+        entries_need = int(self.logicsize_mb * 2**20 * 0.03 / self.conf.page_size)
         self.conf.mapping_cache_bytes = int(entries_need * self.conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
-        self.conf.set_flash_num_blocks_by_bytes(int(self.devsize_mb * 2**20 * 1.28))
+        self.conf.set_flash_num_blocks_by_bytes(int(self.logicsize_mb * 2**20 * 1.28))
 
     def run(self):
         runtime_update(self.conf)
@@ -433,14 +433,14 @@ def run_FIO_DFTLDES():
 def run_ncqexp():
     class NCQExp(object):
         def __init__(self, ncq_depth, n_channels, trafficsize, expname, mode,
-                cache_ratio, devsize_mb):
+                cache_ratio, logicsize_mb):
             self.ncq_depth = ncq_depth
             self.n_channels = n_channels
             self.trafficsize = trafficsize
             self.expname = expname
             self.mode = mode
             self.cache_ratio = cache_ratio
-            self.devsize_mb = devsize_mb
+            self.logicsize_mb = logicsize_mb
 
         def setup_config(self):
             self.conf = ssdbox.dftldes.Config()
@@ -481,10 +481,10 @@ def run_ncqexp():
             self.conf['ftl_type'] = 'dftldes'
             self.conf['simulator_class'] = 'SimulatorDES'
 
-            entries_need = int(self.devsize_mb * 2**20 * self.cache_ratio / \
+            entries_need = int(self.logicsize_mb * 2**20 * self.cache_ratio / \
                     self.conf['flash_config']['page_size'])
             self.conf.mapping_cache_bytes = int(entries_need * self.conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
-            self.conf.set_flash_num_blocks_by_bytes(int(self.devsize_mb * 2**20 * 2))
+            self.conf.set_flash_num_blocks_by_bytes(int(self.logicsize_mb * 2**20 * 2))
             print "Current n_blocks_per_plane",\
                 self.conf['flash_config']['n_blocks_per_plane']
 
@@ -507,7 +507,7 @@ def run_ncqexp():
             'cache_ratio'   : [0.03, 10],
             'trafficsize'   : [64*MB],
             'expname'       : [expname],
-            'devsize_mb'    : [256]
+            'logicsize_mb'    : [256]
             }
 
     parameter_combs = ParameterCombinations(para_dict)
