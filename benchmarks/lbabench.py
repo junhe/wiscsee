@@ -83,6 +83,10 @@ def qdepth_pattern():
 
             self.conf['exp_parameters'] = self.para._asdict()
 
+            self.conf['do_not_check_gc_setting'] = True
+            self.conf.GC_high_threshold_ratio = 0.01
+            self.conf.GC_low_threshold_ratio = 0
+
         def setup_environment(self):
             set_exp_metadata(self.conf, save_data = True,
                     expname = self.para.expname,
@@ -161,6 +165,81 @@ def qdepth_pattern():
                 ','.join(para.keys()))
         exp = Experiment( Parameters(**para) )
         exp.main()
+
+def simple_gc():
+    class Experiment(object):
+        def __init__(self, para):
+            self.para = para
+        def setup_config(self):
+            self.conf = ssdbox.dftldes.Config()
+            self.conf['SSDFramework']['ncq_depth'] = 2
+
+            self.conf['flash_config']['n_pages_per_block'] = 2
+            self.conf['flash_config']['n_blocks_per_plane'] = 2
+            self.conf['flash_config']['n_planes_per_chip'] = 1
+            self.conf['flash_config']['n_chips_per_package'] = 1
+            self.conf['flash_config']['n_packages_per_channel'] = 1
+            self.conf['flash_config']['n_channels_per_dev'] = 2
+
+            self.conf['do_not_check_gc_setting'] = True
+            self.conf.GC_high_threshold_ratio = 0.95
+            self.conf.GC_low_threshold_ratio = 0
+
+            self.conf['stripe_size'] = 'infinity'
+
+        def setup_environment(self):
+            set_exp_metadata(self.conf, save_data = True,
+                    expname = self.para.expname,
+                    subexpname = chain_items_as_filename(self.para))
+
+            self.conf['enable_blktrace'] = True
+            self.conf['enable_simulation'] = True
+
+        def setup_workload(self):
+            w = 'write'
+            r = 'read'
+            d = 'discard'
+
+            n = self.conf.n_pages_per_block
+            self.conf["workload_src"] = LBAGENERATOR
+            self.conf["lba_workload_class"] = "ExtentTestWorkloadFLEX2"
+            self.conf["lba_workload_configs"]["ExtentTestWorkloadFLEX2"] = {
+                    "events": [
+                        (w, 0, n), # to channel1
+                        (w, n, n), # to channel0
+                        (w, 0, 1),  # to channel1, the previous block in channel1 become 'used'
+                        (w, n, 1),
+                        ('clean', 0, 0)
+                        ]}
+            self.conf["age_workload_class"] = "NoOp"
+
+        def setup_ftl(self):
+            self.conf['ftl_type'] = 'dftldes'
+            self.conf['simulator_class'] = 'SimulatorDESNew'
+
+            logicsize_mb = 2
+            self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page \
+                    * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
+            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
+
+        def my_run(self):
+            runtime_update(self.conf)
+            workflow(self.conf)
+
+        def main(self):
+            self.setup_config()
+            self.setup_environment()
+            self.setup_workload()
+            self.setup_ftl()
+            self.my_run()
+
+    Parameters = collections.namedtuple("Parameters",
+            "expname")
+    expname = get_expname()
+
+    exp = Experiment( Parameters(expname = expname) )
+    exp.main()
+
 
 
 def main(cmd_args):
