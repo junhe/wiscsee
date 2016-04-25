@@ -363,7 +363,7 @@ class MappingCache(object):
 
         self._lpn_table = LpnTableMvpn(confobj)
 
-        self.trans_page_locks =  VPNResourcePool(self.env)
+        self._trans_page_locks =  VPNResourcePool(self.env)
 
     def lpn_to_ppn(self, lpn, tag=None):
         """
@@ -450,14 +450,14 @@ class MappingCache(object):
         Becoming a victim is the only approach for an entry to be deleted.
         """
         victim_row = self._lpn_table.victim_row(loading_m_vpn,
-                self.trans_page_locks.locked_vpns)
+                self._trans_page_locks.locked_vpns)
         victim_row.state = USED_AND_HOLD
 
         # avoid loading and evicting
         m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
-        tp_req = self.trans_page_locks.get_request(m_vpn)
+        tp_req = self._trans_page_locks.get_request(m_vpn)
         yield tp_req
-        self.trans_page_locks.locked_vpns.add(m_vpn)
+        self._trans_page_locks.locked_vpns.add(m_vpn)
 
         if victim_row.dirty == True:
             yield self.env.process(self._write_back(m_vpn, tag))
@@ -473,8 +473,8 @@ class MappingCache(object):
         # This is the only place that we delete a lpn
         locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
 
-        self.trans_page_locks.release_request(m_vpn, tp_req)
-        self.trans_page_locks.locked_vpns.remove(m_vpn)
+        self._trans_page_locks.release_request(m_vpn, tp_req)
+        self._trans_page_locks.locked_vpns.remove(m_vpn)
 
         self.env.exit(locked_row_id)
 
@@ -510,9 +510,9 @@ class MappingCache(object):
         # anything of this m_vpn in cache
         # WARNING: eviction called by this _load_missing(m_vpn) should
         # not try to lock the same m_vpn,  otherwise it will deadlock!
-        tp_req = self.trans_page_locks.get_request(m_vpn)
+        tp_req = self._trans_page_locks.get_request(m_vpn)
         yield tp_req
-        self.trans_page_locks.locked_vpns.add(m_vpn)
+        self._trans_page_locks.locked_vpns.add(m_vpn)
 
         # check again before really loading
         if wanted_lpn != None and not self._lpn_table.has_lpn(wanted_lpn):
@@ -537,8 +537,8 @@ class MappingCache(object):
         else:
             loaded = False
 
-        self.trans_page_locks.release_request(m_vpn, tp_req)
-        self.trans_page_locks.locked_vpns.remove(m_vpn)
+        self._trans_page_locks.release_request(m_vpn, tp_req)
+        self._trans_page_locks.locked_vpns.remove(m_vpn)
 
         self.env.exit(loaded)
 
