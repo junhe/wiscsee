@@ -50,6 +50,7 @@ class SSDRequest(CacheExtent):
         return "{}, operation: {}".format(
             super(CacheExtent, self).__str__(), self.operation)
 
+
 def create_ssd_request(conf, event):
     lpn_start, lpn_count = conf.sec_ext_to_page_ext(
             event.sector, event.sector_count)
@@ -75,7 +76,24 @@ class NCQSingleQueue(object):
         self.env = simpy_env
         self.queue = simpy.Store(self.env)
         # ssd need to grab a slot before get item from queue
-        self.slots = simpy.Resource(self.env, capacity=1)
+        self.slots = simpy.Resource(self.env, capacity=ncq_depth)
+
+        self._held_slot_reqs = []
+
+    def hold_all_slots(self):
+        assert len(self._held_slot_reqs) == 0
+        for i in range(self.ncq_depth):
+            slot_req  = self.slots.request()
+            self._held_slot_reqs.append(slot_req)
+
+        yield simpy.events.AllOf(self.env, self._held_slot_reqs)
+
+    def release_all_slots(self):
+        """Must be used in pair with hold_all_slots()"""
+        assert len(self._held_slot_reqs) > 0
+        for req in self._held_slot_reqs:
+            self.slots.release(req)
+        del self._held_slot_reqs[:]
 
 
 

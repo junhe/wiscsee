@@ -147,8 +147,6 @@ class Ssd(SsdBase):
 
 
 
-
-
 class SSDFramework(object):
     """
     The interface of this FTL for the host is a queue (NCQ). The host puts
