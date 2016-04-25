@@ -1078,7 +1078,9 @@ class TestTransBlockCleaner(unittest.TestCase):
             mappings = mappings,
             directory = objs['directory'],
             rec = objs['rec'],
-            env = objs['env'])
+            env = objs['env'],
+            trans_page_locks = objs['trans_page_locks']
+            )
 
         k = conf.n_mapping_entries_per_page
         n = conf.n_pages_per_block
@@ -1305,7 +1307,9 @@ class TestCleaningTransBlocksByCleaner(unittest.TestCase):
             mappings = mappings,
             directory = objs['directory'],
             rec = objs['rec'],
-            env = objs['env'])
+            env = objs['env'],
+            trans_page_locks = objs['trans_page_locks']
+            )
 
         k = conf.n_mapping_entries_per_page
         n = conf.n_pages_per_block

@@ -1345,7 +1345,8 @@ class Cleaner(object):
             block_pool = self.block_pool,
             mappings = self.mappings,
             rec = self.recorder,
-            env = self.env)
+            env = self.env
+            )
 
         self._transblockcleaner = TransBlockCleaner(
             conf = self.conf,
@@ -1355,7 +1356,9 @@ class Cleaner(object):
             mappings = self.mappings,
             directory = self.directory,
             rec = self.recorder,
-            env = self.env)
+            env = self.env,
+            trans_page_locks = self._trans_page_locks
+            )
 
     def assert_threshold_sanity(self):
         if self.conf['do_not_check_gc_setting'] is True:
@@ -1483,7 +1486,7 @@ class TransBlockCleaner(object):
     TODO: some code is duplicated with DataBlockCleaner
     """
     def __init__(self, conf, flash, oob, block_pool, mappings, directory, rec,
-            env):
+            env, trans_page_locks):
         self.conf = conf
         self.flash = flash
         self.oob = oob
@@ -1492,6 +1495,7 @@ class TransBlockCleaner(object):
         self.directory = directory
         self.recorder = rec
         self.env = env
+        self._trans_page_locks = trans_page_locks
 
     def clean(self, blocknum):
         print 'clean trans block'
@@ -1512,6 +1516,12 @@ class TransBlockCleaner(object):
     def _clean_page(self, ppn):
         assert self.oob.states.is_page_valid(ppn) is True
 
+        m_vpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
+
+        tp_req = self._trans_page_locks.get_request(m_vpn)
+        yield tp_req
+        self._trans_page_locks.locked_vpns.add(m_vpn)
+
         yield self.env.process(
             self.flash.rw_ppn_extent(ppn, 1, 'read',
                 tag=self.recorder.get_tag('read.trans.gc', None)))
@@ -1522,7 +1532,6 @@ class TransBlockCleaner(object):
             self.flash.rw_ppn_extent(new_ppn, 1, 'write',
                 tag=self.recorder.get_tag('write.trans.gc', None)))
 
-        m_vpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
 
         # mappings in cache
         # mapping cache is only for data pages, so we don't need to update
@@ -1543,6 +1552,8 @@ class TransBlockCleaner(object):
         # blockpool
         # handled by next_gc_trans_page_to_program
 
+        self._trans_page_locks.release_request(m_vpn, tp_req)
+        self._trans_page_locks.locked_vpns.remove(m_vpn)
 
 
 class GarbageCollector(object):
@@ -2184,7 +2195,6 @@ class OutOfBandAreas(object):
 
         if old_ppn != UNINITIATED:
             self.invalidate_ppn(old_ppn)
-
 
     def invalidate_ppns(self, ppns):
         for ppn in ppns:
