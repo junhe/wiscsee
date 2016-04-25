@@ -1395,10 +1395,16 @@ class Cleaner(object):
         """
         victim_blocks = VictimBlocks(self.conf, self.block_pool, self.oob)
 
+        # TODO: we may spawn too many processes here
+        # To reduce number of concurrent processes, use Resources
+        procs = []
         for valid_ratio, block_type, block_num in victim_blocks.iterator_verbose():
             if self.is_stopping_needed():
                 break
-            yield self.env.process(self._clean_block(block_type, block_num))
+            p = self.env.process(self._clean_block(block_type, block_num))
+            procs.append(p)
+
+        yield simpy.AllOf(self.env, procs)
 
     def _clean_block(self, block_type, block_num):
         if block_type == VictimBlocks.TYPE_DATA:
