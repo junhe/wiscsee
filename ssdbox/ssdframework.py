@@ -84,12 +84,24 @@ class Ssd(SsdBase):
                 print '.',
                 sys.stdout.flush()
 
+            if self.ftl.is_cleaning_needed() is True:
+                self.env.process(self._cleaner_process())
+
             self.ncq.slots.release(slot_req)
 
     def _end_all_processes(self):
         for i in range(self.n_processes):
             yield self.ncq.queue.put(
                 hostevent.EventSimple(0, "end_ssd_process"))
+
+    def _cleaner_process(self):
+        held_slot_reqs = yield self.env.process(self.ncq.hold_all_slots())
+
+        # things may have changed since last time we check, because of locks
+        if self.ftl.is_cleaning_needed():
+            yield self.env.process(self.ftl.clean())
+
+        self.ncq.release_all_slots(held_slot_reqs)
 
     def run(self):
         procs = []

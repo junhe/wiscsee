@@ -12,8 +12,8 @@ class TestNCQSingleQueue(unittest.TestCase):
         env.run()
 
     def process(self, env, ncq):
-        yield env.process(ncq.hold_all_slots())
-        ncq.release_all_slots()
+        held_slot_reqs = yield env.process(ncq.hold_all_slots())
+        ncq.release_all_slots(held_slot_reqs)
 
 
 class TestNCQSingleQueueWithWaitTime(unittest.TestCase):
@@ -31,8 +31,9 @@ class TestNCQSingleQueueWithWaitTime(unittest.TestCase):
         self.assertEqual(env.now, 5)
 
     def wait_all(self, env, ncq):
-        yield env.process(ncq.hold_all_slots())
-        ncq.release_all_slots()
+        held_slot_reqs = yield env.process(ncq.hold_all_slots())
+        self.assertEqual(env.now, 5)
+        ncq.release_all_slots(held_slot_reqs)
 
     def use_one_slot(self, env, ncq):
         req = ncq.slots.request()

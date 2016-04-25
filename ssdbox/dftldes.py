@@ -286,6 +286,12 @@ class Ftl(object):
 
         self.oob.invalidate_ppns(ppns_to_invalidate)
 
+    def is_cleaning_needed(self):
+        return self._cleaner.is_cleaning_needed()
+
+    def clean(self):
+        yield self.env.process(self._cleaner.clean())
+
 
 def remove_invalid_ppns(ppns):
     return [ppn for ppn in ppns if not ppn in (UNINITIATED, MISS)]
@@ -1344,6 +1350,9 @@ class Cleaner(object):
             env = self.env)
 
     def assert_threshold_sanity(self):
+        if self.conf['do_not_check_gc_setting'] is True:
+            return
+
         # check high threshold
         # TODO: this check is not sufficient. We may use more pages
         # than the file system size because the translation page overhead
@@ -1374,8 +1383,6 @@ class Cleaner(object):
         if you need cleaning before calling.
         """
         victim_blocks = VictimBlocks(self.conf, self.block_pool, self.oob)
-
-        print 'to clean', list(victim_blocks.iterator_verbose())
 
         for valid_ratio, block_type, block_num in victim_blocks.iterator_verbose():
             if self.is_stopping_needed():
@@ -1408,7 +1415,6 @@ class DataBlockCleaner(object):
         for each valid page, move it to another block
         invalidate pages in blocknum and erase block
         '''
-        print 'clean data block'
         assert blocknum in self.block_pool.used_blocks
         assert blocknum not in self.block_pool.current_blocks()
 
@@ -2215,7 +2221,8 @@ class Config(config.ConfigNCQFTL):
             "GC_high_threshold_ratio": 0.95,
             "GC_low_threshold_ratio": 0.9,
             "over_provisioning": 1.28,
-            "mapping_cache_bytes": None # cmt: cached mapping table
+            "mapping_cache_bytes": None, # cmt: cached mapping table
+            "do_not_check_gc_setting": False
             }
         self.update(local_itmes)
 

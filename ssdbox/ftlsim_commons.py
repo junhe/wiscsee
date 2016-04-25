@@ -78,22 +78,21 @@ class NCQSingleQueue(object):
         # ssd need to grab a slot before get item from queue
         self.slots = simpy.Resource(self.env, capacity=ncq_depth)
 
-        self._held_slot_reqs = []
-
     def hold_all_slots(self):
-        assert len(self._held_slot_reqs) == 0
+        held_slot_reqs = []
         for i in range(self.ncq_depth):
             slot_req  = self.slots.request()
-            self._held_slot_reqs.append(slot_req)
+            held_slot_reqs.append(slot_req)
 
-        yield simpy.events.AllOf(self.env, self._held_slot_reqs)
+        yield simpy.events.AllOf(self.env, held_slot_reqs)
 
-    def release_all_slots(self):
+        self.env.exit(held_slot_reqs)
+
+    def release_all_slots(self, held_slot_reqs):
         """Must be used in pair with hold_all_slots()"""
-        assert len(self._held_slot_reqs) > 0
-        for req in self._held_slot_reqs:
+        assert len(held_slot_reqs) > 0
+        for req in held_slot_reqs:
             self.slots.release(req)
-        del self._held_slot_reqs[:]
 
 
 
