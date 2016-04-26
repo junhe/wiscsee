@@ -1283,6 +1283,9 @@ class VictimBlocks(object):
         for (_, _, block_num) in self.iterator_verbose():
             yield block_num
 
+    def __str__(self):
+        return repr(list(self.iterator_verbose()))
+
     def iterator_verbose(self):
         candidate_tuples = self._candidate_priorityq()
         while True:
