@@ -22,6 +22,7 @@ class PatternBase(object):
     def __iter__(self):
         raise NotImplementedError()
 
+
 class InitMixin(object):
     def __init__(self, op, zone_offset, zone_size, chunk_size, traffic_size):
         self.op = op
@@ -54,7 +55,6 @@ class Sequential(PatternBase, InitMixin):
     def __iter__(self):
         n_req = self.traffic_size / self.chunk_size
         n_chunks = self.zone_size / self.chunk_size
-        chunk_idx = list(range(n_chunks))
 
         for i in range(n_req):
             chunk_id = i % n_chunks
@@ -66,11 +66,136 @@ class Sequential(PatternBase, InitMixin):
         raise StopIteration
 
 
+class Strided(PatternBase, InitMixin):
+    """
+    Stride includes the data and hole
+
+    |      stride      |
+    | data |   hole    |
+    """
+    def __init__(self, op, zone_offset, zone_size, chunk_size, traffic_size,
+            stride_size):
+        super(Strided, self).__init__(op, zone_offset, zone_size, chunk_size,
+                traffic_size)
+
+        self.stride_size = stride_size
+        utils.assert_multiple(self.zone_size, self.stride_size)
+
+    def __iter__(self):
+        n_req = self.traffic_size / self.chunk_size
+        n_strides = self.zone_size / self.stride_size
+
+        for i in range(n_req):
+            stride_id = i % n_strides
+            req_offset = stride_id * self.stride_size
+            req_size = self.chunk_size
+            req = Request(self.op, req_offset, req_size)
+            yield req
+
+        raise StopIteration
+
+
+class Snake(PatternBase, InitMixin):
+    """
+    Like the snake walking in the space. If the snake appears to be too long,
+    its tail will be cut (invalidated)
+    """
+    def __init__(self, zone_offset, zone_size, chunk_size, traffic_size,
+            snake_size):
+        # op is set to None
+        super(Snake, self).__init__(None, zone_offset, zone_size, chunk_size,
+                traffic_size)
+
+        self.snake_size = snake_size
+        assert self.snake_size < self.zone_size
+
+        utils.assert_multiple(self.snake_size, self.chunk_size)
+
+    def __iter__(self):
+        n_req = self.traffic_size / self.chunk_size
+        n_chunks = self.zone_size / self.chunk_size
+        n_snake_chunks = self.snake_size / self.chunk_size
+
+        cur_snake_size = 0
+        req_cnt = 0
+        write_chunk_id = 0
+        while req_cnt < n_req:
+            req_offset = (write_chunk_id % n_chunks) * self.chunk_size
+            req = Request(op=WRITE, offset=req_offset, size=self.chunk_size)
+            yield req
+
+            req_cnt += 1
+            cur_snake_size += self.chunk_size
+
+            if cur_snake_size > self.snake_size:
+                # cut the tail
+                req_offset = ((write_chunk_id - n_snake_chunks) % n_chunks) * self.chunk_size
+                req = Request(op=DISCARD, offset=req_offset, size=self.chunk_size)
+                yield req
+
+                req_cnt += 1
+                cur_snake_size -= self.chunk_size
+
+            write_chunk_id += 1
+
+        raise StopIteration
+
+
+class FadingSnake(PatternBase, InitMixin):
+    """
+    Like the snake walking in the space. Once the snake reaches its adult size,
+    for each chunk write, one existing chunk will be selected randomly and
+    invalidated.
+    """
+    def __init__(self, zone_offset, zone_size, chunk_size, traffic_size,
+            snake_size):
+        # op is set to None
+        super(FadingSnake, self).__init__(None, zone_offset, zone_size, chunk_size,
+                traffic_size)
+
+        self.snake_size = snake_size
+        assert self.snake_size < self.zone_size
+
+        utils.assert_multiple(self.snake_size, self.chunk_size)
+
+    def __iter__(self):
+        n_req = self.traffic_size / self.chunk_size
+        n_chunks = self.zone_size / self.chunk_size
+        n_snake_chunks = self.snake_size / self.chunk_size
+
+        cur_snake_size = 0
+        req_cnt = 0
+        write_chunk_id = 0
+        valid_chunks = []
+        while req_cnt < n_req:
+            req_offset = (write_chunk_id % n_chunks) * self.chunk_size
+            req = Request(op=WRITE, offset=req_offset, size=self.chunk_size)
+            yield req
+
+            valid_chunks.append(write_chunk_id)
+            req_cnt += 1
+            cur_snake_size += self.chunk_size
+
+            if cur_snake_size > self.snake_size:
+                # discard some chunk
+                victim_chunk_id = random.choice(valid_chunks)
+                valid_chunks.remove(victim_chunk_id)
+                req_offset = victim_chunk_id * self.chunk_size
+                req = Request(op=DISCARD, offset=req_offset, size=self.chunk_size)
+                yield req
+
+                req_cnt += 1
+                cur_snake_size -= self.chunk_size
+
+            write_chunk_id += 1
+
+        raise StopIteration
+
+
+
+
 class HotNCold(PatternBase, InitMixin):
     """
-    Half of chunks are accessed once, half of chunks are accessed
-    decidec by traffic_size
-
     We access sequentially first, then only the hot chunks
     """
     def __iter__(self):
