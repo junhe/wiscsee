@@ -126,11 +126,11 @@ class SimulatorNonDES(Simulator):
         self.ftl.post_processing()
 
     def process_event(self, event):
-        if event.operation == 'read':
+        if event.operation == OP_READ:
             self.read(event)
-        elif event.operation == 'write':
+        elif event.operation == OP_WRITE:
             self.write(event)
-        elif event.operation == 'discard':
+        elif event.operation == OP_DISCARD:
             self.discard(event)
         elif event.operation == 'enable_recorder':
             self.ftl.enable_recording()
@@ -442,7 +442,7 @@ class SimulatorDESTime(Simulator):
             event.token_req = event.token.request()
 
             if self.conf['simulator_enable_interval'] == True:
-                if event.operation in ('read', 'write', 'discard'):
+                if event.operation in (OP_READ, OP_WRITE, OP_DISCARD):
                     yield self.env.timeout(int(event.pre_wait_time * SEC))
 
             yield self.ssdframework.ncq.queue.put(event)

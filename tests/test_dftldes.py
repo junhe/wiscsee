@@ -721,9 +721,9 @@ class TestParallelDFTL(unittest.TestCase):
         self.conf['enable_simulation'] = True
 
     def setup_workload(self):
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
 
         self.conf["workload_src"] = LBAGENERATOR
         self.conf["lba_workload_class"] = "ExtentTestWorkloadFLEX2"
@@ -787,8 +787,7 @@ class TestFTLwithMoreData(unittest.TestCase):
         self.conf["lba_workload_configs"]["TestWorkloadFLEX3"] = {
                 "op_count": traffic/chunk_size,
                 "extent_size": chunk_size/page_size ,
-                "ops": ['write'], 'mode': 'random'}
-                # "ops": ['read', 'write', 'discard']}
+                "ops": [OP_WRITE], 'mode': 'random'}
         print self.conf['lba_workload_configs']['TestWorkloadFLEX3']
         self.conf["age_workload_class"] = "NoOp"
 
@@ -1641,9 +1640,9 @@ class Experiment(object):
         self.conf['enable_simulation'] = True
 
     def setup_workload(self):
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
 
         n_pages_per_block = self.conf.n_pages_per_block
 

@@ -62,9 +62,9 @@ class Manual(LBAWorkloadGenerator):
         self.sector_size = self.conf['sector_size']
 
     def test1(self):
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
         events = [
                 (w, 1),
                 (w, 1),
@@ -74,9 +74,9 @@ class Manual(LBAWorkloadGenerator):
         return events
 
     def test2(self):
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
         events = [
                 (r, 1)
                 ]
@@ -87,9 +87,9 @@ class Manual(LBAWorkloadGenerator):
         """
         To trigger switch merge
         """
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
         events = []
 
         maxi = 0
@@ -107,9 +107,9 @@ class Manual(LBAWorkloadGenerator):
         """
         To trigger partial merge
         """
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
 
         events = [
                 (w, 9),
@@ -128,9 +128,9 @@ class Manual(LBAWorkloadGenerator):
         return events
 
     def test4(self):
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
         events = [
                 (w, 1),
                 (d, 1),
@@ -143,9 +143,9 @@ class Manual(LBAWorkloadGenerator):
         return events
 
     def test1410(self):
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
         events = [
                 (w, 1),
                 (r, 1),
@@ -158,9 +158,9 @@ class Manual(LBAWorkloadGenerator):
         return events
 
     def test_random_dftl(self):
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
         ops = [w, r, d]
 
         events = []
@@ -191,9 +191,9 @@ class Manual(LBAWorkloadGenerator):
         return events
 
     def test_random(self):
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
         ops = [w, r, d]
 
         events = []
@@ -266,9 +266,9 @@ class TestWorkload(LBAWorkloadGenerator):
                 self.ftl_type))
 
     def test_random(self):
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
         ops = [w, r, d]
 
         events = []
@@ -329,9 +329,9 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
             self.page_size = self.conf.page_size
 
     def test_random(self):
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
         ops = [w, r, d]
 
         events = []
@@ -544,9 +544,9 @@ class ExtentTestWorkloadMANUAL(LBAWorkloadGenerator):
             self.page_size = self.conf.page_size
 
     def test_random(self):
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
         ops = [w, r, d]
 
         events = []
@@ -602,9 +602,9 @@ class ExtentTestWorkload4DFTLDES(LBAWorkloadGenerator):
             self.page_size = self.conf.page_size
 
     def test_random(self):
-        w = 'write'
-        r = 'read'
-        d = 'discard'
+        w = OP_WRITE
+        r = OP_READ
+        d = OP_DISCARD
         ops = [w, r]
 
         events = []

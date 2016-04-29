@@ -1,4 +1,5 @@
 import random
+from commons import *
 
 from utilities import utils
 
@@ -6,7 +7,7 @@ from utilities import utils
 Minimum coupling with others
 """
 
-READ, WRITE, DISCARD = ('read', 'write', 'discard')
+READ, WRITE, DISCARD = (OP_READ, OP_WRITE, OP_DISCARD)
 
 class Request(object):
     def __init__(self, op, offset, size):

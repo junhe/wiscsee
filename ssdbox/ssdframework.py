@@ -73,13 +73,13 @@ class Ssd(SsdBase):
                 self.env.process(self._cleaner_process_forced())
                 self.ncq.slots.release(slot_req)
                 break
-            elif operation == 'read':
+            elif operation == OP_READ:
                 yield self.env.process(
                     self.ftl.read_ext(host_event.get_lpn_extent(self.conf)))
-            elif  operation == 'write':
+            elif  operation == OP_WRITE:
                 yield self.env.process(
                     self.ftl.write_ext(host_event.get_lpn_extent(self.conf)))
-            elif  operation == 'discard':
+            elif  operation == OP_DISCARD:
                 yield self.env.process(
                     self.ftl.discard_ext(host_event.get_lpn_extent(self.conf)))
             else:
@@ -241,7 +241,7 @@ class SSDFramework(object):
 
                 self.release_token(host_event)
                 continue
-            elif not host_event.operation in ('read', 'write', 'discard'):
+            elif not host_event.operation in (OP_READ, OP_WRITE, OP_DISCARD):
                 self.release_token(host_event)
                 continue
 
