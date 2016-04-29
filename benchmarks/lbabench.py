@@ -241,6 +241,64 @@ def simple_gc():
     exp.main()
 
 
+def patterns_bench():
+    class Experiment(object):
+        def __init__(self, para):
+            self.para = para
+        def setup_config(self):
+            self.conf = ssdbox.dftldes.Config()
+            self.conf['SSDFramework']['ncq_depth'] = 1
+
+            self.conf['flash_config']['n_pages_per_block'] = 2
+            self.conf['flash_config']['n_blocks_per_plane'] = 2
+            self.conf['flash_config']['n_planes_per_chip'] = 1
+            self.conf['flash_config']['n_chips_per_package'] = 1
+            self.conf['flash_config']['n_packages_per_channel'] = 1
+            self.conf['flash_config']['n_channels_per_dev'] = 4
+
+        def setup_environment(self):
+            set_exp_metadata(self.conf, save_data = True,
+                    expname = self.para.expname,
+                    subexpname = chain_items_as_filename(self.para))
+
+            self.conf['enable_blktrace'] = True
+            self.conf['enable_simulation'] = True
+
+        def setup_workload(self):
+            self.conf["workload_src"] = LBAGENERATOR
+            self.conf["lba_workload_class"] = "PatternAdapter"
+            self.conf["lba_workload_configs"]["PatternAdapter"] = {}
+            self.conf["lba_workload_configs"]["PatternAdapter"]["class"] = 'Random001'
+            self.conf["age_workload_class"] = "NoOp"
+
+        def setup_ftl(self):
+            self.conf['ftl_type'] = 'dftldes'
+            self.conf['simulator_class'] = 'SimulatorDESNew'
+
+            logicsize_mb = 2
+            self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page \
+                    * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
+            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
+
+        def my_run(self):
+            runtime_update(self.conf)
+            workflow(self.conf)
+
+        def main(self):
+            self.setup_config()
+            self.setup_environment()
+            self.setup_workload()
+            self.setup_ftl()
+            self.my_run()
+
+    Parameters = collections.namedtuple("Parameters",
+            "expname")
+    expname = get_expname()
+
+    exp = Experiment( Parameters(expname = expname) )
+    exp.main()
+
+
 
 def main(cmd_args):
     if cmd_args.git == True:

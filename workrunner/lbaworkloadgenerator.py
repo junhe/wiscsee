@@ -5,6 +5,7 @@ import config
 import workload
 from ssdbox import hostevent
 from commons import *
+from accpatterns import patterns
 
 class LBAWorkloadGenerator(object):
     __metaclass__ = abc.ABCMeta
@@ -12,6 +13,7 @@ class LBAWorkloadGenerator(object):
     @abc.abstractmethod
     def __iter__(self):
         return
+
 class LBAMultiProcGenerator(object):
     __metaclass__ = abc.ABCMeta
 
@@ -702,6 +704,8 @@ class ExtentTestWorkloadFLEX(LBAWorkloadGenerator):
                     size = size)
             yield event
 
+
+
 class ExtentTestWorkloadFLEX2(LBAWorkloadGenerator):
     def __init__(self, confobj):
         if not isinstance(confobj, config.Config):
@@ -881,5 +885,42 @@ class MultipleProcess(LBAMultiProcGenerator):
                     pid = 0, operation = op, offset = offset,
                     size = size)
             yield event
+
+
+
+
+class PatternAdapter(LBAWorkloadGenerator):
+    def __init__(self, conf):
+        self.conf = conf
+        self.sector_size = self.conf['sector_size']
+
+        pattern_class_name = \
+            self.conf['lba_workload_configs']['PatternAdapter']['class']
+        pattern_class = eval(pattern_class_name)
+        self.pattern_iter = pattern_class(conf)
+
+    def __iter__(self):
+        yield hostevent.Event(sector_size=self.sector_size,
+                pid=0, operation='enable_recorder',
+                offset=0, size=0)
+
+        for req in self.pattern_iter:
+            yield hostevent.Event(sector_size=self.sector_size,
+                    pid=0, operation=req.op,
+                    offset=req.offset, size=req.size)
+
+
+class Random001(object):
+    def __init__(self, conf):
+        self.conf = conf
+
+    def __iter__(self):
+        pat_iter = patterns.Random(op=patterns.READ, zone_offset=0,
+                zone_size=2048*10,
+                chunk_size=2048, traffic_size=2048*10)
+        for req in pat_iter:
+            yield req
+
+
 
 

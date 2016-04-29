@@ -6,7 +6,7 @@ from utilities import utils
 Minimum coupling with others
 """
 
-READ, WRITE, DISCARD = ('OPREAD', 'OPWRITE', 'OPDISCARD')
+READ, WRITE, DISCARD = ('read', 'write', 'discard')
 
 class Request(object):
     def __init__(self, op, offset, size):
