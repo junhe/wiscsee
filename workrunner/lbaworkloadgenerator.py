@@ -6,6 +6,7 @@ import workload
 from ssdbox import hostevent
 from commons import *
 from accpatterns import patterns
+from patternsuite import *
 
 class LBAWorkloadGenerator(object):
     __metaclass__ = abc.ABCMeta
@@ -887,8 +888,6 @@ class MultipleProcess(LBAMultiProcGenerator):
             yield event
 
 
-
-
 class PatternAdapter(LBAWorkloadGenerator):
     def __init__(self, conf):
         self.conf = conf
@@ -908,19 +907,5 @@ class PatternAdapter(LBAWorkloadGenerator):
             yield hostevent.Event(sector_size=self.sector_size,
                     pid=0, operation=req.op,
                     offset=req.offset, size=req.size)
-
-
-class Random001(object):
-    def __init__(self, conf):
-        self.conf = conf
-
-    def __iter__(self):
-        pat_iter = patterns.Random(op=patterns.READ, zone_offset=0,
-                zone_size=2048*10,
-                chunk_size=2048, traffic_size=2048*10)
-        for req in pat_iter:
-            yield req
-
-
 
 
