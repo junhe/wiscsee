@@ -10,5 +10,5 @@ import misc_test
 import recorder_test
 import simulator_test
 import test_dftldes
-import test_gc
 import test_bitmap
+from . import accpatterns

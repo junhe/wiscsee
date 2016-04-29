@@ -265,7 +265,8 @@ def str_as_filename(s):
     return ''.join(c for c in s if c in valid_chars)
 
 
-if __name__ == '__main__':
-    is_proc_running('blktrace')
+def assert_multiple(n, divider):
+    "n is multiple of divider"
+    assert n % divider == 0, "{} is not mutliple of {}".format(n, divider)
 
 
