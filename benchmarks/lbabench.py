@@ -244,16 +244,24 @@ def patterns_bench():
     class Experiment(object):
         def __init__(self, para):
             self.para = para
+
         def setup_config(self):
             self.conf = ssdbox.dftldes.Config()
-            self.conf['SSDFramework']['ncq_depth'] = 1
+            self.conf['SSDFramework']['ncq_depth'] = self.para.ncq_depth
 
-            self.conf['flash_config']['n_pages_per_block'] = 2
+            self.conf['flash_config']['page_size'] = 2048
+            self.conf['flash_config']['n_pages_per_block'] = 64
             self.conf['flash_config']['n_blocks_per_plane'] = 2
             self.conf['flash_config']['n_planes_per_chip'] = 1
             self.conf['flash_config']['n_chips_per_package'] = 1
             self.conf['flash_config']['n_packages_per_channel'] = 1
             self.conf['flash_config']['n_channels_per_dev'] = 4
+
+            self.conf['exp_parameters'] = self.para._asdict()
+
+            self.conf['do_not_check_gc_setting'] = True
+            self.conf.GC_high_threshold_ratio = 0.96
+            self.conf.GC_low_threshold_ratio = 0
 
         def setup_environment(self):
             set_exp_metadata(self.conf, save_data = True,
@@ -267,17 +275,16 @@ def patterns_bench():
             self.conf["workload_src"] = LBAGENERATOR
             self.conf["lba_workload_class"] = "PatternAdapter"
             self.conf["lba_workload_configs"]["PatternAdapter"] = {}
-            self.conf["lba_workload_configs"]["PatternAdapter"]["class"] = 'Random001'
+            self.conf["lba_workload_configs"]["PatternAdapter"]["class"] = self.para.patternclass
             self.conf["age_workload_class"] = "NoOp"
 
         def setup_ftl(self):
             self.conf['ftl_type'] = 'dftldes'
             self.conf['simulator_class'] = 'SimulatorDESNew'
+            self.conf['stripe_size'] = self.para.stripe_size
 
-            logicsize_mb = 2
-            self.conf.mapping_cache_bytes = self.conf.n_mapping_entries_per_page \
-                    * self.conf['cache_entry_bytes'] # 8 bytes (64bits) needed in mem
-            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
+            self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
+            self.conf.set_flash_num_blocks_by_bytes(self.para.flashbytes)
 
         def my_run(self):
             runtime_update(self.conf)
@@ -290,12 +297,25 @@ def patterns_bench():
             self.setup_ftl()
             self.my_run()
 
-    Parameters = collections.namedtuple("Parameters",
-            "expname")
-    expname = get_expname()
+    def gen_parameters():
+        expname = get_expname()
+        para_dict = {
+                'expname'        : [expname],
+                'ncq_depth'      : [4],
+                'patternclass'   : ['SHotNCold'],
+                'cache_mapped_data_bytes' :[32*MB],
+                'flashbytes'     : [128*MB],
+                'stripe_size'    : ['infinity']
+                }
 
-    exp = Experiment( Parameters(expname = expname) )
-    exp.main()
+        parameter_combs = ParameterCombinations(para_dict)
+
+        return parameter_combs
+
+    for i, para in enumerate(gen_parameters()):
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        exp = Experiment( Parameters(**para) )
+        exp.main()
 
 
 

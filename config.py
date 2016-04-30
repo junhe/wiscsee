@@ -562,9 +562,7 @@ class ConfigNewFlash(Config):
         return offset / self['flash_config']['page_size']
 
     def total_flash_bytes(self):
-        return self['flash_config']['n_pages_per_block'] * \
-            self.n_blocks_per_dev * \
-            self['flash_config']['page_size']
+        return self.n_pages_per_block * self.n_blocks_per_dev * self.page_size
 
     def off_size_to_page_list(self, off, size, force_alignment = True):
         if force_alignment:
@@ -646,10 +644,6 @@ class ConfigNewFlash(Config):
     def block_to_page_range(self, blocknum):
         return blocknum * self['flash_config']['n_pages_per_block'], \
                 (blocknum + 1) * self['flash_config']['n_pages_per_block']
-
-    def total_flash_bytes(self):
-        return self['flash_config']['n_pages_per_block'] * \
-                self['flash_num_blocks'] * self['flash_page_size']
 
 
 class ConfigNotForceAlign(ConfigNewFlash):
