@@ -122,6 +122,9 @@ class Ftl(object):
         return ppns
 
     def write_ext(self, extent):
+        self.recorder.add_to_general_accumulater('traffic', 'write',
+                extent.lpn_count*self.conf.page_size)
+
         op_id = self.recorder.get_unique_num()
         start_time = self.env.now # <----- start
 
@@ -228,6 +231,9 @@ class Ftl(object):
         #   should be handled when we got new_ppn
 
     def read_ext(self, extent):
+        self.recorder.add_to_general_accumulater('traffic', 'read',
+                extent.lpn_count*self.conf.page_size)
+
         ext_list = split_ext_to_mvpngroups(self.conf, extent)
         # print [str(x) for x in ext_list]
 
@@ -269,6 +275,9 @@ class Ftl(object):
             start_time = start_time, end_time = self.env.now)
 
     def discard_ext(self, extent):
+        self.recorder.add_to_general_accumulater('traffic', 'discard',
+                extent.lpn_count*self.conf.page_size)
+
         ext_list = split_ext_to_mvpngroups(self.conf, extent)
 
         procs = []
