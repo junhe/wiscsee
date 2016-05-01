@@ -1,5 +1,7 @@
 from commons import *
 from accpatterns import patterns
+from ssdbox import hostevent
+
 
 class SRandomRead(object):
     "Sequential write and then reandomly read it"
@@ -19,6 +21,10 @@ class SRandomRead(object):
     def __iter__(self):
         for req in self.write_iter:
             yield req
+
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='interest_workload_start')
 
         for req in self.read_iter:
             yield req
@@ -57,6 +63,10 @@ class SSequentialRead(object):
     def __iter__(self):
         for req in self.write_iter:
             yield req
+
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='interest_workload_start')
 
         for req in self.read_iter:
             yield req

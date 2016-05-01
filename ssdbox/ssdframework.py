@@ -49,6 +49,19 @@ class Ssd(SsdBase):
         self.ftl = eval("{}.Ftl(self.conf, self.recorder, self.flash_controller, "
                 "self.env)".format(self.conf['ftl_type']))
 
+    def _barrier(self):
+        """
+        Grab and hold the rest of the ncq slots (already holding one)
+        """
+        reqs = []
+        for i in range(self.ncq.ncq_depth - 1):
+            slot_req = self.ncq.slots.request()
+            reqs.append(slot_req)
+        yield simpy.AllOf(self.env, reqs)
+
+        for req in reqs:
+            self.ncq.slots.release(req)
+
     def _process(self, pid):
         for req_i in itertools.count():
             host_event = yield self.ncq.queue.get()
@@ -64,10 +77,12 @@ class Ssd(SsdBase):
             elif operation == 'shut_ssd':
                 print 'got shut_ssd'
                 sys.stdout.flush()
-                yield self.env.process(
-                    self._end_all_processes())
+                yield self.env.process(self._end_all_processes())
+            elif operation == OP_BARRIER:
+                yield self.env.process(self._barrier())
             elif operation == OP_REC_TIMESTAMP:
-                self.recorder.set_result_by_one_key('timestamp', self.now)
+                self.recorder.set_result_by_one_key(host_event.arg1,
+                        self.env.now)
             elif operation == 'end_ssd_process':
                 self.ncq.slots.release(slot_req)
                 break

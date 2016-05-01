@@ -904,7 +904,11 @@ class PatternAdapter(LBAWorkloadGenerator):
                 offset=0, size=0)
 
         for req in self.pattern_iter:
-            yield hostevent.Event(sector_size=self.sector_size,
+            if isinstance(req, hostevent.HostEventBase):
+                yield req
+            else:
+                # need converting
+                yield hostevent.Event(sector_size=self.sector_size,
                     pid=0, operation=req.op,
                     offset=req.offset, size=req.size)
 
