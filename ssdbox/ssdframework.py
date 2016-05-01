@@ -57,7 +57,7 @@ class Ssd(SsdBase):
             yield slot_req
 
             # handle host_event case by case
-            operation = host_event.operation
+            operation = host_event.get_operation()
 
             if operation == 'enable_recorder':
                 self.recorder.enable()
@@ -101,7 +101,7 @@ class Ssd(SsdBase):
     def _end_all_processes(self):
         for i in range(self.n_processes):
             yield self.ncq.queue.put(
-                hostevent.SingleOpHostEvent("end_ssd_process"))
+                hostevent.ControlEvent("end_ssd_process"))
 
     def _cleaner_process(self):
         held_slot_reqs = yield self.env.process(self.ncq.hold_all_slots())

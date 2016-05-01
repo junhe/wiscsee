@@ -4,19 +4,29 @@ class HostEventBase(object):
     def get_operation(self):
         raise NotImplementedError
 
+    def get_type(self):
+        raise NotImplementedError
 
-class SingleOpHostEvent(HostEventBase):
-    def __init__(self, operation):
+
+class ControlEvent(HostEventBase):
+    def __init__(self, operation, arg1=None, arg2=None, arg3=None):
         self.operation = operation
+        self.arg1 = arg1
+        self.arg2 = arg2
+        self.arg3 = arg3
 
     def get_operation(self):
         return self.operation
 
+    def get_type(self):
+        return 'ControlEvent'
+
     def __str__(self):
-        return "SingleOpHostEvent OP:{}".format(self.operation)
+        return "ControlEvent: {}: {}, {}, {}".format(self.operation,
+                self.arg1, self.arg2, self.arg3)
 
 
-class Event(object):
+class Event(HostEventBase):
     def __init__(self, sector_size, pid, operation, offset, size,
             timestamp = None, pre_wait_time = None, sync = True):
         self.pid = int(pid)
@@ -37,6 +47,12 @@ class Event(object):
             self.size, sector_size)
 
         self.sector_count = self.size / sector_size
+
+    def get_operation(self):
+        return self.operation
+
+    def get_type(self):
+        return 'Event'
 
     def get_lpn_extent(self, conf):
         lpn_start, lpn_count = conf.off_size_to_page_range(
