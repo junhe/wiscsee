@@ -66,6 +66,8 @@ class Ssd(SsdBase):
                 sys.stdout.flush()
                 yield self.env.process(
                     self._end_all_processes())
+            elif operation == OP_REC_TIMESTAMP:
+                self.recorder.set_result_by_one_key('timestamp', self.now)
             elif operation == 'end_ssd_process':
                 self.ncq.slots.release(slot_req)
                 break
@@ -99,7 +101,7 @@ class Ssd(SsdBase):
     def _end_all_processes(self):
         for i in range(self.n_processes):
             yield self.ncq.queue.put(
-                hostevent.EventSimple(0, "end_ssd_process"))
+                hostevent.SingleOpHostEvent("end_ssd_process"))
 
     def _cleaner_process(self):
         held_slot_reqs = yield self.env.process(self.ncq.hold_all_slots())

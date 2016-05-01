@@ -302,7 +302,10 @@ def patterns_bench():
         para_dict = {
                 'expname'        : [expname],
                 'ncq_depth'      : [4],
-                'patternclass'   : ['SHotNCold'],
+                'patternclass'   : ['SHotNCold',
+                    'SRandomWrite', 'SRandomRead',
+                    'SSequentialWrite', 'SSequentialRead',
+                    'SSnake', 'SFadingSnake', 'SStrided'],
                 'cache_mapped_data_bytes' :[32*MB],
                 'flashbytes'     : [128*MB],
                 'stripe_size'    : ['infinity']

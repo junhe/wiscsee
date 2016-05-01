@@ -252,7 +252,6 @@ class Ftl(object):
             op_id = op_id, op = 'read_ext', arg = extent.lpn_start,
             start_time = start_time, end_time = self.env.now)
 
-
     def _read_single_mvpngroup(self, ext_single_m_vpn, tag=None):
         m_vpn = self.conf.lpn_to_m_vpn(ext_single_m_vpn.lpn_start)
 

@@ -1,12 +1,19 @@
 from ftlsim_commons import Extent
 
-class EventSimple(object):
-    def __init__(self, pid, operation):
-        self.pid = int(pid)
+class HostEventBase(object):
+    def get_operation(self):
+        raise NotImplementedError
+
+
+class SingleOpHostEvent(HostEventBase):
+    def __init__(self, operation):
         self.operation = operation
 
+    def get_operation(self):
+        return self.operation
+
     def __str__(self):
-        return "EventSimple PID:{} OP:{}".format(self.pid, self.operation)
+        return "SingleOpHostEvent OP:{}".format(self.operation)
 
 
 class Event(object):

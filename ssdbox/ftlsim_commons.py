@@ -26,6 +26,7 @@ class Extent(object):
     def __contains__(self, lpn):
         return lpn >= self.lpn_start and lpn < self.end_lpn()
 
+
 class CacheExtent(Extent):
     def __init__(self, lpn_start, lpn_count, in_cache):
         super(CacheExtent, self).__init__(lpn_start, lpn_count)
