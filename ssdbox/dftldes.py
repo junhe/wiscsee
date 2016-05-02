@@ -1454,6 +1454,8 @@ class DataBlockCleaner(object):
         yield self.env.process(
             self.flash.erase_pbn_extent(blocknum, 1,
                 tag=self.recorder.get_tag('erase.data.gc', None)))
+        self.recorder.count_me("gc", "erase.data.block")
+
         self.oob.erase_block(blocknum)
         self.block_pool.move_used_data_block_to_free(blocknum)
 
@@ -1462,6 +1464,8 @@ class DataBlockCleaner(object):
         read ppn, write to new ppn, update metadata
         """
         assert self.oob.states.is_page_valid(ppn) is True
+
+        self.recorder.count_me("gc", "user.page.moves")
 
         yield self.env.process(
             self.flash.rw_ppn_extent(ppn, 1, 'read',
@@ -1527,11 +1531,15 @@ class TransBlockCleaner(object):
         yield self.env.process(
             self.flash.erase_pbn_extent(blocknum, 1,
                 tag=self.recorder.get_tag('erase.trans.gc', None)))
+        self.recorder.count_me("gc", "erase.trans.block")
+
         self.oob.erase_block(blocknum)
         self.block_pool.move_used_trans_block_to_free(blocknum)
 
     def _clean_page(self, ppn):
         assert self.oob.states.is_page_valid(ppn) is True
+
+        self.recorder.count_me("gc", "trans.page.moves")
 
         m_vpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
 
