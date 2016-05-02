@@ -12,7 +12,7 @@ class SuiteBase(object):
 
         self.chunk_size = self.local_conf['chunk_size']
         self.zone_size = flashbytes / 8
-        self.traffic_size = self.zone_size * 2
+        self.traffic_size = self.zone_size * 3
         self.snake_size = self.zone_size / 2
         self.stride_size = self.chunk_size * 2
 
@@ -47,7 +47,7 @@ class SRandomRead(SuiteBase):
 
         yield hostevent.ControlEvent(operation=OP_BARRIER)
         yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
-                arg1='gc_start')
+                arg1='gc_start_timestamp')
 
         yield hostevent.ControlEvent(operation=OP_CLEAN)
 
@@ -70,7 +70,7 @@ class SRandomWrite(SuiteBase):
 
         yield hostevent.ControlEvent(operation=OP_BARRIER)
         yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
-                arg1='gc_start')
+                arg1='gc_start_timestamp')
 
         yield hostevent.ControlEvent(operation=OP_CLEAN)
 
@@ -80,7 +80,6 @@ class SSequentialRead(SuiteBase):
         writesize = flashbytes/8
         chunk_size = self.local_conf['chunk_size']
 
-        # write half
         self.write_iter = patterns.Sequential(op=OP_WRITE, zone_offset=0,
                 zone_size=self.zone_size, chunk_size=self.zone_size,
                 traffic_size=self.zone_size)
@@ -102,6 +101,12 @@ class SSequentialRead(SuiteBase):
         for req in self.read_iter:
             yield req
 
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start_timestamp')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
+
 
 class SSequentialWrite(SuiteBase):
     def _prepare_iter(self):
@@ -119,6 +124,13 @@ class SSequentialWrite(SuiteBase):
 
         for req in self.write_iter:
             yield req
+
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start_timestamp')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
+
 
 
 class SSnake(SuiteBase):
@@ -155,6 +167,12 @@ class SFadingSnake(SuiteBase):
         for req in self.write_iter:
             yield req
 
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start_timestamp')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
+
 
 class SStrided(SuiteBase):
     def _prepare_iter(self):
@@ -173,6 +191,12 @@ class SStrided(SuiteBase):
         for req in self.write_iter:
             yield req
 
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start_timestamp')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
+
 
 class SHotNCold(SuiteBase):
     def _prepare_iter(self):
@@ -190,5 +214,11 @@ class SHotNCold(SuiteBase):
 
         for req in self.write_iter:
             yield req
+
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start_timestamp')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
 
 
