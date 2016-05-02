@@ -276,6 +276,8 @@ def patterns_bench():
             self.conf["lba_workload_class"] = "PatternAdapter"
             self.conf["lba_workload_configs"]["PatternAdapter"] = {}
             self.conf["lba_workload_configs"]["PatternAdapter"]["class"] = self.para.patternclass
+            self.conf["lba_workload_configs"]["PatternAdapter"]["conf"] = {
+                    "chunk_size": self.para.chunk_size}
             self.conf["age_workload_class"] = "NoOp"
 
         def setup_ftl(self):
@@ -308,8 +310,9 @@ def patterns_bench():
                     'SSequentialWrite', 'SSequentialRead',
                     'SSnake', 'SFadingSnake', 'SStrided'],
                 'cache_mapped_data_bytes' :[128*MB],
-                'flashbytes'     : [128*MB],
-                'stripe_size'    : [1, 'infinity']
+                'flashbytes'     : [32*MB],
+                'stripe_size'    : ['infinity'],
+                'chunk_size'     : [2*KB]
                 }
 
         parameter_combs = ParameterCombinations(para_dict)
