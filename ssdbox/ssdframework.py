@@ -86,7 +86,8 @@ class Ssd(SsdBase):
             elif operation == 'end_ssd_process':
                 self.ncq.slots.release(slot_req)
                 break
-            elif operation == 'clean':
+            elif operation == OP_CLEAN:
+                print 'start cleaning'
                 self.env.process(self._cleaner_process_forced())
                 self.ncq.slots.release(slot_req)
                 break

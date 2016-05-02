@@ -208,7 +208,7 @@ def simple_gc():
                         (w, n, n), # to channel0
                         (w, 0, 1),  # to channel1, the previous block in channel1 become 'used'
                         (w, n, 1),
-                        ('clean', 0, 0)
+                        (OP_CLEAN, 0, 0)
                         ]}
             self.conf["age_workload_class"] = "NoOp"
 
