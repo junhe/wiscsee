@@ -92,15 +92,19 @@ class TestSnake(unittest.TestCase):
         pat_iter = patterns.Snake(zone_offset=0, zone_size=10,
                 chunk_size=2, traffic_size=20, snake_size=4)
         reqs = list(pat_iter)
-        self.assertEqual(len(reqs), 10)
+        self.assertEqual(len(reqs), 18)
 
         offs = [req.offset for req in reqs]
-        self.assertListEqual(offs, [0, 2, 4, 0, 6, 2, 8, 4, 0, 6])
+        self.assertListEqual(offs,
+            [0, 2,  4, 0,  6, 2,  8, 4,  0, 6,  2, 8,  4, 0,  6, 2,  8, 4])
 
         ops = [req.op for req in reqs]
         self.assertListEqual(ops,
                 [WRITE, WRITE, WRITE, DISCARD, WRITE,
-                DISCARD, WRITE, DISCARD, WRITE, DISCARD])
+                DISCARD, WRITE, DISCARD, WRITE, DISCARD,
+                WRITE, DISCARD, WRITE, DISCARD,
+                WRITE, DISCARD, WRITE, DISCARD
+                ])
 
 
 class TestFadingSnake(unittest.TestCase):
@@ -108,7 +112,7 @@ class TestFadingSnake(unittest.TestCase):
         pat_iter = patterns.FadingSnake(zone_offset=0, zone_size=10,
                 chunk_size=2, traffic_size=20, snake_size=4)
         reqs = list(pat_iter)
-        self.assertEqual(len(reqs), 10)
+        self.assertEqual(len(reqs), 18)
 
         offs = [req.offset for req in reqs]
         self.assertListEqual(offs[:3], [0, 2, 4])
@@ -116,7 +120,10 @@ class TestFadingSnake(unittest.TestCase):
         ops = [req.op for req in reqs]
         self.assertListEqual(ops,
                 [WRITE, WRITE, WRITE, DISCARD, WRITE,
-                DISCARD, WRITE, DISCARD, WRITE, DISCARD])
+                DISCARD, WRITE, DISCARD, WRITE, DISCARD,
+                WRITE, DISCARD, WRITE, DISCARD,
+                WRITE, DISCARD, WRITE, DISCARD
+                ])
 
         valid_offs = []
         for req in reqs:

@@ -113,19 +113,19 @@ class Snake(PatternBase, InitMixin):
         utils.assert_multiple(self.snake_size, self.chunk_size)
 
     def __iter__(self):
-        n_req = self.traffic_size / self.chunk_size
+        n_w_req = self.traffic_size / self.chunk_size
         n_chunks = self.zone_size / self.chunk_size
         n_snake_chunks = self.snake_size / self.chunk_size
 
         cur_snake_size = 0
-        req_cnt = 0
+        w_req_cnt = 0
         write_chunk_id = 0
-        while req_cnt < n_req:
+        while w_req_cnt < n_w_req:
             req_offset = (write_chunk_id % n_chunks) * self.chunk_size
             req = Request(op=WRITE, offset=req_offset, size=self.chunk_size)
             yield req
 
-            req_cnt += 1
+            w_req_cnt += 1
             cur_snake_size += self.chunk_size
 
             if cur_snake_size > self.snake_size:
@@ -134,7 +134,6 @@ class Snake(PatternBase, InitMixin):
                 req = Request(op=DISCARD, offset=req_offset, size=self.chunk_size)
                 yield req
 
-                req_cnt += 1
                 cur_snake_size -= self.chunk_size
 
             write_chunk_id += 1
@@ -160,32 +159,33 @@ class FadingSnake(PatternBase, InitMixin):
         utils.assert_multiple(self.snake_size, self.chunk_size)
 
     def __iter__(self):
-        n_req = self.traffic_size / self.chunk_size
+        n_w_req = self.traffic_size / self.chunk_size
         n_chunks = self.zone_size / self.chunk_size
         n_snake_chunks = self.snake_size / self.chunk_size
 
         cur_snake_size = 0
-        req_cnt = 0
+        w_req_cnt = 0
         write_chunk_id = 0
         valid_chunks = []
-        while req_cnt < n_req:
-            req_offset = (write_chunk_id % n_chunks) * self.chunk_size
+        while w_req_cnt < n_w_req:
+            write_chunk_id = write_chunk_id % n_chunks
+
+            req_offset = write_chunk_id * self.chunk_size
             req = Request(op=WRITE, offset=req_offset, size=self.chunk_size)
             yield req
 
             valid_chunks.append(write_chunk_id)
-            req_cnt += 1
+            w_req_cnt += 1
             cur_snake_size += self.chunk_size
 
             if cur_snake_size > self.snake_size:
                 # discard some chunk
                 victim_chunk_id = random.choice(valid_chunks)
                 valid_chunks.remove(victim_chunk_id)
-                req_offset = victim_chunk_id * self.chunk_size
+                req_offset = (victim_chunk_id % n_chunks) * self.chunk_size
                 req = Request(op=DISCARD, offset=req_offset, size=self.chunk_size)
                 yield req
 
-                req_cnt += 1
                 cur_snake_size -= self.chunk_size
 
             write_chunk_id += 1
