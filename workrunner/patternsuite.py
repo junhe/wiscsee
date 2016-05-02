@@ -157,7 +157,7 @@ class SFadingSnake(SuiteBase):
         chunk_size = self.local_conf['chunk_size']
 
         # write half
-        self.write_iter = patterns.Snake(zone_offset=0,
+        self.write_iter = patterns.FadingSnake(zone_offset=0,
                 zone_size=self.zone_size, chunk_size=self.chunk_size,
                 traffic_size=self.traffic_size, snake_size=self.snake_size)
 
