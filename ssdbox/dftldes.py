@@ -461,7 +461,9 @@ class MappingCache(object):
                 if m_vpn != loading_m_vpn and not m_vpn in avoid_m_vpns:
                     return row
         raise RuntimeError("Cannot find a victim. Current stats: {}"\
-                .format(str(self._lpn_table.stats())))
+                "loading_m_vpn: {}, avoid_m_vpns: {}.\n"
+                .format(str(self._lpn_table.stats()), loading_m_vpn,
+                    avoid_m_vpns))
 
     def _evict_entry(self, loading_m_vpn, tag=None):
         """
