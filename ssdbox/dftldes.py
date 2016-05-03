@@ -454,6 +454,15 @@ class MappingCache(object):
 
         self.env.exit(locked_row_ids)
 
+    def _victim_row(self, loading_m_vpn, avoid_m_vpns):
+        for lpn, row in self._lpn_table.least_to_most_lpn_items():
+            if row.state == USED:
+                m_vpn = self.conf.lpn_to_m_vpn(lpn)
+                if m_vpn != loading_m_vpn and not m_vpn in avoid_m_vpns:
+                    return row
+        raise RuntimeError("Cannot find a victim. Current stats: {}"\
+                .format(str(self._lpn_table.stats())))
+
     def _evict_entry(self, loading_m_vpn, tag=None):
         """
         For an entry to be deleted, it must first become a victim_row.
@@ -463,8 +472,9 @@ class MappingCache(object):
 
         Becoming a victim is the only approach for an entry to be deleted.
         """
-        victim_row = self._lpn_table.victim_row(loading_m_vpn,
+        victim_row = self._victim_row(loading_m_vpn,
                 self._trans_page_locks.locked_vpns)
+
         victim_row.state = USED_AND_HOLD
 
         # avoid loading and evicting
@@ -827,17 +837,10 @@ class LpnTableMvpn(LpnTable):
     """
     def __init__(self, conf):
         super(LpnTableMvpn, self).__init__(conf.n_cache_entries)
-
         self.conf = conf
 
-    def victim_row(self, loading_m_vpn, avoid_m_vpns):
-        for lpn, row in self._lpn_to_row.least_to_most_items():
-            if row.state == USED:
-                m_vpn = self.conf.lpn_to_m_vpn(lpn)
-                if m_vpn != loading_m_vpn and not m_vpn in avoid_m_vpns:
-                    return row
-        raise RuntimeError("Cannot find a victim. Current stats: {}"\
-                .format(str(self.stats())))
+    def least_to_most_lpn_items(self):
+        return self._lpn_to_row.least_to_most_items()
 
     def needed_space_for_m_vpn(self, m_vpn):
         cached_mappings = self.get_m_vpn_mappings(m_vpn)
