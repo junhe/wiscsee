@@ -1019,8 +1019,8 @@ class Row(object):
         self.dirty = None
 
     def __repr__(self):
-        return "lpn:{}, ppn:{}, dirty:{}, locked:{}, rowid:{}".format(self.lpn,
-            self.ppn, self.dirty, self.locked)
+        return "lpn:{}, ppn:{}, dirty:{}, rowid:{}".format(self.lpn,
+            self.ppn, self.dirty, self._rowid)
 
 
 
