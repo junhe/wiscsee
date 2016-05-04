@@ -628,20 +628,6 @@ class TestLpnTable(unittest.TestCase):
 
         self.assertEqual(table.lock_free_row(), None)
 
-    def test_victim(self):
-        conf = create_config()
-        table = LpnTableMvpn(conf)
-
-        rowid = table.lock_free_row()
-        table.add_lpn(rowid = rowid, lpn = 8, ppn = 88, dirty = True)
-
-        rowid = table.lock_free_row()
-        table.add_lpn(rowid = rowid, lpn = 9, ppn = 99, dirty = True)
-
-        victim_row = table.victim_row(None, [])
-
-        self.assertEqual(victim_row.lpn, 8)
-
     def test_multiple_adds(self):
         table = LpnTable(8)
 

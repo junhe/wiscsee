@@ -231,6 +231,7 @@ class Ftl(object):
         #   should be handled when we got new_ppn
 
     def read_ext(self, extent):
+        # print 'read_ext', str(extent)
         self.recorder.add_to_general_accumulater('traffic', 'read',
                 extent.lpn_count*self.conf.page_size)
 
@@ -379,6 +380,12 @@ class MappingCache(object):
 
         self._trans_page_locks = trans_page_locks
 
+        n_cache_tps = self.conf.n_cache_entries / self.conf.n_mapping_entries_per_page
+        capsize = max(n_cache_tps - 1, 1)
+        print 'max number of tps in cache', n_cache_tps
+        self._concurrent_trans_quota = simpy.Container(self.env, init=capsize,
+                capacity=capsize)
+
     def lpn_to_ppn(self, lpn, tag=None):
         """
         Note that the return can be UNINITIATED
@@ -388,9 +395,9 @@ class MappingCache(object):
         m_vpn = self.conf.lpn_to_m_vpn(lpn)
         if ppn == MISS:
             m_vpn = self.conf.lpn_to_m_vpn(lpn)
-            loaded = yield self.env.process(
+            loaded, ppn = yield self.env.process(
                 self._load_missing(m_vpn, wanted_lpn=lpn, tag=tag))
-            ppn = self._lpn_table.lpn_to_ppn(lpn)
+            # ppn = self._lpn_table.lpn_to_ppn(lpn)
             assert ppn != MISS
         else:
             loaded = False
@@ -437,7 +444,8 @@ class MappingCache(object):
         if self._lpn_table.n_free_rows() == 0:
             # no free space for this insertion, free and lock 1
             locked_rows = yield self.env.process(
-                self._add_locked_room(n_needed=1, loading_m_vpn=None, tag=tag))
+                self._add_locked_room(n_needed=1, loading_m_vpn=None,
+                    get_quota=True, tag=tag))
             locked_row_id = locked_rows[0]
         else:
             locked_row_id = self._lpn_table.lock_free_row()
@@ -445,11 +453,11 @@ class MappingCache(object):
         self._lpn_table.add_lpn(rowid = locked_row_id,
                 lpn = lpn, ppn = ppn, dirty = True)
 
-    def _add_locked_room(self, n_needed, loading_m_vpn, tag=None):
+    def _add_locked_room(self, n_needed, loading_m_vpn, get_quota, tag=None):
         locked_row_ids = []
         for i in range(n_needed):
             row_id = yield self.env.process(
-                    self._evict_entry(loading_m_vpn, tag))
+                    self._evict_entry(loading_m_vpn, get_quota, tag))
             locked_row_ids.append(row_id)
 
         self.env.exit(locked_row_ids)
@@ -465,7 +473,7 @@ class MappingCache(object):
                 .format(str(self._lpn_table.stats()), loading_m_vpn,
                     avoid_m_vpns))
 
-    def _evict_entry(self, loading_m_vpn, tag=None):
+    def _evict_entry(self, loading_m_vpn, get_quota, tag=None):
         """
         For an entry to be deleted, it must first become a victim_row.
         To become a victim_row, it must has state USED. Existing victim_row
@@ -478,9 +486,12 @@ class MappingCache(object):
                 self._trans_page_locks.locked_vpns)
 
         victim_row.state = USED_AND_HOLD
-
         # avoid loading and evicting
         m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
+
+        if get_quota is True:
+            yield self._concurrent_trans_quota.get(1)
+
         tp_req = self._trans_page_locks.get_request(m_vpn)
         yield tp_req
         self._trans_page_locks.locked_vpns.add(m_vpn)
@@ -501,6 +512,9 @@ class MappingCache(object):
 
         self._trans_page_locks.release_request(m_vpn, tp_req)
         self._trans_page_locks.locked_vpns.remove(m_vpn)
+
+        if get_quota is True:
+            yield self._concurrent_trans_quota.put(1)
 
         self.env.exit(locked_row_id)
 
@@ -532,6 +546,7 @@ class MappingCache(object):
         """
         Return True if we really load flash page
         """
+        yield self._concurrent_trans_quota.get(2)
         # By holding this lock, you ensure nobody will delete
         # anything of this m_vpn in cache
         # WARNING: eviction called by this _load_missing(m_vpn) should
@@ -541,10 +556,7 @@ class MappingCache(object):
         self._trans_page_locks.locked_vpns.add(m_vpn)
 
         # check again before really loading
-        if wanted_lpn != None and not self._lpn_table.has_lpn(wanted_lpn):
-            # we need to lock all the entries beloinging to m_vpn
-            # m_vpn_row_ids = self._lpn_table.row_ids_of_m_vpn(m_vpn)
-            # self._lpn_table.hold_used_rows(m_vpn_row_ids)
+        if wanted_lpn is not None and not self._lpn_table.has_lpn(wanted_lpn):
 
             n_needed = self._lpn_table.needed_space_for_m_vpn(m_vpn)
             locked_rows = self._lpn_table.lock_free_rows(n_needed)
@@ -553,7 +565,7 @@ class MappingCache(object):
             if n_more > 0:
                 more_locked_rows = yield self.env.process(
                     self._add_locked_room(n_more, loading_m_vpn=m_vpn,
-                        tag=tag))
+                        get_quota=False, tag=tag))
                 locked_rows += more_locked_rows
 
             yield self.env.process(
@@ -563,10 +575,14 @@ class MappingCache(object):
         else:
             loaded = False
 
+        ppn = self._lpn_table.lpn_to_ppn(wanted_lpn)
+
         self._trans_page_locks.release_request(m_vpn, tp_req)
         self._trans_page_locks.locked_vpns.remove(m_vpn)
 
-        self.env.exit(loaded)
+        yield self._concurrent_trans_quota.put(2)
+
+        self.env.exit((loaded, ppn))
 
     def _load_to_locked_space(self, m_vpn, locked_rows, tag=None):
         """
