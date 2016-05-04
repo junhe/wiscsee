@@ -442,7 +442,121 @@ class FlashTransmitMixin(object):
         assert self.oob.ppn_to_lpn_mvpn[new_m_ppn] == m_vpn
         assert self.directory.m_vpn_to_m_ppn(m_vpn) == new_m_ppn
 
-class MappingCache(FlashTransmitMixin):
+
+class EvictForInsertMixin(object):
+    def _add_locked_room_for_insert(self, n_needed, loading_m_vpn, get_quota, tag=None):
+        locked_row_ids = []
+        for i in range(n_needed):
+            row_id = yield self.env.process(
+                    self._evict_entry_for_insert(loading_m_vpn, get_quota, tag))
+            locked_row_ids.append(row_id)
+
+        self.env.exit(locked_row_ids)
+
+    def _evict_entry_for_insert(self, loading_m_vpn, get_quota, tag=None):
+        """
+        For an entry to be deleted, it must first become a victim_row.
+        To become a victim_row, it must has state USED. Existing victim_row
+        has state USED_AND_HOLD, so the same row cannot become victim
+        and the same time.
+
+        Becoming a victim is the only approach for an entry to be deleted.
+        """
+        victim_row = self._victim_row(loading_m_vpn,
+                self._trans_page_locks.locked_vpns)
+
+        victim_row.state = USED_AND_HOLD
+        # avoid loading and evicting
+        m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
+
+        if get_quota is True:
+            yield self._concurrent_trans_quota.get(1)
+
+        tp_req = self._trans_page_locks.get_request(m_vpn)
+        yield tp_req
+        self._trans_page_locks.locked_vpns.add(m_vpn)
+
+        if victim_row.dirty == True:
+            yield self.env.process(self._write_back(m_vpn, tag))
+
+        # after writing back, this lpn could already been deleted
+        # by another _evict_entry()?
+        assert self._lpn_table.has_lpn(victim_row.lpn), \
+                "lpn_table does not has lpn {}.".format(victim_row.lpn)
+        assert victim_row.dirty == False, repr(victim_row)
+        assert victim_row.state == USED_AND_HOLD
+        victim_row.state = USED
+
+        # This is the only place that we delete a lpn
+        locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
+
+        self._trans_page_locks.release_request(m_vpn, tp_req)
+        self._trans_page_locks.locked_vpns.remove(m_vpn)
+
+        if get_quota is True:
+            yield self._concurrent_trans_quota.put(1)
+
+        self.env.exit(locked_row_id)
+
+
+class EvictForLoadMixin(object):
+    def _add_locked_room_for_load(self, n_needed, loading_m_vpn, get_quota, tag=None):
+        locked_row_ids = []
+        for i in range(n_needed):
+            row_id = yield self.env.process(
+                    self._evict_entry_for_load(loading_m_vpn, get_quota, tag))
+            locked_row_ids.append(row_id)
+
+        self.env.exit(locked_row_ids)
+
+    def _evict_entry_for_load(self, loading_m_vpn, get_quota, tag=None):
+        """
+        For an entry to be deleted, it must first become a victim_row.
+        To become a victim_row, it must has state USED. Existing victim_row
+        has state USED_AND_HOLD, so the same row cannot become victim
+        and the same time.
+
+        Becoming a victim is the only approach for an entry to be deleted.
+        """
+        victim_row = self._victim_row(loading_m_vpn,
+                self._trans_page_locks.locked_vpns)
+
+        victim_row.state = USED_AND_HOLD
+        # avoid loading and evicting
+        m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
+
+        if get_quota is True:
+            yield self._concurrent_trans_quota.get(1)
+
+        tp_req = self._trans_page_locks.get_request(m_vpn)
+        yield tp_req
+        self._trans_page_locks.locked_vpns.add(m_vpn)
+
+        if victim_row.dirty == True:
+            yield self.env.process(self._write_back(m_vpn, tag))
+
+        # after writing back, this lpn could already been deleted
+        # by another _evict_entry()?
+        assert self._lpn_table.has_lpn(victim_row.lpn), \
+                "lpn_table does not has lpn {}.".format(victim_row.lpn)
+        assert victim_row.dirty == False, repr(victim_row)
+        assert victim_row.state == USED_AND_HOLD
+        victim_row.state = USED
+
+        # This is the only place that we delete a lpn
+        locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
+
+        self._trans_page_locks.release_request(m_vpn, tp_req)
+        self._trans_page_locks.locked_vpns.remove(m_vpn)
+
+        if get_quota is True:
+            yield self._concurrent_trans_quota.put(1)
+
+        self.env.exit(locked_row_id)
+
+
+
+class MappingCache(FlashTransmitMixin, EvictForInsertMixin, EvictForLoadMixin):
     """
     This class maintains MappingTable, it evicts entries from MappingTable, load
     entries from flash.
@@ -494,7 +608,7 @@ class MappingCache(FlashTransmitMixin):
         if self._lpn_table.n_free_rows() == 0:
             # no free space for this insertion, free and lock 1
             locked_rows = yield self.env.process(
-                self._add_locked_room(n_needed=1, loading_m_vpn=None,
+                self._add_locked_room_for_insert(n_needed=1, loading_m_vpn=None,
                     get_quota=True, tag=tag))
             locked_row_id = locked_rows[0]
         else:
@@ -552,14 +666,13 @@ class MappingCache(FlashTransmitMixin):
 
         # check again before really loading
         if wanted_lpn is not None and not self._lpn_table.has_lpn(wanted_lpn):
-
             n_needed = self._lpn_table.needed_space_for_m_vpn(m_vpn)
             locked_rows = self._lpn_table.lock_free_rows(n_needed)
             n_more = n_needed - len(locked_rows)
 
             if n_more > 0:
                 more_locked_rows = yield self.env.process(
-                    self._add_locked_room(n_more, loading_m_vpn=m_vpn,
+                    self._add_locked_room_for_load(n_more, loading_m_vpn=m_vpn,
                         get_quota=False, tag=tag))
                 locked_rows += more_locked_rows
 
@@ -602,60 +715,6 @@ class MappingCache(FlashTransmitMixin):
             if not self._lpn_table.has_lpn(lpn):
                 uncached_mapping[lpn] = ppn
         return uncached_mapping
-
-    def _add_locked_room(self, n_needed, loading_m_vpn, get_quota, tag=None):
-        locked_row_ids = []
-        for i in range(n_needed):
-            row_id = yield self.env.process(
-                    self._evict_entry(loading_m_vpn, get_quota, tag))
-            locked_row_ids.append(row_id)
-
-        self.env.exit(locked_row_ids)
-
-    def _evict_entry(self, loading_m_vpn, get_quota, tag=None):
-        """
-        For an entry to be deleted, it must first become a victim_row.
-        To become a victim_row, it must has state USED. Existing victim_row
-        has state USED_AND_HOLD, so the same row cannot become victim
-        and the same time.
-
-        Becoming a victim is the only approach for an entry to be deleted.
-        """
-        victim_row = self._victim_row(loading_m_vpn,
-                self._trans_page_locks.locked_vpns)
-
-        victim_row.state = USED_AND_HOLD
-        # avoid loading and evicting
-        m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
-
-        if get_quota is True:
-            yield self._concurrent_trans_quota.get(1)
-
-        tp_req = self._trans_page_locks.get_request(m_vpn)
-        yield tp_req
-        self._trans_page_locks.locked_vpns.add(m_vpn)
-
-        if victim_row.dirty == True:
-            yield self.env.process(self._write_back(m_vpn, tag))
-
-        # after writing back, this lpn could already been deleted
-        # by another _evict_entry()?
-        assert self._lpn_table.has_lpn(victim_row.lpn), \
-                "lpn_table does not has lpn {}.".format(victim_row.lpn)
-        assert victim_row.dirty == False
-        assert victim_row.state == USED_AND_HOLD
-        victim_row.state = USED
-
-        # This is the only place that we delete a lpn
-        locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
-
-        self._trans_page_locks.release_request(m_vpn, tp_req)
-        self._trans_page_locks.locked_vpns.remove(m_vpn)
-
-        if get_quota is True:
-            yield self._concurrent_trans_quota.put(1)
-
-        self.env.exit(locked_row_id)
 
     def _victim_row(self, loading_m_vpn, avoid_m_vpns):
         for lpn, row in self._lpn_table.least_to_most_lpn_items():
