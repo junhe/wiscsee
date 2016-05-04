@@ -1,4 +1,5 @@
 import unittest
+import random
 import simpy
 
 from ssdbox import ftlsim_commons
@@ -7,7 +8,7 @@ import ssdbox
 from utilities import utils
 import flashcontroller
 from ssdbox.ftlsim_commons import Extent
-from ssdbox.dftldes import LpnTable, LpnTableMvpn
+from ssdbox.dftldes import LpnTable, LpnTableMvpn, UNINITIATED
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 from commons import *
 from Makefile import workflow, get_expname
@@ -247,6 +248,110 @@ class TestMappingCache(unittest.TestCase):
         env = objs['env']
         env.process(self.update_proc(objs, mapping_cache))
         env.run()
+
+
+class TestMappingCacheParallel(unittest.TestCase):
+    def update_random(self, conf, env, mapping_cache):
+        n = conf.total_num_pages()
+        print 'n tp pages', conf.total_translation_pages()
+        lpns = list(range(n))
+        random.shuffle(lpns)
+        lpns = lpns[:128]
+
+        procs = []
+        mappings = {}
+        for lpn in lpns:
+            ppn = random.randint(0, 1000)
+            mappings[lpn] = ppn
+            p = env.process(mapping_cache.update(lpn=lpn, ppn=ppn, tag=None))
+            procs.append(p)
+        yield simpy.AllOf(env, procs)
+
+        for lpn in lpns:
+            ppn = yield env.process(mapping_cache.lpn_to_ppn(lpn=lpn, tag=None))
+            self.assertEqual(ppn, mappings[lpn])
+
+        print "i am finished"
+
+    def test_update(self):
+        conf = create_config()
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 4
+        objs = create_obj_set(conf)
+
+        mapping_cache = create_mapping_cache(objs)
+
+        env = objs['env']
+        env.process(self.update_random(conf, env, mapping_cache))
+
+        env.run()
+
+
+class TestMappingCacheParallel2(unittest.TestCase):
+    def translate(self, conf, env, mapping_cache):
+        ppn = yield env.process(mapping_cache.lpn_to_ppn(lpn=0, tag=None))
+        self.assertEqual(ppn, UNINITIATED)
+        env.exit('finished')
+
+    def runme(self, conf, env, mapping_cache):
+        ret = yield env.process(self.translate(conf, env, mapping_cache))
+        self.assertEqual(ret, 'finished')
+
+    def test_update(self):
+        conf = create_config()
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 4
+        objs = create_obj_set(conf)
+
+        mapping_cache = create_mapping_cache(objs)
+
+        env = objs['env']
+        env.process(self.runme(conf, env, mapping_cache))
+        env.run()
+
+class TestMappingCacheParallel3(unittest.TestCase):
+    def update_mix(self, conf, env, mapping_cache):
+        n = conf.total_num_pages()
+        print 'n tp pages', conf.total_translation_pages()
+        lpns = list(range(n))
+        random.shuffle(lpns)
+        lpns = lpns[:128]
+
+        procs = []
+        mappings = {}
+        for lpn in lpns:
+            ppn = random.randint(0, 1000)
+            mappings[lpn] = ppn
+            p = env.process(mapping_cache.update(lpn=lpn, ppn=ppn, tag=None))
+            procs.append(p)
+
+        procs = []
+        translate_lpns = list(range(n))
+        random.shuffle(translate_lpns)
+        translate_lpns = translate_lpns[:128]
+        for lpn in translate_lpns:
+            p = env.process(mapping_cache.lpn_to_ppn(lpn=lpn, tag=None))
+            procs.append(p)
+
+        yield simpy.AllOf(env, procs)
+
+        procs = []
+        for lpn in lpns:
+            ppn = yield env.process(mapping_cache.lpn_to_ppn(lpn=lpn, tag=None))
+            self.assertEqual(ppn, mappings[lpn])
+
+        print 'finished'
+
+    def test_update(self):
+        conf = create_config()
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 4
+        objs = create_obj_set(conf)
+
+        mapping_cache = create_mapping_cache(objs)
+
+        env = objs['env']
+        env.process(self.update_mix(conf, env, mapping_cache))
+
+        env.run()
+
 
 class TestParallelTranslation(unittest.TestCase):
     def write_proc(self, env, dftl, extent):
