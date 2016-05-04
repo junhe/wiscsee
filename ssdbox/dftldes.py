@@ -444,34 +444,21 @@ class FlashTransmitMixin(object):
 
 
 class EvictForInsertMixin(object):
-    def _add_locked_room_for_insert(self, n_needed, loading_m_vpn, get_quota, tag=None):
+    def _add_locked_room_for_insert(self, tag=None):
         locked_row_ids = []
-        for i in range(n_needed):
-            row_id = yield self.env.process(
-                    self._evict_entry_for_insert(loading_m_vpn, get_quota, tag))
-            locked_row_ids.append(row_id)
+        row_id = yield self.env.process(self._evict_entry_for_insert(tag))
+        locked_row_ids.append(row_id)
 
         self.env.exit(locked_row_ids)
 
-    def _evict_entry_for_insert(self, loading_m_vpn, get_quota, tag=None):
-        """
-        For an entry to be deleted, it must first become a victim_row.
-        To become a victim_row, it must has state USED. Existing victim_row
-        has state USED_AND_HOLD, so the same row cannot become victim
-        and the same time.
-
-        Becoming a victim is the only approach for an entry to be deleted.
-        """
-        victim_row = self._victim_row(loading_m_vpn,
-                self._trans_page_locks.locked_vpns)
-
+    def _evict_entry_for_insert(self, tag=None):
+        victim_row = self._victim_row(loading_m_vpn=None, avoid_m_vpns=[])
         victim_row.state = USED_AND_HOLD
-        # avoid loading and evicting
+
+        yield self._concurrent_trans_quota.get(1)
+
+        # lock m_vpn
         m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
-
-        if get_quota is True:
-            yield self._concurrent_trans_quota.get(1)
-
         tp_req = self._trans_page_locks.get_request(m_vpn)
         yield tp_req
         self._trans_page_locks.locked_vpns.add(m_vpn)
@@ -479,8 +466,6 @@ class EvictForInsertMixin(object):
         if victim_row.dirty == True:
             yield self.env.process(self._write_back(m_vpn, tag))
 
-        # after writing back, this lpn could already been deleted
-        # by another _evict_entry()?
         assert self._lpn_table.has_lpn(victim_row.lpn), \
                 "lpn_table does not has lpn {}.".format(victim_row.lpn)
         assert victim_row.dirty == False, repr(victim_row)
@@ -493,8 +478,7 @@ class EvictForInsertMixin(object):
         self._trans_page_locks.release_request(m_vpn, tp_req)
         self._trans_page_locks.locked_vpns.remove(m_vpn)
 
-        if get_quota is True:
-            yield self._concurrent_trans_quota.put(1)
+        yield self._concurrent_trans_quota.put(1)
 
         self.env.exit(locked_row_id)
 
@@ -608,8 +592,7 @@ class MappingCache(FlashTransmitMixin, EvictForInsertMixin, EvictForLoadMixin):
         if self._lpn_table.n_free_rows() == 0:
             # no free space for this insertion, free and lock 1
             locked_rows = yield self.env.process(
-                self._add_locked_room_for_insert(n_needed=1, loading_m_vpn=None,
-                    get_quota=True, tag=tag))
+                    self._add_locked_room_for_insert(tag=tag))
             locked_row_id = locked_rows[0]
         else:
             locked_row_id = self._lpn_table.lock_free_row()
