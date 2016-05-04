@@ -443,9 +443,6 @@ class FlashTransmitMixin(object):
 
 class InsertMixin(object):
     def _insert_new_mapping(self, lpn, ppn, tag=None):
-        """
-        lpn should not be in cache
-        """
         assert not self._lpn_table.has_lpn(lpn)
 
         if self._lpn_table.n_free_rows() == 0:
@@ -635,13 +632,12 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
 
     def update(self, lpn, ppn, tag=None):
         """
-        It may evict to make room for this entry
+        Two threads should not update the same lpn at the same time, both
+        of them may go into _insert_new_mapping
         """
         if self._lpn_table.has_lpn(lpn):
-            # hit
             self._lpn_table.overwrite_lpn(lpn, ppn, dirty=True)
         else:
-            # miss
             yield self.env.process(self._insert_new_mapping(lpn, ppn, tag))
 
     def lpns_to_ppns(self, lpns, tag=None):
@@ -658,7 +654,8 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
     def lpn_to_ppn(self, lpn, tag=None):
         """
         Note that the return can be UNINITIATED
-        TODO: avoid thrashing!
+        It is OK for two or more threads to translate the same lpn at the same
+        time because _load_missing is serialized for the same mvpn.
         """
         ppn = self._lpn_table.lpn_to_ppn(lpn)
         m_vpn = self.conf.lpn_to_m_vpn(lpn)
@@ -666,7 +663,6 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
             m_vpn = self.conf.lpn_to_m_vpn(lpn)
             loaded, ppn = yield self.env.process(
                 self._load_missing(m_vpn, wanted_lpn=lpn, tag=tag))
-            # ppn = self._lpn_table.lpn_to_ppn(lpn)
             assert ppn != MISS
         else:
             loaded = False
