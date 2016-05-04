@@ -621,7 +621,7 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
         self._trans_page_locks = trans_page_locks
 
         n_cache_tps = self.conf.n_cache_entries / self.conf.n_mapping_entries_per_page
-        capsize = max(n_cache_tps - 1, 1)
+        capsize = max(n_cache_tps - 1, 2)
         print 'max number of tps in cache', n_cache_tps
         self._concurrent_trans_quota = simpy.Container(self.env, init=capsize,
                 capacity=capsize)
