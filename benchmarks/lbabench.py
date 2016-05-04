@@ -304,12 +304,13 @@ def patterns_bench():
         para_dict = {
                 'expname'        : [expname],
                 'ncq_depth'      : [4],
-                # 'patternclass'   : ['SFadingSnake'],
+                # 'patternclass'   : ['SRandomRead'],
+                # 'patternclass'   : ['SRandomRead', 'SSnake'],
                 'patternclass'   : ['SHotNCold',
                     'SRandomWrite', 'SRandomRead',
                     'SSequentialWrite', 'SSequentialRead',
                     'SSnake', 'SFadingSnake', 'SStrided'],
-                'cache_mapped_data_bytes' :[128*MB],
+                'cache_mapped_data_bytes' :[8*MB, 128*MB],
                 'flashbytes'     : [128*MB],
                 'stripe_size'    : [1, 'infinity'],
                 'chunk_size'     : [2*KB, 128*KB]
@@ -319,10 +320,15 @@ def patterns_bench():
 
         return parameter_combs
 
+    cnt = 0
     for i, para in enumerate(gen_parameters()):
+        cnt += 1
+        if cnt != 10:
+            continue
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
         exp = Experiment( Parameters(**para) )
         exp.main()
+
 
 
 
