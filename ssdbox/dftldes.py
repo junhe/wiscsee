@@ -358,7 +358,91 @@ class MappingDict(dict):
     """
     pass
 
-class MappingCache(object):
+
+class FlashTransmitMixin(object):
+    def _write_back(self, m_vpn, tag=None):
+        """
+        It should not call _load_to_locked_space() directly or indirectly as it
+        will deadlock.
+        """
+        mapping_in_cache = self._lpn_table.get_m_vpn_mappings(m_vpn)
+
+        # We have to mark it clean before writing it back because
+        # if we do it after writing flash, the cache may already changed
+        self._lpn_table.mark_clean_multiple(mapping_in_cache.keys())
+
+        if len(mapping_in_cache) < self.conf.n_mapping_entries_per_page:
+            # Not all mappings are in cache
+            mapping_in_flash = yield self.env.process(
+                    self._read_translation_page(m_vpn, tag))
+            latest_mapping = mapping_in_flash
+            latest_mapping.update(mapping_in_cache)
+        else:
+            # all mappings are in cache, no need to read the translation page
+            latest_mapping = mapping_in_cache
+
+        yield self.env.process(
+            self._update_mapping_on_flash(m_vpn, latest_mapping, tag))
+
+    def _read_translation_page(self, m_vpn, tag=None):
+        lpns = self.conf.m_vpn_to_lpns(m_vpn)
+        mapping_dict = self.mapping_on_flash.lpns_to_ppns(lpns)
+
+        # as if we readlly read from flash
+        m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
+
+        op_id = self.recorder.get_unique_num()
+        start_time = self.env.now
+
+        yield self.env.process(
+                self.flash.rw_ppn_extent(m_ppn, 1, 'read',
+                tag = self.recorder.get_tag('read_trans', tag)))
+
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'read_trans_page', arg = m_vpn,
+            start_time = start_time, end_time = self.env.now)
+
+        self.env.exit(mapping_dict)
+
+    def _update_mapping_on_flash(self, m_vpn, mapping_dict, tag=None):
+        """
+        mapping_dict should only has lpns belonging to m_vpn
+        """
+        # mapping_dict has to have all and only the entries of m_vpn
+        lpn_sample = mapping_dict.keys()[0]
+        tmp_m_vpn = self.conf.lpn_to_m_vpn(lpn_sample)
+        assert tmp_m_vpn == m_vpn
+        assert len(mapping_dict) == self.conf.n_mapping_entries_per_page
+
+        self.mapping_on_flash.batch_update(mapping_dict)
+
+        yield self.env.process(self._program_translation_page(m_vpn, tag))
+
+    def _program_translation_page(self, m_vpn, tag=None):
+        new_m_ppn = self.block_pool.next_translation_page_to_program()
+        old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
+
+        op_id = self.recorder.get_unique_num()
+        start_time = self.env.now
+
+        yield self.env.process(
+                self.flash.rw_ppn_extent(new_m_ppn, 1, 'write',
+                tag = self.recorder.get_tag('prog_trans', tag)))
+
+        self.recorder.write_file('timeline.txt',
+            op_id = op_id, op = 'prog_trans_page', arg = m_vpn,
+            start_time = start_time, end_time = self.env.now)
+
+        self.oob.relocate_trans_page(m_vpn=m_vpn, old_ppn=old_m_ppn,
+            new_ppn = new_m_ppn, update_time=True)
+        self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
+
+        assert self.oob.states.is_page_valid(old_m_ppn) == False
+        assert self.oob.states.is_page_valid(new_m_ppn) == True
+        assert self.oob.ppn_to_lpn_mvpn[new_m_ppn] == m_vpn
+        assert self.directory.m_vpn_to_m_ppn(m_vpn) == new_m_ppn
+
+class MappingCache(FlashTransmitMixin):
     """
     This class maintains MappingTable, it evicts entries from MappingTable, load
     entries from flash.
@@ -385,40 +469,6 @@ class MappingCache(object):
         print 'max number of tps in cache', n_cache_tps
         self._concurrent_trans_quota = simpy.Container(self.env, init=capsize,
                 capacity=capsize)
-
-    def lpn_to_ppn(self, lpn, tag=None):
-        """
-        Note that the return can be UNINITIATED
-        TODO: avoid thrashing!
-        """
-        ppn = self._lpn_table.lpn_to_ppn(lpn)
-        m_vpn = self.conf.lpn_to_m_vpn(lpn)
-        if ppn == MISS:
-            m_vpn = self.conf.lpn_to_m_vpn(lpn)
-            loaded, ppn = yield self.env.process(
-                self._load_missing(m_vpn, wanted_lpn=lpn, tag=tag))
-            # ppn = self._lpn_table.lpn_to_ppn(lpn)
-            assert ppn != MISS
-        else:
-            loaded = False
-
-        if loaded == True:
-            self.recorder.count_me("Mapping_Cache", "miss")
-        else:
-            self.recorder.count_me("Mapping_Cache", "hit")
-
-        self.env.exit(ppn)
-
-    def lpns_to_ppns(self, lpns, tag=None):
-        """
-        If lpns are of the same m_vpn, this process will only
-        have one cache miss.
-        """
-        ppns = []
-        for lpn in lpns:
-            ppn = yield self.env.process(self.lpn_to_ppn(lpn, tag))
-            ppns.append(ppn)
-        self.env.exit(ppns)
 
     def update_batch(self, mapping_dict, tag=None):
         for lpn, ppn in mapping_dict.items():
@@ -453,94 +503,39 @@ class MappingCache(object):
         self._lpn_table.add_lpn(rowid = locked_row_id,
                 lpn = lpn, ppn = ppn, dirty = True)
 
-    def _add_locked_room(self, n_needed, loading_m_vpn, get_quota, tag=None):
-        locked_row_ids = []
-        for i in range(n_needed):
-            row_id = yield self.env.process(
-                    self._evict_entry(loading_m_vpn, get_quota, tag))
-            locked_row_ids.append(row_id)
-
-        self.env.exit(locked_row_ids)
-
-    def _victim_row(self, loading_m_vpn, avoid_m_vpns):
-        for lpn, row in self._lpn_table.least_to_most_lpn_items():
-            if row.state == USED:
-                m_vpn = self.conf.lpn_to_m_vpn(lpn)
-                if m_vpn != loading_m_vpn and not m_vpn in avoid_m_vpns:
-                    return row
-        raise RuntimeError("Cannot find a victim. Current stats: {}"\
-                "loading_m_vpn: {}, avoid_m_vpns: {}.\n"
-                .format(str(self._lpn_table.stats()), loading_m_vpn,
-                    avoid_m_vpns))
-
-    def _evict_entry(self, loading_m_vpn, get_quota, tag=None):
+    def lpns_to_ppns(self, lpns, tag=None):
         """
-        For an entry to be deleted, it must first become a victim_row.
-        To become a victim_row, it must has state USED. Existing victim_row
-        has state USED_AND_HOLD, so the same row cannot become victim
-        and the same time.
-
-        Becoming a victim is the only approach for an entry to be deleted.
+        If lpns are of the same m_vpn, this process will only
+        have one cache miss.
         """
-        victim_row = self._victim_row(loading_m_vpn,
-                self._trans_page_locks.locked_vpns)
+        ppns = []
+        for lpn in lpns:
+            ppn = yield self.env.process(self.lpn_to_ppn(lpn, tag))
+            ppns.append(ppn)
+        self.env.exit(ppns)
 
-        victim_row.state = USED_AND_HOLD
-        # avoid loading and evicting
-        m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
-
-        if get_quota is True:
-            yield self._concurrent_trans_quota.get(1)
-
-        tp_req = self._trans_page_locks.get_request(m_vpn)
-        yield tp_req
-        self._trans_page_locks.locked_vpns.add(m_vpn)
-
-        if victim_row.dirty == True:
-            yield self.env.process(self._write_back(m_vpn, tag))
-
-        # after writing back, this lpn could already been deleted
-        # by another _evict_entry()?
-        assert self._lpn_table.has_lpn(victim_row.lpn), \
-                "lpn_table does not has lpn {}.".format(victim_row.lpn)
-        assert victim_row.dirty == False
-        assert victim_row.state == USED_AND_HOLD
-        victim_row.state = USED
-
-        # This is the only place that we delete a lpn
-        locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
-
-        self._trans_page_locks.release_request(m_vpn, tp_req)
-        self._trans_page_locks.locked_vpns.remove(m_vpn)
-
-        if get_quota is True:
-            yield self._concurrent_trans_quota.put(1)
-
-        self.env.exit(locked_row_id)
-
-    def _write_back(self, m_vpn, tag=None):
+    def lpn_to_ppn(self, lpn, tag=None):
         """
-        It should not call _load_to_locked_space() directly or indirectly as it
-        will deadlock.
+        Note that the return can be UNINITIATED
+        TODO: avoid thrashing!
         """
-        mapping_in_cache = self._lpn_table.get_m_vpn_mappings(m_vpn)
-
-        # We have to mark it clean before writing it back because
-        # if we do it after writing flash, the cache may already changed
-        self._lpn_table.mark_clean_multiple(mapping_in_cache.keys())
-
-        if len(mapping_in_cache) < self.conf.n_mapping_entries_per_page:
-            # Not all mappings are in cache
-            mapping_in_flash = yield self.env.process(
-                    self._read_translation_page(m_vpn, tag))
-            latest_mapping = mapping_in_flash
-            latest_mapping.update(mapping_in_cache)
+        ppn = self._lpn_table.lpn_to_ppn(lpn)
+        m_vpn = self.conf.lpn_to_m_vpn(lpn)
+        if ppn == MISS:
+            m_vpn = self.conf.lpn_to_m_vpn(lpn)
+            loaded, ppn = yield self.env.process(
+                self._load_missing(m_vpn, wanted_lpn=lpn, tag=tag))
+            # ppn = self._lpn_table.lpn_to_ppn(lpn)
+            assert ppn != MISS
         else:
-            # all mappings are in cache, no need to read the translation page
-            latest_mapping = mapping_in_cache
+            loaded = False
 
-        yield self.env.process(
-            self._update_mapping_on_flash(m_vpn, latest_mapping, tag))
+        if loaded == True:
+            self.recorder.count_me("Mapping_Cache", "miss")
+        else:
+            self.recorder.count_me("Mapping_Cache", "hit")
+
+        self.env.exit(ppn)
 
     def _load_missing(self, m_vpn, wanted_lpn, tag=None):
         """
@@ -608,63 +603,70 @@ class MappingCache(object):
                 uncached_mapping[lpn] = ppn
         return uncached_mapping
 
-    def _read_translation_page(self, m_vpn, tag=None):
-        lpns = self.conf.m_vpn_to_lpns(m_vpn)
-        mapping_dict = self.mapping_on_flash.lpns_to_ppns(lpns)
+    def _add_locked_room(self, n_needed, loading_m_vpn, get_quota, tag=None):
+        locked_row_ids = []
+        for i in range(n_needed):
+            row_id = yield self.env.process(
+                    self._evict_entry(loading_m_vpn, get_quota, tag))
+            locked_row_ids.append(row_id)
 
-        # as if we readlly read from flash
-        m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
+        self.env.exit(locked_row_ids)
 
-        op_id = self.recorder.get_unique_num()
-        start_time = self.env.now
-
-        yield self.env.process(
-                self.flash.rw_ppn_extent(m_ppn, 1, 'read',
-                tag = self.recorder.get_tag('read_trans', tag)))
-
-        self.recorder.write_file('timeline.txt',
-            op_id = op_id, op = 'read_trans_page', arg = m_vpn,
-            start_time = start_time, end_time = self.env.now)
-
-        self.env.exit(mapping_dict)
-
-    def _update_mapping_on_flash(self, m_vpn, mapping_dict, tag=None):
+    def _evict_entry(self, loading_m_vpn, get_quota, tag=None):
         """
-        mapping_dict should only has lpns belonging to m_vpn
+        For an entry to be deleted, it must first become a victim_row.
+        To become a victim_row, it must has state USED. Existing victim_row
+        has state USED_AND_HOLD, so the same row cannot become victim
+        and the same time.
+
+        Becoming a victim is the only approach for an entry to be deleted.
         """
-        # mapping_dict has to have all and only the entries of m_vpn
-        lpn_sample = mapping_dict.keys()[0]
-        tmp_m_vpn = self.conf.lpn_to_m_vpn(lpn_sample)
-        assert tmp_m_vpn == m_vpn
-        assert len(mapping_dict) == self.conf.n_mapping_entries_per_page
+        victim_row = self._victim_row(loading_m_vpn,
+                self._trans_page_locks.locked_vpns)
 
-        self.mapping_on_flash.batch_update(mapping_dict)
+        victim_row.state = USED_AND_HOLD
+        # avoid loading and evicting
+        m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
 
-        yield self.env.process(self._program_translation_page(m_vpn, tag))
+        if get_quota is True:
+            yield self._concurrent_trans_quota.get(1)
 
-    def _program_translation_page(self, m_vpn, tag=None):
-        new_m_ppn = self.block_pool.next_translation_page_to_program()
-        old_m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
+        tp_req = self._trans_page_locks.get_request(m_vpn)
+        yield tp_req
+        self._trans_page_locks.locked_vpns.add(m_vpn)
 
-        op_id = self.recorder.get_unique_num()
-        start_time = self.env.now
+        if victim_row.dirty == True:
+            yield self.env.process(self._write_back(m_vpn, tag))
 
-        yield self.env.process(
-                self.flash.rw_ppn_extent(new_m_ppn, 1, 'write',
-                tag = self.recorder.get_tag('prog_trans', tag)))
+        # after writing back, this lpn could already been deleted
+        # by another _evict_entry()?
+        assert self._lpn_table.has_lpn(victim_row.lpn), \
+                "lpn_table does not has lpn {}.".format(victim_row.lpn)
+        assert victim_row.dirty == False
+        assert victim_row.state == USED_AND_HOLD
+        victim_row.state = USED
 
-        self.recorder.write_file('timeline.txt',
-            op_id = op_id, op = 'prog_trans_page', arg = m_vpn,
-            start_time = start_time, end_time = self.env.now)
+        # This is the only place that we delete a lpn
+        locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
 
-        self.oob.relocate_trans_page(m_vpn=m_vpn, old_ppn=old_m_ppn,
-            new_ppn = new_m_ppn, update_time=True)
-        self.directory.update_mapping(m_vpn = m_vpn, m_ppn = new_m_ppn)
+        self._trans_page_locks.release_request(m_vpn, tp_req)
+        self._trans_page_locks.locked_vpns.remove(m_vpn)
 
-        assert self.oob.states.is_page_valid(old_m_ppn) == False
-        assert self.oob.states.is_page_valid(new_m_ppn) == True
-        assert self.oob.ppn_to_lpn_mvpn[new_m_ppn] == m_vpn
-        assert self.directory.m_vpn_to_m_ppn(m_vpn) == new_m_ppn
+        if get_quota is True:
+            yield self._concurrent_trans_quota.put(1)
+
+        self.env.exit(locked_row_id)
+
+    def _victim_row(self, loading_m_vpn, avoid_m_vpns):
+        for lpn, row in self._lpn_table.least_to_most_lpn_items():
+            if row.state == USED:
+                m_vpn = self.conf.lpn_to_m_vpn(lpn)
+                if m_vpn != loading_m_vpn and not m_vpn in avoid_m_vpns:
+                    return row
+        raise RuntimeError("Cannot find a victim. Current stats: {}"\
+                "loading_m_vpn: {}, avoid_m_vpns: {}.\n"
+                .format(str(self._lpn_table.stats()), loading_m_vpn,
+                    avoid_m_vpns))
 
 
 FREE, FREE_AND_LOCKED, USED, USED_AND_LOCKED, USED_AND_HOLD = \
