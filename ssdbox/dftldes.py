@@ -480,7 +480,11 @@ class InsertMixin(object):
 
         assert self._lpn_table.has_lpn(victim_row.lpn), \
                 "lpn_table does not has lpn {}.".format(victim_row.lpn)
-        assert victim_row.dirty == False, repr(victim_row)
+        # Hmm... victim_row could be updated when you are writing them back
+        # this is OK because we have written the old mapping to flash
+        # and the new one in cache is marked dirty, we will
+        # later write the new dirty one back to flash
+        # assert victim_row.dirty == False, repr(victim_row)
         assert victim_row.state == USED_AND_HOLD
         victim_row.state = USED
 
@@ -560,7 +564,7 @@ class LoadMixin(object):
         # by another _evict_entry()?
         assert self._lpn_table.has_lpn(victim_row.lpn), \
                 "lpn_table does not has lpn {}.".format(victim_row.lpn)
-        assert victim_row.dirty == False, repr(victim_row)
+        # assert victim_row.dirty == False, repr(victim_row)
         assert victim_row.state == USED_AND_HOLD
         victim_row.state = USED
 
