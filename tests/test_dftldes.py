@@ -98,7 +98,7 @@ def create_obj_set(conf):
     directory = create_translation_directory(conf, oob, block_pool)
     gmt = create_mapping_on_flash(conf)
     victimblocks = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
-    trans_page_locks = ssdbox.dftldes.VPNResourcePool(env)
+    trans_page_locks = ssdbox.dftldes.LockPool(env)
 
     return {'conf':conf, 'rec':rec, 'oob':oob, 'block_pool':block_pool,
             'flash_controller':flash_controller, 'env':env, 'directory':directory,
@@ -286,7 +286,7 @@ class TestMappingCacheParallel(unittest.TestCase):
         env.run()
 
 
-class TestMappingCacheParallel2(unittest.TestCase):
+class TestMappingCacheSimpleTranslation(unittest.TestCase):
     def translate(self, conf, env, mapping_cache):
         ppn = yield env.process(mapping_cache.lpn_to_ppn(lpn=0, tag=None))
         self.assertEqual(ppn, UNINITIATED)
@@ -307,10 +307,10 @@ class TestMappingCacheParallel2(unittest.TestCase):
         env.process(self.runme(conf, env, mapping_cache))
         env.run()
 
+
 class TestMappingCacheParallel3(unittest.TestCase):
-    def update_mix(self, conf, env, mapping_cache):
+    def update_and_check(self, conf, env, mapping_cache):
         n = conf.total_num_pages()
-        print 'n tp pages', conf.total_translation_pages()
         lpns = list(range(n))
         random.shuffle(lpns)
         lpns = lpns[:128]
@@ -348,8 +348,75 @@ class TestMappingCacheParallel3(unittest.TestCase):
         mapping_cache = create_mapping_cache(objs)
 
         env = objs['env']
-        env.process(self.update_mix(conf, env, mapping_cache))
+        env.process(self.update_and_check(conf, env, mapping_cache))
 
+        env.run()
+
+
+class TestMappingCacheSameLpnTranslation(unittest.TestCase):
+    def translate(self, conf, env, mapping_cache):
+        p1 = env.process(mapping_cache.lpn_to_ppn(lpn=0, tag=None))
+        p2 = env.process(mapping_cache.lpn_to_ppn(lpn=0, tag=None))
+        yield simpy.AllOf(env, [p1, p2])
+        print 'finished'
+
+    def test_update(self):
+        conf = create_config()
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 4
+        objs = create_obj_set(conf)
+
+        mapping_cache = create_mapping_cache(objs)
+
+        env = objs['env']
+        env.process(self.translate(conf, env, mapping_cache))
+        env.run()
+
+
+class TestMappingCacheSameLpnUpdate(unittest.TestCase):
+    def translate(self, conf, env, mapping_cache):
+        p1 = env.process(mapping_cache.update(lpn=0, ppn=1, tag=None))
+        p2 = env.process(mapping_cache.update(lpn=0, ppn=2, tag=None))
+        yield simpy.AllOf(env, [p1, p2])
+        print 'finished'
+
+    def test_update(self):
+        conf = create_config()
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 4
+        objs = create_obj_set(conf)
+
+        mapping_cache = create_mapping_cache(objs)
+
+        env = objs['env']
+        env.process(self.translate(conf, env, mapping_cache))
+        env.run()
+
+
+class TestMappingCacheSameLpnUpdateWEvict(unittest.TestCase):
+    def translate(self, conf, env, mapping_cache):
+        # dirty 4 translation pages to mem
+        n = conf.n_mapping_entries_per_page
+        ext = Extent(lpn_start=0, lpn_count=4*n)
+        for lpn in ext.lpn_iter():
+            yield env.process(mapping_cache.update(lpn=lpn, ppn=3))
+
+        # update a lpn that is not in mem
+        ext = Extent(lpn_start=4*n, lpn_count=4*n)
+        procs = []
+        for lpn in ext.lpn_iter():
+            p = env.process(mapping_cache.update(lpn=lpn, ppn=1, tag=None))
+            procs.append(p)
+        yield simpy.AllOf(env, procs)
+        print 'finished'
+
+    def test_update(self):
+        conf = create_config()
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 4
+        objs = create_obj_set(conf)
+
+        mapping_cache = create_mapping_cache(objs)
+
+        env = objs['env']
+        env.process(self.translate(conf, env, mapping_cache))
         env.run()
 
 
@@ -765,7 +832,7 @@ class TestLpnTable(unittest.TestCase):
         self.assertEqual(table.n_locked_used_rows(), 1)
 
 
-class TestVPNResourcePool(unittest.TestCase):
+class TestLockPool(unittest.TestCase):
     def access_vpn(self, env, respool, vpn):
         req = respool.get_request(vpn)
         yield req
@@ -786,7 +853,7 @@ class TestVPNResourcePool(unittest.TestCase):
 
     def test_request(self):
         env = simpy.Environment()
-        respool = ssdbox.dftldes.VPNResourcePool(env)
+        respool = ssdbox.dftldes.LockPool(env)
 
         env.process(self.init_proc(env, respool))
         env.run()
