@@ -493,7 +493,7 @@ class TestWrite(unittest.TestCase):
         conf = create_config()
         conf['stripe_size'] = 1
         # make sure no cache miss in this test
-        conf.n_cache_entries = conf.n_mapping_entries_per_page * 2
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 100
 
         objs = create_obj_set(conf)
         env = objs['env']
