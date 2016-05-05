@@ -122,7 +122,6 @@ class Ftl(object):
         return ppns
 
     def write_ext(self, extent):
-        print 'write', str(extent)
         self.recorder.add_to_general_accumulater('traffic', 'write',
                 extent.lpn_count*self.conf.page_size)
 
@@ -152,7 +151,6 @@ class Ftl(object):
 
     def _write_single_mvpngroup(self, ext_single_m_vpn, ppns_to_write,
             tag=None):
-        print 'write single mvpn', str(ext_single_m_vpn)
         m_vpn = self.conf.lpn_to_m_vpn(ext_single_m_vpn.lpn_start)
 
         p_relocate = self.env.process(
