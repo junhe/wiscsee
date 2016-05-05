@@ -85,7 +85,7 @@ class Ftl(object):
         self._directory = GlobalTranslationDirectory(self.conf,
                 self.oob, self.block_pool)
 
-        self._trans_page_locks =  VPNResourcePool(self.env)
+        self._trans_page_locks =  LockPool(self.env)
 
         self._mappings = MappingCache(
             confobj = self.conf,
@@ -122,6 +122,7 @@ class Ftl(object):
         return ppns
 
     def write_ext(self, extent):
+        print 'write', str(extent)
         self.recorder.add_to_general_accumulater('traffic', 'write',
                 extent.lpn_count*self.conf.page_size)
 
@@ -151,6 +152,7 @@ class Ftl(object):
 
     def _write_single_mvpngroup(self, ext_single_m_vpn, ppns_to_write,
             tag=None):
+        print 'write single mvpn', str(ext_single_m_vpn)
         m_vpn = self.conf.lpn_to_m_vpn(ext_single_m_vpn.lpn_start)
 
         p_relocate = self.env.process(
@@ -336,19 +338,19 @@ def split_ext_to_mvpngroups(conf, extent):
     return group_extent_list
 
 
-class VPNResourcePool(object):
+class LockPool(object):
     def __init__(self, simpy_env):
-        self.resources = {} # lpn: lock
+        self.resources = {} # addr: lock
         self.env = simpy_env
-        self.locked_vpns = set()
+        self.locked_addrs = set()
 
-    def get_request(self, vpn):
-        res = self.resources.setdefault(vpn,
+    def get_request(self, addr):
+        res = self.resources.setdefault(addr,
                                     simpy.Resource(self.env, capacity = 1))
         return res.request()
 
-    def release_request(self, vpn, request):
-        res = self.resources[vpn]
+    def release_request(self, addr, request):
+        res = self.resources[addr]
         res.release(request)
 
 
@@ -361,7 +363,7 @@ class MappingDict(dict):
 
 class FlashTransmitMixin(object):
     def _write_back(self, m_vpn, tag=None):
-        assert m_vpn in self._trans_page_locks.locked_vpns
+        assert m_vpn in self._trans_page_locks.locked_addrs
 
         mapping_in_cache = self._lpn_table.get_m_vpn_mappings(m_vpn)
 
@@ -443,11 +445,15 @@ class FlashTransmitMixin(object):
 
 class InsertMixin(object):
     def _insert_new_mapping(self, lpn, ppn, tag=None):
-        assert not self._lpn_table.has_lpn(lpn)
+        assert not self._lpn_table.has_lpn(lpn), 'lpn: {}'.format(lpn)
         # no free space for this insertion, free and lock 1
         locked_rows = yield self.env.process(
                 self.__add_locked_room_for_insert(tag=tag))
         locked_row_id = locked_rows[0]
+
+        # even if you inserting and loading of the same lpn can be
+        # serialize, but loading of lpns in the same mvpn which
+        # also brings lpn to memory is not serialized.
         self._lpn_table.add_lpn(rowid = locked_row_id,
                 lpn = lpn, ppn = ppn, dirty = True)
 
@@ -473,7 +479,7 @@ class InsertMixin(object):
         m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
         tp_req = self._trans_page_locks.get_request(m_vpn)
         yield tp_req
-        self._trans_page_locks.locked_vpns.add(m_vpn)
+        self._trans_page_locks.locked_addrs.add(m_vpn)
 
         if victim_row.dirty == True:
             yield self.env.process(self._write_back(m_vpn, tag))
@@ -492,7 +498,7 @@ class InsertMixin(object):
         locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
 
         self._trans_page_locks.release_request(m_vpn, tp_req)
-        self._trans_page_locks.locked_vpns.remove(m_vpn)
+        self._trans_page_locks.locked_addrs.remove(m_vpn)
 
         yield self._concurrent_trans_quota.put(1)
 
@@ -507,7 +513,7 @@ class LoadMixin(object):
         yield self._concurrent_trans_quota.get(2)
         tp_req = self._trans_page_locks.get_request(m_vpn)
         yield tp_req
-        self._trans_page_locks.locked_vpns.add(m_vpn)
+        self._trans_page_locks.locked_addrs.add(m_vpn)
 
         # check again before really loading
         if wanted_lpn is not None and not self._lpn_table.has_lpn(wanted_lpn):
@@ -531,7 +537,7 @@ class LoadMixin(object):
         ppn = self._lpn_table.lpn_to_ppn(wanted_lpn)
 
         self._trans_page_locks.release_request(m_vpn, tp_req)
-        self._trans_page_locks.locked_vpns.remove(m_vpn)
+        self._trans_page_locks.locked_addrs.remove(m_vpn)
 
         yield self._concurrent_trans_quota.put(2)
 
@@ -548,14 +554,14 @@ class LoadMixin(object):
 
     def __evict_entry_for_load(self, loading_m_vpn, tag=None):
         victim_row = self._victim_row(
-                [loading_m_vpn] + list(self._trans_page_locks.locked_vpns))
+                [loading_m_vpn] + list(self._trans_page_locks.locked_addrs))
         victim_row.state = USED_AND_HOLD
 
         m_vpn = self.conf.lpn_to_m_vpn(lpn = victim_row.lpn)
 
         tp_req = self._trans_page_locks.get_request(m_vpn)
         yield tp_req
-        self._trans_page_locks.locked_vpns.add(m_vpn)
+        self._trans_page_locks.locked_addrs.add(m_vpn)
 
         if victim_row.dirty == True:
             yield self.env.process(self._write_back(m_vpn, tag))
@@ -572,7 +578,7 @@ class LoadMixin(object):
         locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
 
         self._trans_page_locks.release_request(m_vpn, tp_req)
-        self._trans_page_locks.locked_vpns.remove(m_vpn)
+        self._trans_page_locks.locked_addrs.remove(m_vpn)
 
         self.env.exit(locked_row_id)
 
@@ -629,6 +635,7 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
         print 'max number of tps in cache', n_cache_tps
         self._concurrent_trans_quota = simpy.Container(self.env, init=capsize,
                 capacity=capsize)
+        self._m_vpn_interface_lock = LockPool(self.env)
 
     def update_batch(self, mapping_dict, tag=None):
         for lpn, ppn in mapping_dict.items():
@@ -636,9 +643,12 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
 
     def update(self, lpn, ppn, tag=None):
         """
-        Two threads should not update the same lpn at the same time, both
-        of them may go into _insert_new_mapping
+        All translation and update of the same m_vpn are serialized.
         """
+        m_vpn = self.conf.lpn_to_m_vpn(lpn)
+        req = self._m_vpn_interface_lock.get_request(m_vpn)
+        yield req
+
         if self._lpn_table.has_lpn(lpn):
             self._lpn_table.overwrite_lpn(lpn, ppn, dirty=True)
         else:
@@ -646,6 +656,8 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
                 self._add_to_free(lpn, ppn)
             else:
                 yield self.env.process(self._insert_new_mapping(lpn, ppn, tag))
+
+        self._m_vpn_interface_lock.release_request(m_vpn, req)
 
     def lpns_to_ppns(self, lpns, tag=None):
         """
@@ -661,13 +673,15 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
     def lpn_to_ppn(self, lpn, tag=None):
         """
         Note that the return can be UNINITIATED
-        It is OK for two or more threads to translate the same lpn at the same
-        time because _load_missing is serialized for the same mvpn.
+        All translation and update of the same m_vpn are serialized.
         """
-        ppn = self._lpn_table.lpn_to_ppn(lpn)
         m_vpn = self.conf.lpn_to_m_vpn(lpn)
+
+        req = self._m_vpn_interface_lock.get_request(m_vpn)
+        yield req
+
+        ppn = self._lpn_table.lpn_to_ppn(lpn)
         if ppn == MISS:
-            m_vpn = self.conf.lpn_to_m_vpn(lpn)
             loaded, ppn = yield self.env.process(
                 self._load_missing(m_vpn, wanted_lpn=lpn, tag=tag))
             assert ppn != MISS
@@ -679,6 +693,7 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
         else:
             self.recorder.count_me("Mapping_Cache", "hit")
 
+        self._m_vpn_interface_lock.release_request(m_vpn, req)
         self.env.exit(ppn)
 
     def _victim_row(self, avoid_m_vpns):
@@ -1591,7 +1606,7 @@ class TransBlockCleaner(object):
 
         tp_req = self._trans_page_locks.get_request(m_vpn)
         yield tp_req
-        self._trans_page_locks.locked_vpns.add(m_vpn)
+        self._trans_page_locks.locked_addrs.add(m_vpn)
 
         yield self.env.process(
             self.flash.rw_ppn_extent(ppn, 1, 'read',
@@ -1624,7 +1639,7 @@ class TransBlockCleaner(object):
         # handled by next_gc_trans_page_to_program
 
         self._trans_page_locks.release_request(m_vpn, tp_req)
-        self._trans_page_locks.locked_vpns.remove(m_vpn)
+        self._trans_page_locks.locked_addrs.remove(m_vpn)
 
 
 class OutOfBandAreas(object):
