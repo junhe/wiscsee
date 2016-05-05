@@ -444,15 +444,15 @@ class FlashTransmitMixin(object):
 class InsertMixin(object):
     def _insert_new_mapping(self, lpn, ppn, tag=None):
         assert not self._lpn_table.has_lpn(lpn)
+        # no free space for this insertion, free and lock 1
+        locked_rows = yield self.env.process(
+                self.__add_locked_room_for_insert(tag=tag))
+        locked_row_id = locked_rows[0]
+        self._lpn_table.add_lpn(rowid = locked_row_id,
+                lpn = lpn, ppn = ppn, dirty = True)
 
-        if self._lpn_table.n_free_rows() == 0:
-            # no free space for this insertion, free and lock 1
-            locked_rows = yield self.env.process(
-                    self.__add_locked_room_for_insert(tag=tag))
-            locked_row_id = locked_rows[0]
-        else:
-            locked_row_id = self._lpn_table.lock_free_row()
-
+    def _add_to_free(self, lpn, ppn):
+        locked_row_id = self._lpn_table.lock_free_row()
         self._lpn_table.add_lpn(rowid = locked_row_id,
                 lpn = lpn, ppn = ppn, dirty = True)
 
@@ -642,7 +642,10 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
         if self._lpn_table.has_lpn(lpn):
             self._lpn_table.overwrite_lpn(lpn, ppn, dirty=True)
         else:
-            yield self.env.process(self._insert_new_mapping(lpn, ppn, tag))
+            if self._lpn_table.n_free_rows() > 0:
+                self._add_to_free(lpn, ppn)
+            else:
+                yield self.env.process(self._insert_new_mapping(lpn, ppn, tag))
 
     def lpns_to_ppns(self, lpns, tag=None):
         """
@@ -806,7 +809,7 @@ class LpnTable(object):
             self.add_lpn(row_id, lpn, ppn, dirty, as_least_recent)
 
     def add_lpn(self, rowid, lpn, ppn, dirty, as_least_recent = False):
-        assert self.has_lpn(lpn) == False
+        assert self.has_lpn(lpn) == False, "lpn is {}.".format(lpn)
 
         row = self._rows[rowid]
 
