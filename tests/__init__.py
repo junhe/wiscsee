@@ -12,3 +12,4 @@ import simulator_test
 import test_dftldes
 import test_bitmap
 from . import accpatterns
+from . import workrunner
