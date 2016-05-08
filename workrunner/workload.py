@@ -4,12 +4,16 @@ import pprint
 import random
 import time
 
+from commons import *
 import config
 import fio
 import multiwriters
 import perf
 from utilities import utils
 import workloadlist
+
+from accpatterns import patterns
+from .filepatternsuite import File
 
 class Workload(object):
     def __init__(self, confobj, workload_conf_key = None):
@@ -97,6 +101,24 @@ class FIONEW(Workload):
 
     def stop(self):
         pass
+
+class PatternSuite(Workload):
+    def __init__(self, confobj, workload_conf_key = None):
+        super(PatternSuite, self).__init__(confobj, workload_conf_key)
+
+    def run(self):
+        datapath = os.path.join(self.conf["fs_mount_point"], 'datafile')
+        req_iter = patterns.Random(op=patterns.WRITE, zone_offset=0, zone_size=8*MB,
+                chunk_size=8*MB, traffic_size=8*MB)
+
+        f = File(datapath)
+        f.open()
+        f.access(req_iter)
+        f.close()
+
+    def stop(self):
+        pass
+
 
 
 class WlMultiWriters(Workload):

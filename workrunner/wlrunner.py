@@ -125,9 +125,10 @@ class WorkloadRunner(object):
                 self.conf['linux_ncq_depth'])
 
     def __set_linux_io_scheduler(self):
-        device_name = self.conf.get_device_name_no_num()
-        utils.set_linux_io_scheduler(device_name,
-            self.conf['linux_io_scheduler'])
+        if self.conf.device_type == 'real':
+            device_name = self.conf.get_device_name_no_num()
+            utils.set_linux_io_scheduler(device_name,
+                self.conf['linux_io_scheduler'])
 
     def __set_linux_environment(self):
         self.__set_linux_ncq_depth()
