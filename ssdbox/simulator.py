@@ -132,7 +132,7 @@ class SimulatorNonDES(Simulator):
             self.write(event)
         elif event.operation == OP_DISCARD:
             self.discard(event)
-        elif event.operation == 'enable_recorder':
+        elif event.operation == OP_ENABLE_RECORDER:
             self.ftl.enable_recording()
         elif event.operation == 'disable_recorder':
             self.ftl.disable_recording()

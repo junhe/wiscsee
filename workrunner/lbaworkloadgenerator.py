@@ -231,7 +231,7 @@ class Manual(LBAWorkloadGenerator):
 
     def __iter__(self):
         yield hostevent.Event(sector_size = self.sector_size,
-                pid = 0, operation = 'enable_recorder',
+                pid = 0, operation = OP_ENABLE_RECORDER,
                 offset = 0, size = 0)
 
         # events = self.test1410()
@@ -291,7 +291,7 @@ class TestWorkload(LBAWorkloadGenerator):
 
     def __iter__(self):
         yield hostevent.Event(sector_size = self.sector_size,
-                pid = 0, operation = 'enable_recorder',
+                pid = 0, operation = OP_ENABLE_RECORDER,
                 offset = 0, size = 0)
 
         events = self.test_random()
@@ -358,7 +358,7 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
 
     def __iter__(self):
         yield hostevent.Event(sector_size = self.sector_size,
-                pid = 0, operation = 'enable_recorder',
+                pid = 0, operation = OP_ENABLE_RECORDER,
                 offset = 0, size = 0)
 
         events = self.test_random()
@@ -434,7 +434,7 @@ class TestWorkloadFLEX3(LBAWorkloadGenerator):
 
     def __iter__(self):
         yield hostevent.Event(sector_size = self.sector_size,
-                pid = 0, operation = 'enable_recorder',
+                pid = 0, operation = OP_ENABLE_RECORDER,
                 offset = 0, size = 0)
 
         events = self.generate_events()
@@ -504,7 +504,7 @@ class TestWorkloadFLEX4(LBAWorkloadGenerator):
 
     def __iter__(self):
         yield hostevent.Event(sector_size = self.sector_size,
-                pid = 0, operation = 'enable_recorder',
+                pid = 0, operation = OP_ENABLE_RECORDER,
                 offset = 0, size = 0)
 
         events = self.generate_events()
@@ -565,7 +565,7 @@ class ExtentTestWorkloadMANUAL(LBAWorkloadGenerator):
 
     def __iter__(self):
         yield hostevent.Event(sector_size = self.sector_size,
-                pid = 0, operation = 'enable_recorder',
+                pid = 0, operation = OP_ENABLE_RECORDER,
                 offset = 0, size = 0)
 
         events = self.test_random()
@@ -631,7 +631,7 @@ class ExtentTestWorkload4DFTLDES(LBAWorkloadGenerator):
 
     def __iter__(self):
         yield hostevent.Event(sector_size = self.sector_size,
-                pid = 0, operation = 'enable_recorder',
+                pid = 0, operation = OP_ENABLE_RECORDER,
                 offset = 0, size = 0)
 
         events = self.test_random()
@@ -692,7 +692,7 @@ class ExtentTestWorkloadFLEX(LBAWorkloadGenerator):
 
     def __iter__(self):
         yield hostevent.Event(sector_size = self.sector_size,
-                pid = 0, operation = 'enable_recorder',
+                pid = 0, operation = OP_ENABLE_RECORDER,
                 offset = 0, size = 0)
 
         events = self.test_random()
@@ -747,7 +747,7 @@ class ExtentTestWorkloadFLEX2(LBAWorkloadGenerator):
 
     def __iter__(self):
         yield hostevent.Event(sector_size = self.sector_size,
-                pid = 0, operation = 'enable_recorder',
+                pid = 0, operation = OP_ENABLE_RECORDER,
                 offset = 0, size = 0)
 
         events = self.check()
@@ -876,7 +876,7 @@ class MultipleProcess(LBAMultiProcGenerator):
 
     def get_iter(self, raw_list):
         yield hostevent.Event(sector_size = self.sector_size,
-                pid = 0, operation = 'enable_recorder',
+                pid = 0, operation = OP_ENABLE_RECORDER,
                 offset = 0, size = 0)
 
         for op, lpn, npages in raw_list:
@@ -901,7 +901,7 @@ class PatternAdapter(LBAWorkloadGenerator):
 
     def __iter__(self):
         yield hostevent.Event(sector_size=self.sector_size,
-                pid=0, operation='enable_recorder',
+                pid=0, operation=OP_ENABLE_RECORDER,
                 offset=0, size=0)
 
         for req in self.pattern_iter:

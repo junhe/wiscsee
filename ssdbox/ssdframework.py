@@ -72,7 +72,7 @@ class Ssd(SsdBase):
             # handle host_event case by case
             operation = host_event.get_operation()
 
-            if operation == 'enable_recorder':
+            if operation == OP_ENABLE_RECORDER:
                 self.recorder.enable()
             elif operation == 'shut_ssd':
                 print 'got shut_ssd'
@@ -252,7 +252,7 @@ class SSDFramework(object):
                 self.release_token(host_event)
                 break
 
-            if host_event.operation == 'enable_recorder':
+            if host_event.operation == OP_ENABLE_RECORDER:
                 self.realftl.recorder.enable()
                 self.recorder.set_result_by_one_key('workload_start_time',
                         self.env.now)
