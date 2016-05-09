@@ -218,7 +218,7 @@ class WorkloadRunner(object):
             pid = 0, operation = OP_ENABLE_RECORDER,
             offset = 0, size = 0)
         yield hostevent.Event(sector_size = self.conf['sector_size'],
-            pid = 0, operation = 'workloadstart',
+            pid = 0, operation = OP_WORKLOADSTART,
             offset = 0, size = 0)
 
         workload_line_iter = hostevent.FileLineIterator(

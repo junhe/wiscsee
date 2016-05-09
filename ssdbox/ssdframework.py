@@ -76,7 +76,9 @@ class Ssd(SsdBase):
                 self.recorder.enable()
             elif operation == OP_DISABLE_RECORDER:
                 self.recorder.disable()
-            elif operation == 'shut_ssd':
+            elif operation == OP_WORKLOADSTART:
+                pass
+            elif operation == OP_SHUT_SSD:
                 print 'got shut_ssd'
                 sys.stdout.flush()
                 yield self.env.process(self._end_all_processes())
@@ -85,7 +87,7 @@ class Ssd(SsdBase):
             elif operation == OP_REC_TIMESTAMP:
                 self.recorder.set_result_by_one_key(host_event.arg1,
                         self.env.now)
-            elif operation == 'end_ssd_process':
+            elif operation == OP_END_SSD_PROCESS:
                 self.ncq.slots.release(slot_req)
                 break
             elif operation == OP_CLEAN:
@@ -119,7 +121,7 @@ class Ssd(SsdBase):
     def _end_all_processes(self):
         for i in range(self.n_processes):
             yield self.ncq.queue.put(
-                hostevent.ControlEvent("end_ssd_process"))
+                hostevent.ControlEvent(OP_END_SSD_PROCESS))
 
     def _cleaner_process(self):
         held_slot_reqs = yield self.env.process(self.ncq.hold_all_slots())
@@ -250,7 +252,7 @@ class SSDFramework(object):
         for req_index in itertools.count():
             host_event = yield self.ncq.queue.get()
 
-            if host_event.operation == 'shut_ssd':
+            if host_event.operation == OP_SHUT_SSD:
                 self.release_token(host_event)
                 break
 

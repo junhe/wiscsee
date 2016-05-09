@@ -75,7 +75,7 @@ class Host(object):
 
     def run(self):
         yield self.env.process(self._process())
-        yield self._ncq.queue.put(hostevent.ControlEvent("shut_ssd"))
+        yield self._ncq.queue.put(hostevent.ControlEvent(OP_SHUT_SSD))
 
 
 class SimulatorNonDES(Simulator):
@@ -136,7 +136,7 @@ class SimulatorNonDES(Simulator):
             self.ftl.enable_recording()
         elif event.operation == OP_DISABLE_RECORDER:
             self.ftl.disable_recording()
-        elif event.operation == 'workloadstart':
+        elif event.operation == OP_WORKLOADSTART:
             self.ftl.pre_workload()
         elif event.operation == 'finish':
             # ignore this
@@ -307,7 +307,7 @@ class SimulatorDES(Simulator):
             yield self.ssdframework.ncq.queue.put(event)
 
         for i in range(self.conf['SSDFramework']['ncq_depth']):
-            event = hostevent.ControlEvent("shut_ssd")
+            event = hostevent.ControlEvent(OP_SHUT_SSD)
 
             event.token = token
             event.token_req = event.token.request()
@@ -388,7 +388,7 @@ class SimulatorDESSync(Simulator):
             yield self.ssdframework.ncq.queue.put(event)
 
         for i in range(self.conf['SSDFramework']['ncq_depth']):
-            event = hostevent.ControlEvent("shut_ssd")
+            event = hostevent.ControlEvent(OP_SHUT_SSD)
 
             event.token = token
             event.token_req = event.token.request()
@@ -448,7 +448,7 @@ class SimulatorDESTime(Simulator):
             yield self.ssdframework.ncq.queue.put(event)
 
         for i in range(self.conf['SSDFramework']['ncq_depth']):
-            event = hostevent.ControlEvent("shut_ssd")
+            event = hostevent.ControlEvent(OP_SHUT_SSD)
 
             event.token = token
             event.token_req = event.token.request()
