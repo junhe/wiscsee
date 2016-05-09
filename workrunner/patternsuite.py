@@ -19,7 +19,6 @@ class SuiteBase(object):
 class SRandomRead(SuiteBase):
     "Sequential write and then reandomly read it"
     def _prepare_iter(self):
-        flashbytes = self.conf.total_flash_bytes()
         chunk_size = self.chunk_size
 
         # write half
@@ -53,7 +52,6 @@ class SRandomRead(SuiteBase):
 
 class SRandomWrite(SuiteBase):
     def _prepare_iter(self):
-        flashbytes = self.conf.total_flash_bytes()
         chunk_size = self.chunk_size
 
         # write half
@@ -75,7 +73,6 @@ class SRandomWrite(SuiteBase):
 
 class SSequentialRead(SuiteBase):
     def _prepare_iter(self):
-        flashbytes = self.conf.total_flash_bytes()
         chunk_size = self.chunk_size
 
         self.write_iter = patterns.Sequential(op=OP_WRITE, zone_offset=0,
@@ -108,7 +105,6 @@ class SSequentialRead(SuiteBase):
 
 class SSequentialWrite(SuiteBase):
     def _prepare_iter(self):
-        flashbytes = self.conf.total_flash_bytes()
         chunk_size = self.chunk_size
 
         # write half
@@ -132,7 +128,6 @@ class SSequentialWrite(SuiteBase):
 
 class SSnake(SuiteBase):
     def _prepare_iter(self):
-        flashbytes = self.conf.total_flash_bytes()
         chunk_size = self.chunk_size
 
         self.write_iter = patterns.Snake(zone_offset=0,
@@ -148,7 +143,6 @@ class SSnake(SuiteBase):
 
 class SFadingSnake(SuiteBase):
     def _prepare_iter(self):
-        flashbytes = self.conf.total_flash_bytes()
         chunk_size = self.chunk_size
 
         # write half
@@ -171,7 +165,6 @@ class SFadingSnake(SuiteBase):
 
 class SStrided(SuiteBase):
     def _prepare_iter(self):
-        flashbytes = self.conf.total_flash_bytes()
         chunk_size = self.chunk_size
 
         # write half
@@ -194,7 +187,6 @@ class SStrided(SuiteBase):
 
 class SHotNCold(SuiteBase):
     def _prepare_iter(self):
-        flashbytes = self.conf.total_flash_bytes()
         chunk_size = self.chunk_size
 
         # write half
