@@ -14,6 +14,7 @@ import workloadlist
 
 from accpatterns import patterns
 from .filepatternsuite import File
+import patternsuite
 
 class Workload(object):
     def __init__(self, confobj, workload_conf_key = None):

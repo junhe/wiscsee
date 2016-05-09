@@ -15,6 +15,9 @@ class Request(object):
         self.offset = offset
         self.size = size
 
+    def get_operation(self):
+        return self.op
+
     def __str__(self):
         return "{} {} {}".format(self.op, self.offset, self.size)
 

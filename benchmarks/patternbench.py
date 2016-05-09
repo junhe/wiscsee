@@ -22,7 +22,8 @@ def pattern_on_fs():
         def setup_workload(self):
             self.conf['workload_class'] = 'PatternSuite'
             self.conf['workload_conf_key'] = 'PatternSuite'
-            self.conf['PatternSuite'] = {'patternname': 'SRandomWrite'}
+            self.conf['PatternSuite'] = {'patternname': 'SRandomWrite',
+                'parameters': {'chunk_size':4096} }
 
         def setup_flash(self):
             self.conf['SSDFramework']['ncq_depth'] = 4

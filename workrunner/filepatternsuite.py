@@ -17,14 +17,17 @@ class File(object):
         self.fd = None
 
     def access(self, req_iter):
+        "req is accpatterns.patterns.Request"
         for req in req_iter:
-            if req.op == WRITE:
+            op = req.get_operation()
+            if op == WRITE:
                 os.lseek(self.fd, req.offset, os.SEEK_SET)
                 os.write(self.fd, 'x' * req.size)
-            elif req.op == READ:
+            elif op == READ:
                 os.lseek(self.fd, req.offset, os.SEEK_SET)
                 os.read(self.fd, req.size)
-            elif req.op == DISCARD:
+            elif op == DISCARD:
                 fallocate(self.fd, 3, req.offset, req.size)
-
+            else:
+                print 'WARNING', op, 'is not supported'
 
