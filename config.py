@@ -583,9 +583,9 @@ class ConfigNewFlash(Config):
     def off_size_to_page_range(self, off, size, force_alignment = True):
         "The input is in bytes"
         if force_alignment:
-            assert size % self['flash_config']['page_size'] == 0, \
-                'size:{}, page_size:{}'.format(size,
-                self['flash_config']['page_size'])
+            if size % self['flash_config']['page_size'] != 0:
+                raise RuntimeError('Not aligned size:{}, page_size:{}'.format(
+                    size, self['flash_config']['page_size']))
             npages = size / self['flash_config']['page_size']
             start_page = self.byte_to_pagenum(off)
 

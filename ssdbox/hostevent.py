@@ -57,7 +57,7 @@ class Event(HostEventBase):
 
     def get_lpn_extent(self, conf):
         lpn_start, lpn_count = conf.off_size_to_page_range(
-                self.offset, self.size)
+                self.offset, self.size, force_alignment=False)
         return Extent(lpn_start = lpn_start, lpn_count = lpn_count)
 
     def __str__(self):
