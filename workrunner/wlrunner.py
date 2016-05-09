@@ -204,24 +204,24 @@ class WorkloadRunner(object):
             pid = 0, operation = 'disable_recorder',
             offset = 0, size = 0)
 
-        mkfs_iter = hostevent.FileLineIterator(
+        mkfs_line_iter = hostevent.FileLineIterator(
             self.conf.get_ftlsim_events_output_path_mkfs())
-        event_mkfs_iter = hostevent.EventIterator(self.conf, mkfs_iter)
+        event_mkfs_iter = hostevent.EventIterator(self.conf, mkfs_line_iter)
 
         for event in event_mkfs_iter:
             yield event
 
         # special event indicates the start of workload
         yield hostevent.Event(sector_size = self.conf['sector_size'],
-            pid = 0, operation = 'enable_recorder',
+            pid = 0, operation = OP_ENABLE_RECORDER,
             offset = 0, size = 0)
         yield hostevent.Event(sector_size = self.conf['sector_size'],
             pid = 0, operation = 'workloadstart',
             offset = 0, size = 0)
 
-        workload_iter = hostevent.FileLineIterator(
+        workload_line_iter = hostevent.FileLineIterator(
             self.conf.get_ftlsim_events_output_path())
-        event_workload_iter = hostevent.EventIterator(self.conf, workload_iter)
+        event_workload_iter = hostevent.EventIterator(self.conf, workload_line_iter)
 
         for event in event_workload_iter:
             yield event

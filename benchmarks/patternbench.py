@@ -29,8 +29,16 @@ def pattern_on_fs():
             pass
 
         def setup_ftl(self):
-            self.conf['enable_blktrace'] = False
-            self.conf['enable_simulation'] = False
+            self.conf['enable_blktrace'] = True
+            self.conf['enable_simulation'] = True
+
+            self.conf['simulator_class'] = 'SimulatorDESNew'
+            self.conf['ftl_type'] = 'dftldes'
+
+            logicsize_mb = self.conf['dev_size_mb']
+            entries_need = int(logicsize_mb * 2**20 * 0.1 / self.conf['flash_config']['page_size'])
+            self.conf.mapping_cache_bytes = int(entries_need * self.conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
+            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
         def run(self):
             set_exp_metadata(self.conf, save_data = True,

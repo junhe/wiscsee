@@ -1,4 +1,5 @@
 from ftlsim_commons import Extent
+from commons import *
 
 class HostEventBase(object):
     def get_operation(self):
@@ -81,11 +82,20 @@ class FileLineIterator(object):
 
 
 class EventIterator(object):
+    """
+    Convert string line to event, and iter
+    """
     def __init__(self, conf, filelineiter):
         self.conf = conf
         self.sector_size = self.conf['sector_size']
         self.filelineiter = filelineiter
         self.event_file_columns = self.conf['event_file_columns']
+
+        self._translation = {'read': OP_READ, 'write': OP_WRITE,
+                'discard':OP_DISCARD}
+
+    def _convert(self, op_in_file):
+        return self._translation[op_in_file]
 
     def str_to_event(self, line):
         items = line.split()
@@ -96,10 +106,9 @@ class EventIterator(object):
         dic['sector_size'] = self.sector_size
         dic['pre_wait_time'] = float(dic['pre_wait_time'])
 
+        dic['operation'] = self._convert(dic['operation'])
+
         return Event(**dic)
-        # return Event(sector_size = self.sector_size,
-                # pid = items[0], operation = items[1], offset = items[2],
-                # size = items[3])
 
     def __iter__(self):
         for line in self.filelineiter:
