@@ -272,14 +272,23 @@ def patterns_bench():
             self.conf['enable_simulation'] = True
 
         def setup_workload(self):
+            flashbytes = self.para.flashbytes
+            zone_size = flashbytes / 8
+
             self.conf["workload_src"] = LBAGENERATOR
             self.conf["lba_workload_class"] = "PatternAdapter"
             self.conf["lba_workload_configs"]["PatternAdapter"] = {}
             self.conf["lba_workload_configs"]["PatternAdapter"]["class"] = self.para.patternclass
             self.conf["lba_workload_configs"]["PatternAdapter"]["conf"] = {
-                    "chunk_size": self.para.chunk_size}
+                    "zone_size": zone_size,
+                    "chunk_size": self.para.chunk_size,
+                    "traffic_size": zone_size * 3,
+                    "snake_size": zone_size / 2,
+                    "stride_size": self.para.chunk_size * 2
+                    }
             self.conf["age_workload_class"] = "NoOp"
 
+            print self.conf["lba_workload_configs"]["PatternAdapter"]["conf"]
         def setup_ftl(self):
             self.conf['ftl_type'] = 'dftldes'
             self.conf['simulator_class'] = 'SimulatorDESNew'

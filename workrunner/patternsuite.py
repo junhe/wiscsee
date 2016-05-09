@@ -4,16 +4,16 @@ from ssdbox import hostevent
 
 
 class SuiteBase(object):
-    def __init__(self, conf, **kwargs):
-        self.conf = conf
-        self.chunk_size = kwargs['chunk_size']
+    def __init__(self, zone_size, chunk_size, traffic_size, **kwargs):
+        self.zone_size = zone_size
+        self.chunk_size = chunk_size
+        self.traffic_size = traffic_size
 
-        flashbytes = self.conf.total_flash_bytes()
+        kwargs.setdefault("snake_size", None)
+        kwargs.setdefault("stride_size", None)
 
-        self.zone_size = flashbytes / 8
-        self.traffic_size = self.zone_size * 3
-        self.snake_size = self.zone_size / 2
-        self.stride_size = self.chunk_size * 2
+        self.snake_size = kwargs['snake_size']
+        self.stride_size = kwargs['stride_size']
 
 
 class SRandomRead(SuiteBase):

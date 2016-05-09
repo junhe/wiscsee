@@ -112,7 +112,7 @@ class PatternSuite(Workload):
     def _get_iter(self):
         patternname = self.workload_conf['patternname']
         patterncls = eval('patternsuite.'+patternname)
-        req_iter = patterncls(self.conf, **self.workload_conf['parameters'])
+        req_iter = patterncls(**self.workload_conf['parameters'])
         return req_iter
 
     def run(self):
