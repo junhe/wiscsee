@@ -23,10 +23,22 @@ def pattern_on_fs():
 
         def setup_workload(self):
             self.conf['workload_conf_key'] = 'PatternSuite'
-            self.conf['PatternSuite'] = {}
+            self.conf['PatternSuite'] = {'patternname': 'SRandomWrite'}
 
         def setup_flash(self):
-            pass
+            self.conf['SSDFramework']['ncq_depth'] = 4
+
+            self.conf['flash_config']['page_size'] = 2048
+            self.conf['flash_config']['n_pages_per_block'] = 64
+            self.conf['flash_config']['n_blocks_per_plane'] = 2
+            self.conf['flash_config']['n_planes_per_chip'] = 1
+            self.conf['flash_config']['n_chips_per_package'] = 1
+            self.conf['flash_config']['n_packages_per_channel'] = 1
+            self.conf['flash_config']['n_channels_per_dev'] = 4
+
+            self.conf['do_not_check_gc_setting'] = True
+            self.conf.GC_high_threshold_ratio = 0.96
+            self.conf.GC_low_threshold_ratio = 0
 
         def setup_ftl(self):
             self.conf['enable_blktrace'] = True
@@ -36,7 +48,7 @@ def pattern_on_fs():
             self.conf['ftl_type'] = 'dftldes'
 
             logicsize_mb = self.conf['dev_size_mb']
-            entries_need = int(logicsize_mb * 2**20 * 0.1 / self.conf['flash_config']['page_size'])
+            entries_need = int(logicsize_mb * 2**20 * 1.00 / self.conf['flash_config']['page_size'])
             self.conf.mapping_cache_bytes = int(entries_need * self.conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
             self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 

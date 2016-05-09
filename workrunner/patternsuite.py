@@ -16,6 +16,7 @@ class SuiteBase(object):
         self.snake_size = self.zone_size / 2
         self.stride_size = self.chunk_size * 2
 
+
 class SRandomRead(SuiteBase):
     "Sequential write and then reandomly read it"
     def _prepare_iter(self):
@@ -49,6 +50,7 @@ class SRandomRead(SuiteBase):
                 arg1='gc_start_timestamp')
 
         yield hostevent.ControlEvent(operation=OP_CLEAN)
+
 
 class SRandomWrite(SuiteBase):
     def _prepare_iter(self):

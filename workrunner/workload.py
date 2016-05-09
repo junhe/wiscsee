@@ -102,6 +102,7 @@ class FIONEW(Workload):
     def stop(self):
         pass
 
+
 class PatternSuite(Workload):
     def __init__(self, confobj, workload_conf_key = None):
         super(PatternSuite, self).__init__(confobj, workload_conf_key)
@@ -109,7 +110,7 @@ class PatternSuite(Workload):
     def run(self):
         datapath = os.path.join(self.conf["fs_mount_point"], 'datafile')
         req_iter = patterns.Random(op=patterns.WRITE, zone_offset=0, zone_size=8*MB,
-                chunk_size=8*MB, traffic_size=8*MB)
+                chunk_size=1*MB, traffic_size=1*MB)
 
         f = File(datapath)
         f.open()
@@ -118,7 +119,6 @@ class PatternSuite(Workload):
 
     def stop(self):
         pass
-
 
 
 class WlMultiWriters(Workload):
