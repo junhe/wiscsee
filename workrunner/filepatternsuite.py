@@ -1,5 +1,5 @@
 import os
-from os import O_RDWR, O_CREAT
+from os import O_RDWR, O_CREAT, O_DIRECT
 from accpatterns.patterns import READ, WRITE, DISCARD
 from pyfallocate import fallocate
 
@@ -10,7 +10,7 @@ class File(object):
         self.fd = None
 
     def open(self):
-        self.fd = os.open(self.filepath, O_RDWR|O_CREAT, 0666)
+        self.fd = os.open(self.filepath, O_RDWR | O_CREAT, 0666)
 
     def close(self):
         os.close(self.fd)
@@ -23,6 +23,7 @@ class File(object):
             if op == WRITE:
                 os.lseek(self.fd, req.offset, os.SEEK_SET)
                 os.write(self.fd, 'x' * req.size)
+                os.fsync(self.fd)
             elif op == READ:
                 os.lseek(self.fd, req.offset, os.SEEK_SET)
                 os.read(self.fd, req.size)
