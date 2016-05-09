@@ -51,6 +51,37 @@ class Simulator(object):
             raise RuntimeError("enable_e2e_test is deprecated")
 
 
+class SimulatorDESNew(Simulator):
+    def __init__(self, conf, event_iter):
+        super(SimulatorDESNew, self).__init__(conf, event_iter)
+
+        self.env = simpy.Environment()
+        self.host = Host(self.conf, self.env, event_iter)
+        self.ssd = ssdframework.Ssd(self.conf, self.env,
+                self.host.get_ncq(), self.recorder)
+
+    def run(self):
+        self.env.process(self.host.run())
+        self.env.process(self.ssd.run())
+
+        self.env.run()
+
+    def get_sim_type(self):
+        return "SimulatorDESNew"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def random_data(addr):
     randnum = random.randint(0, 10000)
     content = "{}.{}".format(addr, randnum)
@@ -313,24 +344,6 @@ class SimulatorDES(Simulator):
     def discard(self):
         raise NotImplementedError()
 
-
-class SimulatorDESNew(Simulator):
-    def __init__(self, conf, event_iter):
-        super(SimulatorDESNew, self).__init__(conf, event_iter)
-
-        self.env = simpy.Environment()
-        self.host = Host(self.conf, self.env, event_iter)
-        self.ssd = ssdframework.Ssd(self.conf, self.env,
-                self.host.get_ncq(), self.recorder)
-
-    def run(self):
-        self.env.process(self.host.run())
-        self.env.process(self.ssd.run())
-
-        self.env.run()
-
-    def get_sim_type(self):
-        return "SimulatorDESNew"
 
 
 class SimulatorDESSync(Simulator):
