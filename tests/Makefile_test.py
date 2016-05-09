@@ -389,7 +389,7 @@ class TestEventIter(unittest.TestCase):
             ["1123 write 0 4096 0 0", "13 write 40960 4096 1 1"]))
         e = events[0]
         self.assertEqual(e.pid, 1123)
-        self.assertEqual(e.operation, 'write')
+        self.assertEqual(e.operation, OP_WRITE)
         self.assertEqual(e.offset, 0)
         self.assertEqual(e.size, 4096)
 

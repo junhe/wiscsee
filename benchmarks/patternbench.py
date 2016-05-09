@@ -14,14 +14,13 @@ def pattern_on_fs():
             self.conf['filesystem'] = self.para.filesystem
             self.conf["n_online_cpus"] = 'all'
 
-            self.conf['workload_class'] = 'PatternSuite'
-
             self.conf['linux_ncq_depth'] = self.para.linux_ncq_depth
 
             set_vm_default()
             set_vm("dirty_bytes", self.para.dirty_bytes)
 
         def setup_workload(self):
+            self.conf['workload_class'] = 'PatternSuite'
             self.conf['workload_conf_key'] = 'PatternSuite'
             self.conf['PatternSuite'] = {'patternname': 'SRandomWrite'}
 

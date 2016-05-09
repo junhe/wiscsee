@@ -11,5 +11,5 @@ import recorder_test
 import simulator_test
 import test_dftldes
 import test_bitmap
-from . import accpatterns
-from . import workrunner
+from . import _accpatterns
+from . import _workrunner
