@@ -897,7 +897,7 @@ class PatternAdapter(LBAWorkloadGenerator):
             self.conf['lba_workload_configs']['PatternAdapter']['class']
         pattern_class = eval(pattern_class_name)
         self.pattern_iter = pattern_class(conf,
-            self.conf['lba_workload_configs']['PatternAdapter']['conf'])
+            **self.conf['lba_workload_configs']['PatternAdapter']['conf'])
 
     def __iter__(self):
         yield hostevent.Event(sector_size=self.sector_size,

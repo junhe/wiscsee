@@ -4,13 +4,12 @@ from ssdbox import hostevent
 
 
 class SuiteBase(object):
-    def __init__(self, conf, local_conf=None):
+    def __init__(self, conf, **kwargs):
         self.conf = conf
-        self.local_conf = local_conf
+        self.chunk_size = kwargs['chunk_size']
 
         flashbytes = self.conf.total_flash_bytes()
 
-        self.chunk_size = self.local_conf['chunk_size']
         self.zone_size = flashbytes / 8
         self.traffic_size = self.zone_size * 3
         self.snake_size = self.zone_size / 2
