@@ -1,8 +1,8 @@
-
 import unittest
 from workflow import *
 import ssdbox
 from utilities import utils
+from ssdbox.hostevent import Event, ControlEvent
 
 import os
 
@@ -22,7 +22,7 @@ def create_config():
             subexpname = 'test_subexpname')
 
     conf['ftl_type'] = 'dftldes'
-    conf['simulator_class'] = 'SimulatorDESSync'
+    conf['simulator_class'] = 'SimulatorDESNew'
 
     logicsize_mb = 64
     conf.n_cache_entries = conf.n_mapping_entries_per_page
@@ -46,14 +46,58 @@ class TestWorkflow(unittest.TestCase):
             os.remove(jsonpath)
 
         wf = Workflow(conf)
-        wf.save_conf()
+        wf._save_conf()
 
         self.assertTrue(os.path.exists(jsonpath))
 
 
+    def test_onfs_workload(self):
+        conf = create_config()
+
+        # environment
+        conf['device_path'] = "/dev/loop0"
+        conf['dev_size_mb'] = 64
+        conf['filesystem'] = "ext4"
+        conf["n_online_cpus"] = 'all'
+
+        conf['linux_ncq_depth'] = 31
+
+        # workload
+        conf['workload_class'] = 'PatternSuite'
+        conf['workload_conf_key'] = 'PatternSuite'
+        conf['PatternSuite'] = {'patternname': 'SRandomWrite',
+            'parameters': {
+                'zone_size': 1*MB,
+                'chunk_size': 512*KB,
+                'traffic_size': 1*MB,
+                }
+            }
+
+        datapath = os.path.join(conf["fs_mount_point"], 'datafile')
+        if os.path.exists(datapath):
+            os.remove(datapath)
+
+        wf = Workflow(conf)
+        wf.run_workload()
+
+        self.assertTrue(os.path.exists(datapath))
 
 
+    def test_simulation(self):
+        conf = create_config()
 
+        # set ftl
+        conf['do_not_check_gc_setting'] = True
+        conf.GC_high_threshold_ratio = 0.96
+        conf.GC_low_threshold_ratio = 0
+
+        conf['enable_simulation'] = True
+
+        ctrl_event = ControlEvent(OP_ENABLE_RECORDER)
+        event = Event(512, 0, OP_WRITE, 0, 4096)
+
+        wf = Workflow(conf)
+        wf.run_simulator([ctrl_event, event])
 
 
 

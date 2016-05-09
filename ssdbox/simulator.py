@@ -72,8 +72,9 @@ class SimulatorDESNew(Simulator):
 
 
 
-
-
+def create_simulator(simulator_class, conf, event_iter):
+    cls = eval(simulator_class)
+    return cls(conf, event_iter)
 
 
 
