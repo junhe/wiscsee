@@ -11,6 +11,8 @@ from ssdbox import hostevent
 from utilities import utils
 import workload
 
+from commons import *
+
 
 class WorkloadRunner(object):
     def __init__(self, confobj):
@@ -201,7 +203,7 @@ class WorkloadRunner(object):
 
     def get_event_iterator(self):
         yield hostevent.Event(sector_size = self.conf['sector_size'],
-            pid = 0, operation = 'disable_recorder',
+            pid = 0, operation = OP_DISABLE_RECORDER,
             offset = 0, size = 0)
 
         mkfs_line_iter = hostevent.FileLineIterator(

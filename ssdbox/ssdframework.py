@@ -74,6 +74,8 @@ class Ssd(SsdBase):
 
             if operation == OP_ENABLE_RECORDER:
                 self.recorder.enable()
+            elif operation == OP_DISABLE_RECORDER:
+                self.recorder.disable()
             elif operation == 'shut_ssd':
                 print 'got shut_ssd'
                 sys.stdout.flush()
