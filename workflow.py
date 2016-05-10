@@ -14,7 +14,7 @@ class Workflow(object):
 
     def run(self):
         self._save_conf()
-        event_iter = self._run_workload(conf)
+        event_iter = self._run_workload()
         self._run_simulator(event_iter)
 
     def run_simulator(self, event_iter):

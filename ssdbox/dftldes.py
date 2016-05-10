@@ -701,9 +701,8 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
                 if not m_vpn in avoid_m_vpns:
                     return row
         raise RuntimeError("Cannot find a victim. Current stats: {}"\
-                "loading_m_vpn: {}, avoid_m_vpns: {}.\n"
-                .format(str(self._lpn_table.stats()), loading_m_vpn,
-                    avoid_m_vpns))
+                ", avoid_m_vpns: {}.\n"
+                .format(str(self._lpn_table.stats()), avoid_m_vpns))
 
 
 FREE, FREE_AND_LOCKED, USED, USED_AND_LOCKED, USED_AND_HOLD = \
