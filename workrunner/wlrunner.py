@@ -175,6 +175,7 @@ class WorkloadRunner(object):
             self.build_fs()
 
             # Age the file system
+            print 'Running agingnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn'
             self.aging_workload.run()
 
             time.sleep(1)
@@ -187,7 +188,7 @@ class WorkloadRunner(object):
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
 
-            print 'Running workload ....'
+            print 'Running workload ..................'
             self.workload.run()
 
         except Exception:
@@ -202,9 +203,7 @@ class WorkloadRunner(object):
             self.blktracer.stop_tracing_and_collecting()
 
     def get_event_iterator(self):
-        yield hostevent.Event(sector_size = self.conf['sector_size'],
-            pid = 0, operation = OP_DISABLE_RECORDER,
-            offset = 0, size = 0)
+        yield hostevent.ControlEvent(operation=OP_DISABLE_RECORDER)
 
         mkfs_line_iter = hostevent.FileLineIterator(
             self.conf.get_ftlsim_events_output_path_mkfs())
@@ -214,12 +213,10 @@ class WorkloadRunner(object):
             yield event
 
         # special event indicates the start of workload
-        yield hostevent.Event(sector_size = self.conf['sector_size'],
-            pid = 0, operation = OP_ENABLE_RECORDER,
-            offset = 0, size = 0)
-        yield hostevent.Event(sector_size = self.conf['sector_size'],
-            pid = 0, operation = OP_WORKLOADSTART,
-            offset = 0, size = 0)
+        yield hostevent.ControlEvent(operation=OP_ENABLE_RECORDER)
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='interest_workload_start')
 
         workload_line_iter = hostevent.FileLineIterator(
             self.conf.get_ftlsim_events_output_path())
@@ -227,5 +224,11 @@ class WorkloadRunner(object):
 
         for event in event_workload_iter:
             yield event
+
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start_timestamp')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
 
 

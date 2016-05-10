@@ -50,6 +50,32 @@ class SRandomRead(SuiteBase):
         yield hostevent.ControlEvent(operation=OP_CLEAN)
 
 
+class SRandomReadNoPrep(SuiteBase):
+    "Sequential write and then reandomly read it"
+    def _prepare_iter(self):
+        chunk_size = self.chunk_size
+
+        self.read_iter = patterns.Random(op=OP_READ, zone_offset=0,
+                zone_size=self.zone_size, chunk_size=self.chunk_size,
+                traffic_size=self.traffic_size)
+
+    def __iter__(self):
+        self._prepare_iter()
+
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='interest_workload_start')
+
+        for req in self.read_iter:
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start_timestamp')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
+
+
 class SRandomWrite(SuiteBase):
     def _prepare_iter(self):
         chunk_size = self.chunk_size
@@ -71,6 +97,7 @@ class SRandomWrite(SuiteBase):
 
         yield hostevent.ControlEvent(operation=OP_CLEAN)
 
+
 class SSequentialRead(SuiteBase):
     def _prepare_iter(self):
         chunk_size = self.chunk_size
@@ -88,6 +115,31 @@ class SSequentialRead(SuiteBase):
 
         for req in self.write_iter:
             yield req
+
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='interest_workload_start')
+
+        for req in self.read_iter:
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start_timestamp')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
+
+
+class SSequentialReadNoPrep(SuiteBase):
+    def _prepare_iter(self):
+        chunk_size = self.chunk_size
+
+        self.read_iter = patterns.Sequential(op=OP_READ, zone_offset=0,
+                zone_size=self.zone_size, chunk_size=self.chunk_size,
+                traffic_size=self.traffic_size)
+
+    def __iter__(self):
+        self._prepare_iter()
 
         yield hostevent.ControlEvent(operation=OP_BARRIER)
         yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
@@ -205,5 +257,7 @@ class SHotNCold(SuiteBase):
                 arg1='gc_start_timestamp')
 
         yield hostevent.ControlEvent(operation=OP_CLEAN)
+
+
 
 

@@ -11,6 +11,13 @@ def pattern_on_fs():
             self.para = para
             self.conf['exp_parameters'] = self.para._asdict()
 
+            self.patternconf = {
+                    'zone_size': 1*MB,
+                    'chunk_size': 512*KB,
+                    'traffic_size': 8*MB,
+                    }
+
+
         def setup_environment(self):
             self.conf['device_path'] = self.para.device_path
             self.conf['dev_size_mb'] = 256
@@ -22,16 +29,22 @@ def pattern_on_fs():
             set_vm_default()
             set_vm("dirty_bytes", self.para.dirty_bytes)
 
+        def setup_file_prep(self):
+            if self.para.patternclass not in ['SRandomReadNoPrep', 'SSequentialReadNoPrep']:
+                self.conf['age_workload_class'] = 'PatternSuite'
+                self.conf['age_config'] = {'patternname': 'SSequentialWrite',
+                    'parameters': self.patternconf}
+
+                self.conf['aging_config_key'] = 'age_config'
+
         def setup_workload(self):
+            # they already have prep
+            assert self.para.patternclass not in ["SRandomRead", "SSequentialRead"]
+
             self.conf['workload_class'] = 'PatternSuite'
-            self.conf['workload_conf_key'] = 'PatternSuite'
-            self.conf['PatternSuite'] = {'patternname': 'SRandomWrite',
-                'parameters': {
-                    'zone_size': 1*MB,
-                    'chunk_size': 512*KB,
-                    'traffic_size': 128*MB,
-                    }
-                }
+            self.conf['workload_config'] = {'patternname': self.para.patternclass,
+                'parameters': self.patternconf}
+            self.conf['workload_conf_key'] = 'workload_config'
 
         def setup_flash(self):
             self.conf['SSDFramework']['ncq_depth'] = 4
@@ -70,6 +83,7 @@ def pattern_on_fs():
 
         def main(self):
             self.setup_environment()
+            self.setup_file_prep()
             self.setup_workload()
             self.setup_flash()
             self.setup_ftl()
@@ -77,28 +91,19 @@ def pattern_on_fs():
 
     def test_rand():
         Parameters = collections.namedtuple("Parameters",
-            "filesystem, numjobs, bs, iodepth, expname, size, rw, direct, "\
-            "dirty_bytes, fsync, device_path, linux_ncq_depth")
+            "patternclass, filesystem, expname, dirty_bytes, device_path, linux_ncq_depth")
 
         expname = get_expname()
         para_dict = {
+                # 'patternclass'   : ['SRandomWrite'],
+                'patternclass'   : ['SRandomReadNoPrep'],
                 'device_path'    : ['/dev/loop0'],
-                'numjobs'        : [16],
-                'bs'             : [16*KB],
-                'iodepth'        : [1],
                 'filesystem'     : ['ext4'],
                 'expname'        : [expname],
-                'rw'             : ['write'],
-                'direct'         : [0],
                 'dirty_bytes'    : [4*MB],
-                'fsync'          : [0],
                 'linux_ncq_depth': [31]
                 }
-
         parameter_combs = ParameterCombinations(para_dict)
-        total_size = 128*MB
-        for para in parameter_combs:
-            para['size'] =  total_size / para['numjobs']
 
         for para in parameter_combs:
             obj = Experimenter( Parameters(**para) )
@@ -106,8 +111,6 @@ def pattern_on_fs():
 
     # test_seq()
     test_rand()
-
-
 
 
 
