@@ -13,15 +13,15 @@ def pattern_on_fs():
 
             self.patternconf = {
                     'zone_size': 16*MB,
-                    'chunk_size': 4*KB,
-                    'traffic_size': 2*MB,
+                    'chunk_size': self.para.chunk_size,
+                    'traffic_size': 48*MB,
                     'snake_size': 8*MB,
-                    'stride_size': 256*KB,
+                    'stride_size': self.para.chunk_size * 2,
                     }
 
         def setup_environment(self):
             self.conf['device_path'] = self.para.device_path
-            self.conf['dev_size_mb'] = 256
+            self.conf['dev_size_mb'] = 128
             self.conf['filesystem'] = self.para.filesystem
             self.conf["n_online_cpus"] = 'all'
 
@@ -75,7 +75,7 @@ def pattern_on_fs():
 
             logicsize_mb = self.conf['dev_size_mb']
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
-            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
+            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.08))
 
         def run(self):
             set_exp_metadata(self.conf, save_data = True,
@@ -96,28 +96,29 @@ def pattern_on_fs():
     def test_rand():
         Parameters = collections.namedtuple("Parameters",
             "patternclass, filesystem, expname, dirty_bytes, device_path, "\
-            "stripe_size, linux_ncq_depth, cache_mapped_data_bytes")
+            "stripe_size, chunk_size, linux_ncq_depth, cache_mapped_data_bytes")
 
         expname = get_expname()
         para_dict = {
                 # 'patternclass'   : ['SRandomWrite'],
                 'patternclass'   : [
                     'SRandomReadNoPrep',
-                    # 'SRandomWrite',
-                    # 'SSequentialReadNoPrep',
-                    # 'SSequentialWrite',
-                    # 'SSnake',
-                    # 'SFadingSnake',
-                    # 'SStrided',
-                    # 'SHotNCold'
+                    'SRandomWrite',
+                    'SSequentialReadNoPrep',
+                    'SSequentialWrite',
+                    'SSnake',
+                    'SFadingSnake',
+                    'SStrided',
+                    'SHotNCold'
                     ],
                 'device_path'    : ['/dev/loop0'],
                 'filesystem'     : ['ext4'],
                 'expname'        : [expname],
-                'dirty_bytes'    : [4*MB],
+                'dirty_bytes'    : [128*MB],
                 'linux_ncq_depth': [31],
-                'stripe_size'    : [1],
-                'cache_mapped_data_bytes' :[128*MB],
+                'stripe_size'    : [1, 'infinity'],
+                'chunk_size'     : [4*KB, 128*KB],
+                'cache_mapped_data_bytes' :[8*MB, 128*MB],
                 }
         parameter_combs = ParameterCombinations(para_dict)
 

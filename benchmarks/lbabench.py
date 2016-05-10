@@ -314,17 +314,17 @@ def patterns_bench():
         expname = get_expname()
         para_dict = {
                 'expname'        : [expname],
-                'ncq_depth'      : [4, 8],
-                'patternclass'   : ['SRandomRead'],
+                'ncq_depth'      : [4],
+                # 'patternclass'   : ['SRandomRead'],
                 # 'patternclass'   : ['SRandomRead', 'SSnake'],
-                # 'patternclass'   : ['SHotNCold',
-                    # 'SRandomWrite', 'SRandomRead',
-                    # 'SSequentialWrite', 'SSequentialRead',
-                    # 'SSnake', 'SFadingSnake', 'SStrided'],
+                'patternclass'   : ['SHotNCold',
+                    'SRandomWrite', 'SRandomRead',
+                    'SSequentialWrite', 'SSequentialRead',
+                    'SSnake', 'SFadingSnake', 'SStrided'],
                 'cache_mapped_data_bytes' :[8*MB, 128*MB],
                 'flashbytes'     : [128*MB],
-                'stripe_size'    : [1],
-                'chunk_size'     : [2*KB]
+                'stripe_size'    : [1, 'infinity'],
+                'chunk_size'     : [4*KB, 128*KB]
                 }
 
         parameter_combs = ParameterCombinations(para_dict)
