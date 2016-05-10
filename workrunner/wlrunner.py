@@ -151,6 +151,7 @@ class WorkloadRunner(object):
         self.build_fs()
 
         self.aging_workload.run()
+        utils.drop_caches()
 
         self.workload.run()
 
@@ -177,6 +178,7 @@ class WorkloadRunner(object):
             # Age the file system
             print 'Running agingnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn'
             self.aging_workload.run()
+            utils.drop_caches()
 
             time.sleep(1)
             self.blktracer_mkfs.stop_tracing_and_collecting()

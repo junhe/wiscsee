@@ -285,4 +285,9 @@ def str_as_filename(s):
     valid_chars = "-_.%s%s" % (string.ascii_letters, string.digits)
     return ''.join(c for c in s if c in valid_chars)
 
+def drop_caches():
+    subprocess.call("sync", shell=True)
+    cmd = "echo 3 > /proc/sys/vm/drop_caches"
+    subprocess.call(cmd, shell=True)
+
 

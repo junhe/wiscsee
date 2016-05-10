@@ -30,12 +30,15 @@ def pattern_on_fs():
             set_vm("dirty_bytes", self.para.dirty_bytes)
 
         def setup_file_prep(self):
-            if self.para.patternclass not in ['SRandomReadNoPrep', 'SSequentialReadNoPrep']:
+            if self.para.patternclass in ['SRandomReadNoPrep', 'SSequentialReadNoPrep']:
                 self.conf['age_workload_class'] = 'PatternSuite'
                 self.conf['age_config'] = {'patternname': 'SSequentialWrite',
                     'parameters': self.patternconf}
 
                 self.conf['aging_config_key'] = 'age_config'
+                print "Aging workload is patternstuie"
+            else:
+                print "Aging workload is NOOP"
 
         def setup_workload(self):
             # they already have prep

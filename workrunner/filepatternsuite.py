@@ -1,7 +1,10 @@
 import os
 from os import O_RDWR, O_CREAT, O_DIRECT
 from accpatterns.patterns import READ, WRITE, DISCARD
+from commons import OP_DROPCACHE
 from pyfallocate import fallocate
+
+from utilities.utils import drop_caches
 
 
 class File(object):
@@ -29,6 +32,8 @@ class File(object):
                 os.read(self.fd, req.size)
             elif op == DISCARD:
                 fallocate(self.fd, 3, req.offset, req.size)
+            elif op == OP_DROPCACHE:
+                drop_caches()
             else:
-                print 'WARNING', op, 'is not supported'
+                print 'WARNING', op, 'is not supported in File adapter.'
 
