@@ -392,6 +392,7 @@ class TestMappingCacheSameLpnUpdate(unittest.TestCase):
         env.run()
 
 
+@unittest.skipUnless(TESTALL == True, "Skip unless we want to test all")
 class TestMappingCacheSameLpnUpdateWEvict(unittest.TestCase):
     def translate(self, conf, env, mapping_cache):
         # dirty 4 translation pages to mem
@@ -1505,6 +1506,7 @@ class TestCleaningTransBlocksByCleaner(unittest.TestCase):
         self.assertNotEqual(conf.page_to_block_off(directory.m_vpn_to_m_ppn(0))[0],
                 victim_block)
 
+@unittest.skipUnless(TESTALL == True, "Skip unless we want to test all")
 class TestCleaningTransBlocksByCleaner4Channel(unittest.TestCase):
     def test(self):
         conf = create_config()

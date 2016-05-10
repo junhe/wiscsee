@@ -3,8 +3,13 @@ import pprint
 
 from Makefile import *
 from workflow import run_workflow
+try:
+    from commons import TESTALL
+except ImportError:
+    TESTALL = True
 
 
+@unittest.skipUnless(TESTALL == True, "Skip unless we want to test all")
 class TestManager(unittest.TestCase):
     def init(self):
         # Get default setting
