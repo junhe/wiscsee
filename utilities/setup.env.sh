@@ -40,3 +40,5 @@ sudo apt-get install xfsprogs
 sudo apt-get install libffi-dev
 
 sudo pip install cffi
+
+sudo pip install ordereddict
