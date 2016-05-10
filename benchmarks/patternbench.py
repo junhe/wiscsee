@@ -12,11 +12,12 @@ def pattern_on_fs():
             self.conf['exp_parameters'] = self.para._asdict()
 
             self.patternconf = {
-                    'zone_size': 1*MB,
-                    'chunk_size': 512*KB,
-                    'traffic_size': 8*MB,
+                    'zone_size': 16*MB,
+                    'chunk_size': 4*KB,
+                    'traffic_size': 2*MB,
+                    'snake_size': 8*MB,
+                    'stride_size': 256*KB,
                     }
-
 
         def setup_environment(self):
             self.conf['device_path'] = self.para.device_path
@@ -67,13 +68,13 @@ def pattern_on_fs():
         def setup_ftl(self):
             self.conf['enable_blktrace'] = True
             self.conf['enable_simulation'] = True
+            self.conf['stripe_size'] = self.para.stripe_size
 
             self.conf['simulator_class'] = 'SimulatorDESNew'
             self.conf['ftl_type'] = 'dftldes'
 
             logicsize_mb = self.conf['dev_size_mb']
-            entries_need = int(logicsize_mb * 2**20 * 1.00 / self.conf['flash_config']['page_size'])
-            self.conf.mapping_cache_bytes = int(entries_need * self.conf['cache_entry_bytes']) # 8 bytes (64bits) needed in mem
+            self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
             self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
         def run(self):
@@ -94,17 +95,29 @@ def pattern_on_fs():
 
     def test_rand():
         Parameters = collections.namedtuple("Parameters",
-            "patternclass, filesystem, expname, dirty_bytes, device_path, linux_ncq_depth")
+            "patternclass, filesystem, expname, dirty_bytes, device_path, "\
+            "stripe_size, linux_ncq_depth, cache_mapped_data_bytes")
 
         expname = get_expname()
         para_dict = {
                 # 'patternclass'   : ['SRandomWrite'],
-                'patternclass'   : ['SRandomReadNoPrep'],
+                'patternclass'   : [
+                    'SRandomReadNoPrep',
+                    # 'SRandomWrite',
+                    # 'SSequentialReadNoPrep',
+                    # 'SSequentialWrite',
+                    # 'SSnake',
+                    # 'SFadingSnake',
+                    # 'SStrided',
+                    # 'SHotNCold'
+                    ],
                 'device_path'    : ['/dev/loop0'],
                 'filesystem'     : ['ext4'],
                 'expname'        : [expname],
                 'dirty_bytes'    : [4*MB],
-                'linux_ncq_depth': [31]
+                'linux_ncq_depth': [31],
+                'stripe_size'    : [1],
+                'cache_mapped_data_bytes' :[128*MB],
                 }
         parameter_combs = ParameterCombinations(para_dict)
 
@@ -114,7 +127,6 @@ def pattern_on_fs():
 
     # test_seq()
     test_rand()
-
 
 
 def main(cmd_args):

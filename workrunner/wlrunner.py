@@ -37,7 +37,6 @@ class WorkloadRunner(object):
             to_ftlsim_path = self.conf.get_ftlsim_events_output_path(),
             sector_size = self.conf['sector_size'])
 
-        # create aging workload object
         self.aging_workload = eval("workload.{wlclass}(confobj = self.conf, " \
             "workload_conf_key = '{wlconf_key}')".format(
                 wlclass = self.conf["age_workload_class"],
