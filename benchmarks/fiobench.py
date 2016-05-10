@@ -1,5 +1,6 @@
 from Makefile import *
 
+from utilities.utils import get_expname
 from workflow import run_workflow
 
 def stress_n_processes_raw():

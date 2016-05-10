@@ -11,7 +11,7 @@ from ssdbox.ftlsim_commons import Extent
 from ssdbox.dftldes import LpnTable, LpnTableMvpn, UNINITIATED
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 from commons import *
-from Makefile import get_expname
+from utilities.utils import get_expname
 import collections
 from workflow import run_workflow
 

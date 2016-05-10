@@ -1,5 +1,6 @@
 from Makefile import *
 from workflow import run_workflow
+from utilities.utils import get_expname
 
 def simplest():
     class Experiment(object):

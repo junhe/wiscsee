@@ -75,7 +75,7 @@ class TestManager(unittest.TestCase):
         runtime_update(self.conf)
 
         # self.run_fio()
-        workflow(self.conf)
+        run_workflow(self.conf)
 
     def test_main(self):
         self.init()

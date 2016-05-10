@@ -270,3 +270,19 @@ def assert_multiple(n, divider):
     assert n % divider == 0, "{} is not mutliple of {}".format(n, divider)
 
 
+def get_expname():
+    ret = raw_input("Enter expname (default-expname):")
+    if ret == "":
+        return "default-expname"
+    else:
+        return ret
+
+def str_as_filename(s):
+    """
+    valid_chars
+    '-_.abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    """
+    valid_chars = "-_.%s%s" % (string.ascii_letters, string.digits)
+    return ''.join(c for c in s if c in valid_chars)
+
+
