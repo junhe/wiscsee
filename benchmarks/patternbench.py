@@ -1,5 +1,7 @@
 from Makefile import *
 
+from workflow import run_workflow
+
 
 def pattern_on_fs():
     class Experimenter(object):
@@ -63,7 +65,7 @@ def pattern_on_fs():
                     subexpname = chain_items_as_filename(self.para))
             runtime_update(self.conf)
 
-            workflow(self.conf)
+            run_workflow(self.conf)
 
         def main(self):
             self.setup_environment()

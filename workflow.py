@@ -8,6 +8,12 @@ import ssdbox
 from ssdbox.simulator import create_simulator
 import workrunner
 
+
+def run_workflow(conf):
+    wf = Workflow(conf)
+    wf.run()
+
+
 class Workflow(object):
     def __init__(self, conf):
         self.conf = conf
@@ -58,4 +64,5 @@ class Workflow(object):
         simulator = create_simulator(self.conf['simulator_class'], self.conf,
                 event_iter )
         simulator.run()
+
 
