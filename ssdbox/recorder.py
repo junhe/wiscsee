@@ -64,6 +64,7 @@ class Recorder(object):
 
     def disable(self):
         "Note that this will not clear the previous records"
+        print "....Recorder is DIS-abled. Now not counting anything."
         self.enabled = False
 
     def __save_result_dict(self):
@@ -89,7 +90,6 @@ class Recorder(object):
                 self.general_accumulator)
         utils.table_to_file(general_accumulator_table, counter_set_path)
 
-    @switchable
     def __write_log(self, *args):
         line = ' '.join( str(x) for x in args)
         line += '\n'
@@ -120,6 +120,7 @@ class Recorder(object):
                 collections.Counter())
         return counter_dict[item_name]
 
+    @switchable
     def add_to_general_accumulater(self,
             counter_set_name, item_name, addition):
         """
@@ -201,23 +202,19 @@ class Recorder(object):
         args = [str(kwargs[colname]).rjust(width) for colname in colnames]
         fd.write(' '.join(args) + '\n')
 
-    @switchable
     def debug(self, *args):
         if self.verbose_level >= 3:
             self.__write_log('DEBUG', *args)
 
-    @switchable
     def put(self, operation, page_num, category):
         # do statistics
         item = '.'.join((operation, category))
         self.add_to_general_accumulater("put", item, 1)
 
-    @switchable
     def warning(self, *args):
         if self.verbose_level >= 2:
             self.__write_log('WARNING', *args)
 
-    @switchable
     def error(self, *args):
         if self.verbose_level >= 0:
             self.__write_log('ERROR', *args)
