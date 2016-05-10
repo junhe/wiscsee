@@ -1,4 +1,5 @@
 from Makefile import *
+from workflow import run_workflow
 
 def simplest():
     class Experiment(object):
@@ -49,7 +50,7 @@ def simplest():
 
         def my_run(self):
             runtime_update(self.conf)
-            workflow(self.conf)
+            run_workflow(self.conf)
 
         def main(self):
             self.setup_config()
@@ -120,7 +121,7 @@ def qdepth_pattern():
 
         def my_run(self):
             runtime_update(self.conf)
-            workflow(self.conf)
+            run_workflow(self.conf)
 
         def main(self):
             self.setup_config()
@@ -223,7 +224,7 @@ def simple_gc():
 
         def my_run(self):
             runtime_update(self.conf)
-            workflow(self.conf)
+            run_workflow(self.conf)
 
         def main(self):
             self.setup_config()
@@ -299,7 +300,7 @@ def patterns_bench():
 
         def my_run(self):
             runtime_update(self.conf)
-            workflow(self.conf)
+            run_workflow(self.conf)
 
         def main(self):
             self.setup_config()

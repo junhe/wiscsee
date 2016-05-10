@@ -11,8 +11,9 @@ from ssdbox.ftlsim_commons import Extent
 from ssdbox.dftldes import LpnTable, LpnTableMvpn, UNINITIATED
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 from commons import *
-from Makefile import workflow, get_expname
+from Makefile import get_expname
 import collections
+from workflow import run_workflow
 
 class FtlTest(ssdbox.dftldes.Ftl):
     def get_mappings(self):
@@ -904,7 +905,7 @@ class TestParallelDFTL(unittest.TestCase):
 
     def my_run(self):
         utils.runtime_update(self.conf)
-        workflow(self.conf)
+        run_workflow(self.conf)
 
     def test_main(self):
         self.setup_config()
@@ -962,7 +963,7 @@ class TestFTLwithMoreData(unittest.TestCase):
 
     def my_run(self):
         utils.runtime_update(self.conf)
-        workflow(self.conf)
+        run_workflow(self.conf)
 
     def test_main(self):
         self.setup_config()
@@ -1826,7 +1827,7 @@ class Experiment(object):
 
     def my_run(self):
         utils.runtime_update(self.conf)
-        workflow(self.conf)
+        run_workflow(self.conf)
 
     def main(self):
         self.setup_config()

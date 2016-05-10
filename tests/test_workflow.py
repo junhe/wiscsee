@@ -31,7 +31,7 @@ def create_config():
     conf['ftl_type'] = 'dftldes'
     conf['simulator_class'] = 'SimulatorDESNew'
 
-    logicsize_mb = 4
+    logicsize_mb = 16
     conf.n_cache_entries = conf.n_mapping_entries_per_page * 16
     conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
@@ -43,7 +43,7 @@ def create_config():
 def on_fs_config(conf):
     # environment
     conf['device_path'] = "/dev/loop0"
-    conf['dev_size_mb'] = 4
+    conf['dev_size_mb'] = 16
     conf['filesystem'] = "ext4"
     conf["n_online_cpus"] = 'all'
 

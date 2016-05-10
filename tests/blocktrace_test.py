@@ -2,6 +2,7 @@ import unittest
 import pprint
 
 from Makefile import *
+from workflow import run_workflow
 
 
 class TestManager(unittest.TestCase):

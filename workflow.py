@@ -42,12 +42,12 @@ class Workflow(object):
             runner = workrunner.wlrunner.WorkloadRunner(self.conf)
             event_iter = runner.run()
         elif workload_src == LBAGENERATOR:
-            classname = conf['lba_workload_class']
+            classname = self.conf['lba_workload_class']
             cls = eval("workrunner.lbaworkloadgenerator.{}".format(classname))
             lbagen = cls(self.conf)
             event_iter = lbagen
         elif workload_src == LBAMULTIPROC:
-            classname = conf['lba_workload_class']
+            classname = self.conf['lba_workload_class']
             cls = "workrunner.lbaworkloadgenerator.{}".format(classname)
             lbagen = cls(self.conf)
             event_iter = lbagen.get_iter_list()

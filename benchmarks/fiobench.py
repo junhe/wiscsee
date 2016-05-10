@@ -1,5 +1,7 @@
 from Makefile import *
 
+from workflow import run_workflow
+
 def stress_n_processes_raw():
     """
     stress the number of processes on file system
@@ -78,7 +80,7 @@ def stress_n_processes_raw():
             runtime_update(self.conf)
 
             # self.run_fio()
-            workflow(self.conf)
+            run_workflow(self.conf)
 
         def main(self):
             self.setup_environment()
@@ -178,7 +180,7 @@ def stress_n_processes():
             runtime_update(self.conf)
 
             # self.run_fio()
-            workflow(self.conf)
+            run_workflow(self.conf)
 
         def main(self):
             self.setup_environment()
@@ -308,7 +310,7 @@ def stress_page_cache():
             runtime_update(self.conf)
 
             # self.run_fio()
-            workflow(self.conf)
+            run_workflow(self.conf)
 
         def main(self):
             self.setup_environment()
@@ -419,7 +421,7 @@ def stress_metadata():
             runtime_update(self.conf)
 
             # self.run_fio()
-            workflow(self.conf)
+            run_workflow(self.conf)
 
         def main(self):
             self.setup_environment()
@@ -543,7 +545,7 @@ def compare_real_and_sim_w_fs():
                     subexpname = chain_items_as_filename(self.para))
             runtime_update(self.conf)
 
-            workflow(self.conf)
+            run_workflow(self.conf)
 
         def main(self):
             self.setup_environment()
@@ -666,7 +668,7 @@ def compare_real_and_sim_raw():
                     subexpname = chain_items_as_filename(self.para))
             runtime_update(self.conf)
 
-            workflow(self.conf)
+            run_workflow(self.conf)
 
         def main(self):
             self.setup_environment()
@@ -767,7 +769,7 @@ def compare_fs():
                     subexpname = chain_items_as_filename(self.para))
             runtime_update(self.conf)
 
-            workflow(self.conf)
+            run_workflow(self.conf)
 
         def main(self):
             self.setup_environment()

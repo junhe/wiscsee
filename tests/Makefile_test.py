@@ -2,6 +2,7 @@ import unittest
 import pprint
 
 from Makefile import *
+from workflow import run_workflow
 
 
 
@@ -58,7 +59,7 @@ class DftlextExp(Experiment):
 
     def run(self):
         runtime_update(self.conf)
-        workflow(self.conf)
+        run_workflow(self.conf)
 
 
 class DftlextExp2(Experiment):
@@ -94,7 +95,7 @@ class DftlextExp2(Experiment):
 
     def run(self):
         runtime_update(self.conf)
-        workflow(self.conf)
+        run_workflow(self.conf)
 
 class DftlextExpE2e(Experiment):
     """
@@ -129,7 +130,7 @@ class DftlextExpE2e(Experiment):
 
     def run(self):
         runtime_update(self.conf)
-        workflow(self.conf)
+        run_workflow(self.conf)
 
 class DftlextTest(unittest.TestCase):
     def test_Dftl(self):
@@ -176,7 +177,7 @@ class TestDftextGC(unittest.TestCase):
 
     def my_run(self):
         runtime_update(self.conf)
-        workflow(self.conf)
+        run_workflow(self.conf)
 
     def test_main(self):
         self.setup_config()
@@ -217,7 +218,7 @@ class TestDftextGCSingleChannel(unittest.TestCase):
 
     def my_run(self):
         runtime_update(self.conf)
-        workflow(self.conf)
+        run_workflow(self.conf)
 
     def test_main(self):
         self.setup_config()
