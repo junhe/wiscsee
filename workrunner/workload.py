@@ -13,7 +13,7 @@ from utilities import utils
 import workloadlist
 
 from accpatterns import patterns
-from .filepatternsuite import File
+from .patternonfile import File
 import patternsuite
 
 class Workload(object):
