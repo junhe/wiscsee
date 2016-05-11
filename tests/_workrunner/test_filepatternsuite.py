@@ -2,8 +2,8 @@ import unittest
 import os
 import itertools
 
-from workrunner import filepatternsuite
-from workrunner.filepatternsuite import File
+from workrunner import patternonfile
+from workrunner.patternonfile import File
 from accpatterns import patterns
 from accpatterns.patterns import READ, WRITE, DISCARD
 

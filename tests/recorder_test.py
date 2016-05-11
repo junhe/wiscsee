@@ -27,6 +27,7 @@ class TestFTLwithDFTL(unittest.TestCase):
                 output_target = ssdbox.recorder.FILE_TARGET,
                 output_directory = "/tmp"
                 )
+        recorder.enable()
 
         recorder.add_to_general_accumulater("counter_set_1", "counter1", 3)
         recorder.add_to_general_accumulater("counter_set_1", "counter1", 4)
