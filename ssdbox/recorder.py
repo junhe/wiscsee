@@ -206,6 +206,7 @@ class Recorder(object):
         if self.verbose_level >= 3:
             self.__write_log('DEBUG', *args)
 
+    @switchable
     def put(self, operation, page_num, category):
         # do statistics
         item = '.'.join((operation, category))
