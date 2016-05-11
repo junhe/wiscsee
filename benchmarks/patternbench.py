@@ -21,7 +21,7 @@ def pattern_on_fs():
 
         def setup_environment(self):
             self.conf['device_path'] = self.para.device_path
-            self.conf['dev_size_mb'] = 128
+            self.conf['dev_size_mb'] = self.para.lbabytes / MB
             self.conf['filesystem'] = self.para.filesystem
             self.conf["n_online_cpus"] = 'all'
 
@@ -96,9 +96,11 @@ def pattern_on_fs():
     def test_rand():
         Parameters = collections.namedtuple("Parameters",
             "patternclass, filesystem, expname, dirty_bytes, device_path, "\
-            "stripe_size, chunk_size, linux_ncq_depth, cache_mapped_data_bytes")
+            "stripe_size, chunk_size, linux_ncq_depth, "\
+            "cache_mapped_data_bytes, lbabytes")
 
         expname = get_expname()
+        lbabytes = 256*MB
         para_dict = {
                 # 'patternclass'   : ['SRandomWrite'],
                 'patternclass'   : [
@@ -112,13 +114,14 @@ def pattern_on_fs():
                     'SHotNCold'
                     ],
                 'device_path'    : ['/dev/loop0'],
-                'filesystem'     : ['ext4'],
+                'filesystem'     : ['f2fs'],
                 'expname'        : [expname],
                 'dirty_bytes'    : [128*MB],
                 'linux_ncq_depth': [31],
                 'stripe_size'    : [1, 'infinity'],
                 'chunk_size'     : [4*KB, 128*KB],
-                'cache_mapped_data_bytes' :[8*MB, 128*MB],
+                'cache_mapped_data_bytes' :[8*MB, lbabytes],
+                'lbabytes'       : [lbabytes],
                 }
         parameter_combs = ParameterCombinations(para_dict)
 
