@@ -167,7 +167,7 @@ class WorkloadRunner(object):
             # This is only for making and mounting file system, because we
             # want to separate them with workloads.
             self.blktracer_mkfs.start_tracing_and_collecting()
-            time.sleep(0.5)
+            time.sleep(1)
             while self.blktracer_mkfs.proc == None:
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
@@ -185,12 +185,14 @@ class WorkloadRunner(object):
             self.blktracer_mkfs.create_event_file_from_blkparse()
 
             self.blktracer.start_tracing_and_collecting()
+            time.sleep(2)
             while self.blktracer.proc == None:
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
 
             print 'Running workload ..................'
             self.workload.run()
+            time.sleep(1) # has to sleep here so the blktrace gets all the data
 
         except Exception:
             raise
