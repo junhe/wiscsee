@@ -192,6 +192,13 @@ class SSnake(SuiteBase):
         for req in self.write_iter:
             yield req
 
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start_timestamp')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
+
+
 
 class SFadingSnake(SuiteBase):
     def _prepare_iter(self):
