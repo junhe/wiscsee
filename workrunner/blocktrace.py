@@ -64,7 +64,7 @@ class BlktraceResult(object):
                 continue
             row['pre_wait_time'] = float(event_table[i]['timestamp']) - \
                 float(event_table[i-1]['timestamp'])
-            assert row['pre_wait_time'] >= 0
+            assert row['pre_wait_time'] >= 0, "data is {}".format(row['pre_wait_time'])
 
         return event_table
 
