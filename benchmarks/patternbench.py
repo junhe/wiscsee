@@ -53,6 +53,8 @@ def pattern_on_fs():
                 'parameters': self.patternconf}
             self.conf['workload_conf_key'] = 'workload_config'
 
+            self.conf['f2fs_gc_after_workload'] = self.para.f2fs_gc_after_workload
+
         def setup_fs(self):
             self.conf['mnt_opts'].update({
                 "f2fs":   {
@@ -116,7 +118,8 @@ def pattern_on_fs():
             "patternclass, filesystem, expname, dirty_bytes, device_path, "\
             "stripe_size, chunk_size, linux_ncq_depth, "\
             "cache_mapped_data_bytes, lbabytes, "\
-            "zone_size, traffic_size, snake_size, stride_size"
+            "zone_size, traffic_size, snake_size, stride_size, "\
+            "f2fs_gc_after_workload"
             )
 
         expname = get_expname()
@@ -146,6 +149,7 @@ def pattern_on_fs():
                 'chunk_size'     : [4*KB],
                 'traffic_size'   : [48*MB],
                 'snake_size'     : [8*MB],
+                'f2fs_gc_after_workload': [True, False],
                 }
         parameter_combs = ParameterCombinations(para_dict)
 

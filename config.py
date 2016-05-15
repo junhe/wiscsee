@@ -384,6 +384,7 @@ class Config(dict):
                 "n_col"      : 5,   # only for hotcold workload
                 "filename"   : "test.file"
             },
+            "f2fs_gc_after_workload": True,
 
             ############## LBAGENERATOR  #########
             # if you choose LBAGENERATOR for workload_src, the following will

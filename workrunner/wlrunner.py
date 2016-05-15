@@ -208,7 +208,7 @@ class WorkloadRunner(object):
             self.blktracer.stop_tracing_and_collecting()
 
     def _post_target_workload(self):
-        if self.conf['filesystem'] == 'f2fs':
+        if self.conf['filesystem'] == 'f2fs' and self.conf['f2fs_gc_after_workload'] is True:
             time.sleep(1)
             # this could return -1 if there is no garbage
             utils.invoke_f2fs_gc(self.conf['fs_mount_point'], 1)
