@@ -2,6 +2,7 @@ from Makefile import *
 
 from workflow import run_workflow
 from utilities.utils import get_expname
+from config import MountOption as MOpt
 
 
 def pattern_on_fs():
@@ -52,6 +53,20 @@ def pattern_on_fs():
                 'parameters': self.patternconf}
             self.conf['workload_conf_key'] = 'workload_config'
 
+        def setup_fs(self):
+            self.conf['mnt_opts'].update({
+                "f2fs":   {
+                            'discard': MOpt(opt_name = 'discard',
+                                            value = 'discard',
+                                            include_name = False),
+                            'background_gc': MOpt(opt_name = 'background_gc',
+                                                value = 'off',
+                                                include_name = True)
+                                            }
+                }
+                )
+
+
         def setup_flash(self):
             self.conf['SSDFramework']['ncq_depth'] = 8
 
@@ -90,6 +105,7 @@ def pattern_on_fs():
         def main(self):
             self.setup_environment()
             self.setup_file_prep()
+            self.setup_fs()
             self.setup_workload()
             self.setup_flash()
             self.setup_ftl()
