@@ -14,11 +14,11 @@ def pattern_on_fs():
             # TODO: make this large and more to avoid cases
             # that happen only at small scale
             self.patternconf = {
-                    'zone_size': 16*MB,
+                    'zone_size': self.para.zone_size,
                     'chunk_size': self.para.chunk_size,
-                    'traffic_size': 64*MB,
-                    'snake_size': 8*MB,
-                    'stride_size': self.para.chunk_size * 2,
+                    'traffic_size': self.para.traffic_size,
+                    'snake_size': self.para.snake_size,
+                    'stride_size': self.para.stride_size,
                     }
 
         def setup_environment(self):
@@ -99,7 +99,9 @@ def pattern_on_fs():
         Parameters = collections.namedtuple("Parameters",
             "patternclass, filesystem, expname, dirty_bytes, device_path, "\
             "stripe_size, chunk_size, linux_ncq_depth, "\
-            "cache_mapped_data_bytes, lbabytes")
+            "cache_mapped_data_bytes, lbabytes, "\
+            "zone_size, traffic_size, snake_size, stride_size"
+            )
 
         expname = get_expname()
         lbabytes = 512*MB
@@ -107,27 +109,32 @@ def pattern_on_fs():
                 # 'patternclass'   : ['SRandomWrite'],
                 'patternclass'   : [
                     # 'SRandomReadNoPrep',
-                    'SRandomWrite',
+                    # 'SRandomWrite',
                     # 'SSequentialReadNoPrep',
                     # 'SSequentialWrite',
-                    # 'SSnake',
+                    'SSnake',
                     # 'SFadingSnake',
                     # 'SStrided',
                     # 'SHotNCold'
                     ],
                 'device_path'    : ['/dev/loop0'],
-                'filesystem'     : ['f2fs'],
+                'filesystem'     : ['ext4'],
                 'expname'        : [expname],
                 'dirty_bytes'    : [128*MB],
                 'linux_ncq_depth': [31],
                 'stripe_size'    : [1],
-                'chunk_size'     : [128*KB],
                 'cache_mapped_data_bytes' :[lbabytes],
                 'lbabytes'       : [lbabytes],
+
+                'zone_size'      : [16*MB],
+                'chunk_size'     : [4*KB],
+                'traffic_size'   : [48*MB],
+                'snake_size'     : [8*MB],
                 }
         parameter_combs = ParameterCombinations(para_dict)
 
         for para in parameter_combs:
+            para['stride_size'] = para['chunk_size'] * 2
             obj = Experimenter( Parameters(**para) )
             obj.main()
 
