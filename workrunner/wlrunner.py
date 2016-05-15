@@ -153,6 +153,7 @@ class WorkloadRunner(object):
         utils.drop_caches()
 
         self.workload.run()
+        self._post_target_workload()
 
         return None
 
@@ -192,6 +193,7 @@ class WorkloadRunner(object):
 
             print 'Running workload ..................'
             self.workload.run()
+            self._post_target_workload()
             time.sleep(1) # has to sleep here so the blktrace gets all the data
 
         except Exception:
@@ -204,6 +206,12 @@ class WorkloadRunner(object):
         finally:
             # always try to clean up the blktrace processes
             self.blktracer.stop_tracing_and_collecting()
+
+    def _post_target_workload(self):
+        if self.conf['filesystem'] == 'f2fs':
+            time.sleep(1)
+            # this could return -1 if there is no garbage
+            utils.invoke_f2fs_gc(self.conf['fs_mount_point'], 1)
 
     def get_event_iterator(self):
         yield hostevent.ControlEvent(operation=OP_DISABLE_RECORDER)
