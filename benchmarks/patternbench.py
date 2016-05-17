@@ -2,6 +2,7 @@ from Makefile import *
 
 from workflow import run_workflow
 from utilities.utils import get_expname
+from utilities import utils
 from config import MountOption as MOpt
 
 
@@ -64,10 +65,20 @@ def pattern_on_fs():
                             'background_gc': MOpt(opt_name = 'background_gc',
                                                 value = 'off',
                                                 include_name = True)
-                                            }
+                                            },
+                "ext4":   { 'discard': MOpt(opt_name = "discard",
+                                             value = "discard",
+                                             include_name = False),
+                            'data': MOpt(opt_name = "data",
+                                            value = self.para.ext4datamode,
+                                            include_name = True) },
                 }
                 )
 
+            if self.para.ext4hasjournal is True:
+                utils.enable_ext4_journal(self.conf)
+            else:
+                utils.disable_ext4_journal(self.conf)
 
         def setup_flash(self):
             self.conf['SSDFramework']['ncq_depth'] = 8
@@ -119,7 +130,7 @@ def pattern_on_fs():
             "stripe_size, chunk_size, linux_ncq_depth, "\
             "cache_mapped_data_bytes, lbabytes, "\
             "zone_size, traffic_size, snake_size, stride_size, "\
-            "f2fs_gc_after_workload"
+            "f2fs_gc_after_workload, ext4datamode, ext4hasjournal"
             )
 
         expname = get_expname()
@@ -138,6 +149,8 @@ def pattern_on_fs():
                     ],
                 'device_path'    : ['/dev/loop0'],
                 'filesystem'     : ['ext4'],
+                'ext4datamode'   : ['ordered'],
+                'ext4hasjournal' : [False],
                 'expname'        : [expname],
                 'dirty_bytes'    : [128*MB],
                 'linux_ncq_depth': [31],

@@ -300,5 +300,32 @@ def invoke_f2fs_gc(mountpoint, sync):
     ret = subprocess.call(cmd)
     return ret
 
+def disable_ext4_journal(conf):
+    if '^has_journal' in conf['ext4']['make_opts']['-O']:
+        conf['ext4']['make_opts']['-O'].remove('^has_journal')
+
+    if 'has_journal' in conf['ext4']['make_opts']['-O']:
+        conf['ext4']['make_opts']['-O'].remove('has_journal')
+
+    conf['ext4']['make_opts']['-O'].append('^has_journal')
+
+    try:
+        del conf['mnt_opts']['ext4']['data']
+    except KeyError:
+        pass
+
+def enable_ext4_journal(conf):
+    if '^has_journal' in conf['ext4']['make_opts']['-O']:
+        conf['ext4']['make_opts']['-O'].remove('^has_journal')
+
+    if 'has_journal' in conf['ext4']['make_opts']['-O']:
+        conf['ext4']['make_opts']['-O'].remove('has_journal')
+
+    conf['ext4']['make_opts']['-O'].append('has_journal')
+
+    try:
+        del conf['mnt_opts']['ext4']['data']
+    except KeyError:
+        pass
 
 
