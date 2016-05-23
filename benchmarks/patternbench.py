@@ -28,6 +28,7 @@ def pattern_on_fs():
             self.conf['dev_size_mb'] = self.para.lbabytes / MB
             self.conf['filesystem'] = self.para.filesystem
             self.conf["n_online_cpus"] = 'all'
+            self.conf['preallocate'] = self.para.preallocate
 
             self.conf['linux_ncq_depth'] = self.para.linux_ncq_depth
 
@@ -130,27 +131,28 @@ def pattern_on_fs():
             "stripe_size, chunk_size, linux_ncq_depth, "\
             "cache_mapped_data_bytes, lbabytes, "\
             "zone_size, traffic_size, snake_size, stride_size, "\
-            "f2fs_gc_after_workload, ext4datamode, ext4hasjournal"
+            "f2fs_gc_after_workload, ext4datamode, ext4hasjournal, preallocate"
             )
 
         expname = get_expname()
-        lbabytes = 512*MB
+        lbabytes = 256*MB
         para_dict = {
                 # 'patternclass'   : ['SRandomWrite'],
                 'patternclass'   : [
                     # 'SRandomReadNoPrep',
-                    # 'SRandomWrite',
+                    'SRandomWrite',
                     # 'SSequentialReadNoPrep',
-                    # 'SSequentialWrite',
-                    'SSnake',
+                    'SSequentialWrite',
+                    # 'SSnake',
                     # 'SFadingSnake',
                     # 'SStrided',
                     # 'SHotNCold'
+                    'SNoOp',
                     ],
                 'device_path'    : ['/dev/loop0'],
                 'filesystem'     : ['ext4'],
                 'ext4datamode'   : ['ordered'],
-                'ext4hasjournal' : [False],
+                'ext4hasjournal' : [True, False],
                 'expname'        : [expname],
                 'dirty_bytes'    : [128*MB],
                 'linux_ncq_depth': [31],
@@ -160,9 +162,10 @@ def pattern_on_fs():
 
                 'zone_size'      : [16*MB],
                 'chunk_size'     : [4*KB],
-                'traffic_size'   : [48*MB],
+                'traffic_size'   : [16*MB],
                 'snake_size'     : [8*MB],
-                'f2fs_gc_after_workload': [True, False],
+                'f2fs_gc_after_workload': [True],
+                'preallocate'    : [True, False],
                 }
         parameter_combs = ParameterCombinations(para_dict)
 

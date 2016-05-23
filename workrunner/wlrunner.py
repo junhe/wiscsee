@@ -152,6 +152,7 @@ class WorkloadRunner(object):
         self.aging_workload.run()
         utils.drop_caches()
 
+        self._pre_target_workload()
         self.workload.run()
         self._post_target_workload()
 
@@ -176,7 +177,6 @@ class WorkloadRunner(object):
             self.build_fs()
 
             # Age the file system
-            print 'Running agingnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn'
             self.aging_workload.run()
             utils.drop_caches()
 
@@ -192,6 +192,7 @@ class WorkloadRunner(object):
                 time.sleep(0.5)
 
             print 'Running workload ..................'
+            self._pre_target_workload()
             self.workload.run()
             self._post_target_workload()
             time.sleep(1) # has to sleep here so the blktrace gets all the data
@@ -207,11 +208,16 @@ class WorkloadRunner(object):
             # always try to clean up the blktrace processes
             self.blktracer.stop_tracing_and_collecting()
 
+    def _pre_target_workload(self):
+        if self.conf['preallocate'] is True:
+            utils.shcmd("fallocate -l 16777216 /mnt/fsonloop/datafile")
+
     def _post_target_workload(self):
         if self.conf['filesystem'] == 'f2fs' and self.conf['f2fs_gc_after_workload'] is True:
             time.sleep(1)
             # this could return -1 if there is no garbage
             utils.invoke_f2fs_gc(self.conf['fs_mount_point'], 1)
+            time.sleep(2)
 
     def get_event_iterator(self):
         yield hostevent.ControlEvent(operation=OP_DISABLE_RECORDER)

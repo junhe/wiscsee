@@ -266,5 +266,17 @@ class SHotNCold(SuiteBase):
         yield hostevent.ControlEvent(operation=OP_CLEAN)
 
 
+class SNoOp(SuiteBase):
+    def _prepare_iter(self):
+        pass
+
+    def __iter__(self):
+        self._prepare_iter()
+
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start_timestamp')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
 
 
