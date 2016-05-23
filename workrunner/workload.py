@@ -81,7 +81,6 @@ class FIONEW(Workload):
     def run(self):
         self.workload_conf['ini'].save(self.jobpath)
 
-
         if self.to_json == True:
             utils.prepare_dir_for_path(self.resultpath)
             fio_cmd = "fio {} --output-format=json --output {}".format(
