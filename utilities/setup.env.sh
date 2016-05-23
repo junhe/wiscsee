@@ -35,10 +35,14 @@ sudo apt-get install -y blktrace
 
 sudo pip install simpy
 
-sudo apt-get install xfsprogs
+sudo apt-get install -y xfsprogs
 
-sudo apt-get install libffi-dev
+sudo apt-get install -y python-dev
+
+sudo apt-get install -y libffi-dev
 
 sudo pip install cffi
 
 sudo pip install ordereddict
+
+cd ../pyfallocate && python fallocate_build.py 
