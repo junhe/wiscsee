@@ -731,7 +731,7 @@ def compare_fs():
         def setup_workload(self):
             tmp_job_conf = [
                 ("global", {
-                    'ioengine'  : 'libaio',
+                    'ioengine'  : 'sync',
                     'size'      : self.para.size,
                     'directory'  : self.conf['fs_mount_point'],
                     'direct'    : self.para.direct,
@@ -740,12 +740,13 @@ def compare_fs():
                     'bs'        : self.para.bs,
                     'fallocate' : 'none',
                     'numjobs'   : self.para.numjobs,
-                    'fsync'     : self.para.fsync
+                    'fsync'     : self.para.fsync,
+                    'fadvise_hint': 0,
                     }
                 ),
                 ("writer", {
                     'group_reporting': workrunner.fio.NOVALUE,
-                    'rw'        : self.para.rw
+                    'rw'        : self.para.rw,
                     }
                 )
                 ]
@@ -761,7 +762,7 @@ def compare_fs():
             pass
 
         def setup_ftl(self):
-            self.conf['enable_blktrace'] = False
+            self.conf['enable_blktrace'] = True
             self.conf['enable_simulation'] = False
 
         def run(self):
@@ -786,21 +787,21 @@ def compare_fs():
 
         expname = get_expname()
         para_dict = {
-                'device_path'    : ['/dev/sda1'],
-                'numjobs'        : [16],
-                'bs'             : [16*KB, 128*KB],
+                'device_path'    : ['/dev/sdc1'],
+                'numjobs'        : [1],
+                'bs'             : [4*KB],
                 'iodepth'        : [1],
-                'filesystem'     : ['f2fs', 'btrfs', 'xfs', 'ext4'],
+                'filesystem'     : ['ext4'],
                 'expname'        : [expname],
-                'rw'             : ['write', 'randwrite', 'read', 'randread'],
+                'rw'             : ['write', 'randwrite'],
                 'direct'         : [0],
-                'dirty_bytes'    : [4*MB],
-                'fsync'          : [0, 1],
+                'dirty_bytes'    : [256*MB],
+                'fsync'          : [1],
                 'linux_ncq_depth': [31]
                 }
 
         parameter_combs = ParameterCombinations(para_dict)
-        total_size = 128*MB
+        total_size = 16*MB
         for para in parameter_combs:
             para['size'] =  total_size / para['numjobs']
 

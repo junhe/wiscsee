@@ -305,6 +305,7 @@ class Config(dict):
             "linux_io_scheduler" : 'noop',
             "dev_size_mb"      : None,
             "tmpfs_mount_point"     : "/mnt/tmpfs",
+            "preallocate": False,
 
             # "device_path"           : "/dev/sdc1", # or sth. like /dev/sdc1
             "device_path"           : "/dev/loop0", # or sth. like /dev/sdc1
