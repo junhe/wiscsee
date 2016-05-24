@@ -742,6 +742,7 @@ def compare_fs():
                     'numjobs'   : self.para.numjobs,
                     'fsync'     : self.para.fsync,
                     'fadvise_hint': 0,
+                    'norandommap' : workrunner.fio.NOVALUE,
                     }
                 ),
                 ("writer", {
