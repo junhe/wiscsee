@@ -741,8 +741,7 @@ def compare_fs():
                     'fallocate' : 'none',
                     'numjobs'   : self.para.numjobs,
                     'fsync'     : self.para.fsync,
-                    'fadvise_hint': 0,
-                    'norandommap' : workrunner.fio.NOVALUE,
+                    'fadvise_hint': 1,
                     }
                 ),
                 ("writer", {
@@ -751,6 +750,9 @@ def compare_fs():
                     }
                 )
                 ]
+            if self.para.norandommap is True:
+                tmp_job_conf[0][1]['norandommap'] = workrunner.fio.NOVALUE
+
             self.conf['fio_job_conf'] = {
                     'ini': workrunner.fio.JobConfig(tmp_job_conf),
                     'runner': {
@@ -763,7 +765,7 @@ def compare_fs():
             pass
 
         def setup_ftl(self):
-            self.conf['enable_blktrace'] = True
+            self.conf['enable_blktrace'] = False
             self.conf['enable_simulation'] = False
 
         def run(self):
@@ -784,7 +786,7 @@ def compare_fs():
     def test_rand():
         Parameters = collections.namedtuple("Parameters",
             "filesystem, numjobs, bs, iodepth, expname, size, rw, direct, "\
-            "dirty_bytes, fsync, device_path, linux_ncq_depth")
+            "dirty_bytes, fsync, device_path, linux_ncq_depth, norandommap")
 
         expname = get_expname()
         para_dict = {
@@ -798,7 +800,8 @@ def compare_fs():
                 'direct'         : [0],
                 'dirty_bytes'    : [256*MB],
                 'fsync'          : [1],
-                'linux_ncq_depth': [31]
+                'linux_ncq_depth': [31],
+                'norandommap'    : [True, False]
                 }
 
         parameter_combs = ParameterCombinations(para_dict)
