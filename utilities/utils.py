@@ -1,3 +1,4 @@
+import copy
 import itertools
 import json
 import random
@@ -327,5 +328,12 @@ def enable_ext4_journal(conf):
         del conf['mnt_opts']['ext4']['data']
     except KeyError:
         pass
+
+def replicate_parameters(parameter_combs, n):
+    result = []
+    for i in range(n):
+        result.extend(copy.deepcopy(parameter_combs))
+
+    return result
 
 

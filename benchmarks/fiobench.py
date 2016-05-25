@@ -1,6 +1,7 @@
 from Makefile import *
+import random
 
-from utilities.utils import get_expname
+from utilities.utils import get_expname, replicate_parameters, enable_ext4_journal, disable_ext4_journal
 from workflow import run_workflow
 
 def stress_n_processes_raw():
@@ -728,6 +729,11 @@ def compare_fs():
             set_vm_default()
             set_vm("dirty_bytes", self.para.dirty_bytes)
 
+            if self.para.ext4hasjournal is True:
+                enable_ext4_journal(self.conf)
+            else:
+                disable_ext4_journal(self.conf)
+
         def setup_workload(self):
             tmp_job_conf = [
                 ("global", {
@@ -738,7 +744,7 @@ def compare_fs():
                     # 'sync'      : 1 ,
                     'iodepth'   : self.para.iodepth,
                     'bs'        : self.para.bs,
-                    'fallocate' : 'keep',
+                    'fallocate' : self.para.fallocate,
                     'numjobs'   : self.para.numjobs,
                     'fsync'     : self.para.fsync,
                     'fadvise_hint': 1,
@@ -765,7 +771,7 @@ def compare_fs():
             pass
 
         def setup_ftl(self):
-            self.conf['enable_blktrace'] = False
+            self.conf['enable_blktrace'] = True
             self.conf['enable_simulation'] = False
 
         def run(self):
@@ -786,7 +792,8 @@ def compare_fs():
     def test_rand():
         Parameters = collections.namedtuple("Parameters",
             "filesystem, numjobs, bs, iodepth, expname, size, rw, direct, "\
-            "dirty_bytes, fsync, device_path, linux_ncq_depth, norandommap")
+            "dirty_bytes, fsync, device_path, linux_ncq_depth, norandommap, "\
+            "fallocate, ext4hasjournal")
 
         expname = get_expname()
         para_dict = {
@@ -796,15 +803,21 @@ def compare_fs():
                 'iodepth'        : [1],
                 'filesystem'     : ['ext4'],
                 'expname'        : [expname],
-                'rw'             : ['randwrite'],
+                'rw'             : ['write'],
                 'direct'         : [0],
                 'dirty_bytes'    : [256*MB],
                 'fsync'          : [1],
                 'linux_ncq_depth': [31],
-                'norandommap'    : [True, False]
+                'norandommap'    : [True, False],
+                'fallocate'      : ['keep', 'none', 'posix'],
+                'ext4hasjournal' : [True, False],
                 }
 
         parameter_combs = ParameterCombinations(para_dict)
+
+        # parameter_combs = replicate_parameters(parameter_combs, 1)
+        # random.shuffle(parameter_combs)
+
         total_size = 16*MB
         for para in parameter_combs:
             para['size'] =  total_size / para['numjobs']
