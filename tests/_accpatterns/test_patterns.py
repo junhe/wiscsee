@@ -27,6 +27,20 @@ class TestRandom(unittest.TestCase):
             self.assertTrue(req.offset >= 0 and req.offset <= 20 - 2)
             self.assertEqual(req.size, 2)
 
+class TestRandomNoHole(unittest.TestCase):
+    def test_multiple(self):
+        pat_iter = patterns.RandomNoHole(op=READ, zone_offset=0, zone_size=20,
+                chunk_size=1, traffic_size=20)
+        reqs = list(pat_iter)
+        self.assertEqual(len(reqs), 20)
+
+        for i, req in enumerate(reqs):
+            self.assertEqual(req.op, READ)
+            self.assertEqual(req.size, 1)
+
+            if i > 0:
+                reqs[i].offset = reqs[i-1].offset + 1
+
 
 class TestSequential(unittest.TestCase):
     def test_one(self):

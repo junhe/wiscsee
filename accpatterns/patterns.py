@@ -54,6 +54,21 @@ class Random(PatternBase, InitMixin):
 
         raise StopIteration
 
+class RandomNoHole(PatternBase, InitMixin):
+    def __iter__(self):
+        n_req = self.traffic_size / self.chunk_size
+        n_chunks = self.zone_size / self.chunk_size
+        chunk_idx = list(range(n_chunks))
+        random.shuffle(chunk_idx)
+
+        for i in range(n_req):
+            chunk_id = chunk_idx[i % n_chunks]
+            req_offset = chunk_id * self.chunk_size
+            req_size = self.chunk_size
+            req = Request(self.op, req_offset, req_size)
+            yield req
+
+        raise StopIteration
 
 class Sequential(PatternBase, InitMixin):
     def __iter__(self):
