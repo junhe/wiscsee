@@ -149,10 +149,10 @@ def pattern_on_fs():
                     # 'SHotNCold'
                     'SNoOp',
                     ],
-                'device_path'    : ['/dev/loop0'],
+                'device_path'    : ['/dev/sdc1'],
                 'filesystem'     : ['ext4'],
                 'ext4datamode'   : ['ordered'],
-                'ext4hasjournal' : [True, False],
+                'ext4hasjournal' : [True],
                 'expname'        : [expname],
                 'dirty_bytes'    : [128*MB],
                 'linux_ncq_depth': [31],
@@ -165,7 +165,7 @@ def pattern_on_fs():
                 'traffic_size'   : [16*MB],
                 'snake_size'     : [8*MB],
                 'f2fs_gc_after_workload': [True],
-                'preallocate'    : [True, False],
+                'preallocate'    : [False],
                 }
         parameter_combs = ParameterCombinations(para_dict)
 

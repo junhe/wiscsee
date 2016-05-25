@@ -155,9 +155,10 @@ def start_blktrace_on_bg(dev, resultpath):
 
     kernel_ver = utils.run_and_get_output('uname -r')[0].strip()
     if kernel_ver.startswith('4.1.5'):
-        # trace_filter = 'complete'
         trace_filter = 'issue'
     elif kernel_ver.startswith('3.1.6'):
+        trace_filter = 'queue'
+    elif kernel_ver.startswith('3.13'):
         trace_filter = 'queue'
     else:
         trace_filter = 'issue'
