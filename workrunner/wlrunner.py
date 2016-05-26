@@ -209,8 +209,7 @@ class WorkloadRunner(object):
             self.blktracer.stop_tracing_and_collecting()
 
     def _pre_target_workload(self):
-        if self.conf['preallocate'] is True:
-            utils.shcmd("fallocate -l 16777216 /mnt/fsonloop/datafile")
+        pass
 
     def _post_target_workload(self):
         if self.conf['filesystem'] == 'f2fs' and self.conf['f2fs_gc_after_workload'] is True:

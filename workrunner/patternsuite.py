@@ -14,6 +14,15 @@ class SuiteBase(object):
 
         self.snake_size = kwargs['snake_size']
         self.stride_size = kwargs['stride_size']
+        self.has_hole = kwargs.get('has_hole', False)
+        self.preallocate = kwargs.get('preallocate', False)
+        self.keep_size = kwargs.get('keep_size', False)
+
+    def _falloc_keepsize_arg(self):
+        if self.keep_size is True:
+            return OP_ARG_KEEPSIZE
+        else:
+            return OP_ARG_NOTKEEPSIZE
 
 
 class SRandomRead(SuiteBase):
@@ -81,12 +90,21 @@ class SRandomWrite(SuiteBase):
         chunk_size = self.chunk_size
 
         # write half
-        self.write_iter = patterns.Random(op=OP_WRITE, zone_offset=0,
-                zone_size=self.zone_size, chunk_size=self.chunk_size,
-                traffic_size=self.traffic_size)
+        if self.has_hole is True:
+            self.write_iter = patterns.Random(op=OP_WRITE, zone_offset=0,
+                    zone_size=self.zone_size, chunk_size=self.chunk_size,
+                    traffic_size=self.traffic_size)
+        else:
+            self.write_iter = patterns.RandomNoHole(op=OP_WRITE, zone_offset=0,
+                    zone_size=self.zone_size, chunk_size=self.chunk_size,
+                    traffic_size=self.traffic_size)
 
     def __iter__(self):
         self._prepare_iter()
+
+        if self.preallocate is True:
+            yield hostevent.ControlEvent(operation=OP_FALLOCATE,
+                    arg1=self.zone_size, arg2=self._falloc_keepsize_arg())
 
         for req in self.write_iter:
             yield req
@@ -167,6 +185,10 @@ class SSequentialWrite(SuiteBase):
     def __iter__(self):
         self._prepare_iter()
 
+        if self.preallocate is True:
+            yield hostevent.ControlEvent(operation=OP_FALLOCATE,
+                    arg1=self.zone_size, arg2=self._falloc_keepsize_arg())
+
         for req in self.write_iter:
             yield req
 
@@ -188,6 +210,10 @@ class SSnake(SuiteBase):
 
     def __iter__(self):
         self._prepare_iter()
+
+        if self.preallocate is True:
+            yield hostevent.ControlEvent(operation=OP_FALLOCATE,
+                    arg1=self.zone_size, arg2=self._falloc_keepsize_arg())
 
         for req in self.write_iter:
             yield req
@@ -212,6 +238,10 @@ class SFadingSnake(SuiteBase):
     def __iter__(self):
         self._prepare_iter()
 
+        if self.preallocate is True:
+            yield hostevent.ControlEvent(operation=OP_FALLOCATE,
+                    arg1=self.zone_size, arg2=self._falloc_keepsize_arg())
+
         for req in self.write_iter:
             yield req
 
@@ -234,6 +264,10 @@ class SStrided(SuiteBase):
     def __iter__(self):
         self._prepare_iter()
 
+        if self.preallocate is True:
+            yield hostevent.ControlEvent(operation=OP_FALLOCATE,
+                    arg1=self.zone_size, arg2=self._falloc_keepsize_arg())
+
         for req in self.write_iter:
             yield req
 
@@ -255,6 +289,10 @@ class SHotNCold(SuiteBase):
 
     def __iter__(self):
         self._prepare_iter()
+
+        if self.preallocate is True:
+            yield hostevent.ControlEvent(operation=OP_FALLOCATE,
+                    arg1=self.zone_size, arg2=self._falloc_keepsize_arg())
 
         for req in self.write_iter:
             yield req

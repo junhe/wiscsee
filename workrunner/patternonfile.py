@@ -1,8 +1,8 @@
 import os
 from os import O_RDWR, O_CREAT, O_DIRECT
 from accpatterns.patterns import READ, WRITE, DISCARD
-from commons import OP_DROPCACHE
-from pyfallocate import fallocate
+from commons import *
+from pyfallocate import fallocate, FALLOC_FL_KEEP_SIZE, FALLOC_FL_PUNCH_HOLE
 
 from utilities.utils import drop_caches
 
@@ -27,13 +27,26 @@ class File(object):
                 os.lseek(self.fd, req.offset, os.SEEK_SET)
                 os.write(self.fd, 'x' * req.size)
                 os.fsync(self.fd)
+                # os.fdatasync(self.fd)
             elif op == READ:
                 os.lseek(self.fd, req.offset, os.SEEK_SET)
                 os.read(self.fd, req.size)
             elif op == DISCARD:
-                fallocate(self.fd, 3, req.offset, req.size)
+                fallocate(self.fd, FALLOC_FL_KEEP_SIZE | FALLOC_FL_PUNCH_HOLE,
+                        req.offset, req.size)
             elif op == OP_DROPCACHE:
                 drop_caches()
+            elif op == OP_FALLOCATE:
+                self._fallocate(req)
             else:
                 print 'WARNING', op, 'is not supported in File adapter.'
+
+    def _fallocate(self, req):
+        zone_size = req.arg1
+
+        if req.arg2 == OP_ARG_KEEPSIZE:
+            fallocate(self.fd, FALLOC_FL_KEEP_SIZE, 0, zone_size)
+        elif req.arg2 == OP_ARG_NOTKEEPSIZE:
+            fallocate(self.fd, 0, 0, zone_size)
+
 

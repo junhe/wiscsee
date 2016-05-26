@@ -104,6 +104,8 @@ class Ssd(SsdBase):
             elif  operation == OP_DISCARD:
                 yield self.env.process(
                     self.ftl.discard_ext(host_event.get_lpn_extent(self.conf)))
+            elif operation in [OP_FALLOCATE]:
+                pass
             else:
                 raise NotImplementedError("Operation {} not supported."\
                         .format(host_event.operation))

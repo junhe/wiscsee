@@ -21,6 +21,9 @@ def pattern_on_fs():
                     'traffic_size': self.para.traffic_size,
                     'snake_size': self.para.snake_size,
                     'stride_size': self.para.stride_size,
+                    'has_hole': self.para.has_hole,
+                    'preallocate': self.para.preallocate,
+                    'keep_size': self.para.keep_size,
                     }
 
         def setup_environment(self):
@@ -28,7 +31,6 @@ def pattern_on_fs():
             self.conf['dev_size_mb'] = self.para.lbabytes / MB
             self.conf['filesystem'] = self.para.filesystem
             self.conf["n_online_cpus"] = 'all'
-            self.conf['preallocate'] = self.para.preallocate
 
             self.conf['linux_ncq_depth'] = self.para.linux_ncq_depth
 
@@ -98,7 +100,7 @@ def pattern_on_fs():
 
         def setup_ftl(self):
             self.conf['enable_blktrace'] = True
-            self.conf['enable_simulation'] = True
+            self.conf['enable_simulation'] = False
             self.conf['stripe_size'] = self.para.stripe_size
 
             self.conf['simulator_class'] = 'SimulatorDESNew'
@@ -131,7 +133,8 @@ def pattern_on_fs():
             "stripe_size, chunk_size, linux_ncq_depth, "\
             "cache_mapped_data_bytes, lbabytes, "\
             "zone_size, traffic_size, snake_size, stride_size, "\
-            "f2fs_gc_after_workload, ext4datamode, ext4hasjournal, preallocate"
+            "f2fs_gc_after_workload, ext4datamode, ext4hasjournal, preallocate, "\
+            "has_hole, keep_size"
             )
 
         expname = get_expname()
@@ -140,7 +143,7 @@ def pattern_on_fs():
                 # 'patternclass'   : ['SRandomWrite'],
                 'patternclass'   : [
                     # 'SRandomReadNoPrep',
-                    'SRandomWrite',
+                    # 'SRandomWrite',
                     # 'SSequentialReadNoPrep',
                     'SSequentialWrite',
                     # 'SSnake',
@@ -165,7 +168,9 @@ def pattern_on_fs():
                 'traffic_size'   : [16*MB],
                 'snake_size'     : [8*MB],
                 'f2fs_gc_after_workload': [True],
-                'preallocate'    : [False],
+                'preallocate'    : [True],
+                'has_hole'       : [False],
+                'keep_size'      : [False],
                 }
         parameter_combs = ParameterCombinations(para_dict)
 
