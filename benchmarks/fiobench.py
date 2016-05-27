@@ -723,6 +723,8 @@ def compare_fs():
             self.conf["n_online_cpus"] = 'all'
 
             self.conf['workload_class'] = 'FIONEW'
+            self.conf['wrap_by_perf'] = False
+            self.conf['perf']['perf_path'] = '/mnt/sdb/linux-4.5.4/tools/perf/perf'
 
             self.conf['linux_ncq_depth'] = self.para.linux_ncq_depth
 

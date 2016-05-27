@@ -16,11 +16,11 @@ def flamegraph_wrap(perf_path, cmd, result_dir, flamegraph_dir):
         os.makedirs(result_dir)
 
     with cd(result_dir):
-        shcmd("{perf_path} record -F 99 -a -g -o myperfrecord -- {cmd}".format(
+        shcmd("{perf_path} record -F 990 -a -g -o myperfrecord -- {cmd}".format(
             perf_path = perf_path, cmd = cmd))
         shcmd("{perf_path} script -i myperfrecord > out.perf".format(
             perf_path = perf_path))
-        shcmd("{cmd} out.perf > out.folded".format(cmd = stackcollapse_perf))
-        shcmd("{cmd} out.folded > kernel.svg".format(cmd = flamegraph_path))
+        # shcmd("{cmd} out.perf > out.folded".format(cmd = stackcollapse_perf))
+        # shcmd("{cmd} out.folded > kernel.svg".format(cmd = flamegraph_path))
 
 

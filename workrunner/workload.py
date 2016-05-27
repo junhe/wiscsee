@@ -92,7 +92,8 @@ class FIONEW(Workload):
             perf.flamegraph_wrap(perf_path = self.conf['perf']['perf_path'],
                     cmd = fio_cmd,
                     result_dir = self.conf['result_dir'],
-                    flamegraph_dir = self.conf['perf']['flamegraph_dir'])
+                    flamegraph_dir = self.conf['result_dir'])
+                    # flamegraph_dir = self.conf['perf']['flamegraph_dir'])
         else:
             utils.shcmd(fio_cmd)
 
