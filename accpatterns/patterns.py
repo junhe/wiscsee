@@ -263,5 +263,12 @@ def mix(*pattern_iters):
             raise StopIteration
 
 
+def rep_and_mix(pattern_iter, req):
+    """
+    for each request in pattern_iter, do a 'req' after it
+    """
+    for request in pattern_iter:
+        yield request
+        yield req
 
 

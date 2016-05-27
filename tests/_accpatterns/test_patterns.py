@@ -189,6 +189,13 @@ class TestMix(unittest.TestCase):
         d = list(patterns.mix(iter(a), iter(b), iter(c)))
         self.assertListEqual(list(d), [0, 2, 4, 1, 5])
 
+class TestRepAndMix(unittest.TestCase):
+    def test_basic(self):
+        a = [0, 1, 2]
+        b = list(patterns.rep_and_mix(iter(a), 3))
+        self.assertListEqual(b, [0, 3, 1, 3, 2, 3])
+
+
 def main():
     unittest.main()
 
