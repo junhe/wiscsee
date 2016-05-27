@@ -26,8 +26,10 @@ class File(object):
             if op == WRITE:
                 os.lseek(self.fd, req.offset, os.SEEK_SET)
                 os.write(self.fd, 'x' * req.size)
+            elif op == OP_FSYNC:
                 os.fsync(self.fd)
-                # os.fdatasync(self.fd)
+            elif op == OP_FDATASYNC:
+                os.fdatasync(self.fd)
             elif op == READ:
                 os.lseek(self.fd, req.offset, os.SEEK_SET)
                 os.read(self.fd, req.size)

@@ -24,6 +24,7 @@ def pattern_on_fs():
                     'has_hole': self.para.has_hole,
                     'preallocate': self.para.preallocate,
                     'keep_size': self.para.keep_size,
+                    'fsync': self.para.fsync,
                     }
 
         def setup_environment(self):
@@ -134,7 +135,7 @@ def pattern_on_fs():
             "cache_mapped_data_bytes, lbabytes, "\
             "zone_size, traffic_size, snake_size, stride_size, "\
             "f2fs_gc_after_workload, ext4datamode, ext4hasjournal, preallocate, "\
-            "has_hole, keep_size"
+            "has_hole, keep_size, fsync"
             )
 
         expname = get_expname()
@@ -171,6 +172,7 @@ def pattern_on_fs():
                 'preallocate'    : [True],
                 'has_hole'       : [False],
                 'keep_size'      : [False],
+                'fsync'          : [False],
                 }
         parameter_combs = ParameterCombinations(para_dict)
 

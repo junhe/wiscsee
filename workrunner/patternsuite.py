@@ -17,6 +17,7 @@ class SuiteBase(object):
         self.has_hole = kwargs.get('has_hole', False)
         self.preallocate = kwargs.get('preallocate', False)
         self.keep_size = kwargs.get('keep_size', False)
+        self.fsync = kwargs.get('fsync', False)
 
     def _falloc_keepsize_arg(self):
         if self.keep_size is True:
@@ -98,6 +99,10 @@ class SRandomWrite(SuiteBase):
             self.write_iter = patterns.RandomNoHole(op=OP_WRITE, zone_offset=0,
                     zone_size=self.zone_size, chunk_size=self.chunk_size,
                     traffic_size=self.traffic_size)
+
+        if self.fsync is True:
+            fsync_req = get_fsync_req()
+            self.write_iter = patterns.rep_and_mix(self.write_iter, fsync_req)
 
     def __iter__(self):
         self._prepare_iter()
@@ -182,6 +187,10 @@ class SSequentialWrite(SuiteBase):
                 zone_size=self.zone_size, chunk_size=self.chunk_size,
                 traffic_size=self.traffic_size)
 
+        if self.fsync is True:
+            fsync_req = get_fsync_req()
+            self.write_iter = patterns.rep_and_mix(self.write_iter, fsync_req)
+
     def __iter__(self):
         self._prepare_iter()
 
@@ -207,6 +216,10 @@ class SSnake(SuiteBase):
         self.write_iter = patterns.Snake(zone_offset=0,
                 zone_size=self.zone_size, chunk_size=self.chunk_size,
                 traffic_size=self.traffic_size, snake_size=self.snake_size)
+
+        if self.fsync is True:
+            fsync_req = get_fsync_req()
+            self.write_iter = patterns.rep_and_mix(self.write_iter, fsync_req)
 
     def __iter__(self):
         self._prepare_iter()
@@ -235,6 +248,10 @@ class SFadingSnake(SuiteBase):
                 zone_size=self.zone_size, chunk_size=self.chunk_size,
                 traffic_size=self.traffic_size, snake_size=self.snake_size)
 
+        if self.fsync is True:
+            fsync_req = get_fsync_req()
+            self.write_iter = patterns.rep_and_mix(self.write_iter, fsync_req)
+
     def __iter__(self):
         self._prepare_iter()
 
@@ -261,6 +278,10 @@ class SStrided(SuiteBase):
                 zone_size=self.zone_size, chunk_size=self.chunk_size,
                 traffic_size=self.traffic_size, stride_size=self.stride_size)
 
+        if self.fsync is True:
+            fsync_req = get_fsync_req()
+            self.write_iter = patterns.rep_and_mix(self.write_iter, fsync_req)
+
     def __iter__(self):
         self._prepare_iter()
 
@@ -286,6 +307,10 @@ class SHotNCold(SuiteBase):
         self.write_iter = patterns.HotNCold(op=OP_WRITE, zone_offset=0,
                 zone_size=self.zone_size, chunk_size=self.chunk_size,
                 traffic_size=self.traffic_size)
+
+        if self.fsync is True:
+            fsync_req = get_fsync_req()
+            self.write_iter = patterns.rep_and_mix(self.write_iter, fsync_req)
 
     def __iter__(self):
         self._prepare_iter()
@@ -317,4 +342,7 @@ class SNoOp(SuiteBase):
 
         yield hostevent.ControlEvent(operation=OP_CLEAN)
 
+
+def get_fsync_req():
+    return patterns.Request(OP_FSYNC, 0, 0)
 
