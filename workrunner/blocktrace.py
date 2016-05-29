@@ -57,7 +57,7 @@ class BlktraceResult(object):
         row['size'] = byte_size
 
     def __calculate_pre_wait_time(self, event_table):
-        event_table.sort(key = lambda k: k['timestamp'])
+        event_table.sort(key = lambda k: float(k['timestamp']))
         for i, row in enumerate(event_table):
             if i == 0:
                 row['pre_wait_time'] = 0
