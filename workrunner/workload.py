@@ -284,6 +284,7 @@ class Sqlbench(Workload):
     def stop_mysql():
         """You will get 'no instance found' if no mysql runningn"""
         shcmd("sudo service mysql stop")
+        shcmd("sudo stop mysql")
 
 
     def change_data_dir(self):
@@ -334,11 +335,11 @@ class Sqlbench(Workload):
             self.change_data_dir()
 
             utils.shcmd("sudo service mysql restart")
-            utils.shcmd("mysqladmin -u root -p8888 create test")
+            # utils.shcmd("mysqladmin -u root -p8888 create test")
 
+            test = self.conf['sqlbench']['bench_to_run']
+            self.run_sqlbench(test)
 
-            for test in self.conf['sqlbench']['benches_to_run']:
-                self.run_sqlbench(test)
         finally:
             try:
                 self.stop_mysql()

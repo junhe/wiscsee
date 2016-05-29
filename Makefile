@@ -7,6 +7,9 @@ patternbench:
 fiobench:
 	sudo python -m benchmarks.fiobench -t 'compare_fs()'
 
+appbench:
+	sudo python -m benchmarks.appbench -t 'bench()'
+
 f2fsgc:
 	mkdir -p bin
 	cd ./foreign && gcc -o forcef2fsgc forcef2fsgc.c && mv forcef2fsgc ../bin/
