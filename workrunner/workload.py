@@ -3,6 +3,7 @@ import os
 import pprint
 import random
 import time
+import sys
 
 from commons import *
 import config
@@ -15,6 +16,14 @@ import workloadlist
 from accpatterns import patterns
 from .patternonfile import File
 import patternsuite
+
+try:
+    parent = os.path.join(sys.path[0], '../reuse/')
+    sys.path.append(parent)
+    import pyreuse
+    from pyreuse.sysutils.ftrace import trace_cmd
+except ImportError:
+    print "Failed to import pyreuse, but it may be ok"
 
 class Workload(object):
     def __init__(self, confobj, workload_conf_key = None):
