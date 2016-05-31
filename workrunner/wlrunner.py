@@ -1,7 +1,8 @@
 import re
 import time
 
-import blocktrace
+import prepare4pyreuse
+from pyreuse.sysutils import blocktrace
 import config
 import cpuhandler
 import filesystem
@@ -23,16 +24,16 @@ class WorkloadRunner(object):
 
         # blktracer for making file system
         self.blktracer_mkfs = blocktrace.BlockTraceManager(
-            confobj = self.conf,
             dev = self.conf['device_path'],
+            event_file_column_names =  self.conf['event_file_column_names'],
             resultpath = self.conf.get_blkparse_result_path_mkfs(),
             to_ftlsim_path = self.conf.get_ftlsim_events_output_path_mkfs(),
             sector_size = self.conf['sector_size'])
 
         # blktracer for running workload
         self.blktracer = blocktrace.BlockTraceManager(
-            confobj = self.conf,
             dev = self.conf['device_path'],
+            event_file_column_names =  self.conf['event_file_column_names'],
             resultpath = self.conf.get_blkparse_result_path(),
             to_ftlsim_path = self.conf.get_ftlsim_events_output_path(),
             sector_size = self.conf['sector_size'])

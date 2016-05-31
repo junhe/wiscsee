@@ -24,8 +24,9 @@ import lrulist
 import recorder
 from utilities import utils
 import dftldes
-from workrunner import blocktrace
 
+import prepare4pyreuse
+from pyreuse.sysutils import blocktrace
 
 class SsdBase(object):
     def _process(self, pid):

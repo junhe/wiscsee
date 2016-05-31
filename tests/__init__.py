@@ -1,4 +1,3 @@
-import blocktrace_test
 import config_test
 import datacache_test
 import fiounittest_test
