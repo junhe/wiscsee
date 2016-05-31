@@ -317,7 +317,9 @@ class SSDFramework(object):
         if not os.path.exists(raw_blkparse_file_path):
             return
 
-        blkresult = blocktrace.BlktraceResult(self.conf,
+        blkresult = blocktrace.BlktraceResult(
+                self.conf['sector_size'],
+                self.conf['event_file_columns'],
                 raw_blkparse_file_path, None)
         self.recorder.set_result_by_one_key(
                 'blkparse_read_bw',

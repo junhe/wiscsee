@@ -10,11 +10,11 @@ class BlktraceResult(object):
     """
     Parse blkparse output
     """
-    def __init__(self, conf, raw_blkparse_file_path, parsed_output_path):
-        self.conf = conf
+    def __init__(self, sector_size, event_file_columns, raw_blkparse_file_path, parsed_output_path):
         self.raw_blkparse_file_path = raw_blkparse_file_path
         self.parsed_output_path = parsed_output_path
-        self.sector_size = self.conf['sector_size']
+        self.sector_size = sector_size
+        self.event_file_columns = event_file_columns
 
         self.__parse_rawfile()
 
@@ -89,7 +89,7 @@ class BlktraceResult(object):
 
     def __create_event_line(self, line_dict):
         columns = [str(line_dict[colname])
-                for colname in self.conf['event_file_columns']]
+                for colname in self.event_file_columns]
         line = ' '.join(columns)
         return line
 
@@ -122,7 +122,7 @@ class BlktraceResult(object):
 
     def get_bandwidth_mb(self, operation):
         sec_cnt = self.count_sectors(operation)
-        size_mb = sec_cnt * self.conf['sector_size'] / float(MB)
+        size_mb = sec_cnt * self.sector_size / float(MB)
         duration = self.get_duration()
 
         return size_mb / duration
@@ -144,7 +144,9 @@ class BlockTraceManager(object):
         stop_blktrace_on_bg()
 
     def create_event_file_from_blkparse(self):
-        rawparser = BlktraceResult(self.conf, self.resultpath, self.to_ftlsim_path)
+        rawparser = BlktraceResult(self.conf['sector_size'],
+                self.conf['event_file_columns'],
+                self.resultpath, self.to_ftlsim_path)
         rawparser.create_event_file()
 
 
