@@ -94,7 +94,7 @@ class TestBlocktraceResult(unittest.TestCase):
         self.conf = ssdbox.dftldes.Config()
         blkresult = workrunner.blocktrace.BlktraceResult(
                 self.conf['sector_size'],
-                self.conf['event_file_columns'],
+                self.conf['event_file_column_names'],
                 './tests/testdata/blkparse-output.txt',
                 '/tmp/blkparse-output.txt.parsed')
         blkresult.create_event_file()

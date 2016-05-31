@@ -89,7 +89,7 @@ class EventIterator(object):
         self.conf = conf
         self.sector_size = self.conf['sector_size']
         self.filelineiter = filelineiter
-        self.event_file_columns = self.conf['event_file_columns']
+        self.event_file_column_names = self.conf['event_file_column_names']
 
         self._translation = {'read': OP_READ, 'write': OP_WRITE,
                 'discard':OP_DISCARD}
@@ -99,10 +99,10 @@ class EventIterator(object):
 
     def str_to_event(self, line):
         items = line.split()
-        if len(self.event_file_columns) != len(items):
+        if len(self.event_file_column_names) != len(items):
             raise RuntimeError("Lengths not equal: {} {}".format(
-                self.event_file_columns, items))
-        dic = dict(zip(self.event_file_columns, items))
+                self.event_file_column_names, items))
+        dic = dict(zip(self.event_file_column_names, items))
         dic['sector_size'] = self.sector_size
         dic['pre_wait_time'] = float(dic['pre_wait_time'])
 

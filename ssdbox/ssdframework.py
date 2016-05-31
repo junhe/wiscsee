@@ -319,7 +319,7 @@ class SSDFramework(object):
 
         blkresult = blocktrace.BlktraceResult(
                 self.conf['sector_size'],
-                self.conf['event_file_columns'],
+                self.conf['event_file_column_names'],
                 raw_blkparse_file_path, None)
         self.recorder.set_result_by_one_key(
                 'blkparse_read_bw',

@@ -311,7 +311,7 @@ class Config(dict):
 
             "enable_blktrace"       : False,
 
-            "event_file_columns"    : ['pid', 'operation', 'offset', 'size',
+            "event_file_column_names"    : ['pid', 'operation', 'offset', 'size',
                     'timestamp', 'pre_wait_time'],
 
             "fs_mount_point"        : "/mnt/fsonloop",

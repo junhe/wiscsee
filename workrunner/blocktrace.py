@@ -10,11 +10,11 @@ class BlktraceResult(object):
     """
     Parse blkparse output
     """
-    def __init__(self, sector_size, event_file_columns, raw_blkparse_file_path, parsed_output_path):
+    def __init__(self, sector_size, event_file_column_names, raw_blkparse_file_path, parsed_output_path):
         self.raw_blkparse_file_path = raw_blkparse_file_path
         self.parsed_output_path = parsed_output_path
         self.sector_size = sector_size
-        self.event_file_columns = event_file_columns
+        self.event_file_column_names = event_file_column_names
 
         self.__parse_rawfile()
 
@@ -89,7 +89,7 @@ class BlktraceResult(object):
 
     def __create_event_line(self, line_dict):
         columns = [str(line_dict[colname])
-                for colname in self.event_file_columns]
+                for colname in self.event_file_column_names]
         line = ' '.join(columns)
         return line
 
@@ -145,7 +145,7 @@ class BlockTraceManager(object):
 
     def create_event_file_from_blkparse(self):
         rawparser = BlktraceResult(self.conf['sector_size'],
-                self.conf['event_file_columns'],
+                self.conf['event_file_column_names'],
                 self.resultpath, self.to_ftlsim_path)
         rawparser.create_event_file()
 
