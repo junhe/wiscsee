@@ -108,12 +108,21 @@ def bench():
             )
 
         expname = get_expname()
-        lbabytes = 256*MB
+        lbabytes = 1024*MB
         para_dict = {
                 'workload_class'   : [
                     'Sqlbench',
                     ],
-                'bench_to_run'   : ['test-select'],
+                'bench_to_run'   : [
+                    'test-select',
+                    'test-ATIS',
+                    # 'test-create', # large data
+                    'test-transactions',
+                    'test-alter-table',
+                    'test-connect',
+                    # 'test-insert', # large data
+                    'test-wisconsin',
+                    ],
                 'device_path'    : ['/dev/sdc1'],
                 'filesystem'     : ['ext4'],
                 'ext4datamode'   : ['ordered'],

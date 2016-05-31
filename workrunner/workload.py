@@ -213,11 +213,11 @@ class Mdtest(Workload):
 
 class Tpcc(Workload):
     def start_mysql():
-        shcmd("sudo service mysql start")
+        utils.shcmd("sudo service mysql start")
 
     def stop_mysql():
         """You will get 'no instance found' if no mysql runningn"""
-        shcmd("sudo service mysql stop")
+        utils.shcmd("sudo service mysql stop")
 
 
     def change_data_dir(self):
@@ -250,10 +250,7 @@ class Tpcc(Workload):
         utils.shcmd("chown -R mysql:mysql /mnt/fsonloop/mysql")
 
     def run(self):
-        try:
-            self.stop_mysql()
-        except Exception:
-            pass
+        self.stop_mysql()
 
         self.change_data_dir()
 
@@ -287,14 +284,14 @@ class Tpcc(Workload):
 
 
 class Sqlbench(Workload):
-    def start_mysql():
-        shcmd("sudo service mysql start")
+    def start_mysql(self):
+        utils.shcmd("sudo service mysql start")
 
-    def stop_mysql():
+    def stop_mysql(self):
         """You will get 'no instance found' if no mysql runningn"""
-        shcmd("sudo service mysql stop")
-        shcmd("sudo stop mysql")
-
+        print 'stop_mysql() ---------------------~~~~'
+        utils.shcmd("sudo stop mysql")
+        # shcmd("sudo service mysql stop")
 
     def change_data_dir(self):
         """TODO: It has some hard-coded stuff"""
@@ -335,10 +332,7 @@ class Sqlbench(Workload):
             utils.shcmd(' '.join(cmd))
 
     def run(self):
-        try:
-            self.stop_mysql()
-        except Exception:
-            pass
+        # self.stop_mysql()
 
         try:
             self.change_data_dir()
@@ -350,10 +344,7 @@ class Sqlbench(Workload):
             self.run_sqlbench(test)
 
         finally:
-            try:
-                self.stop_mysql()
-            except Exception:
-                pass
+            self.stop_mysql()
 
     def stop(self):
         utils.shcmd("sudo service mysql stop")
