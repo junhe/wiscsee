@@ -25,6 +25,12 @@ make
 sudo make install
 cd $doradir
 
+cd ../..
+wget https://github.com/google/leveldb/archive/v1.18.tar.gz
+tar xf v1.18.tar.gz
+cd leveldb-1.18
+make
+cd $doradir
 
 sudo apt-get install -y python-bitarray
 
