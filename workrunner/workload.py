@@ -212,12 +212,13 @@ class Mdtest(Workload):
 
 
 class Tpcc(Workload):
-    def start_mysql():
+    def start_mysql(self):
         utils.shcmd("sudo service mysql start")
 
-    def stop_mysql():
+    def stop_mysql(self):
         """You will get 'no instance found' if no mysql runningn"""
-        utils.shcmd("sudo service mysql stop")
+        # utils.shcmd("sudo service mysql stop")
+        utils.shcmd("sudo stop mysql")
 
 
     def change_data_dir(self):
@@ -249,16 +250,13 @@ class Tpcc(Workload):
         utils.shcmd("cp -r /var/lib/mysql /mnt/fsonloop/")
         utils.shcmd("chown -R mysql:mysql /mnt/fsonloop/mysql")
 
-    def run(self):
-        self.stop_mysql()
-
+    def execute_tpcc(self):
         self.change_data_dir()
 
-        with utils.cd("/home/jun/workdir/mysql-io-pattern/tpcc-mysql/tpcc-mysql"):
+        with utils.cd("../mysql-io-pattern/tpcc-mysql/tpcc-mysql"):
             # utils.shcmd("sudo mysqld &")
             # utils.shcmd("sudo /etc/init.d/mysql restart")
             # time.sleep(1)
-
 
             utils.shcmd("sudo service mysql restart")
             utils.shcmd('mysql -u root -p8888 -e "CREATE DATABASE tpcc1000;"')
@@ -279,8 +277,11 @@ class Tpcc(Workload):
                   ]
             utils.shcmd(" ".join(cmd))
 
-    def stop(self):
-        utils.shcmd("sudo service mysql stop")
+    def run(self):
+        try:
+            self.execute_tpcc()
+        finally:
+            self.stop_mysql()
 
 
 class Sqlbench(Workload):
