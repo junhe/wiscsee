@@ -284,6 +284,16 @@ class Tpcc(Workload):
             self.stop_mysql()
 
 
+
+class Leveldb(Workload):
+    def run(self):
+        data_dir = os.path.join(self.conf['fs_mount_point'], 'leveldb_data')
+        utils.prepare_dir(data_dir)
+
+        db_bench_path = "../leveldb-1.18/db_bench"
+        utils.shcmd("{} --db={}".format(db_bench_path, data_dir))
+
+
 class Sqlbench(Workload):
     def start_mysql(self):
         utils.shcmd("sudo service mysql start")
