@@ -104,7 +104,8 @@ class FIONEW(Workload):
                     flamegraph_dir = self.conf['result_dir'])
                     # flamegraph_dir = self.conf['perf']['flamegraph_dir'])
         else:
-            utils.shcmd(fio_cmd)
+            with utils.cd(self.conf['result_dir']):
+                utils.shcmd(fio_cmd)
 
         if self.to_json:
             self.parse_results()
