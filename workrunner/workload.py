@@ -22,6 +22,7 @@ try:
     sys.path.append(parent)
     import pyreuse
     from pyreuse.sysutils.ftrace import trace_cmd
+    from pyreuse.apputils.parseleveldboutput import parse_file
 except ImportError:
     print "Failed to import pyreuse, but it may be ok"
 
@@ -287,12 +288,22 @@ class Tpcc(Workload):
 
 
 class Leveldb(Workload):
+    def parse_output(self, outputpath):
+        outputpath_parsed = outputpath + '.parsed'
+        tablestr = parse_file(outputpath)
+        with open(outputpath_parsed, 'w') as f:
+            f.write(tablestr)
+
     def run(self):
         data_dir = os.path.join(self.conf['fs_mount_point'], 'leveldb_data')
         utils.prepare_dir(data_dir)
 
+        outputpath = os.path.join(self.conf['result_dir'], 'leveldb.out')
+
         db_bench_path = "../leveldb-1.18/db_bench"
-        utils.shcmd("{} --db={}".format(db_bench_path, data_dir))
+        utils.shcmd("{} --db={} > {}".format(db_bench_path, data_dir, outputpath))
+
+        self.parse_output(outputpath)
 
 
 class Sqlbench(Workload):
