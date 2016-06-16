@@ -53,3 +53,6 @@ sudo pip install cffi
 sudo pip install ordereddict
 
 cd ../pyfallocate && python fallocate_build.py 
+
+cd ../ && make f2fsgc
+
