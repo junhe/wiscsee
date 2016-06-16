@@ -145,7 +145,7 @@ class Ftl(object):
 
         yield simpy.events.AllOf(self.env, procs)
 
-        self.recorder.write_file('timeline.txt',
+        write_timeline(self.conf, self.recorder,
             op_id = op_id, op = 'write_ext', arg = extent.lpn_start,
             start_time = start_time, end_time = self.env.now)
 
@@ -171,7 +171,7 @@ class Ftl(object):
             self.flash.rw_ppns(ppns_to_write, 'write',
                 tag = channel_tag))
 
-        self.recorder.write_file('timeline.txt',
+        write_timeline(self.conf, self.recorder,
             op_id = op_id, op = 'write_user_data', arg = len(ppns_to_write),
             start_time = start_time, end_time = self.env.now)
 
@@ -249,7 +249,7 @@ class Ftl(object):
 
         yield simpy.events.AllOf(self.env, procs)
 
-        self.recorder.write_file('timeline.txt',
+        write_timeline(self.conf, self.recorder,
             op_id = op_id, op = 'read_ext', arg = extent.lpn_start,
             start_time = start_time, end_time = self.env.now)
 
@@ -270,7 +270,7 @@ class Ftl(object):
             self.flash.rw_ppns(ppns_to_read, 'read',
                 tag=self.recorder.get_tag('read_user', tag)))
 
-        self.recorder.write_file('timeline.txt',
+        write_timeline(self.conf, self.recorder,
             op_id=op_id, op='read_user_data', arg=len(ppns_to_read),
             start_time = start_time, end_time = self.env.now)
 
@@ -396,7 +396,7 @@ class FlashTransmitMixin(object):
                 self.flash.rw_ppn_extent(m_ppn, 1, 'read',
                 tag = self.recorder.get_tag('read_trans', tag)))
 
-        self.recorder.write_file('timeline.txt',
+        write_timeline(self.conf, self.recorder,
             op_id = op_id, op = 'read_trans_page', arg = m_vpn,
             start_time = start_time, end_time = self.env.now)
 
@@ -427,7 +427,7 @@ class FlashTransmitMixin(object):
                 self.flash.rw_ppn_extent(new_m_ppn, 1, 'write',
                 tag = self.recorder.get_tag('prog_trans', tag)))
 
-        self.recorder.write_file('timeline.txt',
+        write_timeline(self.conf, self.recorder,
             op_id = op_id, op = 'prog_trans_page', arg = m_vpn,
             start_time = start_time, end_time = self.env.now)
 
@@ -1883,4 +1883,10 @@ class Config(config.ConfigNCQFTL):
         return (n_entries * entry_bytes + \
                 (flash_page_size -1)) / flash_page_size
 
+
+def write_timeline(conf, recorder, op_id, op, arg, start_time, end_time):
+    if conf.get('write_timeline', False) is True:
+        recorder.write_file('timeline.txt',
+            op_id = op_id, op = op, arg = arg,
+            start_time = start_time, end_time = end_time)
 

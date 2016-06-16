@@ -424,6 +424,14 @@ class Channel3(Channel2):
         elif isinstance(tag, str):
             return {'tag':tag}
 
+    def _write_channel_timeline(self, channel_id, start_time, end_time, tag):
+        write = self.conf.get("write_channel_timeline", False)
+        if write is True:
+            tag = self._convert_tag(tag)
+            self.recorder.write_file('channel_timeline.txt',
+                channel=channel_id, start_time=start_time, end_time=end_time,
+                **tag)
+
     def write_page(self, tag, addr = None , data = None):
         """
         If you want to when this operation is finished, just print env.now.
@@ -440,10 +448,8 @@ class Channel3(Channel2):
                 "channel_{id}-write-{tag}".format(id = self.channel_id,
                     tag = self.recorder.tag_group(tag)),
                 e - s)
-            tag = self._convert_tag(tag)
-            self.recorder.write_file('channel_timeline.txt',
-                channel=self.channel_id, start_time=s, end_time=e, **tag)
-
+            self._write_channel_timeline(channel_id=self.channel_id,
+                    start_time=s, end_time=e, tag=tag)
 
     def read_page(self, tag, addr = None):
         with self.resource.request() as request:
@@ -456,10 +462,8 @@ class Channel3(Channel2):
                 "channel_{id}-read-{tag}".format(id = self.channel_id,
                     tag = self.recorder.tag_group(tag)),
                 e - s)
-            tag = self._convert_tag(tag)
-            self.recorder.write_file('channel_timeline.txt',
-                channel=self.channel_id, start_time=s, end_time=e, **tag)
-
+            self._write_channel_timeline(channel_id=self.channel_id,
+                    start_time=s, end_time=e, tag=tag)
 
     def erase_block(self, tag, addr = None):
         with self.resource.request() as request:
@@ -472,7 +476,6 @@ class Channel3(Channel2):
                 "channel_{id}-erase-{tag}".format(id = self.channel_id,
                     tag = self.recorder.tag_group(tag)),
                 e - s)
-            tag = self._convert_tag(tag)
-            self.recorder.write_file('channel_timeline.txt',
-                channel=self.channel_id, start_time=s, end_time=e, **tag)
+            self._write_channel_timeline(channel_id=self.channel_id,
+                    start_time=s, end_time=e, tag=tag)
 
