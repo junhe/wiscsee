@@ -10,6 +10,8 @@ fiobench:
 appbench:
 	sudo python -m benchmarks.appbench -t 'bench()'
 
+leveldb:
+	sudo python -m benchmarks.appbench -t 'leveldbbench()'
 f2fsgc:
 	mkdir -p bin
 	cd ./foreign && gcc -o forcef2fsgc forcef2fsgc.c && mv forcef2fsgc ../bin/

@@ -295,13 +295,19 @@ class Leveldb(Workload):
             f.write(tablestr)
 
     def run(self):
+
+        benchmarks = self.workload_conf['benchmarks']
+        num = self.workload_conf['num']
+
         data_dir = os.path.join(self.conf['fs_mount_point'], 'leveldb_data')
         utils.prepare_dir(data_dir)
 
         outputpath = os.path.join(self.conf['result_dir'], 'leveldb.out')
 
         db_bench_path = "../leveldb-1.18/db_bench"
-        utils.shcmd("{} --db={} > {}".format(db_bench_path, data_dir, outputpath))
+        utils.shcmd("{exe} --benchmarks={benchmarks} --num={num} --db={db} > {out}"\
+            .format(exe=db_bench_path, benchmarks=benchmarks,
+                num=num, db=data_dir, out=outputpath))
 
         self.parse_output(outputpath)
 
