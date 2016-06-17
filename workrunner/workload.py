@@ -4,6 +4,7 @@ import pprint
 import random
 import time
 import sys
+import subprocess
 
 from commons import *
 import config
@@ -294,22 +295,53 @@ class Leveldb(Workload):
         with open(outputpath_parsed, 'w') as f:
             f.write(tablestr)
 
-    def run(self):
 
-        benchmarks = self.workload_conf['benchmarks']
-        num = self.workload_conf['num']
-
-        data_dir = os.path.join(self.conf['fs_mount_point'], 'leveldb_data')
-        utils.prepare_dir(data_dir)
-
-        outputpath = os.path.join(self.conf['result_dir'], 'leveldb.out')
+    def _execute_leveldb(self, benchmarks, num, db, outputpath, use_existing_db=1):
+        utils.prepare_dir(db)
 
         db_bench_path = "../leveldb-1.18/db_bench"
-        utils.shcmd("{exe} --benchmarks={benchmarks} --num={num} --db={db} > {out}"\
+        cmd = "{exe} --benchmarks={benchmarks} --num={num} --db={db} "\
+                "--use_existing_db={use_existing_db} > {out}"\
             .format(exe=db_bench_path, benchmarks=benchmarks,
-                num=num, db=data_dir, out=outputpath))
+                num=num, db=db, out=outputpath,
+                use_existing_db=use_existing_db
+                )
+        p = subprocess.Popen(cmd, shell=True)
 
-        self.parse_output(outputpath)
+        return p
+
+    def run(self):
+        data_dir = os.path.join(self.conf['fs_mount_point'], 'leveldb_data')
+        outputpath = os.path.join(self.conf['result_dir'], 'leveldb.out')
+        benchmarks = self.workload_conf['benchmarks']
+        num = self.workload_conf['num']
+        one_by_one = self.workload_conf['one_by_one']
+
+        n_instances = self.workload_conf['n_instances']
+
+        if one_by_one is True:
+            p = self._execute_leveldb(benchmarks='fillrandom', num=2000000,
+                    db=data_dir, outputpath=outputpath,
+                    use_existing_db=0
+                    )
+            p.wait()
+            for i in range(n_instances):
+                p = self._execute_leveldb(benchmarks=benchmarks, num=num,
+                        db=data_dir, outputpath=outputpath,
+                        use_existing_db=1
+                        )
+                p.wait()
+        else:
+            procs = []
+            for i in range(n_instances):
+                p = self._execute_leveldb(benchmarks=benchmarks, num=num,
+                        db=data_dir + str(i), outputpath=outputpath,
+                        use_existing_db=0
+                        )
+                procs.append(p)
+
+            for p in procs:
+                p.wait()
 
 
 class Sqlbench(Workload):

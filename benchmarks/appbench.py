@@ -295,7 +295,10 @@ def leveldbbench():
             self.conf['workload_class'] = self.para.workload_class
             self.conf['workload_config'] = {
                     'benchmarks': self.para.benchmarks,
-                    'num': self.para.num}
+                    'n_instances': self.para.n_instances,
+                    'num': self.para.num,
+                    'one_by_one': self.para.one_by_one
+                    }
             self.conf['workload_conf_key'] = 'workload_config'
 
             self.conf['f2fs_gc_after_workload'] = self.para.f2fs_gc_after_workload
@@ -344,7 +347,7 @@ def leveldbbench():
             self.conf['SSDFramework']['ncq_depth'] = 8
 
             self.conf['flash_config']['page_size'] = 2048
-            self.conf['flash_config']['n_pages_per_block'] = 64
+            self.conf['flash_config']['n_pages_per_block'] = 256
             self.conf['flash_config']['n_blocks_per_plane'] = 2
             self.conf['flash_config']['n_planes_per_chip'] = 1
             self.conf['flash_config']['n_chips_per_package'] = 1
@@ -352,7 +355,7 @@ def leveldbbench():
             self.conf['flash_config']['n_channels_per_dev'] = 8
 
             self.conf['do_not_check_gc_setting'] = True
-            self.conf.GC_high_threshold_ratio = 0.96
+            self.conf.GC_high_threshold_ratio = 0.90
             self.conf.GC_low_threshold_ratio = 0.80
 
         def setup_ftl(self):
@@ -389,28 +392,31 @@ def leveldbbench():
             "stripe_size, linux_ncq_depth, "\
             "cache_mapped_data_bytes, lbabytes, "\
             "f2fs_gc_after_workload, ext4datamode, ext4hasjournal, "\
-            "benchmarks, num"
+            "benchmarks, num, n_instances, one_by_one"
             )
 
         expname = get_expname()
         lbabytes = 512*MB
         para_dict = {
                 'workload_class'   : [
-                    # 'Tpcc',
                     'Leveldb'
                     ],
-                'benchmarks'     : ['fillrandom'],
+                'benchmarks'     : [
+                    'overwrite',
+                    ],
                 'num'            : [1000000],
                 'device_path'    : ['/dev/sdc1'],
                 'filesystem'     : ['ext4'],
                 'ext4datamode'   : ['ordered'],
                 'ext4hasjournal' : [True],
                 'expname'        : [expname],
-                'dirty_bytes'    : [128*MB],
+                'dirty_bytes'    : [4*GB],
                 'linux_ncq_depth': [31],
-                'stripe_size'    : [1, 128],
+                'stripe_size'    : [128],
                 'cache_mapped_data_bytes' :[lbabytes],
                 'lbabytes'       : [lbabytes],
+                'n_instances'    : [1],
+                'one_by_one'     : [True],
 
                 'f2fs_gc_after_workload': [True],
                 }
@@ -421,8 +427,6 @@ def leveldbbench():
             obj.main()
 
     run_exp()
-
-
 
 
 def main(cmd_args):
