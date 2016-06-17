@@ -73,8 +73,8 @@ class OutOfBandAreas(object):
     def __init__(self, confobj):
         self.conf = confobj
 
-        self.flash_num_blocks = confobj['flash_num_blocks']
-        self.flash_npage_per_block = confobj['flash_npage_per_block']
+        self.flash_num_blocks = confobj.n_blocks_per_dev
+        self.flash_npage_per_block = confobj.n_pages_per_block
         self.total_pages = self.flash_num_blocks * self.flash_npage_per_block
 
         # Key data structures
@@ -85,7 +85,7 @@ class OutOfBandAreas(object):
 
     def display_bitmap_by_block(self):
         npages_per_block = self.conf['flash_npage_per_block']
-        nblocks = self.conf['flash_num_blocks']
+        nblocks = self.conf.n_blocks_per_dev
         totalpages =  nblocks * npages_per_block
         line = ''
         for i in range(totalpages):
@@ -157,7 +157,7 @@ class BlockPool(object):
     def __init__(self, confobj):
         self.conf = confobj
 
-        self.freeblocks = deque(range(self.conf['flash_num_blocks']))
+        self.freeblocks = deque(range(self.conf.n_blocks_per_dev))
 
         # initialize usedblocks
         self.log_usedblocks = []
@@ -216,12 +216,12 @@ class BlockPool(object):
 
     def visual(self):
         block_states = [ 'O' if block in self.freeblocks else 'X'
-                for block in range(self.conf['flash_num_blocks'])]
+                for block in range(self.conf.n_blocks_per_dev)]
         return ''.join(block_states)
 
     def used_ratio(self):
         return (len(self.log_usedblocks) + len(self.data_usedblocks))\
-            / float(self.conf['flash_num_blocks'])
+            / float(self.conf.n_blocks_per_dev)
 
 class MappingBase(object):
     """
@@ -556,10 +556,10 @@ class GcDecider(object):
         self.recorder = recorderobj
 
         self.high_watermark = self.conf['nkftl']['GC_threshold_ratio'] * \
-            self.conf['flash_num_blocks']
+            self.conf.n_blocks_per_dev
         self.low_watermark = max( self.conf['nkftl']['GC_low_threshold_ratio'] * \
-            self.conf['flash_num_blocks'],
-            self.conf['flash_num_blocks'] / self.conf['nkftl']['provision_ratio'])
+            self.conf.n_blocks_per_dev,
+            self.conf.n_blocks_per_dev / self.conf['nkftl']['provision_ratio'])
 
         assert self.high_watermark > self.low_watermark
 
@@ -1270,7 +1270,7 @@ class GarbageCollector(object):
 
         # number of data blocks cannot excceed the setting
         # print 'calling asserts()'
-        block_span =  int(self.conf['flash_num_blocks'] * \
+        block_span =  int(self.conf.n_blocks_per_dev * \
                 self.conf['nkftl']['n_blocks_in_data_group'] \
                 / (self.conf['nkftl']['max_blocks_in_log_group'] \
                    + self.conf['nkftl']['n_blocks_in_data_group']) - 1)
