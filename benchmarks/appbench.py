@@ -353,7 +353,7 @@ def leveldbbench():
 
             self.conf['do_not_check_gc_setting'] = True
             self.conf.GC_high_threshold_ratio = 0.96
-            self.conf.GC_low_threshold_ratio = 0
+            self.conf.GC_low_threshold_ratio = 0.80
 
         def setup_ftl(self):
             self.conf['enable_blktrace'] = True
@@ -365,7 +365,7 @@ def leveldbbench():
 
             logicsize_mb = self.conf['dev_size_mb']
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
-            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.08))
+            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
         def run(self):
             set_exp_metadata(self.conf, save_data = True,
