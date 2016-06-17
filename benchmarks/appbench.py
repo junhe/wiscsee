@@ -317,6 +317,21 @@ def leveldbbench():
                             'data': MOpt(opt_name = "data",
                                             value = self.para.ext4datamode,
                                             include_name = True) },
+                "btrfs":  {
+                            # "discard": MOpt(opt_name = "discard",
+                                             # value = "discard",
+                                             # include_name = False),
+                                             # "ssd": MOpt(opt_name = 'ssd',
+                                                 # value = 'ssd',
+                                         # include_name = False),
+                            "autodefrag": MOpt(opt_name = 'autodefrag',
+                                                value = 'autodefrag',
+                                                include_name = False) },
+                "xfs":    {
+                    # 'discard': MOpt(opt_name = 'discard',
+                                            # value = 'discard',
+                                            # include_name = False)
+                    },
                 }
                 )
 
