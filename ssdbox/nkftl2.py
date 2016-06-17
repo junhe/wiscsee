@@ -1294,8 +1294,6 @@ class GarbageCollector(object):
                 .format(len(self.block_pool.log_usedblocks), total_log_blocks)
 
 
-
-
 class Nkftl(ftlbuilder.FtlBuilder):
     """
     This is an FTL implemented according to paper:

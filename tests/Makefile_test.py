@@ -387,7 +387,7 @@ class TestEventIter(unittest.TestCase):
     def test_main2(self):
         conf = config.ConfigNewFlash()
         events = list(ssdbox.hostevent.EventIterator(conf,
-            ["1123 write 0 4096 0 0", "13 write 40960 4096 1 1"]))
+            ["1123 write 0 4096 0 0 S", "13 write 40960 4096 1 1 S"]))
         e = events[0]
         self.assertEqual(e.pid, 1123)
         self.assertEqual(e.operation, OP_WRITE)
