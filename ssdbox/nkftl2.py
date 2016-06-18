@@ -56,6 +56,77 @@ TAG_FORGROUND       = 'FORGROUND'
 TAG_WRITE_DRIVEN    = 'WRITE.DRIVEN.DIRECT.ERASE'
 TAG_THRESHOLD_GC    = 'THRESHOLD.GC.DIRECT.ERASE'
 
+
+class Config(config.ConfigNCQFTL):
+    def __init__(self, confdic = None):
+        super(Config, self).__init__(confdic)
+
+        local_itmes = {
+            ############## NKFTL (SAST) ############
+            "nkftl": {
+                'n_blocks_in_data_group': 4, # number of blocks in a data block group
+                'max_blocks_in_log_group': 2, # max number of blocks in a log block group
+
+                "GC_threshold_ratio": 0.8,
+                "GC_low_threshold_ratio": 0.7,
+
+                "provision_ratio": 1.5 # 1.5: 1GB user size, 1.5 flash size behind
+            },
+        }
+        self.update(local_itmes)
+
+    def nkftl_data_group_number_of_lpn(self, lpn):
+        """
+        Given lpn, return its data group number
+        """
+        dgn = (lpn / self.n_pages_per_block) / \
+            self['nkftl']['n_blocks_in_data_group']
+        return dgn
+
+    def nkftl_data_group_number_of_logical_block(self, logical_block_num):
+        dgn = logical_block_num / self['nkftl']['n_blocks_in_data_group']
+        return dgn
+
+    def nkftl_max_n_log_pages_in_data_group(self):
+        """
+        This is the max number of log pages in data group:
+            max number of log blocks * number of pages in block
+        """
+        return self['nkftl']['max_blocks_in_log_group'] * \
+            self.n_pages_per_block
+
+    def nkftl_allowed_num_of_data_blocks(self):
+        """
+        NKFTL has to have certain amount of log and data blocks
+        Required data blocks =
+        ((num of total block-1) * num of blocks in data group / (num of blocks
+        in data group + num of blocks in a log group))
+
+        -1 is because we need to at least one staging block for the purposes
+        such as merging.
+        """
+
+        raise RuntimeError("nkftl_set_flash_num_blocks_by_data_block_bytes()"
+            "should not be called anymore because it assumes the total number "
+            "of data blocks and log blocks in flash to be proportional "
+            "following N/K. In fact, the number of log blocks in flash can be "
+            "less than total.flash.block * K/(N+K).")
+
+    def nkftl_set_flash_num_blocks_by_data_block_bytes(self, data_bytes):
+        """
+        Example:
+        data_byptes is the filesystem size (LBA size), and this will set
+        the number of flash blocks based on the ratio of data blocks and
+        log blocks.
+        """
+
+        raise RuntimeError("nkftl_set_flash_num_blocks_by_data_block_bytes()"
+            "should not be called anymore because it assumes the total number "
+            "of data blocks and log blocks in flash to be proportional "
+            "following N/K. In fact, the number of log blocks in flash can be "
+            "less than total.flash.block * K/(N+K).")
+
+
 class GlobalHelper(object):
     """
     In case you need some global variables. We put all global stuff here so
@@ -84,7 +155,7 @@ class OutOfBandAreas(object):
         self.ppn_to_lpn = {}
 
     def display_bitmap_by_block(self):
-        npages_per_block = self.conf['flash_npage_per_block']
+        npages_per_block = self.conf.n_pages_per_block
         nblocks = self.conf.n_blocks_per_dev
         totalpages =  nblocks * npages_per_block
         line = ''
@@ -301,7 +372,7 @@ class SingleLogBlockInfo(object):
 
     def has_free_page(self):
         return self.last_programmed_offset < \
-            self.conf['flash_npage_per_block'] - 1
+            self.conf.n_pages_per_block - 1
 
     def next_ppn_to_program(self):
         """
@@ -309,7 +380,7 @@ class SingleLogBlockInfo(object):
         If next_ppn_to_program() return True, you have to program the
         returned ppn
         """
-        if self.last_programmed_offset + 1 < self.conf['flash_npage_per_block']:
+        if self.last_programmed_offset + 1 < self.conf.n_pages_per_block:
             self.last_programmed_offset += 1
             return True, self.conf.block_off_to_page(self.flash_block_num,
                     self.last_programmed_offset)
@@ -612,7 +683,7 @@ class GcDecider(object):
         else:
             self.freeze_count += 1
 
-            if self.freeze_count > 2 * self.conf['flash_npage_per_block']:
+            if self.freeze_count > 2 * self.conf.n_pages_per_block:
                 ret = True
             else:
                 ret = False
@@ -1073,7 +1144,7 @@ class GarbageCollector(object):
             lbn)
         # Copy
         for offset in range(first_free_offset,
-                self.conf['flash_npage_per_block']):
+                self.conf.n_pages_per_block):
             lpn = self.conf.block_off_to_page(lbn, offset)
             dst_ppn = self.conf.block_off_to_page(log_pbn, offset)
 

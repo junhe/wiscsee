@@ -7,7 +7,7 @@ from commons import *
 from utilities import utils
 
 def create_config():
-    conf = config.ConfigNewFlash()
+    conf = ssdbox.nkftl2.Config()
 
     conf['flash_config']['n_pages_per_block'] = 64
     conf['flash_config']['n_blocks_per_plane'] = 2
@@ -41,15 +41,24 @@ def create_recorder(conf):
     return rec
 
 
-class TestInitialization(unittest.TestCase):
-    def test_main(self):
-        conf = create_config()
-        rec = create_recorder(conf)
+def create_nkftl():
+    conf = create_config()
+    rec = create_recorder(conf)
 
-        self.ftl = Nkftl(conf, rec,
-            ssdbox.flash.Flash(recorder=rec, confobj=conf))
+    ftl = Nkftl(conf, rec,
+        ssdbox.flash.Flash(recorder=rec, confobj=conf))
+    return ftl
 
+class TestNkftl(unittest.TestCase):
+    def test_init(self):
+        ftl = create_nkftl()
 
+    def test_write_and_read(self):
+        ftl = create_nkftl()
+
+        ftl.lba_write(8, data='3')
+        ret = ftl.lba_read(8)
+        print ret
 
 def main():
     unittest.main()
