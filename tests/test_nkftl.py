@@ -1,4 +1,5 @@
 import unittest
+import random
 
 from ssdbox.nkftl2 import Nkftl
 import ssdbox
@@ -47,18 +48,32 @@ def create_nkftl():
 
     ftl = Nkftl(conf, rec,
         ssdbox.flash.Flash(recorder=rec, confobj=conf))
-    return ftl
+    return ftl, conf, rec
 
 class TestNkftl(unittest.TestCase):
     def test_init(self):
-        ftl = create_nkftl()
+        ftl, conf, rec = create_nkftl()
 
     def test_write_and_read(self):
-        ftl = create_nkftl()
+        ftl, conf, rec = create_nkftl()
 
         ftl.lba_write(8, data='3')
         ret = ftl.lba_read(8)
-        print ret
+        self.assertEqual(ret, '3')
+
+    def test_data_integerity(self):
+        ftl, conf, rec = create_nkftl()
+
+        total_pages = conf.total_num_pages()
+        lpns = random.sample(range(total_pages), 1000)
+
+        data_dict = {lpn:str(lpn) for lpn in lpns}
+        for lpn, data in data_dict.items():
+            ftl.lba_write(lpn, data)
+
+        for lpn, data in data_dict.items():
+            ret = ftl.lba_read(lpn)
+            self.assertEqual(ret, data)
 
 def main():
     unittest.main()
