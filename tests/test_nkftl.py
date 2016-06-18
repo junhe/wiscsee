@@ -61,7 +61,7 @@ class TestNkftl(unittest.TestCase):
         ret = ftl.lba_read(8)
         self.assertEqual(ret, '3')
 
-    def test_data_integerity(self):
+    def test_data_integrity(self):
         ftl, conf, rec = create_nkftl()
 
         total_pages = conf.total_num_pages()
@@ -73,6 +73,7 @@ class TestNkftl(unittest.TestCase):
 
         for lpn, data in data_dict.items():
             ret = ftl.lba_read(lpn)
+            print ret
             self.assertEqual(ret, data)
 
 def main():
