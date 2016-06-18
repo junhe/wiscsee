@@ -93,11 +93,17 @@ class TestNkftl(unittest.TestCase):
 
         self.write_and_check(ftl, lpns)
 
-    def test_GC(self):
+    def test_GC_simple(self):
         ftl, conf, rec = create_nkftl()
 
-        lpns = [0] * 100
-        # self.write_and_check(ftl, lpns)
+        lpns = [0] * 4 * conf.n_pages_per_block * conf['nkftl']['max_blocks_in_log_group']
+        self.write_and_check(ftl, lpns)
+
+    def test_GC_harder(self):
+        ftl, conf, rec = create_nkftl()
+
+        lpns = [0, 3, 1] * 4 * conf.n_pages_per_block * conf['nkftl']['max_blocks_in_log_group']
+        self.write_and_check(ftl, lpns)
 
 
 class TestLogGroupInfo(unittest.TestCase):

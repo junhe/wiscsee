@@ -343,7 +343,7 @@ class DataBlockMappingTable(MappingBase):
         del self.logical_to_physical_block[lbn]
 
     def remove_data_block_mapping_by_pbn(self, pbn):
-        del self.logical_to_physical_block[:pbn]
+        del self.logical_to_physical_block.inv[pbn]
 
     def __str__(self):
         return str(self.logical_to_physical_block)
@@ -406,11 +406,11 @@ class LogGroupInfo(object):
 
     def remove_log_block(self, log_pbn):
         # remove all page maps
-        print 'remove log block'
         ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
         for ppn in range(ppn_start, ppn_end):
             try:
-                del self._page_map[:ppn]
+                # del self._page_map[:ppn]
+                del self._page_map.inv[ppn]
             except KeyError:
                 pass
 
@@ -838,14 +838,14 @@ class GarbageCollector(object):
         log_pbn = blk_info.block_num
         data_group_no = blk_info.data_group_no
 
-        if not log_pbn in self.block_pool.log_usedblocks:
+        if log_pbn not in self.block_pool.log_usedblocks:
             # it is quite dynamic, this log block may have been
             # GCed with previous blocks
             return
 
         # Check to see if it is really the log block of the speicfed data
         # group
-        if not log_pbn in self.mapping_manager.log_mapping_table\
+        if log_pbn not in self.mapping_manager.log_mapping_table\
                 .log_group_info[data_group_no].log_blocks().keys():
             # TODO: maybe you should just return here instead of panic?
             raise RuntimeError("{} is not a log block of data group {}"\
@@ -857,7 +857,7 @@ class GarbageCollector(object):
             self.flash.block_erase(log_pbn, cat = tag)
             self.block_pool.free_used_log_block(log_pbn)
             self.mapping_manager.log_mapping_table\
-                .remove_log_block(data_group_no = blk_info.data_group_no,
+                .remove_log_block(data_group_no = data_group_no,
                 log_pbn = log_pbn)
             return
 
@@ -888,8 +888,6 @@ class GarbageCollector(object):
         TODO: Maybe also try to free empty data blocks here?
         """
         print 'clean_data_group....................'
-        if global_debug:
-            print '======= clean_data_group()'
         # print str(self.mapping_manager)
 
         # We make local copy since we may need to modify the original data
@@ -900,12 +898,7 @@ class GarbageCollector(object):
         # the states of the second log block and makes full merge impossible.
         log_block_list = copy.copy(self.mapping_manager.log_mapping_table\
                 .log_group_info[data_group_no].log_blocks().keys())
-        if global_debug:
-            print 'log_block_list:', log_block_list
         for log_block in log_block_list:
-            if global_debug:
-                print 'merging log block ------>', log_block
-            # print 'before merge', self.block_pool.visual()
             # A log block may not be a log block anymore after the loop starts
             # It may be freed, it may be a data block now,.. Be careful
             self.clean_log_block(BlockInfo(
