@@ -272,6 +272,10 @@ class BlockPool(object):
     def total_used_blocks(self):
         return len(self.log_usedblocks) + len(self.data_usedblocks)
 
+    def used_ratio(self):
+        return (len(self.log_usedblocks) + len(self.data_usedblocks))\
+            / float(self.conf.n_blocks_per_dev)
+
     def __str__(self):
         ret = ' '.join(['freeblocks', repr(self.freeblocks)]) + '\n' + \
             ' '.join(['log_usedblocks', repr(self.trans_usedblocks)]) + \
@@ -283,10 +287,6 @@ class BlockPool(object):
         block_states = [ 'O' if block in self.freeblocks else 'X'
                 for block in range(self.conf.n_blocks_per_dev)]
         return ''.join(block_states)
-
-    def used_ratio(self):
-        return (len(self.log_usedblocks) + len(self.data_usedblocks))\
-            / float(self.conf.n_blocks_per_dev)
 
 
 class MappingBase(object):
