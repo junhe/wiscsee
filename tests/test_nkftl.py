@@ -1,7 +1,8 @@
 import unittest
 import random
 
-from ssdbox.nkftl2 import Nkftl, LogGroupInfo, GlobalHelper, \
+from ssdbox.nkftl2 import Ftl
+from ssdbox.nkftl2 import LogGroupInfo, GlobalHelper, \
         ERR_NEED_NEW_BLOCK, ERR_NEED_MERGING, BlockPool
 import ssdbox
 import config
@@ -50,7 +51,7 @@ def create_nkftl():
     conf = create_config()
     rec = create_recorder(conf)
 
-    ftl = Nkftl(conf, rec,
+    ftl = Ftl(conf, rec,
         ssdbox.flash.Flash(recorder=rec, confobj=conf))
     return ftl, conf, rec
 
@@ -111,7 +112,7 @@ class TestNkftl(unittest.TestCase):
         lpns = [0, 128, 3, 129, 1] * 4 * conf.n_pages_per_block * conf['nkftl']['max_blocks_in_log_group']
         self.write_and_check(ftl, lpns)
 
-    # @unittest.skipUnless(TESTALL == True, "Skip unless we want to test all")
+    @unittest.skipUnless(TESTALL == True, "Skip unless we want to test all")
     def test_GC_harder_super(self):
         ftl, conf, rec = create_nkftl()
 
@@ -153,6 +154,7 @@ class TestLogGroupInfo(unittest.TestCase):
         found, err = loggroupinfo.next_ppn_to_program()
         self.assertFalse(found)
         self.assertEqual(err, ERR_NEED_MERGING)
+
 
 class TestBlockPool(unittest.TestCase):
     def test_init(self):

@@ -1336,13 +1336,13 @@ class GarbageCollector(object):
                 .format(len(self.block_pool.log_usedblocks), total_log_blocks)
 
 
-class Nkftl(ftlbuilder.FtlBuilder):
+class Ftl(ftlbuilder.FtlBuilder):
     """
     This is an FTL implemented according to paper:
         A reconfigurable FTL Architecture for NAND Flash-Based Applications
     """
     def __init__(self, confobj, recorderobj, flashobj):
-        super(Nkftl, self).__init__(confobj, recorderobj, flashobj)
+        super(Ftl, self).__init__(confobj, recorderobj, flashobj)
 
         self.block_pool = BlockPool(confobj)
         self.oob = OutOfBandAreas(confobj)

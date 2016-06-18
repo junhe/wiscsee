@@ -112,9 +112,9 @@ class SimulatorNonDES(Simulator):
         elif self.conf['ftl_type'] == 'nkftl':
             raise DeprecationWarning("You are trying to use nkftl, which is a "
                 "deprecated version of nkftl. Please use nkftl2 instead.")
-            ftl_class = nkftl.Nkftl
+            ftl_class = nkftl.Ftl
         elif self.conf['ftl_type'] == 'nkftl2':
-            ftl_class = nkftl2.Nkftl
+            ftl_class = nkftl2.Ftl
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))
