@@ -111,7 +111,7 @@ class TestNkftl(unittest.TestCase):
         lpns = [0, 128, 3, 129, 1] * 4 * conf.n_pages_per_block * conf['nkftl']['max_blocks_in_log_group']
         self.write_and_check(ftl, lpns)
 
-    @unittest.skipUnless(TESTALL == True, "Skip unless we want to test all")
+    # @unittest.skipUnless(TESTALL == True, "Skip unless we want to test all")
     def test_GC_harder_super(self):
         ftl, conf, rec = create_nkftl()
 
@@ -198,6 +198,13 @@ class TestBlockPool(unittest.TestCase):
         block_pool.free_used_log_block(blocknum)
         self.assertEqual(block_pool.used_ratio(), 0)
         self.assertEqual(block_pool.total_used_blocks(), 0)
+
+    def test_freeblocks(self):
+        conf = create_config()
+        block_pool = BlockPool(conf)
+
+        self.assertEqual(len(block_pool.freeblocks), conf.n_blocks_per_dev)
+
 
 def main():
     unittest.main()

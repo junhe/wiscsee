@@ -91,6 +91,10 @@ class BlockPool(object):
         channel, block_off = block_to_channel_block(self.conf, blocknum)
         self.channel_pools[channel].move_used_trans_block_to_free(block_off)
 
+    def move_used_trans_block_to_data(self, blocknum):
+        channel, block_off = block_to_channel_block(self.conf, blocknum)
+        self.channel_pools[channel].move_used_trans_block_to_data(block_off)
+
     def next_n_data_pages_to_program_striped(self, n):
         return self._next_n_data_pages_to_program_striped(n,
                 self.stripe_size)
@@ -270,6 +274,10 @@ class ChannelBlockPool(object):
         blocknum = self.pop_a_free_block()
         self.data_usedblocks.append(blocknum)
         return blocknum
+
+    def move_used_trans_block_to_data(self, blocknum):
+        self.trans_usedblocks.remove(blocknum)
+        self.data_usedblocks.append(blocknum)
 
     def move_used_data_block_to_free(self, blocknum):
         self.data_usedblocks.remove(blocknum)

@@ -228,55 +228,52 @@ class OutOfBandAreas(object):
 
 
 class BlockPool(object):
+    """
+    An adapter to use blkpool.BlockPool
+    log block -> trans block
+    data block -> data block
+    """
     def __init__(self, confobj):
         self.conf = confobj
+        self._pool = blkpool.BlockPool(self.conf)
 
-        self.freeblocks = deque(range(self.conf.n_blocks_per_dev))
+    @property
+    def freeblocks(self):
+        return self._pool.freeblocks
 
-        # initialize usedblocks
-        self.log_usedblocks = []
-        self.data_usedblocks  = []
+    @property
+    def log_usedblocks(self):
+        return self._pool.trans_usedblocks
 
-    def _pop_a_free_block(self):
-        if self.freeblocks:
-            blocknum = self.freeblocks.popleft()
-        else:
-            # nobody has free block
-            # utils.breakpoint()
-            raise RuntimeError('No free blocks in device!!!!')
-
-        return blocknum
+    @property
+    def data_usedblocks(self):
+        return self._pool.data_usedblocks
 
     def pop_a_free_block_to_log_blocks(self):
         "take one block from freelist and add it to log block list"
-        blocknum = self._pop_a_free_block()
-        self.log_usedblocks.append(blocknum)
+        blocknum = self._pool.pop_a_free_block_to_trans()
         return blocknum
 
     def move_used_log_to_data_block(self, blocknum):
-        self.log_usedblocks.remove(blocknum)
-        self.data_usedblocks.append(blocknum)
+        self._pool.move_used_trans_block_to_data(blocknum)
 
     def pop_a_free_block_to_data_blocks(self):
         "take one block from freelist and add it to data block list"
-        blocknum = self._pop_a_free_block()
-        self.data_usedblocks.append(blocknum)
+        blocknum = self._pool.pop_a_free_block_to_data()
         return blocknum
 
     def free_used_data_block(self, blocknum):
-        self.data_usedblocks.remove(blocknum)
-        self.freeblocks.append(blocknum)
+        self._pool.move_used_data_block_to_free(blocknum)
 
     def free_used_log_block(self, blocknum):
-        self.log_usedblocks.remove(blocknum)
-        self.freeblocks.append(blocknum)
+        self._pool.move_used_trans_block_to_free(blocknum)
 
     def total_used_blocks(self):
-        return len(self.log_usedblocks) + len(self.data_usedblocks)
+        return self._pool.total_used_blocks()
 
     def used_ratio(self):
-        return (len(self.log_usedblocks) + len(self.data_usedblocks))\
-            / float(self.conf.n_blocks_per_dev)
+        return self._pool.used_ratio()
+
 
 class MappingBase(object):
     """
@@ -876,9 +873,6 @@ class GarbageCollector(object):
 
         TODO: Maybe also try to free empty data blocks here?
         """
-        print 'clean_data_group....................'
-        # print str(self.mapping_manager)
-
         # We make local copy since we may need to modify the original data
         # in the loop
         # TODO: You need to GC the log blocks in a better order. This matters
