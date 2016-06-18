@@ -67,13 +67,13 @@ class TestNkftl(unittest.TestCase):
         total_pages = conf.total_num_pages()
         lpns = random.sample(range(total_pages), 1000)
 
-        data_dict = {lpn:str(lpn) for lpn in lpns}
+        data_dict = {lpn:str(lpn)+str(random.randint(0, 100))
+                for lpn in lpns}
         for lpn, data in data_dict.items():
             ftl.lba_write(lpn, data)
 
         for lpn, data in data_dict.items():
             ret = ftl.lba_read(lpn)
-            print ret
             self.assertEqual(ret, data)
 
 def main():

@@ -224,6 +224,7 @@ class OutOfBandAreas(object):
                 return True
         return False
 
+
 class BlockPool(object):
     def __init__(self, confobj):
         self.conf = confobj
@@ -234,7 +235,7 @@ class BlockPool(object):
         self.log_usedblocks = []
         self.data_usedblocks  = []
 
-    def pop_a_free_block(self):
+    def _pop_a_free_block(self):
         if self.freeblocks:
             blocknum = self.freeblocks.popleft()
         else:
@@ -246,7 +247,7 @@ class BlockPool(object):
 
     def pop_a_free_block_to_log_blocks(self):
         "take one block from freelist and add it to log block list"
-        blocknum = self.pop_a_free_block()
+        blocknum = self._pop_a_free_block()
         self.log_usedblocks.append(blocknum)
         return blocknum
 
@@ -254,13 +255,9 @@ class BlockPool(object):
         self.log_usedblocks.remove(blocknum)
         self.data_usedblocks.append(blocknum)
 
-    def move_used_data_to_log_block(self, blocknum):
-        self.data_usedblocks.remove(blocknum)
-        self.log_usedblocks.append(blocknum)
-
     def pop_a_free_block_to_data_blocks(self):
         "take one block from freelist and add it to data block list"
-        blocknum = self.pop_a_free_block()
+        blocknum = self._pop_a_free_block()
         self.data_usedblocks.append(blocknum)
         return blocknum
 
@@ -274,9 +271,6 @@ class BlockPool(object):
 
     def total_used_blocks(self):
         return len(self.log_usedblocks) + len(self.data_usedblocks)
-
-    def used_blocks(self):
-        return self.log_usedblocks + self.data_usedblocks
 
     def __str__(self):
         ret = ' '.join(['freeblocks', repr(self.freeblocks)]) + '\n' + \
@@ -293,6 +287,7 @@ class BlockPool(object):
     def used_ratio(self):
         return (len(self.log_usedblocks) + len(self.data_usedblocks))\
             / float(self.conf.n_blocks_per_dev)
+
 
 class MappingBase(object):
     """
@@ -1438,13 +1433,6 @@ class Nkftl(ftlbuilder.FtlBuilder):
         6. if we are out of free blocks, start garbage collection.
         """
         self.global_helper.incr_lba_op_timestamp()
-
-        # if lpn == 6:
-            # self.tmpcnt += 1
-            # if self.tmpcnt == 7:
-                # utils.breakpoint()
-
-        # print 'lba_write', lpn, 'data=', data
 
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
