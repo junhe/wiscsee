@@ -406,6 +406,7 @@ class LogGroupInfo(object):
 
     def remove_log_block(self, log_pbn):
         # remove all page maps
+        print 'remove log block'
         ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
         for ppn in range(ppn_start, ppn_end):
             try:
@@ -424,6 +425,7 @@ class LogGroupInfo(object):
         """
         Reset it to original status
         """
+        print 'clear is called'
         self._page_map.clear()
         self._log_blocks.clear()
         self._cur_log_block = None
