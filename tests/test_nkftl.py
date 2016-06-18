@@ -1,7 +1,8 @@
 import unittest
 import random
 
-from ssdbox.nkftl2 import Nkftl
+from ssdbox.nkftl2 import Nkftl, LogGroupInfo, GlobalHelper, \
+        ERR_NEED_NEW_BLOCK, ERR_NEED_MERGING
 import ssdbox
 import config
 from commons import *
@@ -10,12 +11,15 @@ from utilities import utils
 def create_config():
     conf = ssdbox.nkftl2.Config()
 
-    conf['flash_config']['n_pages_per_block'] = 64
+    conf['flash_config']['n_pages_per_block'] = 8
     conf['flash_config']['n_blocks_per_plane'] = 2
     conf['flash_config']['n_planes_per_chip'] = 1
     conf['flash_config']['n_chips_per_package'] = 1
     conf['flash_config']['n_packages_per_channel'] = 1
     conf['flash_config']['n_channels_per_dev'] = 4
+
+    conf['nkftl']['max_blocks_in_log_group'] = 2
+    conf['nkftl']['n_blocks_in_data_group'] = 4
 
     utils.set_exp_metadata(conf, save_data = False,
             expname = 'test_expname',
@@ -50,6 +54,12 @@ def create_nkftl():
         ssdbox.flash.Flash(recorder=rec, confobj=conf))
     return ftl, conf, rec
 
+def create_global_helper(conf):
+    return GlobalHelper(conf)
+
+def create_loggroupinfo(conf, rec, globalhelper):
+    return LogGroupInfo(conf, rec, globalhelper)
+
 class TestNkftl(unittest.TestCase):
     def test_init(self):
         ftl, conf, rec = create_nkftl()
@@ -61,12 +71,8 @@ class TestNkftl(unittest.TestCase):
         ret = ftl.lba_read(8)
         self.assertEqual(ret, '3')
 
-    def test_data_integrity(self):
-        ftl, conf, rec = create_nkftl()
 
-        total_pages = conf.total_num_pages()
-        lpns = random.sample(range(total_pages), 1000)
-
+    def write_and_check(self, ftl, lpns):
         data_dict = {lpn:str(lpn)+str(random.randint(0, 100))
                 for lpn in lpns}
         for lpn, data in data_dict.items():
@@ -75,6 +81,56 @@ class TestNkftl(unittest.TestCase):
         for lpn, data in data_dict.items():
             ret = ftl.lba_read(lpn)
             self.assertEqual(ret, data)
+
+    def test_data_integrity(self):
+        ftl, conf, rec = create_nkftl()
+
+        total_pages = conf.total_num_pages()
+        lpns = random.sample(range(total_pages), 1000)
+
+        self.write_and_check(ftl, lpns)
+
+    def test_GC(self):
+        ftl, conf, rec = create_nkftl()
+
+        lpns = [0, 88] * 100
+        self.write_and_check(ftl, lpns)
+
+
+class TestLogGroupInfo(unittest.TestCase):
+    def test_add_log_blocks(self):
+        ftl, conf, rec = create_nkftl()
+        globalhelper = create_global_helper(conf)
+        loggroupinfo = create_loggroupinfo(conf, rec, globalhelper)
+
+        loggroupinfo.add_log_block(8)
+
+        log_blocks = loggroupinfo.log_blocks()
+        self.assertEqual(log_blocks.keys()[0], 8)
+
+    def test_next_ppn(self):
+        ftl, conf, rec = create_nkftl()
+        globalhelper = create_global_helper(conf)
+        loggroupinfo = create_loggroupinfo(conf, rec, globalhelper)
+
+        loggroupinfo.add_log_block(0)
+        for i in range(conf.n_pages_per_block):
+            found, err = loggroupinfo.next_ppn_to_program()
+            self.assertTrue(found)
+
+        found, err = loggroupinfo.next_ppn_to_program()
+        self.assertFalse(found)
+        self.assertEqual(err, ERR_NEED_NEW_BLOCK)
+
+        loggroupinfo.add_log_block(1)
+        for i in range(conf.n_pages_per_block):
+            found, err = loggroupinfo.next_ppn_to_program()
+            self.assertTrue(found)
+
+        found, err = loggroupinfo.next_ppn_to_program()
+        self.assertFalse(found)
+        self.assertEqual(err, ERR_NEED_MERGING)
+
 
 def main():
     unittest.main()

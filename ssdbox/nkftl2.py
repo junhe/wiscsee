@@ -394,80 +394,81 @@ class LogGroupInfo(object):
 
         # Set them to be private so I understand they are only accessed
         # within this class. Less mess.
-        # every time we update __page_map, we should also update
-        self.__page_map = bidict.bidict() # lpn->ppn
+        # every time we update _page_map, we should also update
+        self._page_map = bidict.bidict() # lpn->ppn
         # flash block number -> SingleLogBlockInfo
         #                       last_used_time, last_programmed_offset
-        self.__log_blocks = {}     #log_pbn -> Singlelogblockinfo
-        self.__cur_log_block = None
+        self._log_blocks = {}     #log_pbn -> Singlelogblockinfo
+        self._cur_log_block = None
 
     def remove_lpn(self, lpn):
-        del self.__page_map[lpn]
+        del self._page_map[lpn]
 
     def remove_log_block(self, log_pbn):
         # remove all page maps
         ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
         for ppn in range(ppn_start, ppn_end):
             try:
-                del self.__page_map[:ppn]
+                del self._page_map[:ppn]
             except KeyError:
                 pass
 
-        # remove log_pbn from __log_blocks
-        del self.__log_blocks[log_pbn]
+        # remove log_pbn from _log_blocks
+        del self._log_blocks[log_pbn]
 
         # handle current log block
-        if self.__cur_log_block == log_pbn:
-            self.__cur_log_block = None
+        if self._cur_log_block == log_pbn:
+            self._cur_log_block = None
 
     def clear(self):
         """
         Reset it to original status
         """
-        self.__page_map.clear()
-        self.__log_blocks.clear()
-        self.__cur_log_block = None
+        self._page_map.clear()
+        self._log_blocks.clear()
+        self._cur_log_block = None
 
     def log_blocks(self):
-        return self.__log_blocks
+        return self._log_blocks
 
     def add_mapping(self, lpn, ppn):
         """
         Note that this function may overwrite existing mapping. If later you
         need keeping everything, add one data structure.
         """
-        self.__page_map[lpn] = ppn
+        self._page_map[lpn] = ppn
 
     def update_block_use_time(self, blocknum):
         """
         blocknum is a log block.
         The time will be used when garbage collecting
         """
-        self.__log_blocks[blocknum].last_used_time = \
+        self._log_blocks[blocknum].last_used_time = \
             self.global_helper.cur_lba_op_timestamp
 
     def add_log_block(self, block_num):
         """
         This should only be called when this log block used all free log pages
         """
-        assert not self.__log_blocks.has_key(block_num)
-        for singleinfo in self.__log_blocks.values():
+        assert not self._log_blocks.has_key(block_num)
+        for singleinfo in self._log_blocks.values():
             if singleinfo.has_free_page():
                 raise RuntimeError("Log Block {} should not have free page"\
                     .format(singleinfo.flash_block_num))
-        self.__log_blocks[block_num] = SingleLogBlockInfo(self.conf, block_num)
-        self.__cur_log_block = block_num
+        self._log_blocks[block_num] = SingleLogBlockInfo(self.conf, block_num)
+        self._cur_log_block = block_num
 
     def cur_log_block_info(self):
         """
         Return the current log block's SingleLogBlockInfo, for convienence.
         """
-        if self.__cur_log_block == None:
+        if self._cur_log_block == None:
             return None
-        return self.__log_blocks[self.__cur_log_block]
+        return self._log_blocks[self._cur_log_block]
 
     def reached_max_n_log_blocks(self):
-        return len(self.__log_blocks) >= \
+        # print len(self._log_blocks), self.conf['nkftl']['max_blocks_in_log_group']
+        return len(self._log_blocks) >= \
             self.conf['nkftl']['max_blocks_in_log_group']
 
     def next_ppn_to_program(self):
@@ -485,7 +486,7 @@ class LogGroupInfo(object):
         # if the current log block has not free pages, but
         # the number of log blocks has not reached its max,
         # we need to get a new log block.
-        if self.__cur_log_block == None or \
+        if self._cur_log_block == None or \
             not self.cur_log_block_info().has_free_page():
             if self.reached_max_n_log_blocks():
                 return False, ERR_NEED_MERGING
@@ -498,7 +499,7 @@ class LogGroupInfo(object):
         """
         return found, ppn
         """
-        ppn = self.__page_map.get(lpn, None)
+        ppn = self._page_map.get(lpn, None)
         if ppn == None:
             return False, None
         else:
@@ -507,10 +508,10 @@ class LogGroupInfo(object):
     def __str__(self):
         ret = []
         ret.append("------- LogGroupInfo")
-        ret.append("__page_map:" + str(self.__page_map))
-        for logblock, info in self.__log_blocks.items():
+        ret.append("_page_map:" + str(self._page_map))
+        for logblock, info in self._log_blocks.items():
             ret.append("Logblock {}{}".format(logblock, str(info)))
-        ret.append("cur_log_block:{}".format(self.__cur_log_block))
+        ret.append("cur_log_block:{}".format(self._cur_log_block))
         return '\n'.join(ret)
 
 class MappingManager(MappingBase):
@@ -884,6 +885,7 @@ class GarbageCollector(object):
 
         TODO: Maybe also try to free empty data blocks here?
         """
+        print 'clean_data_group....................'
         if global_debug:
             print '======= clean_data_group()'
         # print str(self.mapping_manager)
@@ -1257,7 +1259,7 @@ class GarbageCollector(object):
         3. Update log group info:
              remove log_pbn from log_blocks. This is SingleLogBlockInfo
              remove all page mappings in page_map
-             set __cur_log_block to None
+             set _cur_log_block to None
         """
         self.recorder.count_me("garbage.collection", 'switch.merge')
 
