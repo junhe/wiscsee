@@ -105,6 +105,20 @@ class TestNkftl(unittest.TestCase):
         lpns = [0, 3, 1] * 4 * conf.n_pages_per_block * conf['nkftl']['max_blocks_in_log_group']
         self.write_and_check(ftl, lpns)
 
+    def test_GC_harder2(self):
+        ftl, conf, rec = create_nkftl()
+
+        lpns = [0, 128, 3, 129, 1] * 4 * conf.n_pages_per_block * conf['nkftl']['max_blocks_in_log_group']
+        self.write_and_check(ftl, lpns)
+
+    @unittest.skipUnless(TESTALL == True, "Skip unless we want to test all")
+    def test_GC_harder_super(self):
+        ftl, conf, rec = create_nkftl()
+
+        print 'total pages', conf.total_num_pages()
+        lpns = [0, 128, 3, 129, 1] * 4 * conf.total_num_pages()
+        self.write_and_check(ftl, lpns)
+
 
 class TestLogGroupInfo(unittest.TestCase):
     def test_add_log_blocks(self):
