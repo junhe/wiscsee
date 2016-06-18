@@ -2,7 +2,7 @@ import unittest
 import random
 
 from ssdbox.nkftl2 import Nkftl, LogGroupInfo, GlobalHelper, \
-        ERR_NEED_NEW_BLOCK, ERR_NEED_MERGING
+        ERR_NEED_NEW_BLOCK, ERR_NEED_MERGING, BlockPool
 import ssdbox
 import config
 from commons import *
@@ -154,6 +154,50 @@ class TestLogGroupInfo(unittest.TestCase):
         self.assertFalse(found)
         self.assertEqual(err, ERR_NEED_MERGING)
 
+class TestBlockPool(unittest.TestCase):
+    def test_init(self):
+        conf = create_config()
+        block_pool = BlockPool(conf)
+
+        self.assertEqual(block_pool.used_ratio(), 0)
+        self.assertEqual(block_pool.total_used_blocks(), 0)
+
+    def test_log_blocks(self):
+        conf = create_config()
+        block_pool = BlockPool(conf)
+
+        blocknum = block_pool.pop_a_free_block_to_log_blocks()
+        self.assertIn(blocknum, block_pool.log_usedblocks)
+        self.assertNotIn(blocknum, block_pool.data_usedblocks)
+
+        block_pool.move_used_log_to_data_block(blocknum)
+        self.assertIn(blocknum, block_pool.data_usedblocks)
+        self.assertNotIn(blocknum, block_pool.log_usedblocks)
+
+        block_pool.free_used_data_block(blocknum)
+        self.assertEqual(block_pool.used_ratio(), 0)
+        self.assertEqual(block_pool.total_used_blocks(), 0)
+
+    def test_data_blocks(self):
+        conf = create_config()
+        block_pool = BlockPool(conf)
+
+        blocknum = block_pool.pop_a_free_block_to_data_blocks()
+        self.assertIn(blocknum, block_pool.data_usedblocks)
+        self.assertNotIn(blocknum, block_pool.log_usedblocks)
+
+        block_pool.free_used_data_block(blocknum)
+        self.assertEqual(block_pool.used_ratio(), 0)
+        self.assertEqual(block_pool.total_used_blocks(), 0)
+
+    def test_free_used_log(self):
+        conf = create_config()
+        block_pool = BlockPool(conf)
+
+        blocknum = block_pool.pop_a_free_block_to_log_blocks()
+        block_pool.free_used_log_block(blocknum)
+        self.assertEqual(block_pool.used_ratio(), 0)
+        self.assertEqual(block_pool.total_used_blocks(), 0)
 
 def main():
     unittest.main()

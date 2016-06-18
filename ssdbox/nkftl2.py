@@ -10,6 +10,8 @@ import recorder
 from utilities import utils
 from .bitmap import FlashBitmap2
 
+from . import blkpool
+
 """
 ############## Checklist ###############
 When you conduct an operation, consider how it affects the following data
@@ -275,19 +277,6 @@ class BlockPool(object):
     def used_ratio(self):
         return (len(self.log_usedblocks) + len(self.data_usedblocks))\
             / float(self.conf.n_blocks_per_dev)
-
-    def __str__(self):
-        ret = ' '.join(['freeblocks', repr(self.freeblocks)]) + '\n' + \
-            ' '.join(['log_usedblocks', repr(self.trans_usedblocks)]) + \
-            '\n' + \
-            ' '.join(['data_usedblocks', repr(self.data_usedblocks)])
-        return ret
-
-    def visual(self):
-        block_states = [ 'O' if block in self.freeblocks else 'X'
-                for block in range(self.conf.n_blocks_per_dev)]
-        return ''.join(block_states)
-
 
 class MappingBase(object):
     """
@@ -907,7 +896,6 @@ class GarbageCollector(object):
                         last_used_time = None,
                         data_group_no = data_group_no),
                         tag = TAG_WRITE_DRIVEN)
-            # print 'after  merge', self.block_pool.visual()
             self.asserts()
 
     def full_merge(self, log_pbn):
@@ -942,7 +930,6 @@ class GarbageCollector(object):
             self.asserts()
 
     def debug(self):
-        print self.block_pool.visual()
         print 'block_pool.freeblocks', self.block_pool.freeblocks
         print 'block_pool.log_usedblocks', self.block_pool.log_usedblocks
         print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
@@ -976,7 +963,6 @@ class GarbageCollector(object):
         """
         if global_debug:
             print '------------------------- aggre logical block -----------------------'
-            # print self.block_pool.visual()
             print 'block_pool.freeblocks', self.block_pool.freeblocks
             # print 'block_pool.log_usedblocks', self.block_pool.log_usedblocks
             # print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
@@ -1050,7 +1036,6 @@ class GarbageCollector(object):
 
         if global_debug:
             print '--------------------AFTER aggregate-------------------'
-            # print self.block_pool.visual()
             print 'block_pool.freeblocks', self.block_pool.freeblocks
             # print 'block_pool.log_usedblocks', self.block_pool.log_usedblocks
             # print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
@@ -1474,7 +1459,6 @@ class Nkftl(ftlbuilder.FtlBuilder):
         self.mapping_manager.log_mapping_table.add_mapping(data_group_no,
             lpn, new_ppn)
 
-        # print 'AFTER WRITE block_pool', self.block_pool.visual()
         # print 'AFTER WRITE block_pool.freeblocks', self.block_pool.freeblocks
         # print 'AFTER WRITE block_pool.log_usedblocks', self.block_pool.log_usedblocks
         # print 'AFTER WRITE block_pool.data_usedblocks', self.block_pool.data_usedblocks
