@@ -18,9 +18,6 @@ def create_config():
             expname = 'test_expname',
             subexpname = 'test_subexpname')
 
-    conf['ftl_type'] = 'dftldes'
-    conf['simulator_class'] = 'SimulatorDESSync'
-
     logicsize_mb = 64
     conf.n_cache_entries = conf.n_mapping_entries_per_page
     conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
