@@ -276,7 +276,8 @@ def bench():
 def leveldbbench():
     class Experimenter(object):
         def __init__(self, para):
-            self.conf = ssdbox.dftldes.Config()
+            # self.conf = ssdbox.dftldes.Config()
+            self.conf = ssdbox.nkftl2.Config()
             self.para = para
             self.conf['exp_parameters'] = self.para._asdict()
 
@@ -363,18 +364,31 @@ def leveldbbench():
             self.conf['enable_simulation'] = True
             self.conf['stripe_size'] = self.para.stripe_size
 
-            self.conf['simulator_class'] = 'SimulatorDESNew'
-            self.conf['ftl_type'] = 'dftldes'
+            # self.conf['simulator_class'] = 'SimulatorDESNew'
+            self.conf['simulator_class'] = 'SimulatorNonDESe2eExtent'
+            self.conf['ftl_type'] = 'nkftl2'
 
             logicsize_mb = self.conf['dev_size_mb']
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
             self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
+
+        def check_config(self):
+            if self.conf['ftl_type'] == 'dftldes':
+                assert isinstance(self.conf, ssdbox.dftldes.Config)
+                assert self.conf['simulator_class'] == 'SimulatorDESNew'
+            elif self.conf['ftl_type'] == 'nkftl2':
+                assert isinstance(self.conf, ssdbox.nkftl2.Config)
+                assert self.conf['simulator_class'] == 'SimulatorNonDESe2eExtent'
+            else:
+                RuntimeError("ftl type may not be supported here")
 
         def run(self):
             set_exp_metadata(self.conf, save_data = True,
                     expname = self.para.expname,
                     subexpname = chain_items_as_filename(self.para))
             runtime_update(self.conf)
+
+            self.check_config()
 
             run_workflow(self.conf)
 
@@ -404,7 +418,7 @@ def leveldbbench():
                 'benchmarks'     : [
                     'overwrite',
                     ],
-                'num'            : [1000000],
+                'num'            : [10000],
                 'device_path'    : ['/dev/sdc1'],
                 'filesystem'     : ['ext4'],
                 'ext4datamode'   : ['ordered'],
@@ -416,7 +430,7 @@ def leveldbbench():
                 'cache_mapped_data_bytes' :[lbabytes],
                 'lbabytes'       : [lbabytes],
                 'n_instances'    : [1],
-                'one_by_one'     : [True],
+                'one_by_one'     : [False],
 
                 'f2fs_gc_after_workload': [True],
                 }

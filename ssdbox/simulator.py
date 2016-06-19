@@ -127,7 +127,7 @@ class SimulatorNonDES(Simulator):
             self.ftl.disable_recording()
         elif event.operation == OP_WORKLOADSTART:
             self.ftl.pre_workload()
-        elif event.operation == 'finish':
+        elif event.operation in ['finish', OP_BARRIER, OP_REC_TIMESTAMP, OP_CLEAN]:
             # ignore this
             pass
         else:
