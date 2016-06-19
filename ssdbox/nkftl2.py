@@ -1476,3 +1476,27 @@ class Ftl(ftlbuilder.FtlBuilder):
                     data_group_no, lpn)
             self.oob.wipe_ppn(ppn)
 
+    def write_ext(self, extent, data=None):
+        lpn_start = extent.lpn_start
+        lpn_count = extent.lpn_count
+        for lpn in range(lpn_start, lpn_start+lpn_count):
+            if data is None:
+                self.lba_write(lpn)
+            else:
+                self.lba_write(lpn, data[lpn-lpn_start])
+
+    def discard_ext(self, extent):
+        for lpn in extent.lpn_iter():
+            self.lba_discard(lpn)
+
+    def read_ext(self, extent):
+        data = []
+        for lpn in extent.lpn_iter():
+            ret = self.lba_read(lpn)
+            data.append(ret)
+
+        return data
+
+    def post_processing(self):
+        pass
+

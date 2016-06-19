@@ -316,8 +316,8 @@ class ExtentTestWorkload(LBAWorkloadGenerator):
         self.ftl_type = self.conf['ftl_type']
         if self.ftl_type in ('dftlext', 'dftldes', 'dftldes'):
             self.over_provisioning = self.conf.over_provisioning
-        elif self.ftl_type == 'nkftl':
-            self.over_provisioning = self.conf['nkftl']['provision_ratio']
+        elif self.ftl_type == 'nkftl2':
+            self.over_provisioning = 1
         else:
             raise RuntimeError("FTL type {} is not supported".format(
                 self.ftl_type))

@@ -70,15 +70,9 @@ class SimulatorDESNew(Simulator):
         return "SimulatorDESNew"
 
 
-
-
 def create_simulator(simulator_class, conf, event_iter):
     cls = eval(simulator_class)
     return cls(conf, event_iter)
-
-
-
-
 
 
 
@@ -95,24 +89,8 @@ class SimulatorNonDES(Simulator):
     def __init__(self, conf, event_iter):
         super(SimulatorNonDES, self).__init__(conf, event_iter)
 
-        if self.conf['ftl_type'] == 'directmap':
-            ftl_class = dmftl.DirectMapFtl
-        elif self.conf['ftl_type'] == 'blockmap':
-            ftl_class = bmftl.BlockMapFtl
-        elif self.conf['ftl_type'] == 'pagemap':
-            ftl_class = pmftl.PageMapFtl
-        elif self.conf['ftl_type'] == 'hybridmap':
-            ftl_class = hmftl.HybridMapFtl
-        elif self.conf['ftl_type'] == 'dftl2':
-            ftl_class = dftl2.Dftl
-        elif self.conf['ftl_type'] == 'dftlext':
+        if self.conf['ftl_type'] == 'dftlext':
             ftl_class = dftlext.Dftl
-        elif self.conf['ftl_type'] == 'tpftl':
-            ftl_class = tpftl.Tpftl
-        elif self.conf['ftl_type'] == 'nkftl':
-            raise DeprecationWarning("You are trying to use nkftl, which is a "
-                "deprecated version of nkftl. Please use nkftl2 instead.")
-            ftl_class = nkftl.Ftl
         elif self.conf['ftl_type'] == 'nkftl2':
             ftl_class = nkftl2.Ftl
         else:
@@ -184,6 +162,66 @@ class SimulatorNonDESSpeed(SimulatorNonDES):
         self.ftl.sec_discard(
             sector = event.sector,
             count = event.sector_count)
+
+
+class SimulatorNonDESe2eExtent(SimulatorNonDES):
+    """
+    This one does not do e2e test
+    It uses extents
+    """
+    def __init__(self, conf, event_iter):
+        super(SimulatorNonDESe2eExtent, self).__init__(conf, event_iter)
+
+        self.lpn_to_data = {}
+
+    def get_sim_type(self):
+        return "NonDESe2eExtent"
+
+    def write(self, event):
+        """
+        1. Generate random data
+        2. Copy random data to lsn_to_data
+        3. Write data by ftl
+        """
+        extent = event.get_lpn_extent(self.conf)
+
+        data = []
+        for lpn in extent.lpn_iter():
+            content = random_data(lpn)
+            self.lpn_to_data[lpn] = content
+            data.append(content)
+
+        self.ftl.write_ext(extent, data = data)
+
+    def read(self, event):
+        """
+        read extent from flash and check if the data is correct.
+        """
+        extent = event.get_lpn_extent(self.conf)
+        data = self.ftl.read_ext(extent)
+
+        self.check_read(event, data)
+
+    def check_read(self, event, data):
+        extent = event.get_lpn_extent(self.conf)
+        for lpn, lpn_data in zip(extent.lpn_iter(), data):
+            if self.lpn_to_data.get(lpn, None) != lpn_data:
+                msg = "Data is not correct. Got: {read}, "\
+                        "Correct: {correct}. lpn={lpn}".format(
+                        read=lpn_data,
+                        correct=self.lpn_to_data.get(lpn, None),
+                        lpn=lpn)
+                print msg
+
+    def discard(self, event):
+        extent = event.get_lpn_extent(self.conf)
+        self.ftl.discard_ext(extent)
+
+        for lpn in extent.lpn_iter():
+            try:
+                del self.lpn_to_data[lpn]
+            except KeyError:
+                pass
 
 
 class SimulatorNonDESe2e(SimulatorNonDES):
