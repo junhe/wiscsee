@@ -718,7 +718,7 @@ def compare_fs():
 
         def setup_environment(self):
             self.conf['device_path'] = self.para.device_path
-            self.conf['dev_size_mb'] = 256
+            self.conf['dev_size_mb'] = self.para.dev_size_mb
             self.conf['filesystem'] = self.para.filesystem
             self.conf["n_online_cpus"] = 'all'
 
@@ -735,6 +735,8 @@ def compare_fs():
                 enable_ext4_journal(self.conf)
             else:
                 disable_ext4_journal(self.conf)
+
+            self.conf['f2fs_gc_after_workload'] = True
 
         def setup_workload(self):
             tmp_job_conf = [
@@ -795,24 +797,25 @@ def compare_fs():
         Parameters = collections.namedtuple("Parameters",
             "filesystem, numjobs, bs, iodepth, expname, size, rw, direct, "\
             "dirty_bytes, fsync, device_path, linux_ncq_depth, norandommap, "\
-            "fallocate, ext4hasjournal")
+            "fallocate, ext4hasjournal, dev_size_mb")
 
         expname = get_expname()
         para_dict = {
                 'device_path'    : ['/dev/sdc1'],
                 'numjobs'        : [1],
-                'bs'             : [4*KB],
+                'bs'             : [8*KB],
                 'iodepth'        : [1],
-                'filesystem'     : ['ext4'],
+                'filesystem'     : ['f2fs'],
                 'expname'        : [expname],
                 'rw'             : ['write'],
                 'direct'         : [0],
                 'dirty_bytes'    : [256*MB],
                 'fsync'          : [1],
                 'linux_ncq_depth': [31],
-                'norandommap'    : [True, False],
-                'fallocate'      : ['keep', 'none', 'posix'],
-                'ext4hasjournal' : [True, False],
+                'norandommap'    : [True],
+                'fallocate'      : ['none'],
+                'ext4hasjournal' : [True],
+                'dev_size_mb'    : [256],
                 }
 
         parameter_combs = ParameterCombinations(para_dict)
