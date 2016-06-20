@@ -48,6 +48,7 @@ int main(int argc, char** argv)
 
     if (ret == -1) {
         perror("ioctl error");
+        exit(1);
     }
     printf("ioctl ret: %d.\n", ret);
 
