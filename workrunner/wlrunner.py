@@ -215,9 +215,8 @@ class WorkloadRunner(object):
     def _post_target_workload(self):
         if self.conf['filesystem'] == 'f2fs' and self.conf['f2fs_gc_after_workload'] is True:
             time.sleep(1)
-            # this could return -1 if there is no garbage
-            utils.invoke_f2fs_gc(self.conf['fs_mount_point'], 1)
-            time.sleep(2)
+            utils.invoke_f2fs_gc(self.conf['fs_mount_point'], 1, -1)
+
 
     def get_event_iterator(self):
         yield hostevent.ControlEvent(operation=OP_DISABLE_RECORDER)
