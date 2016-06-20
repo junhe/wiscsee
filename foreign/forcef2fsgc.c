@@ -25,9 +25,10 @@ int main(int argc, char** argv)
     int ret;
     int status;
     int arg;
+    int n, i;
 
-    if (argc != 3) {
-        printf("Usage: %s mount-point sync\n", argv[0]);
+    if (argc != 4) {
+        printf("Usage: %s mount-point sync n\n", argv[0]);
         printf("sync is the third arg passed to ioctl. "
                 "Generally, sync=1 implies forground gc. "
                 "sync=0 implies background gc.");
@@ -36,6 +37,7 @@ int main(int argc, char** argv)
 
     devpath = argv[1];
     arg = atoi(argv[2]);
+    n = atoi(argv[3]);
     printf("arg:%d\n", arg);
 
     fd = open(devpath, 0);
@@ -44,15 +46,22 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    ret = ioctl(fd, F2FS_IOC_GARBAGE_COLLECT, &arg);
-
-    if (ret == -1) {
-        perror("ioctl error");
-        exit(1);
+    for (i = 0; i < n; i++) {
+        ret = ioctl(fd, F2FS_IOC_GARBAGE_COLLECT, &arg);
+        if (ret == -1) {
+            perror("ioctl error");
+            break;
+        }
     }
-    printf("ioctl ret: %d.\n", ret);
+
+    printf("ioctl ret: %d. finished: %d\n", ret, i);
 
     close(fd);
-    return(0);
+
+    if (ret == -1) {
+        return(1);
+    } else {
+        return(0);
+    }
 }
 
