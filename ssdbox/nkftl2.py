@@ -899,7 +899,7 @@ class GarbageCollector(object):
         find in this log block, we iterate all LPNs to and copy their
         data to a new free block.
         """
-        self.recorder.count_me("garbage.collection", 'full.merge')
+        self.recorder.count_me("garbage_collection", 'full_merge')
 
         if global_debug:
             print '------------------- full merge {} ------------------'.format(log_pbn)
@@ -1109,7 +1109,7 @@ class GarbageCollector(object):
 
         After this function, log_pbn will become a data block
         """
-        self.recorder.count_me("garbage.collection", 'partial.merge')
+        self.recorder.count_me("garbage_collection", 'partial_merge')
 
         data_group_no = self.conf.nkftl_data_group_number_of_logical_block(
             lbn)
@@ -1235,7 +1235,7 @@ class GarbageCollector(object):
              remove all page mappings in page_map
              set _cur_log_block to None
         """
-        self.recorder.count_me("garbage.collection", 'switch.merge')
+        self.recorder.count_me("garbage_collection", 'switch_merge')
 
         # erase old data block
         found, old_physical_block = self.mapping_manager.data_block_mapping_table\
@@ -1464,9 +1464,6 @@ class Ftl(ftlbuilder.FtlBuilder):
     def lba_discard(self, lpn):
         self.global_helper.incr_lba_op_timestamp()
 
-        self.recorder.put('logical_discard', lpn, 'user')
-
-        # print 'lba_discard', lpn
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
         found, ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)

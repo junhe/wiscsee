@@ -418,9 +418,9 @@ def leveldbbench():
                 'benchmarks'     : [
                     'overwrite',
                     ],
-                'num'            : [10000],
+                'num'            : [1000000],
                 'device_path'    : ['/dev/sdc1'],
-                'filesystem'     : ['ext4'],
+                'filesystem'     : ['ext4', 'f2fs', 'xfs', 'btrfs'],
                 'ext4datamode'   : ['ordered'],
                 'ext4hasjournal' : [True],
                 'expname'        : [expname],
