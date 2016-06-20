@@ -12,6 +12,8 @@ import shlex
 import time
 import glob
 from time import localtime, strftime
+import prepare4pyreuse
+from pyreuse.sysutils.ftrace import trace_cmd
 
 def shcmd(cmd, ignore_error=False):
     print 'Doing:', cmd

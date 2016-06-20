@@ -26,6 +26,7 @@ int main(int argc, char** argv)
     int status;
     int arg;
     int n, i;
+    int bypass_cnt_check;
 
     if (argc != 4) {
         printf("Usage: %s mount-point sync n\n", argv[0]);
@@ -40,13 +41,19 @@ int main(int argc, char** argv)
     n = atoi(argv[3]);
     printf("arg:%d\n", arg);
 
+    if (n == -1) {
+        bypass_cnt_check = 1;
+    } else {
+        bypass_cnt_check = 0;
+    }
+
     fd = open(devpath, 0);
     if (fd == -1) {
         perror("open file error");
         exit(1);
     }
 
-    for (i = 0; i < n; i++) {
+    for (i = 0; bypass_cnt_check || i < n; i++) {
         ret = ioctl(fd, F2FS_IOC_GARBAGE_COLLECT, &arg);
         if (ret == -1) {
             perror("ioctl error");
