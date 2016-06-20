@@ -293,13 +293,13 @@ def drop_caches():
     cmd = "echo 3 > /proc/sys/vm/drop_caches"
     subprocess.call(cmd, shell=True)
 
-def invoke_f2fs_gc(mountpoint, sync):
+def invoke_f2fs_gc(mountpoint, sync, n=1):
     binpath = './bin/forcef2fsgc'
     if not os.path.exists(binpath):
         raise RuntimeError("{} does not exist. To compile, do 'make f2fsgc'"\
                 .format(binpath))
 
-    cmd = [binpath, mountpoint, str(sync)]
+    cmd = [binpath, mountpoint, str(sync), str(n)]
     ret = subprocess.call(cmd)
     return ret
 
