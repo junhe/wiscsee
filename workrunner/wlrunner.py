@@ -215,6 +215,7 @@ class WorkloadRunner(object):
     def _post_target_workload(self):
         if self.conf['filesystem'] == 'f2fs' and self.conf['f2fs_gc_after_workload'] is True:
             time.sleep(1)
+            utils.drop_caches()
             utils.invoke_f2fs_gc(self.conf['fs_mount_point'], 1, -1)
 
 

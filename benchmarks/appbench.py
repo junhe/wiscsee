@@ -298,7 +298,8 @@ def leveldbbench():
                     'benchmarks': self.para.benchmarks,
                     'n_instances': self.para.n_instances,
                     'num': self.para.num,
-                    'one_by_one': self.para.one_by_one
+                    'one_by_one': self.para.one_by_one,
+                    'pre_run_kv_num': self.para.pre_run_kv_num,
                     }
             self.conf['workload_conf_key'] = 'workload_config'
 
@@ -348,7 +349,7 @@ def leveldbbench():
             self.conf['SSDFramework']['ncq_depth'] = 8
 
             self.conf['flash_config']['page_size'] = 2048
-            self.conf['flash_config']['n_pages_per_block'] = 256
+            self.conf['flash_config']['n_pages_per_block'] = self.para.n_pages_per_block
             self.conf['flash_config']['n_blocks_per_plane'] = 2
             self.conf['flash_config']['n_planes_per_chip'] = 1
             self.conf['flash_config']['n_chips_per_package'] = 1
@@ -406,11 +407,12 @@ def leveldbbench():
             "stripe_size, linux_ncq_depth, "\
             "cache_mapped_data_bytes, lbabytes, "\
             "f2fs_gc_after_workload, ext4datamode, ext4hasjournal, "\
-            "benchmarks, num, n_instances, one_by_one"
+            "benchmarks, num, n_instances, one_by_one, n_pages_per_block, "\
+            "nkftl_n, nkftl_k, pre_run_kv_num"
             )
 
         expname = get_expname()
-        lbabytes = 512*MB
+        lbabytes = 16*GB
         para_dict = {
                 'workload_class'   : [
                     'Leveldb'
@@ -419,8 +421,9 @@ def leveldbbench():
                     'overwrite',
                     ],
                 'num'            : [1000000],
+                'pre_run_kv_num' : [2000000],
                 'device_path'    : ['/dev/sdc1'],
-                'filesystem'     : ['ext4', 'f2fs', 'xfs', 'btrfs'],
+                'filesystem'     : ['ext4'],
                 'ext4datamode'   : ['ordered'],
                 'ext4hasjournal' : [True],
                 'expname'        : [expname],
@@ -430,7 +433,10 @@ def leveldbbench():
                 'cache_mapped_data_bytes' :[lbabytes],
                 'lbabytes'       : [lbabytes],
                 'n_instances'    : [1],
-                'one_by_one'     : [False],
+                'one_by_one'     : [True],
+                'n_pages_per_block': [64],
+                'nkftl_n'        : [4],
+                'nkftl_k'        : [4],
 
                 'f2fs_gc_after_workload': [True],
                 }

@@ -316,11 +316,13 @@ class Leveldb(Workload):
         benchmarks = self.workload_conf['benchmarks']
         num = self.workload_conf['num']
         one_by_one = self.workload_conf['one_by_one']
+        pre_run_kv_num = self.workload_conf['pre_run_kv_num']
 
         n_instances = self.workload_conf['n_instances']
 
         if one_by_one is True:
-            p = self._execute_leveldb(benchmarks='fillrandom', num=2000000,
+            p = self._execute_leveldb(benchmarks='fillrandom',
+                    num=pre_run_kv_num,
                     db=data_dir, outputpath=outputpath,
                     use_existing_db=0
                     )
