@@ -1471,6 +1471,8 @@ class Cleaner(object):
         for valid_ratio, block_type, block_num in victim_blocks.iterator_verbose():
             if self.is_stopping_needed():
                 break
+            self.recorder.count_me('victim_valid_ratio',
+                    "{0:.2f}".format(valid_ratio))
             p = self.env.process(self._clean_block(block_type, block_num))
             procs.append(p)
 
