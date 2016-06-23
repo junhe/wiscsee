@@ -296,16 +296,21 @@ class Leveldb(Workload):
             f.write(tablestr)
 
 
-    def _execute_leveldb(self, benchmarks, num, db, outputpath, use_existing_db=1):
+    def _execute_leveldb(self, benchmarks, num, db, outputpath,
+            threads=0,
+            use_existing_db=1):
         utils.prepare_dir(db)
 
         db_bench_path = "../leveldb-1.18/db_bench"
         cmd = "{exe} --benchmarks={benchmarks} --num={num} --db={db} "\
+                "--threads={threads} "\
                 "--use_existing_db={use_existing_db} > {out}"\
             .format(exe=db_bench_path, benchmarks=benchmarks,
                 num=num, db=db, out=outputpath,
+                threads=threads,
                 use_existing_db=use_existing_db
                 )
+        print cmd
         p = subprocess.Popen(cmd, shell=True)
 
         return p
@@ -317,18 +322,21 @@ class Leveldb(Workload):
         num = self.workload_conf['num']
         one_by_one = self.workload_conf['one_by_one']
         pre_run_kv_num = self.workload_conf['pre_run_kv_num']
+        threads = self.workload_conf['threads']
 
         n_instances = self.workload_conf['n_instances']
 
         if one_by_one is True:
             p = self._execute_leveldb(benchmarks='fillrandom',
                     num=pre_run_kv_num,
+                    threads=threads,
                     db=data_dir, outputpath=outputpath,
                     use_existing_db=0
                     )
             p.wait()
             for i in range(n_instances):
                 p = self._execute_leveldb(benchmarks=benchmarks, num=num,
+                        threads=threads,
                         db=data_dir, outputpath=outputpath,
                         use_existing_db=1
                         )
@@ -338,6 +346,7 @@ class Leveldb(Workload):
             for i in range(n_instances):
                 p = self._execute_leveldb(benchmarks=benchmarks, num=num,
                         db=data_dir + str(i), outputpath=outputpath,
+                        threads=threads,
                         use_existing_db=0
                         )
                 procs.append(p)

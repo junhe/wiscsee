@@ -304,6 +304,7 @@ def leveldbbench():
                     'num': self.para.num,
                     'one_by_one': self.para.one_by_one,
                     'pre_run_kv_num': self.para.pre_run_kv_num,
+                    'threads': self.para.leveldb_threads,
                     }
             self.conf['workload_conf_key'] = 'workload_config'
 
@@ -417,7 +418,7 @@ def leveldbbench():
             "cache_mapped_data_bytes, lbabytes, "\
             "f2fs_gc_after_workload, ext4datamode, ext4hasjournal, "\
             "benchmarks, num, n_instances, one_by_one, n_pages_per_block, "\
-            "nkftl_n, nkftl_k, pre_run_kv_num, ftl"
+            "nkftl_n, nkftl_k, pre_run_kv_num, ftl, leveldb_threads"
             )
 
         expname = get_expname()
@@ -430,8 +431,9 @@ def leveldbbench():
                 'benchmarks'     : [
                     'overwrite',
                     ],
-                'num'            : [10000],
-                'pre_run_kv_num' : [20000],
+                'num'            : [1000000],
+                'leveldb_threads': [64],
+                'pre_run_kv_num' : [2000000],
                 'device_path'    : ['/dev/sdc1'],
                 'filesystem'     : ['xfs'],
                 'ext4datamode'   : ['ordered'],
