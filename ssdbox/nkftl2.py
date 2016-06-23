@@ -680,7 +680,8 @@ class BlockInfo(object):
     This is for sorting blocks to clean the victim.
     """
     def __init__(self, block_type, block_num, last_used_time,
-            data_group_no = None):
+            valid_ratio, data_group_no = None):
+        self.valid_ratio = valid_ratio
         self.block_type = block_type
         self.block_num = block_num
         self.last_used_time = last_used_time
@@ -726,6 +727,8 @@ class GarbageCollector(object):
                 self.recorder.count_me("GC", "StopIteration")
                 break
 
+            self.recorder.count_me('victim_valid_ratio',
+                    "{0:.2f}".format(valid_ratio))
             self.clean_block(blockinfo, tag = TAG_THRESHOLD_GC)
 
             blk_cnt += 1
@@ -747,12 +750,14 @@ class GarbageCollector(object):
         priority_q = Queue.PriorityQueue()
 
         data_cnt = 0
+        # TODO: data block in log used blocks?
         for data_block in self.block_pool.log_usedblocks:
             if not self.oob.is_any_page_valid(data_block):
                 # no page is valid
                 blk_info = BlockInfo(
                     block_type = TYPE_DATA_BLOCK,
                     block_num = data_block,
+                    valid_ratio = self.oob.states.block_valid_ratio(block_num),
                     last_used_time = -1)  # high priority
                 priority_q.put(blk_info)
                 data_cnt += 1
@@ -765,6 +770,7 @@ class GarbageCollector(object):
                 blk_info = BlockInfo(
                     block_type = TYPE_LOG_BLOCK,
                     block_num = log_pbn,
+                    valid_ratio = self.oob.states.block_valid_ratio(log_pbn),
                     last_used_time = single_log_block_info.last_used_time,
                     data_group_no = data_group_no)
                 priority_q.put(blk_info)
@@ -888,6 +894,7 @@ class GarbageCollector(object):
                         block_type = TYPE_LOG_BLOCK,
                         block_num = log_block,
                         last_used_time = None,
+                        valid_ratio = self.oob.states.block_valid_ratio(log_block),
                         data_group_no = data_group_no),
                         tag = TAG_WRITE_DRIVEN)
             self.asserts()

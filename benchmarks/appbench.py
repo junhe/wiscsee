@@ -276,8 +276,12 @@ def bench():
 def leveldbbench():
     class Experimenter(object):
         def __init__(self, para):
-            # self.conf = ssdbox.dftldes.Config()
-            self.conf = ssdbox.nkftl2.Config()
+            if para.ftl == 'nkftl2':
+                self.conf = ssdbox.nkftl2.Config()
+            elif para.ftl == 'dftldes':
+                self.conf = ssdbox.dftldes.Config()
+            else:
+                raise NotImplementedError()
             self.para = para
             self.conf['exp_parameters'] = self.para._asdict()
 
@@ -358,16 +362,21 @@ def leveldbbench():
 
             self.conf['do_not_check_gc_setting'] = True
             self.conf.GC_high_threshold_ratio = 0.90
-            self.conf.GC_low_threshold_ratio = 0.80
+            self.conf.GC_low_threshold_ratio = 0.0
 
         def setup_ftl(self):
             self.conf['enable_blktrace'] = True
             self.conf['enable_simulation'] = True
             self.conf['stripe_size'] = self.para.stripe_size
 
-            # self.conf['simulator_class'] = 'SimulatorDESNew'
-            self.conf['simulator_class'] = 'SimulatorNonDESe2eExtent'
-            self.conf['ftl_type'] = 'nkftl2'
+            if self.para.ftl == 'dftldes':
+                self.conf['simulator_class'] = 'SimulatorDESNew'
+                self.conf['ftl_type'] = 'dftldes'
+            elif self.para.ftl == 'nkftl2':
+                self.conf['simulator_class'] = 'SimulatorNonDESe2eExtent'
+                self.conf['ftl_type'] = 'nkftl2'
+            else:
+                raise NotImplementedError()
 
             logicsize_mb = self.conf['dev_size_mb']
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
@@ -408,22 +417,23 @@ def leveldbbench():
             "cache_mapped_data_bytes, lbabytes, "\
             "f2fs_gc_after_workload, ext4datamode, ext4hasjournal, "\
             "benchmarks, num, n_instances, one_by_one, n_pages_per_block, "\
-            "nkftl_n, nkftl_k, pre_run_kv_num"
+            "nkftl_n, nkftl_k, pre_run_kv_num, ftl"
             )
 
         expname = get_expname()
-        lbabytes = 16*GB
+        lbabytes = 1*GB
         para_dict = {
+                'ftl'      : ['nkftl2'],
                 'workload_class'   : [
                     'Leveldb'
                     ],
                 'benchmarks'     : [
                     'overwrite',
                     ],
-                'num'            : [1000000],
-                'pre_run_kv_num' : [2000000],
+                'num'            : [10000],
+                'pre_run_kv_num' : [20000],
                 'device_path'    : ['/dev/sdc1'],
-                'filesystem'     : ['ext4'],
+                'filesystem'     : ['xfs'],
                 'ext4datamode'   : ['ordered'],
                 'ext4hasjournal' : [True],
                 'expname'        : [expname],
@@ -434,7 +444,7 @@ def leveldbbench():
                 'lbabytes'       : [lbabytes],
                 'n_instances'    : [1],
                 'one_by_one'     : [True],
-                'n_pages_per_block': [64],
+                'n_pages_per_block': [256],
                 'nkftl_n'        : [4],
                 'nkftl_k'        : [4],
 
