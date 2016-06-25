@@ -213,6 +213,10 @@ class WorkloadRunner(object):
         pass
 
     def _post_target_workload(self):
+        if self.conf.get('do_fstrim', False) is True:
+            cmd = "fstrim {}".format(self.conf['fs_mount_point'])
+            utils.shcmd(cmd)
+
         if self.conf['filesystem'] == 'f2fs' and self.conf['f2fs_gc_after_workload'] is True:
             time.sleep(1)
             utils.drop_caches()

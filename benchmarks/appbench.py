@@ -296,6 +296,8 @@ def leveldbbench():
             set_vm_default()
             set_vm("dirty_bytes", self.para.dirty_bytes)
 
+            self.conf['do_fstrim'] = True
+
         def setup_workload(self):
             self.conf['workload_class'] = self.para.workload_class
             self.conf['workload_config'] = {
