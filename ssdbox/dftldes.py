@@ -1505,6 +1505,19 @@ class DataBlockCleaner(object):
         self.recorder = rec
         self.env = env
 
+        self.gcid = 0
+
+    def log(self, blocknum):
+        ppn_start, ppn_end = self.conf.block_to_page_range(blocknum)
+        for ppn in range(ppn_start, ppn_end):
+            lpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
+            self.recorder.write_file('gc.log',
+                    gcid=self.gcid,
+                    blocknum=blocknum,
+                    lpn=lpn,
+                    valid=self.oob.states.is_page_valid(ppn))
+        self.gcid += 1
+
     def clean(self, blocknum):
         '''
         for each valid page, move it to another block
@@ -1512,6 +1525,8 @@ class DataBlockCleaner(object):
         '''
         assert blocknum in self.block_pool.used_blocks
         assert blocknum not in self.block_pool.current_blocks()
+
+        self.log(blocknum)
 
         ppn_start, ppn_end = self.conf.block_to_page_range(blocknum)
         for ppn in range(ppn_start, ppn_end):

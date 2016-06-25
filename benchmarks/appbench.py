@@ -296,7 +296,7 @@ def leveldbbench():
             set_vm_default()
             set_vm("dirty_bytes", self.para.dirty_bytes)
 
-            self.conf['do_fstrim'] = True
+            self.conf['do_fstrim'] = False
 
         def setup_workload(self):
             self.conf['workload_class'] = self.para.workload_class
@@ -426,18 +426,18 @@ def leveldbbench():
         expname = get_expname()
         lbabytes = 1*GB
         para_dict = {
-                'ftl'      : ['nkftl2'],
+                'ftl'      : ['dftldes'],
                 'workload_class'   : [
                     'Leveldb'
                     ],
                 'benchmarks'     : [
                     'overwrite',
                     ],
-                'num'            : [1000000],
-                'leveldb_threads': [64],
-                'pre_run_kv_num' : [2000000],
+                'num'            : [10000],
+                'leveldb_threads': [1],
+                'pre_run_kv_num' : [20000],
                 'device_path'    : ['/dev/sdc1'],
-                'filesystem'     : ['xfs'],
+                'filesystem'     : ['ext4'],
                 'ext4datamode'   : ['ordered'],
                 'ext4hasjournal' : [True],
                 'expname'        : [expname],
@@ -448,7 +448,7 @@ def leveldbbench():
                 'lbabytes'       : [lbabytes],
                 'n_instances'    : [1],
                 'one_by_one'     : [True],
-                'n_pages_per_block': [256],
+                'n_pages_per_block': [64],
                 'nkftl_n'        : [4],
                 'nkftl_k'        : [4],
 
