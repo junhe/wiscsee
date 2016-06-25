@@ -1430,6 +1430,9 @@ class Cleaner(object):
             trans_page_locks = self._trans_page_locks
             )
 
+        # limit number of cleaner processes
+        self._cleaner_res = simpy.Resource(self.env, capacity = 1)
+
     def assert_threshold_sanity(self):
         if self.conf['do_not_check_gc_setting'] is True:
             return
@@ -1465,8 +1468,6 @@ class Cleaner(object):
         """
         victim_blocks = VictimBlocks(self.conf, self.block_pool, self.oob)
 
-        # TODO: we may spawn too many processes here
-        # To reduce number of concurrent processes, use Resources
         procs = []
         for valid_ratio, block_type, block_num in victim_blocks.iterator_verbose():
             if self.is_stopping_needed():
@@ -1479,10 +1480,15 @@ class Cleaner(object):
         yield simpy.AllOf(self.env, procs)
 
     def _clean_block(self, block_type, block_num):
+        req = self._cleaner_res.request()
+        yield req
+
         if block_type == VictimBlocks.TYPE_DATA:
             yield self.env.process(self._datablockcleaner.clean(block_num))
         elif block_type == VictimBlocks.TYPE_TRANS:
             yield self.env.process(self._transblockcleaner.clean(block_num))
+
+        self._cleaner_res.release(req)
 
 
 class DataBlockCleaner(object):
