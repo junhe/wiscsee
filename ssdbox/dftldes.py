@@ -1508,6 +1508,10 @@ class DataBlockCleaner(object):
         self.gcid = 0
 
     def log(self, blocknum):
+        valid_ratio = self.oob.states.block_valid_ratio(blocknum)
+        if valid_ratio == 0:
+            return
+
         ppn_start, ppn_end = self.conf.block_to_page_range(blocknum)
         for ppn in range(ppn_start, ppn_end):
             lpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
