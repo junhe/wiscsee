@@ -1,6 +1,5 @@
 import bitarray
 from collections import deque, Counter
-import csv
 import datetime
 import itertools
 import random
@@ -26,7 +25,7 @@ from utilities import utils
 import dftldes
 
 import prepare4pyreuse
-from pyreuse.sysutils import blocktrace
+from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
 
 class SsdBase(object):
     def _process(self, pid):
@@ -147,16 +146,6 @@ class Ssd(SsdBase):
             procs.append(p)
 
         yield simpy.events.AllOf(self.env, procs)
-
-
-        self._record_post_run_stats()
-
-    def _record_post_run_stats(self):
-        self.recorder.set_result_by_one_key(
-                'simulation_duration', self.env.now)
-        print self.recorder.get_result_summary()
-
-
 
 
 

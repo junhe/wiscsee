@@ -1,4 +1,5 @@
 import re
+import os
 import time
 
 import prepare4pyreuse
@@ -222,6 +223,13 @@ class WorkloadRunner(object):
             utils.drop_caches()
             utils.invoke_f2fs_gc(self.conf['fs_mount_point'], 1, -1)
 
+        if self.conf['filesystem'] == 'ext4':
+            self.dumpe2fs()
+
+    def dumpe2fs(self):
+        dumppath = os.path.join(self.conf['result_dir'], 'dumpe2fs.out')
+        utils.shcmd("dumpe2fs {} > {}".format(
+            self.conf['device_path'], dumppath))
 
     def get_event_iterator(self):
         yield hostevent.ControlEvent(operation=OP_DISABLE_RECORDER)

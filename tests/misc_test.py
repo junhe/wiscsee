@@ -7,6 +7,7 @@ import ssdbox
 from utilities import utils
 from config import MountOption as MOpt
 from workflow import run_workflow
+from ssdbox.ssdframework import classify_lpn_in_gclog, get_range_table
 
 class TestCpuhandler(unittest.TestCase):
     def test_cpu(self):
@@ -108,6 +109,12 @@ class TestImportPyreuse(unittest.TestCase):
         import prepare4pyreuse
         import pyreuse
         pyreuse.helpers.shcmd("echo 33333")
+
+class TestClassifyGcLOG(unittest.TestCase):
+    def test(self):
+        classify_lpn_in_gclog("tests/testdata/gc.log",
+                "tests/testdata/dumpe2fs.out")
+
 
 def main():
     unittest.main()

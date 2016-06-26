@@ -53,10 +53,11 @@ class Recorder(object):
             'read_trans': 'background',
             'prog_trans': 'background'}
 
-    def __del__(self):
+    def close(self):
         self.__close_log_file()
         self.__save_accumulator()
         self.__save_result_dict()
+        self._close_file_pool()
 
     def enable(self):
         print "....Recorder is enabled...."
@@ -66,6 +67,11 @@ class Recorder(object):
         "Note that this will not clear the previous records"
         print "....Recorder is DIS-abled. Now not counting anything."
         self.enabled = False
+
+    def _close_file_pool(self):
+        for _, file_handle in self.file_pool.items():
+            os.fsync(file_handle)
+            file_handle.close()
 
     def __save_result_dict(self):
         result_path = os.path.join(self.output_directory, 'recorder.json')

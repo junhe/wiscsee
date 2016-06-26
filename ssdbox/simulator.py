@@ -4,6 +4,8 @@ import argparse
 import random
 import simpy
 import sys
+import os
+import csv
 
 import bmftl
 import config
@@ -19,6 +21,10 @@ import dftldes
 from commons import *
 from ftlsim_commons import *
 from .host import Host
+from utilities import utils
+
+import prepare4pyreuse
+from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
 
 class Simulator(object):
     __metaclass__ = abc.ABCMeta
@@ -66,8 +72,48 @@ class SimulatorDESNew(Simulator):
 
         self.env.run()
 
+        self.record_post_run_stats()
+
     def get_sim_type(self):
         return "SimulatorDESNew"
+
+    def record_post_run_stats(self):
+        self.recorder.set_result_by_one_key(
+                'simulation_duration', self.env.now)
+        print self.recorder.get_result_summary()
+
+        self.recorder.close()
+        gclog_path = os.path.join(self.conf['result_dir'], 'gc.log')
+        dumpe2fs_out_path = os.path.join(self.conf['result_dir'], 'dumpe2fs.out')
+        if self.conf['filesystem'] == 'ext4' and\
+                os.path.exists(gclog_path):
+            classify_lpn_in_gclog(gclog_path, dumpe2fs_out_path)
+
+
+def classify_lpn_in_gclog(gclog_path, dumpe2fs_out_path):
+    range_table = get_range_table(dumpe2fs_out_path)
+    classifier = blockclassifiers.Ext4BlockClassifier(range_table, 4096)
+
+    new_table = []
+    with open(gclog_path , 'rb') as f:
+        reader = csv.DictReader(f, skipinitialspace=True)
+        for row in reader:
+            newrow = dict(zip(row.keys()[0].split(), row.values()[0].split()))
+            offset = int(newrow['lpn']) * 4096
+            newrow['semantics'] = classifier.classify(offset)
+            new_table.append(newrow)
+
+    with open(gclog_path+'.parsed', 'w') as f:
+        f.write(utils.table_to_str(new_table))
+
+def get_range_table(dumpe2fs_out_path):
+    with open(dumpe2fs_out_path, 'r') as f:
+        text = f.read()
+    range_table = dumpe2fsparser.parse_file_text(text)
+
+    return range_table
+
+
 
 
 def create_simulator(simulator_class, conf, event_iter):
