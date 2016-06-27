@@ -368,8 +368,8 @@ def leveldbbench():
             self.conf.GC_low_threshold_ratio = 0.0
 
         def setup_ftl(self):
-            self.conf['enable_blktrace'] = True
-            self.conf['enable_simulation'] = True
+            self.conf['enable_blktrace'] = False
+            self.conf['enable_simulation'] = False
             self.conf['stripe_size'] = self.para.stripe_size
 
             if self.para.ftl == 'dftldes':
@@ -424,7 +424,7 @@ def leveldbbench():
             )
 
         expname = get_expname()
-        lbabytes = 1*GB
+        lbabytes = 256*MB
         para_dict = {
                 'ftl'      : ['dftldes'],
                 'workload_class'   : [
@@ -433,9 +433,9 @@ def leveldbbench():
                 'benchmarks'     : [
                     'overwrite',
                     ],
-                'num'            : [10000],
+                'num'            : [1000000],
                 'leveldb_threads': [1],
-                'pre_run_kv_num' : [20000],
+                'pre_run_kv_num' : [2000000],
                 'device_path'    : ['/dev/sdc1'],
                 'filesystem'     : ['ext4'],
                 'ext4datamode'   : ['ordered'],
