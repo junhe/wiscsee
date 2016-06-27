@@ -25,6 +25,7 @@ from utilities import utils
 
 import prepare4pyreuse
 from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
+from pyreuse.fsutils import ext4dumpextents
 
 class Simulator(object):
     __metaclass__ = abc.ABCMeta
@@ -83,37 +84,58 @@ class SimulatorDESNew(Simulator):
         print self.recorder.get_result_summary()
 
         self.recorder.close()
-        gclog_path = os.path.join(self.conf['result_dir'], 'gc.log')
-        dumpe2fs_out_path = os.path.join(self.conf['result_dir'], 'dumpe2fs.out')
+
+
+        gclog = GcLog(self.conf)
         if self.conf['filesystem'] == 'ext4' and\
-                os.path.exists(gclog_path):
-            classify_lpn_in_gclog(gclog_path, dumpe2fs_out_path)
+                os.path.exists(gclog.gclog_path):
+            gclog.classify_lpn_in_gclog()
 
 
-def classify_lpn_in_gclog(gclog_path, dumpe2fs_out_path):
-    range_table = get_range_table(dumpe2fs_out_path)
-    classifier = blockclassifiers.Ext4BlockClassifier(range_table, 4096)
+class GcLog(object):
+    def __init__(self, conf):
+        self.conf = conf
+        self.gclog_path = os.path.join(self.conf['result_dir'], 'gc.log')
+        self.dumpe2fs_out_path = os.path.join(self.conf['result_dir'], 'dumpe2fs.out')
 
-    new_table = []
-    with open(gclog_path , 'rb') as f:
-        reader = csv.DictReader(f, skipinitialspace=True)
-        for row in reader:
-            newrow = dict(zip(row.keys()[0].split(), row.values()[0].split()))
-            offset = int(newrow['lpn']) * 4096
-            newrow['semantics'] = classifier.classify(offset)
-            new_table.append(newrow)
+    def classify_lpn_in_gclog(self):
+        range_table = self._get_range_table()
+        classifier = blockclassifiers.Ext4BlockClassifier(range_table, 4096)
 
-    with open(gclog_path+'.parsed', 'w') as f:
-        f.write(utils.table_to_str(new_table))
+        new_table = []
+        with open(self.gclog_path , 'rb') as f:
+            reader = csv.DictReader(f, skipinitialspace=True)
+            for row in reader:
+                newrow = dict(zip(row.keys()[0].split(), row.values()[0].split()))
+                offset = int(newrow['lpn']) * 4096
+                newrow['semantics'] = classifier.classify(offset)
+                new_table.append(newrow)
 
-def get_range_table(dumpe2fs_out_path):
-    with open(dumpe2fs_out_path, 'r') as f:
-        text = f.read()
-    range_table = dumpe2fsparser.parse_file_text(text)
+        with open(self.gclog_path+'.parsed', 'w') as f:
+            f.write(utils.table_to_str(new_table))
 
-    return range_table
+    def _get_range_table(self):
+        with open(self.dumpe2fs_out_path, 'r') as f:
+            text = f.read()
 
+        header_text, bg_text = text.split("\n\n\n")
 
+        range_table = dumpe2fsparser.parse_bg_text(bg_text)
+
+        j_start, j_end = self._get_journal_block_ext(header_text)
+        range_table.append( {'journal': (j_start, j_end)} )
+
+        return range_table
+
+    def _get_journal_block_ext(self, header_text):
+        header_dict = dumpe2fsparser.parse_header_text(header_text)
+        journal_inum = header_dict['journal-inode']
+        journal_len = header_dict['journal-length']
+
+        ext_text = ext4dumpextents.dump_extents_of_a_file(self.conf['device_path'],
+                '<{}>'.format(journal_inum))
+        table = ext4dumpextents.parse_dump_extents_output(ext_text)
+        return table[0]['Physical_start'], table[0]['Physical_end']
 
 
 def create_simulator(simulator_class, conf, event_iter):

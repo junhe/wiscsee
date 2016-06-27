@@ -7,7 +7,7 @@ import ssdbox
 from utilities import utils
 from config import MountOption as MOpt
 from workflow import run_workflow
-from ssdbox.ssdframework import classify_lpn_in_gclog, get_range_table
+from ssdbox.simulator import GcLog
 
 class TestCpuhandler(unittest.TestCase):
     def test_cpu(self):
@@ -111,9 +111,14 @@ class TestImportPyreuse(unittest.TestCase):
         pyreuse.helpers.shcmd("echo 33333")
 
 class TestClassifyGcLOG(unittest.TestCase):
+    @unittest.skip("Need real device mounted")
     def test(self):
-        classify_lpn_in_gclog("tests/testdata/gc.log",
-                "tests/testdata/dumpe2fs.out")
+        conf = {'result_dir': '/tmp/results/1gbseejournalmix/Leveldb.ext4.1gbseejournalmix.4294967296.devsdc1.128.31.1073741824.1073741824.True.ordered.True.overwrite.1000000.1.True.64.4.4.2000000.dftldes.1-ext4-06-26-22-54-12-5415344140997229298/',
+                'device_path': '/dev/sdc1'}
+        gclog = GcLog(conf)
+        print gclog._get_range_table()
+        gclog.classify_lpn_in_gclog()
+
 
 
 def main():
