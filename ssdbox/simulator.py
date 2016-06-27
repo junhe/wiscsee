@@ -97,6 +97,7 @@ class GcLog(object):
         self.conf = conf
         self.gclog_path = os.path.join(self.conf['result_dir'], 'gc.log')
         self.dumpe2fs_out_path = os.path.join(self.conf['result_dir'], 'dumpe2fs.out')
+        self.flash_page_size = self.conf.page_size
 
     def classify_lpn_in_gclog(self):
         range_table = self._get_range_table()
@@ -107,7 +108,7 @@ class GcLog(object):
             reader = csv.DictReader(f, skipinitialspace=True)
             for row in reader:
                 newrow = dict(zip(row.keys()[0].split(), row.values()[0].split()))
-                offset = int(newrow['lpn']) * 4096
+                offset = int(newrow['lpn']) * self.flash_page_size
                 newrow['semantics'] = classifier.classify(offset)
                 new_table.append(newrow)
 
