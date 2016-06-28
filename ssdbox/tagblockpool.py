@@ -36,6 +36,10 @@ class CurrentBlock(object):
         self.next_page_offset = end_offset
         return ppns
 
+    def is_full(self):
+        assert self.next_page_offset <= self.n_pages_per_block
+        return self.next_page_offset == self.n_pages_per_block
+
 
 class BlockPoolWithCurBlocks(TagBlockPool):
     def __init__(self, n, tags, n_pages_per_block):
@@ -51,17 +55,33 @@ class BlockPoolWithCurBlocks(TagBlockPool):
         There can be several 'current blocks', use block_index to
         choose.
         """
-        self._cur_blocks[tag].get(block_index, None)
+        return self._cur_blocks[tag].get(block_index, None)
 
-    def next_pages(self, n, tag, block_index):
-        cur_block_obj = self.cur_block_obj(tag, block_index)
-        if cur_block_obj is None:
-            cur_block_obj = self._add_cur_block(tag, block_index)
+    def next_ppns_from_cur_block(self, n, tag, block_index):
+        """
+        """
+        remaining = n
 
-    def _add_cur_block(self, tag, block_index):
+        ret_ppns = []
+        while remaining > 0:
+            cur_block_obj = self.cur_block_obj(tag, block_index)
+            if cur_block_obj is None or cur_block_obj.is_full():
+                cur_block_obj = self._set_new_cur_block(tag, block_index)
+
+            ppns = cur_block_obj.next_ppns(remaining)
+            ret_ppns.extend(ppns)
+
+            remaining -= len(ppns)
+        return ret_ppns
+
+    def _set_new_cur_block(self, tag, block_index):
         new_block_num = self.pick_and_move(src=TFREE, dst=tag)
-        block_obj = CurrentBlock(self.n_pages_per_block, blocknum=new_block_num)
+        block_obj = CurrentBlock(self._n_pages_per_block, blocknum=new_block_num)
         self._cur_blocks[tag][block_index] = block_obj
         return block_obj
+
+
+
+
 
 
