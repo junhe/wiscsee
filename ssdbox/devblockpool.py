@@ -6,6 +6,7 @@ class MultiChannelBlockPool(object):
         self.n_channels = n_channels
         self.n_blocks_per_channel = n_blocks_per_channel
         self.n_pages_per_block = n_pages_per_block
+        self.n_pages_per_channel = n_pages_per_block * n_blocks_per_channel
         self.total_blocks = n_blocks_per_channel * n_channels
         self.tags = tags
 
@@ -89,6 +90,7 @@ class MultiChannelBlockPool(object):
                 # channel out of space
                 empty_channels.add(cur_channel_id)
 
+            ppns = self.ppns_channel_to_global(cur_channel_id, ppns)
             ret_ppns.extend(ppns)
             self.incr_next_channel()
             remaining -= len(ppns)
@@ -99,14 +101,17 @@ class MultiChannelBlockPool(object):
 
         return ret_ppns
 
+    def ppn_channel_to_global(self, channel_id, ppn):
+        return channel_id * self.n_pages_per_channel + ppn
+
+    def ppns_channel_to_global(self, channel_id, ppns):
+        return [self.ppn_channel_to_global(channel_id, ppn) for ppn in ppns]
+
     def _next_ppns_in_channel(self, channel_id, n, tag, block_index):
         """
         Return ppns we can find. If returning [], it means this channel
         is out of space.
         """
-        # if there is not current block, allocate a new one
-        # if the current block is full, allocate a new one
-        # if the channel is full, mark it and move on
         channel_pool = self._channel_pool[channel_id]
         remaining = n
 

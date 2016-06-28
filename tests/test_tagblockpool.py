@@ -76,6 +76,9 @@ class TestBlockPoolWithCurBlocks(unittest.TestCase):
         self.assertEqual(len(ppnlist1), 1)
         self.assertEqual(len(ppnlist2), 1)
 
+        for ppn in ppnlist1:
+            self.assertNotIn(ppn, ppnlist2)
+
         cur_block_objs = pool.get_cur_block_obj(tag=TDATA)
         self.assertEqual(len(cur_block_objs), 2)
 
@@ -124,6 +127,11 @@ class TestBlockPoolWithCurBlocks(unittest.TestCase):
 
         new_block = pool.pick_and_move(src=TFREE, dst=TDATA)
         self.assertEqual(new_block, None)
+
+    def test_next_ppns_context(self):
+        pool = BlockPoolWithCurBlocks(100, [TDATA], 8)
+
+
 
 
 class TestCurrentBlock(unittest.TestCase):
