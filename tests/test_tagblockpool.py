@@ -45,47 +45,85 @@ class TestBlockPoolWithCurBlocks(unittest.TestCase):
     def test_init(self):
         tmp = BlockPoolWithCurBlocks(100, [TDATA, TTRANS], NPAGESPERBLOCK)
 
-    def test_cur_block_obj(self):
+    def test_get_cur_block_obj(self):
         pool = BlockPoolWithCurBlocks(100, [TDATA], NPAGESPERBLOCK)
-        self.assertEqual(pool.cur_block_obj(tag=TDATA, block_index=0), None)
+        self.assertEqual(pool.get_cur_block_obj(tag=TDATA, block_index=0), None)
 
     def test_next_ppns_from_cur_block(self):
         pool = BlockPoolWithCurBlocks(100, [TDATA], 3)
+
+        ppnlist = pool.next_ppns_from_cur_block(n=1, tag=TDATA, block_index=0)
+        self.assertEqual(len(ppnlist), 0)
+
+        new_block = pool.pick_and_move(src=TFREE, dst=TDATA)
+        pool.set_new_cur_block(TDATA, block_index=0, blocknum=new_block)
         ppnlist = pool.next_ppns_from_cur_block(n=1, tag=TDATA, block_index=0)
         self.assertEqual(len(ppnlist), 1)
-        cur_block_obj = pool.cur_block_obj(tag=TDATA, block_index=0)
+        cur_block_obj = pool.get_cur_block_obj(tag=TDATA, block_index=0)
         cur_block_obj.next_page_offset = 1
+
+    def test_get_all_cur_blocks(self):
+        pool = BlockPoolWithCurBlocks(100, [TDATA], 3)
+
+        new_block = pool.pick_and_move(src=TFREE, dst=TDATA)
+        pool.set_new_cur_block(TDATA, block_index=0, blocknum=new_block)
+
+        new_block = pool.pick_and_move(src=TFREE, dst=TDATA)
+        pool.set_new_cur_block(TDATA, block_index=1, blocknum=new_block)
+
+        ppnlist1 = pool.next_ppns_from_cur_block(n=1, tag=TDATA, block_index=0)
+        ppnlist2 = pool.next_ppns_from_cur_block(n=1, tag=TDATA, block_index=1)
+        self.assertEqual(len(ppnlist1), 1)
+        self.assertEqual(len(ppnlist2), 1)
+
+        cur_block_objs = pool.get_cur_block_obj(tag=TDATA)
+        self.assertEqual(len(cur_block_objs), 2)
+
+        cur_block_objs[0].next_page_offset = 1
+        cur_block_objs[1].next_page_offset = 1
 
     def test_next_ppns_from_cur_block_overflow(self):
         pool = BlockPoolWithCurBlocks(100, [TDATA], 8)
         # will use one block
+        new_block = pool.pick_and_move(src=TFREE, dst=TDATA)
+        pool.set_new_cur_block(TDATA, block_index=0, blocknum=new_block)
         ppnlist1 = pool.next_ppns_from_cur_block(n=8, tag=TDATA, block_index=0)
         self.assertEqual(len(ppnlist1), 8)
         self.assertEqual(pool.count_blocks(tag=TDATA), 1)
         self.assertEqual(pool.count_blocks(tag=TFREE), 99)
 
         ppnlist2 = pool.next_ppns_from_cur_block(n=4, tag=TDATA, block_index=0)
-        self.assertEqual(len(ppnlist2), 4)
-        self.assertEqual(pool.count_blocks(tag=TDATA), 2)
-        self.assertEqual(pool.count_blocks(tag=TFREE), 98)
+        self.assertEqual(len(ppnlist2), 0)
+
+        self.assertEqual(pool.count_blocks(tag=TDATA), 1)
+        self.assertEqual(pool.count_blocks(tag=TFREE), 99)
 
         for ppn in ppnlist1:
             self.assertNotIn(ppn, ppnlist2)
 
     def test_next_ppns_from_cur_block_all(self):
         pool = BlockPoolWithCurBlocks(100, [TDATA], 8)
-        ppnlist1 = pool.next_ppns_from_cur_block(n=800, tag=TDATA,
-                block_index=0)
-        self.assertEqual(len(ppnlist1), 800)
+
+        remaining = 800
+
+        allppns = []
+        while remaining > 0:
+            ppnlist = pool.next_ppns_from_cur_block(n=remaining, tag=TDATA,
+                    block_index=0)
+            allppns.extend(ppnlist)
+
+            if len(ppnlist) == 0:
+                new_block = pool.pick_and_move(src=TFREE, dst=TDATA)
+                pool.set_new_cur_block(TDATA, block_index=0, blocknum=new_block)
+
+            remaining -= len(ppnlist)
+
+        self.assertEqual(len(allppns), 800)
         self.assertEqual(pool.count_blocks(tag=TDATA), 100)
         self.assertEqual(pool.count_blocks(tag=TFREE), 0)
 
-
-    def test_out_of_space(self):
-        pool = BlockPoolWithCurBlocks(100, [TDATA], 8)
         with self.assertRaisesRegexp(TagOutOfSpaceError, "out of space"):
-            ppnlist1 = pool.next_ppns_from_cur_block(n=801, tag=TDATA,
-                    block_index=0)
+            new_block = pool.pick_and_move(src=TFREE, dst=TDATA)
 
 
 class TestCurrentBlock(unittest.TestCase):
