@@ -122,8 +122,8 @@ class TestBlockPoolWithCurBlocks(unittest.TestCase):
         self.assertEqual(pool.count_blocks(tag=TDATA), 100)
         self.assertEqual(pool.count_blocks(tag=TFREE), 0)
 
-        with self.assertRaisesRegexp(TagOutOfSpaceError, "out of space"):
-            new_block = pool.pick_and_move(src=TFREE, dst=TDATA)
+        new_block = pool.pick_and_move(src=TFREE, dst=TDATA)
+        self.assertEqual(new_block, None)
 
 
 class TestCurrentBlock(unittest.TestCase):

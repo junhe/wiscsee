@@ -55,6 +55,43 @@ class TestMultiChannelBlockPool(unittest.TestCase):
                 n_pages_per_block=32,
                 tags=[TDATA, TTRANS])
 
+    def test_next_ppns_in_channel(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        ppns = pool._next_ppns_in_channel(
+                channel_id=0, n=1, tag=TDATA, block_index=0)
+        self.assertEqual(len(ppns), 1)
+
+        other_ppns = pool._next_ppns_in_channel(
+                channel_id=0, n=100000, tag=TDATA, block_index=0)
+        self.assertEqual(len(other_ppns), 64*32-1)
+
+        more_ppns = pool._next_ppns_in_channel(
+                channel_id=0, n=1, tag=TDATA, block_index=0)
+        self.assertEqual(len(more_ppns), 0)
+
+    def test_next_ppns_in_channel_2_tags(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        ppns = pool._next_ppns_in_channel(
+                channel_id=0, n=1, tag=TDATA, block_index=0)
+        self.assertEqual(len(ppns), 1)
+
+        other_ppns = pool._next_ppns_in_channel(
+                channel_id=0, n=10, tag=TTRANS, block_index=0)
+        self.assertEqual(len(other_ppns), 10)
+
+        # not in the same block
+        self.assertNotEqual(ppns[0]/32, other_ppns[0]/32)
+
     def test_next_ppns(self):
         pool = MultiChannelBlockPool(
                 n_channels=8,

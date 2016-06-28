@@ -20,12 +20,11 @@ class TagBlockPool(object):
         try:
             block = self._tag_subpool[src][-1]
         except IndexError:
-            raise TagOutOfSpaceError(
-                "Tag {} is out of space in this block pool!".format(src))
+            # Out of Space of this tag
+            return None
 
         self.change_tag(block, src, dst)
         return block
-
 
 
 class CurrentBlock(object):
@@ -91,9 +90,5 @@ class BlockPoolWithCurBlocks(TagBlockPool):
         block_obj = CurrentBlock(self._n_pages_per_block, blocknum=blocknum)
         self._cur_blocks[tag][block_index] = block_obj
         return block_obj
-
-
-class TagOutOfSpaceError(IndexError):
-    pass
 
 

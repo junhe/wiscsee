@@ -59,39 +59,81 @@ class MultiChannelBlockPool(object):
 
     def current_blocks(self):
         "return all current block numbers"
-        objs = []
+        blocknums = []
         for pool in self._channel_pool:
             for tag in self.tags:
                 cur_blk_objs = pool.get_cur_block_obj(tag)
-                objs.extend(cur_blk_objs)
-        return [obj.blocknum for obj in objs]
+                for obj in cur_blk_objs:
+                    global_blk = self.channel_to_global(pool.channel_id,
+                            obj.blocknum)
+                    blocknums.append(global_blk)
 
-    def next_ppns(self, n, tag, block_index, stipe_size):
+        return blocknums
+
+    def next_ppns(self, n, tag, block_index, stripe_size):
+        """
+        We will try to use all the available pages in the one channels'
+        current block before going to the next.
+        """
         remaining = n
 
         ret_ppns = []
-        channels_tried = set()
-        while remaining > 0:
-            # get stripe_size of pages from current channel each time
+        empty_channels = set()
+        while remaining > 0 and len(empty_channels) < self.n_channels:
             cur_channel_id = self._next_channel
-            pool = self._channel_pool[cur_channel_id]
+            req = min(remaining, stripe_size)
+            ppns = self._next_ppns_in_channel(
+                    channel_id=cur_channel_id,
+                    n=req, tag=tag, block_index=block_index)
+            if len(ppns) == 0:
+                # channel out of space
+                empty_channels.add(cur_channel_id)
 
-            n_for_cur_channel = min(stripe_size, remaining)
-            try:
-                ppns = pool.next_ppns_from_cur_block(
-                    n_for_cur_channel, tag, block_index)
-            except TagOutOfSpaceError:
-                ppns
             ret_ppns.extend(ppns)
-
             self.incr_next_channel()
+            remaining -= len(ppns)
 
+        if remaining > 0:
+            # out of space
+            raise OutOfSpaceError
 
+        return ret_ppns
+
+    def _next_ppns_in_channel(self, channel_id, n, tag, block_index):
+        """
+        Return ppns we can find. If returning [], it means this channel
+        is out of space.
+        """
+        # if there is not current block, allocate a new one
+        # if the current block is full, allocate a new one
+        # if the channel is full, mark it and move on
+        channel_pool = self._channel_pool[channel_id]
+        remaining = n
+
+        ret_ppns = []
+        while remaining > 0:
+            ppnlist = channel_pool.next_ppns_from_cur_block(n=remaining,
+                    tag=tag, block_index=block_index)
+
+            if len(ppnlist) == 0:
+                new_block = channel_pool.pick_and_move(src=TFREE, dst=tag)
+                if new_block == None:
+                    # this channel is out of space of this tag
+                    break
+                channel_pool.set_new_cur_block(tag, block_index, new_block)
+
+            ret_ppns.extend(ppnlist)
+            remaining -= len(ppnlist)
+        return ret_ppns
 
 
 class ChannelBlockPool(BlockPoolWithCurBlocks):
     def __init__(self, n, tags, n_pages_per_block, channel_id):
         super(ChannelBlockPool, self).__init__(n, tags, n_pages_per_block)
         self.channel_id = channel_id
+
+
+class TagOutOfSpaceError(RuntimeError):
+    pass
 
 
