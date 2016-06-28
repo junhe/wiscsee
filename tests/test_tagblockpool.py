@@ -1,8 +1,12 @@
 import unittest
 from ssdbox.tagblockpool import *
 
+
 TDATA = 'TDATA'
 TTRANS = 'TTRANS'
+NPAGESPERBLOCK = 64
+
+
 class TestTagBlockPool(unittest.TestCase):
     def test_init(self):
         pool = TagBlockPool(100, [])
@@ -37,7 +41,6 @@ class TestTagBlockPool(unittest.TestCase):
         self.assertIn(block, pool.get_blocks_of_tag(TDATA))
 
 
-NPAGESPERBLOCK = 64
 class TestBlockPoolWithCurBlocks(unittest.TestCase):
     def test_init(self):
         tmp = BlockPoolWithCurBlocks(100, [TDATA, TTRANS], NPAGESPERBLOCK)
@@ -83,6 +86,7 @@ class TestBlockPoolWithCurBlocks(unittest.TestCase):
         with self.assertRaisesRegexp(TagOutOfSpaceError, "out of space"):
             ppnlist1 = pool.next_ppns_from_cur_block(n=801, tag=TDATA,
                     block_index=0)
+
 
 class TestCurrentBlock(unittest.TestCase):
     def test_init(self):

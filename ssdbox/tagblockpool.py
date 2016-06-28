@@ -1,5 +1,6 @@
 TFREE = 'TAGFREE'
 
+
 class TagBlockPool(object):
     def __init__(self, n, tags):
         self._tag_subpool = {tag:[] for tag in tags}
@@ -24,6 +25,7 @@ class TagBlockPool(object):
 
         self.change_tag(block, src, dst)
         return block
+
 
 
 class CurrentBlock(object):
@@ -88,7 +90,5 @@ class BlockPoolWithCurBlocks(TagBlockPool):
 
 class TagOutOfSpaceError(IndexError):
     pass
-
-
 
 
