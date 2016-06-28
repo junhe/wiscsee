@@ -16,7 +16,12 @@ class TagBlockPool(object):
         return len(self._tag_subpool[tag])
 
     def pick_and_move(self, src, dst):
-        block = self._tag_subpool[src][-1]
+        try:
+            block = self._tag_subpool[src][-1]
+        except IndexError:
+            raise TagOutOfSpaceError(
+                "Tag {} is out of space in this block pool!".format(src))
+
         self.change_tag(block, src, dst)
         return block
 
@@ -81,6 +86,8 @@ class BlockPoolWithCurBlocks(TagBlockPool):
         return block_obj
 
 
+class TagOutOfSpaceError(IndexError):
+    pass
 
 
 

@@ -36,6 +36,7 @@ class TestTagBlockPool(unittest.TestCase):
 
         self.assertIn(block, pool.get_blocks_of_tag(TDATA))
 
+
 NPAGESPERBLOCK = 64
 class TestBlockPoolWithCurBlocks(unittest.TestCase):
     def test_init(self):
@@ -68,6 +69,20 @@ class TestBlockPoolWithCurBlocks(unittest.TestCase):
         for ppn in ppnlist1:
             self.assertNotIn(ppn, ppnlist2)
 
+    def test_next_ppns_from_cur_block_all(self):
+        pool = BlockPoolWithCurBlocks(100, [TDATA], 8)
+        ppnlist1 = pool.next_ppns_from_cur_block(n=800, tag=TDATA,
+                block_index=0)
+        self.assertEqual(len(ppnlist1), 800)
+        self.assertEqual(pool.count_blocks(tag=TDATA), 100)
+        self.assertEqual(pool.count_blocks(tag=TFREE), 0)
+
+
+    def test_out_of_space(self):
+        pool = BlockPoolWithCurBlocks(100, [TDATA], 8)
+        with self.assertRaisesRegexp(TagOutOfSpaceError, "out of space"):
+            ppnlist1 = pool.next_ppns_from_cur_block(n=801, tag=TDATA,
+                    block_index=0)
 
 class TestCurrentBlock(unittest.TestCase):
     def test_init(self):
