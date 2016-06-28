@@ -368,8 +368,8 @@ def leveldbbench():
             self.conf.GC_low_threshold_ratio = 0.0
 
         def setup_ftl(self):
-            self.conf['enable_blktrace'] = False
-            self.conf['enable_simulation'] = False
+            self.conf['enable_blktrace'] = True
+            self.conf['enable_simulation'] = True
             self.conf['stripe_size'] = self.para.stripe_size
 
             if self.para.ftl == 'dftldes':
