@@ -1729,15 +1729,12 @@ class TestCleaning4Channel(unittest.TestCase):
 
         n_data_used_blocks = len(block_pool.data_usedblocks)
 
-        # create 3 blocks with no valid pages, 1 with full valid pages
         n = conf.n_pages_per_block
-        # write in 4 different channels
         yield env.process(dftl.write_ext(Extent(0, n)))
         yield env.process(dftl.write_ext(Extent(0, n)))
         yield env.process(dftl.write_ext(Extent(0, n)))
         yield env.process(dftl.write_ext(Extent(0, n)))
 
-        # write in 4 different channels and create 3 used blocks
         yield env.process(dftl.write_ext(Extent(0, n)))
         yield env.process(dftl.write_ext(Extent(0, n)))
         yield env.process(dftl.write_ext(Extent(0, n)))
@@ -1747,12 +1744,11 @@ class TestCleaning4Channel(unittest.TestCase):
         valid_ratio, block_type, victim_block = victim_blocks[0]
 
         s = env.now
-        # yield env.process(datablockcleaner.clean(victim_block))
         yield env.process(cleaner.clean())
-        # check the time to move 0 valid pages and erase 3 blocks in parallel
-        # the 3 blocks are in three different channels, so they can be
-        # erased in parallel
-        self.assertEqual(env.now, s + time_erase_block)
+        if cleaner.n_cleaners == 1:
+            self.assertEqual(env.now, s + time_erase_block * 4)
+        elif cleaner.n_cleaners >= 4:
+            self.assertEqual(env.now, s + time_erase_block)
 
         # check validation
         self.assertEqual(oob.states.block_valid_ratio(victim_block), 0)

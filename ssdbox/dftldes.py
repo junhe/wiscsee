@@ -1431,7 +1431,8 @@ class Cleaner(object):
             )
 
         # limit number of cleaner processes
-        self._cleaner_res = simpy.Resource(self.env, capacity = 1)
+        self.n_cleaners = 1
+        self._cleaner_res = simpy.Resource(self.env, capacity=self.n_cleaners)
 
     def assert_threshold_sanity(self):
         if self.conf['do_not_check_gc_setting'] is True:
