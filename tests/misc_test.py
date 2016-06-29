@@ -111,13 +111,13 @@ class TestImportPyreuse(unittest.TestCase):
         pyreuse.helpers.shcmd("echo 33333")
 
 class TestClassifyGcLOG(unittest.TestCase):
-    @unittest.skip("Need real device mounted")
+    # @unittest.skip("Need real device mounted")
     def test(self):
-        conf = {'result_dir': '/tmp/results/1gbseejournalmix/Leveldb.ext4.1gbseejournalmix.4294967296.devsdc1.128.31.1073741824.1073741824.True.ordered.True.overwrite.1000000.1.True.64.4.4.2000000.dftldes.1-ext4-06-26-22-54-12-5415344140997229298/',
-                'device_path': '/dev/sdc1',
-                'flash_page_size': 2048
-                }
-        gclog = GcLog(conf)
+        gclog = GcLog(
+                device_path='/dev/sdc1',
+                result_dir='/tmp/results/1gbnojournalok/Leveldb.ext4.1gbnojournalok.4294967296.devsdc1.128.31.1073741824.1073741824.True.ordered.False.overwrite.1000000.1.True.64.4.4.2000000.dftldes.1-ext4-06-29-08-06-52--7574556694461561217',
+                flash_page_size=2048
+                )
         print gclog._get_range_table()
         gclog.classify_lpn_in_gclog()
 

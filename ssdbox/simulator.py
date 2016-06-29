@@ -86,18 +86,22 @@ class SimulatorDESNew(Simulator):
         self.recorder.close()
 
 
-        gclog = GcLog(self.conf)
+        gclog = GcLog(device_path=self.conf['device_path'],
+                result_dir=self.conf['result_dir'],
+                flash_page_size=self.conf.page_size)
         if self.conf['filesystem'] == 'ext4' and\
                 os.path.exists(gclog.gclog_path):
             gclog.classify_lpn_in_gclog()
 
 
 class GcLog(object):
-    def __init__(self, conf):
-        self.conf = conf
-        self.gclog_path = os.path.join(self.conf['result_dir'], 'gc.log')
-        self.dumpe2fs_out_path = os.path.join(self.conf['result_dir'], 'dumpe2fs.out')
-        self.flash_page_size = self.conf.page_size
+    def __init__(self, device_path, result_dir, flash_page_size):
+        self.device_path = device_path
+        self.result_dir = result_dir
+        self.flash_page_size = flash_page_size
+
+        self.gclog_path = os.path.join(self.result_dir, 'gc.log')
+        self.dumpe2fs_out_path = os.path.join(self.result_dir, 'dumpe2fs.out')
 
     def classify_lpn_in_gclog(self):
         range_table = self._get_range_table()
@@ -124,16 +128,21 @@ class GcLog(object):
         range_table = dumpe2fsparser.parse_bg_text(bg_text)
 
         j_start, j_end = self._get_journal_block_ext(header_text)
-        range_table.append( {'journal': (j_start, j_end)} )
+        if j_start != -1:
+            range_table.append( {'journal': (j_start, j_end)} )
 
         return range_table
 
     def _get_journal_block_ext(self, header_text):
         header_dict = dumpe2fsparser.parse_header_text(header_text)
+
+        if header_dict.has_key('journal-inode') is not True:
+            return -1, -1
+
         journal_inum = header_dict['journal-inode']
         journal_len = header_dict['journal-length']
 
-        ext_text = ext4dumpextents.dump_extents_of_a_file(self.conf['device_path'],
+        ext_text = ext4dumpextents.dump_extents_of_a_file(self.device_path,
                 '<{}>'.format(journal_inum))
         table = ext4dumpextents.parse_dump_extents_output(ext_text)
         return table[0]['Physical_start'], table[0]['Physical_end']
