@@ -369,7 +369,7 @@ def leveldbbench():
 
         def setup_ftl(self):
             self.conf['enable_blktrace'] = True
-            self.conf['enable_simulation'] = True
+            self.conf['enable_simulation'] = False
             self.conf['stripe_size'] = self.para.stripe_size
 
             if self.para.ftl == 'dftldes':
@@ -424,11 +424,12 @@ def leveldbbench():
             )
 
         expname = get_expname()
-        lbabytes = 256*MB
+        lbabytes = 16*GB
         para_dict = {
                 'ftl'      : ['dftldes'],
                 'workload_class'   : [
-                    'Leveldb'
+                    # 'Leveldb'
+                    'IterDirs'
                     ],
                 'benchmarks'     : [
                     'overwrite',
@@ -437,7 +438,7 @@ def leveldbbench():
                 'leveldb_threads': [1],
                 'pre_run_kv_num' : [2000000],
                 'device_path'    : ['/dev/sdc1'],
-                'filesystem'     : ['ext4'],
+                'filesystem'     : ['xfs'],
                 'ext4datamode'   : ['ordered'],
                 'ext4hasjournal' : [True],
                 'expname'        : [expname],

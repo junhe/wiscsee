@@ -18,6 +18,9 @@ from accpatterns import patterns
 from .patternonfile import File
 import patternsuite
 
+import prepare4pyreuse
+from pyreuse.helpers import *
+
 try:
     parent = os.path.join(sys.path[0], '../reuse/')
     sys.path.append(parent)
@@ -64,6 +67,28 @@ class NoOp(Workload):
 
     def stop(self):
         pass
+
+
+class IterDirs(Workload):
+    def run(self):
+        mountpoint = self.conf['fs_mount_point']
+        dirs = ['dir.'+str(i) for i in range(40)]
+        files = ['file.'+str(i) for i in range(2)]
+
+        for dirname in dirs:
+            dirpath = os.path.join(mountpoint, dirname)
+            print dirpath
+            prepare_dir(dirpath)
+            for filename in files:
+                filepath = os.path.join(mountpoint, dirname, filename)
+                print filepath
+                self.write_file(filepath)
+
+    def write_file(self, path):
+        with open(path, 'w') as f:
+            f.write('h' * int(2.1*MB))
+            os.fsync(f)
+
 
 class FIONEW(Workload):
     def __init__(self, confobj, workload_conf_key = None):
