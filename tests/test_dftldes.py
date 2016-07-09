@@ -1908,6 +1908,38 @@ class TestSegmenting(unittest.TestCase):
         self.assertEqual(abs(ppn1 - ppn0), conf.n_pages_per_block)
 
 
+class TestFTLSegmentedWrite(unittest.TestCase):
+    def test_valid_ratio(self):
+        conf = create_config()
+        conf['segment_bytes'] = 2 * conf.page_size
+        conf['flash_config']['n_channels_per_dev'] = 1
+        conf['stripe_size'] = 'infinity'
+        conf.set_flash_num_blocks_by_bytes(128*MB)
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write(objs, dftl))
+        env.run()
+
+    def proc_test_write(self, objs, dftl):
+        env = objs['env']
+        rec = objs['rec']
+        rec.enable()
+
+        block_pool = dftl.block_pool
+        oob = dftl.oob
+
+        conf = objs['conf']
+        # should use 5 more blocks
+        n_used = block_pool.total_used_blocks()
+        yield env.process(dftl.write_ext(Extent(0, 9)))
+
+        n_used2 = block_pool.total_used_blocks()
+        self.assertEqual(n_used2 - n_used, 5)
+
 
 def main():
     unittest.main()
