@@ -71,16 +71,16 @@ class BlockPool(object):
     def move_used_trans_block_to_data(self, blocknum):
         self.pool.change_tag(blocknum, src=TTRANS, dst=TDATA)
 
-    def next_n_data_pages_to_program_striped(self, n):
+    def next_n_data_pages_to_program_striped(self, n, seg_id=0):
         try:
-            ppns = self.pool.next_ppns(n=n, tag=TDATA, block_index=0,
+            ppns = self.pool.next_ppns(n=n, tag=TDATA, block_index=seg_id,
                     stripe_size=self.conf['stripe_size'])
         except TagOutOfSpaceError:
             raise OutOfSpaceError
         return ppns
 
-    def next_data_page_to_program(self):
-        ppns = self.pool.next_ppns(n=1, tag=TDATA, block_index=0,
+    def next_data_page_to_program(self, seg_id=0):
+        ppns = self.pool.next_ppns(n=1, tag=TDATA, block_index=seg_id,
                 stripe_size=1)
         return ppns[0]
 
