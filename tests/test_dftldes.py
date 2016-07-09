@@ -1912,7 +1912,7 @@ class TestFTLSegmentedWrite(unittest.TestCase):
     def test_valid_ratio(self):
         conf = create_config()
         conf['segment_bytes'] = 2 * conf.page_size
-        conf['flash_config']['n_channels_per_dev'] = 1
+        conf['flash_config']['n_channels_per_dev'] = 4
         conf['stripe_size'] = 'infinity'
         conf.set_flash_num_blocks_by_bytes(128*MB)
         objs = create_obj_set(conf)
