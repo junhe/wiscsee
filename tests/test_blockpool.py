@@ -1,7 +1,9 @@
 import unittest
 
-from Makefile import *
-from utilities import utils
+# from Makefile import *
+from utilities.utils import *
+from ssdbox.blkpool import *
+import ssdbox
 
 def create_config():
     conf = ssdbox.dftldes.Config()
@@ -14,7 +16,7 @@ def create_config():
     conf['flash_config']['n_packages_per_channel'] = 1
     conf['flash_config']['n_channels_per_dev'] = 4
 
-    utils.set_exp_metadata(conf, save_data = False,
+    set_exp_metadata(conf, save_data = False,
             expname = 'test_expname',
             subexpname = 'test_subexpname')
 
@@ -22,62 +24,13 @@ def create_config():
     conf.n_cache_entries = conf.n_mapping_entries_per_page
     conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
-    utils.runtime_update(conf)
+    runtime_update(conf)
 
     return conf
 
 
 def create_blockpool(conf):
     return ssdbox.dftldes.BlockPool(conf)
-
-
-class TestChannelBlockPool(unittest.TestCase):
-    def test_pop(self):
-        conf = create_config()
-        channel_pool = ssdbox.blkpool.ChannelBlockPool(conf, 0)
-        channel_pool.pop_a_free_block_to_trans()
-        self.assertEqual(len(channel_pool.trans_usedblocks), 1)
-
-
-class TestBlockPool_freeblocks(unittest.TestCase):
-    """
-    Test pop_a_free_block
-    """
-    def setup_config(self):
-        self.conf = ssdbox.dftlext.Config()
-
-    def setup_environment(self):
-        metadata_dic = choose_exp_metadata(self.conf, interactive = False)
-        self.conf.update(metadata_dic)
-
-    def setup_workload(self):
-        pass
-
-    def setup_ftl(self):
-        pass
-
-    def my_run(self):
-        runtime_update(self.conf)
-        block_pool = ssdbox.blkpool.BlockPool(self.conf)
-        n_channels = block_pool.n_channels
-        n_blocks_per_channel = self.conf.n_blocks_per_channel
-
-        # pop two block from each channel
-        k = 2
-        for i in range(n_channels * k):
-            block_pool.pop_a_free_block()
-
-        # each channel now has 2 less blocks
-        for i in range(n_channels):
-            self.assertEqual(len(block_pool.channel_pools[i].freeblocks),
-                n_blocks_per_channel - k)
-
-    def test_main(self):
-        self.setup_config()
-        self.setup_environment()
-        self.setup_workload()
-        self.setup_ftl()
-        self.my_run()
 
 
 class TestBlockPool_data(unittest.TestCase):
@@ -110,65 +63,15 @@ class TestBlockPool_data(unittest.TestCase):
             blk = block_pool.pop_a_free_block_to_trans()
             blocks.append(blk)
 
-        # each channel now has 2 less blocks
-        for i in range(n_channels):
-            self.assertEqual(len(block_pool.channel_pools[i].freeblocks),
-                n_blocks_per_channel - k)
-            self.assertEqual(
-                len(block_pool.channel_pools[i].trans_usedblocks), k)
-
         for block in blocks:
             block_pool.move_used_trans_block_to_free(block)
 
-        # each channel now has 2 less blocks
         for i in range(n_channels):
-            self.assertEqual(len(block_pool.channel_pools[i].freeblocks),
+            self.assertEqual(
+                block_pool.count_blocks(tag=TFREE, channels=[i]),
                 n_blocks_per_channel)
             self.assertEqual(
-                len(block_pool.channel_pools[i].trans_usedblocks), 0)
-
-    def test_main(self):
-        self.setup_config()
-        self.setup_environment()
-        self.setup_workload()
-        self.setup_ftl()
-        self.my_run()
-
-
-class TestBlockPool_trans(unittest.TestCase):
-    """
-    Test pop_a_free_block_data
-    """
-    def setup_config(self):
-        self.conf = ssdbox.dftlext.Config()
-
-    def setup_environment(self):
-        metadata_dic = choose_exp_metadata(self.conf, interactive = False)
-        self.conf.update(metadata_dic)
-
-    def setup_workload(self):
-        pass
-
-    def setup_ftl(self):
-        pass
-
-    def my_run(self):
-        runtime_update(self.conf)
-        block_pool = ssdbox.blkpool.BlockPool(self.conf)
-        n_channels = block_pool.n_channels
-        n_blocks_per_channel = self.conf.n_blocks_per_channel
-
-        # pop two block from each channel
-        k = 2
-        for i in range(n_channels * k):
-            block_pool.pop_a_free_block_to_data()
-
-        # each channel now has 2 less blocks
-        for i in range(n_channels):
-            self.assertEqual(len(block_pool.channel_pools[i].freeblocks),
-                n_blocks_per_channel - k)
-            self.assertEqual(
-                len(block_pool.channel_pools[i].data_usedblocks), k)
+                block_pool.count_blocks(tag=TTRANS, channels=[i]), 0)
 
     def test_main(self):
         self.setup_config()
@@ -209,10 +112,10 @@ class TestBlockPool_next_data(unittest.TestCase):
         nblocks_used = (k + self.conf['flash_config']['n_pages_per_block'] - 1) / \
             self.conf['flash_config']['n_pages_per_block']
         for i in range(n_channels):
-            self.assertEqual(len(block_pool.channel_pools[i].freeblocks),
+            self.assertEqual(block_pool.count_blocks(tag=TFREE, channels=[i]),
                 n_blocks_per_channel - nblocks_used)
             self.assertEqual(
-                len(block_pool.channel_pools[i].data_usedblocks), nblocks_used)
+                block_pool.count_blocks(tag=TDATA, channels=[i]), nblocks_used)
 
     def test_main(self):
         self.setup_config()
@@ -253,12 +156,12 @@ class TestBlockPool_next_gc_data(unittest.TestCase):
         nblocks_used = (k + self.conf['flash_config']['n_pages_per_block'] - 1) / \
             self.conf['flash_config']['n_pages_per_block']
         for i in range(n_channels):
-            self.assertEqual(len(block_pool.channel_pools[i].freeblocks),
+            self.assertEqual(
+                block_pool.count_blocks(tag=TFREE, channels=[i]),
                 n_blocks_per_channel - nblocks_used)
             self.assertEqual(
-                len(block_pool.channel_pools[i].data_usedblocks), nblocks_used)
-
-        print block_pool.used_ratio()
+                block_pool.count_blocks(tag=TGCDATA, channels=[i]),
+                nblocks_used)
 
     def test_main(self):
         self.setup_config()
@@ -278,10 +181,10 @@ def create_config():
     conf['flash_config']['n_packages_per_channel'] = 1
     conf['flash_config']['n_channels_per_dev'] = 4
 
-    utils.set_exp_metadata(conf, save_data = False,
+    set_exp_metadata(conf, save_data = False,
             expname = 'test_expname',
             subexpname = 'test_subexpname')
-    utils.runtime_update(conf)
+    runtime_update(conf)
 
     return conf
 

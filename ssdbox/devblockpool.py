@@ -20,24 +20,31 @@ class MultiChannelBlockPool(object):
         self._next_channel = (self._next_channel + 1) % self.n_channels
         return self._next_channel
 
-    def count_blocks(self, tag):
+    def count_blocks(self, tag, channels=None):
         total = 0
-        for pool in self._channel_pool:
-            total += pool.count_blocks(tag)
+
+        if channels is None:
+            # count on all channels
+            for pool in self._channel_pool:
+                total += pool.count_blocks(tag)
+        else:
+            for i in channels:
+                total += self._channel_pool[i].count_blocks(tag)
 
         return total
 
     def get_blocks_of_tag(self, tag):
         ret = []
         for pool in self._channel_pool:
-            ret.extend(pool.get_blocks_of_tag(tag))
+            blocks = pool.get_blocks_of_tag(tag)
+            ret.extend(self.blocks_channel_to_global(pool.channel_id, blocks))
 
         return ret
 
     def pick_and_move(self, src, dst):
         "This function will advance self._next_channel"
         cur_channel = self._next_channel
-        self._next_channel += 1
+        self.incr_next_channel()
 
         block_off = self._channel_pool[cur_channel].pick_and_move(src, dst)
 
@@ -45,7 +52,7 @@ class MultiChannelBlockPool(object):
 
     def change_tag(self, blocknum, src, dst):
         channel_id, block_off = self.global_to_channel(blocknum)
-        self._channel_pool[channel_id].change_tag(blocknum, src, dst)
+        self._channel_pool[channel_id].change_tag(block_off, src, dst)
 
     def channel_to_global(self, channel_id, blocknum):
         ret = channel_id * self.n_blocks_per_channel + blocknum
@@ -77,6 +84,8 @@ class MultiChannelBlockPool(object):
         current block before going to the next.
         """
         remaining = n
+        if stripe_size == 'infinity':
+            stripe_size = float('inf')
 
         ret_ppns = []
         empty_channels = set()
@@ -97,9 +106,13 @@ class MultiChannelBlockPool(object):
 
         if remaining > 0:
             # out of space
-            raise OutOfSpaceError
+            raise TagOutOfSpaceError
 
         return ret_ppns
+
+    def blocks_channel_to_global(self, channel_id, blocks):
+        return [self.channel_to_global(channel_id, block)
+                for block in blocks]
 
     def ppn_channel_to_global(self, channel_id, ppn):
         return channel_id * self.n_pages_per_channel + ppn

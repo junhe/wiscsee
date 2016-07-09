@@ -23,6 +23,15 @@ class TestMultiChannelBlockPool(unittest.TestCase):
 
         self.assertEqual(pool.count_blocks(tag=TFREE), 8*64)
 
+    def test_count_channel_blocks(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        self.assertEqual(pool.count_blocks(tag=TFREE, channels=[0]), 64)
+
     def test_change_tag(self):
         pool = MultiChannelBlockPool(
                 n_channels=8,
@@ -33,6 +42,23 @@ class TestMultiChannelBlockPool(unittest.TestCase):
         pool.change_tag(0, src=TFREE, dst=TDATA)
         blocks = pool.get_blocks_of_tag(tag=TDATA)
         self.assertListEqual(blocks, [0])
+
+    def test_change_tag_2(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        blocks = []
+        for i in range(15):
+            block = pool.pick_and_move(src=TFREE, dst=TDATA)
+            blocks.append(block)
+
+        self.assertEqual(len(set(blocks)), 15)
+
+        for block in blocks:
+            pool.change_tag(block, src=TDATA, dst=TFREE)
 
     def test_pick_and_move(self):
         pool = MultiChannelBlockPool(
@@ -193,6 +219,42 @@ class TestMultiChannelBlockPool(unittest.TestCase):
                 tags=[TDATA, TTRANS])
         ppn = pool.ppn_channel_to_global(1, 2)
         self.assertEqual(ppn, 64*32 + 2)
+
+    def test_ppn_conversion2(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        # should use 3 channels
+        ppns = pool.next_ppns(n=6, tag=TDATA, block_index=0, stripe_size=2)
+        self.assertEqual(len(ppns), 6)
+
+        # ppns should from 3 channels
+        channel_set = set()
+        for ppn in ppns:
+            channel = ppn / (64*32)
+            channel_set.add(channel)
+
+        self.assertEqual(len(channel_set), 3)
+
+    def test_block_conversion2(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        block0 = pool.pick_and_move(src=TFREE, dst=TDATA)
+        block1 = pool.pick_and_move(src=TFREE, dst=TDATA)
+
+        channel0 = block0 / pool.n_blocks_per_channel
+        channel1 = block1 / pool.n_blocks_per_channel
+
+        self.assertEqual(channel0, 0)
+        self.assertEqual(channel1, 1)
+
 
 def main():
     unittest.main()

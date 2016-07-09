@@ -1017,7 +1017,7 @@ class TestVictimBlocks(unittest.TestCase):
         vbs = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
 
         victims = list(vbs.iterator())
-        self.assertEqual(victims, [0])
+        self.assertEqual(len(victims), 1)
 
     def test_3_victim_candidates(self):
         conf = create_config()
@@ -1729,6 +1729,7 @@ class TestCleaning4Channel(unittest.TestCase):
 
         n_data_used_blocks = len(block_pool.data_usedblocks)
 
+
         n = conf.n_pages_per_block
         yield env.process(dftl.write_ext(Extent(0, n)))
         yield env.process(dftl.write_ext(Extent(0, n)))
@@ -1740,7 +1741,10 @@ class TestCleaning4Channel(unittest.TestCase):
         yield env.process(dftl.write_ext(Extent(0, n)))
         yield env.process(dftl.write_ext(Extent(0, n)))
 
+
+
         victim_blocks = list(victims.iterator_verbose())
+
         valid_ratio, block_type, victim_block = victim_blocks[0]
 
         s = env.now
@@ -1749,6 +1753,7 @@ class TestCleaning4Channel(unittest.TestCase):
             self.assertEqual(env.now, s + time_erase_block * 4)
         elif cleaner.n_cleaners >= 4:
             self.assertEqual(env.now, s + time_erase_block)
+
 
         # check validation
         self.assertEqual(oob.states.block_valid_ratio(victim_block), 0)

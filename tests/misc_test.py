@@ -111,7 +111,7 @@ class TestImportPyreuse(unittest.TestCase):
         pyreuse.helpers.shcmd("echo 33333")
 
 class TestClassifyGcLOG(unittest.TestCase):
-    # @unittest.skip("Need real device mounted")
+    @unittest.skip("Need real device mounted")
     def test(self):
         gclog = GcLog(
                 device_path='/dev/sdc1',
