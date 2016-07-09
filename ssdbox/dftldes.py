@@ -121,6 +121,15 @@ class Ftl(object):
 
         return ppns
 
+    def get_ppns_to_write(self, ext):
+        exts_by_seg = split_ext_by_segment(self.conf.n_pages_per_segment, ext)
+        mapping = {}
+        for seg_id, seg_ext in exts_by_seg.items():
+            ppns = self.block_pool.next_n_data_pages_to_program_striped(
+                    n=seg_ext.lpn_count, seg_id=seg_id)
+            mapping.update( dict(zip(seg_ext.lpn_iter(), ppns)) )
+        return mapping
+
     def write_ext(self, extent):
         self.recorder.add_to_general_accumulater('traffic', 'write',
                 extent.lpn_count*self.conf.page_size)
@@ -129,11 +138,7 @@ class Ftl(object):
         start_time = self.env.now # <----- start
 
         exts_in_mvpngroup = split_ext_to_mvpngroups(self.conf, extent)
-
-        ppns_to_write = self.block_pool.next_n_data_pages_to_program_striped(
-                n = extent.lpn_count, seg_id=0)
-        assert len(ppns_to_write) == extent.lpn_count
-        new_mappings = dict(zip(extent.lpn_iter(), ppns_to_write))
+        new_mappings = self.get_ppns_to_write(extent)
 
         procs = []
         for ext_single_m_vpn in exts_in_mvpngroup:
@@ -1807,12 +1812,20 @@ class Config(config.ConfigNCQFTL):
             "GC_low_threshold_ratio": 0.9,
             "over_provisioning": 1.28,
             "mapping_cache_bytes": None, # cmt: cached mapping table
-            "do_not_check_gc_setting": False
+            "do_not_check_gc_setting": False,
             }
         self.update(local_itmes)
+        self['segment_bytes'] = self.total_flash_bytes()
 
         # self['keeping_all_tp_entries'] = False
         self['keeping_all_tp_entries'] = True
+
+    def get_segment_id(self, lpn):
+        return (lpn * self.page_size) / self['segment_bytes']
+
+    @property
+    def n_pages_per_segment(self):
+        return self['segment_bytes'] / self.page_size
 
     @property
     def keeping_all_tp_entries(self):
@@ -1918,4 +1931,31 @@ def write_timeline(conf, recorder, op_id, op, arg, start_time, end_time):
         recorder.write_file('timeline.txt',
             op_id = op_id, op = op, arg = arg,
             start_time = start_time, end_time = end_time)
+
+def split_ext_by_segment(n_pages_per_segment, extent):
+    if extent.lpn_count == 0:
+        return None
+
+    last_seg_id = -1
+    cur_ext = None
+    exts = {}
+    for lpn in extent.lpn_iter():
+        seg_id = lpn / n_pages_per_segment
+        if seg_id == last_seg_id:
+            cur_ext.lpn_count += 1
+        else:
+            if cur_ext is not None:
+                exts[last_seg_id] = cur_ext
+            cur_ext = Extent(lpn_start=lpn, lpn_count=1)
+        last_seg_id = seg_id
+
+    if cur_ext is not None:
+        exts[seg_id] = cur_ext
+
+    return exts
+
+
+
+
+
 

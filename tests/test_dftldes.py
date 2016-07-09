@@ -8,7 +8,8 @@ import ssdbox
 from utilities import utils
 import flashcontroller
 from ssdbox.ftlsim_commons import Extent
-from ssdbox.dftldes import LpnTable, LpnTableMvpn, UNINITIATED
+from ssdbox.dftldes import LpnTable, LpnTableMvpn, UNINITIATED, \
+        split_ext_by_segment
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 from commons import *
 from utilities.utils import get_expname
@@ -1847,6 +1848,64 @@ class TestSimpleGC(unittest.TestCase):
 
         exp = Experiment( Parameters(expname = expname) )
         exp.main()
+
+
+class TestSegmenting(unittest.TestCase):
+    def test_split(self):
+        ext = Extent(0, 9)
+        exts = split_ext_by_segment(4, ext)
+
+        self.assertListEqual(list(exts[0].lpn_iter()), [0, 1, 2, 3])
+        self.assertListEqual(list(exts[1].lpn_iter()), [4, 5, 6, 7])
+        self.assertListEqual(list(exts[2].lpn_iter()), [8])
+
+    def test_split_2(self):
+        ext = Extent(5, 1)
+        exts = split_ext_by_segment(4, ext)
+
+        self.assertListEqual(list(exts[1].lpn_iter()), [5])
+
+    def test_mapping(self):
+        conf = create_config()
+        conf['segment_bytes'] = conf.total_flash_bytes()
+        conf['stripe_size'] = 1
+        objs = create_obj_set(conf)
+
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        # all lpn in the same segment
+        mapping = dftl.get_ppns_to_write(Extent(0, 5))
+        channels = set()
+        for lpn, ppn in mapping.items():
+            channel_id = ppn / conf.n_pages_per_channel
+            channels.add(channel_id)
+        self.assertEqual(len(channels), 4)
+
+    def test_mapping_with_segment(self):
+        conf = create_config()
+        conf['segment_bytes'] = 4 * conf.page_size
+        conf['stripe_size'] = 1
+        objs = create_obj_set(conf)
+
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        # seg 0
+        mapping = dftl.get_ppns_to_write(Extent(1, 1))
+        ppn0 = mapping.values()[0]
+        channel_id0 = ppn0 / conf.n_pages_per_channel
+
+        # seg 1
+        mapping = dftl.get_ppns_to_write(Extent(7, 1))
+        mapping = dftl.get_ppns_to_write(Extent(7, 1))
+        mapping = dftl.get_ppns_to_write(Extent(7, 1))
+        mapping = dftl.get_ppns_to_write(Extent(7, 1))
+        ppn1 = mapping.values()[0]
+        channel_id1 = ppn1 / conf.n_pages_per_channel
+        self.assertEqual(channel_id0, channel_id1)
+        # it uses another block
+        self.assertEqual(abs(ppn1 - ppn0), conf.n_pages_per_block)
 
 
 

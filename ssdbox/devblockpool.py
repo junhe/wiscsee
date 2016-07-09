@@ -14,6 +14,7 @@ class MultiChannelBlockPool(object):
             ChannelBlockPool(n_blocks_per_channel, tags, n_pages_per_block, i) \
                 for i in range(n_channels)]
 
+        # TODO: each tag has its own _next_channel
         self._next_channel = 0
 
     def incr_next_channel(self):
