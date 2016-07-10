@@ -59,9 +59,11 @@ class RandomNoHole(PatternBase, InitMixin):
         n_req = self.traffic_size / self.chunk_size
         n_chunks = self.zone_size / self.chunk_size
         chunk_idx = list(range(n_chunks))
-        random.shuffle(chunk_idx)
 
         for i in range(n_req):
+            if i % n_chunks == 0:
+                random.shuffle(chunk_idx)
+
             chunk_id = chunk_idx[i % n_chunks]
             req_offset = chunk_id * self.chunk_size
             req_size = self.chunk_size

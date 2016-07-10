@@ -41,8 +41,64 @@ class TestAlignment(unittest.TestCase):
             self.assertEqual(req.size, 2)
 
 
+class TestRequestScale(unittest.TestCase):
+    def test_init(self):
+        reqbench = RequestScale(space_size=128*MB, chunk_size=4*KB,
+                traffic_size=8*MB, op=OP_WRITE)
+
+    def test_scale(self):
+        bench = RequestScale(space_size=10, chunk_size=2,
+                traffic_size=20, op=OP_WRITE)
+
+        reqs = list(bench)
+
+        offs = [req.offset for req in reqs]
+
+        self.assertEqual(len(reqs), 10)
+
+        for req in reqs:
+            self.assertEqual(req.op, OP_WRITE)
+            self.assertEqual(req.size, 2)
 
 
+class TestGroupByInvTime(unittest.TestCase):
+    def test_init(self):
+        bench = GroupByInvTime(space_size=128*MB, traffic_size=128*MB,
+                chunk_size=4*KB, byinvtime=True)
+
+    def test_group_by_time(self):
+        bench = GroupByInvTime(space_size=32, traffic_size=4,
+                chunk_size=2, byinvtime=True)
+
+        reqs = list(bench)
+        self.assertEqual(len(reqs), 6)
+
+        offs = [req.offset for req in reqs]
+        self.assertListEqual(offs, [0, 2, 28, 30, 0, 2])
+
+        ops = [req.op for req in reqs]
+        self.assertListEqual(ops, [OP_WRITE, OP_WRITE, OP_WRITE, OP_WRITE,
+            OP_DISCARD, OP_DISCARD])
+
+        for req in reqs:
+            self.assertEqual(req.size, 2)
+
+    def test_not_group_by_time(self):
+        bench = GroupByInvTime(space_size=32, traffic_size=4,
+                chunk_size=2, byinvtime=False)
+
+        reqs = list(bench)
+        self.assertEqual(len(reqs), 6)
+
+        offs = [req.offset for req in reqs]
+        self.assertListEqual(offs, [0, 28, 2, 30, 0, 2])
+
+        ops = [req.op for req in reqs]
+        self.assertListEqual(ops, [OP_WRITE, OP_WRITE, OP_WRITE, OP_WRITE,
+            OP_DISCARD, OP_DISCARD])
+
+        for req in reqs:
+            self.assertEqual(req.size, 2)
 
 
 

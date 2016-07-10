@@ -26,3 +26,62 @@ class Alignment(object):
                 yield req
 
 
+class RequestScale(object):
+    def __init__(self, space_size, chunk_size, traffic_size, op):
+        self.space_size = space_size
+        self.chunk_size = chunk_size
+        self.traffic_size = traffic_size
+        self.op = op
+
+    def __iter__(self):
+        req_iter = RandomNoHole(op=self.op, zone_offset=None,
+                zone_size=self.space_size, chunk_size=self.chunk_size,
+                traffic_size=self.traffic_size)
+        for req in req_iter:
+            yield req
+
+
+class Locality(RequestScale):
+    pass
+
+
+class GroupByInvTime(object):
+    def __init__(self, space_size, traffic_size, chunk_size, byinvtime):
+        self.space_size = space_size
+        self.traffic_size = traffic_size
+        self.chunk_size = chunk_size
+        self.byinvtime = byinvtime
+
+    def _get_reqs(self, start, op):
+        n_chunks = self.traffic_size / self.chunk_size
+
+        reqs = []
+        for i in range(n_chunks):
+            off = start + i * self.chunk_size
+            req = Request(op, off, self.chunk_size)
+            reqs.append(req)
+
+        return reqs
+
+    def __iter__(self):
+        reqs1 = self._get_reqs(0, OP_WRITE)
+        second_start = self.space_size - self.traffic_size
+        reqs_discard = self._get_reqs(0, OP_DISCARD)
+
+        assert second_start > 0 + self.traffic_size
+        reqs2 = self._get_reqs(second_start, OP_WRITE)
+
+        if self.byinvtime is True:
+            reqs = reqs1 + reqs2
+        else:
+            reqs = [r for pair in zip(reqs1, reqs2) for r in pair]
+
+        reqs = reqs + reqs_discard
+
+        for req in reqs:
+            yield req
+
+
+
+
+
