@@ -61,14 +61,14 @@ class TestRequestScale(unittest.TestCase):
             self.assertEqual(req.size, 2)
 
 
-class TestGroupByInvTime(unittest.TestCase):
+class TestGroupByInvTimeAtAccTime(unittest.TestCase):
     def test_init(self):
-        bench = GroupByInvTime(space_size=128*MB, traffic_size=128*MB,
-                chunk_size=4*KB, byinvtime=True)
+        bench = GroupByInvTimeAtAccTime(space_size=128*MB, traffic_size=128*MB,
+                chunk_size=4*KB, grouping=True)
 
     def test_group_by_time(self):
-        bench = GroupByInvTime(space_size=32, traffic_size=4,
-                chunk_size=2, byinvtime=True)
+        bench = GroupByInvTimeAtAccTime(space_size=32, traffic_size=4,
+                chunk_size=2, grouping=True)
 
         reqs = list(bench)
         self.assertEqual(len(reqs), 6)
@@ -84,8 +84,8 @@ class TestGroupByInvTime(unittest.TestCase):
             self.assertEqual(req.size, 2)
 
     def test_not_group_by_time(self):
-        bench = GroupByInvTime(space_size=32, traffic_size=4,
-                chunk_size=2, byinvtime=False)
+        bench = GroupByInvTimeAtAccTime(space_size=32, traffic_size=4,
+                chunk_size=2, grouping=False)
 
         reqs = list(bench)
         self.assertEqual(len(reqs), 6)
@@ -101,6 +101,44 @@ class TestGroupByInvTime(unittest.TestCase):
             self.assertEqual(req.size, 2)
 
 
+class TestGroupInvTimeInSpace(unittest.TestCase):
+    def test_init(self):
+        bench = GroupByInvTimeInSpace(space_size=128*MB, traffic_size=128*MB,
+                chunk_size=4*KB, grouping=True)
+
+    def test_group_at_space(self):
+        bench = GroupByInvTimeInSpace(space_size=32, traffic_size=4,
+                chunk_size=2, grouping=True)
+
+        reqs = list(bench)
+        self.assertEqual(len(reqs), 6)
+
+        offs = [req.offset for req in reqs]
+        self.assertListEqual(offs, [0, 28, 2, 30, 0, 2])
+
+        ops = [req.op for req in reqs]
+        self.assertListEqual(ops, [OP_WRITE, OP_WRITE, OP_WRITE, OP_WRITE,
+            OP_DISCARD, OP_DISCARD])
+
+        for req in reqs:
+            self.assertEqual(req.size, 2)
+
+    def test_not_group_at_space(self):
+        bench = GroupByInvTimeInSpace(space_size=32, traffic_size=4,
+                chunk_size=2, grouping=False)
+
+        reqs = list(bench)
+        self.assertEqual(len(reqs), 6)
+
+        offs = [req.offset for req in reqs]
+        self.assertListEqual(offs, [0, 2, 4, 6, 0, 4])
+
+        ops = [req.op for req in reqs]
+        self.assertListEqual(ops, [OP_WRITE, OP_WRITE, OP_WRITE, OP_WRITE,
+            OP_DISCARD, OP_DISCARD])
+
+        for req in reqs:
+            self.assertEqual(req.size, 2)
 
 
 

@@ -45,12 +45,12 @@ class Locality(RequestScale):
     pass
 
 
-class GroupByInvTime(object):
-    def __init__(self, space_size, traffic_size, chunk_size, byinvtime):
+class GroupByInvTimeAtAccTime(object):
+    def __init__(self, space_size, traffic_size, chunk_size, grouping):
         self.space_size = space_size
         self.traffic_size = traffic_size
         self.chunk_size = chunk_size
-        self.byinvtime = byinvtime
+        self.grouping = grouping
 
     def _get_reqs(self, start, op):
         n_chunks = self.traffic_size / self.chunk_size
@@ -71,7 +71,7 @@ class GroupByInvTime(object):
         assert second_start > 0 + self.traffic_size
         reqs2 = self._get_reqs(second_start, OP_WRITE)
 
-        if self.byinvtime is True:
+        if self.grouping is True:
             reqs = reqs1 + reqs2
         else:
             reqs = [r for pair in zip(reqs1, reqs2) for r in pair]
@@ -81,7 +81,43 @@ class GroupByInvTime(object):
         for req in reqs:
             yield req
 
+class GroupByInvTimeInSpace(object):
+    def __init__(self, space_size, traffic_size, chunk_size, grouping):
+        self.space_size = space_size
+        self.traffic_size = traffic_size
+        self.chunk_size = chunk_size
+        self.grouping = grouping
 
+    def _get_reqs(self, start, op, stride_size):
+        n_chunks = self.traffic_size / self.chunk_size
 
+        reqs = []
+        for i in range(n_chunks):
+            off = start + i * stride_size
+            req = Request(op, off, self.chunk_size)
+            reqs.append(req)
 
+        return reqs
+
+    def __iter__(self):
+        if self.grouping is True:
+            reqs1 = self._get_reqs(0, OP_WRITE, stride_size=self.chunk_size)
+            reqs1_discard = self._get_reqs(0, OP_DISCARD,
+                    stride_size=self.chunk_size)
+
+            second_start = self.space_size - self.traffic_size
+            reqs2 = self._get_reqs(second_start, OP_WRITE,
+                    stride_size=self.chunk_size)
+        else:
+            reqs1 = self._get_reqs(0, OP_WRITE, stride_size=2*self.chunk_size)
+            reqs1_discard = self._get_reqs(0, OP_DISCARD,
+                    stride_size=2*self.chunk_size)
+            reqs2 = self._get_reqs(self.chunk_size, OP_WRITE,
+                    stride_size=2*self.chunk_size)
+
+        reqs = [r for pair in zip(reqs1, reqs2) for r in pair]
+        reqs = reqs + reqs1_discard
+
+        for req in reqs:
+            yield req
 
