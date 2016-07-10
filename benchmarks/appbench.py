@@ -421,7 +421,8 @@ def leveldbbench():
             "cache_mapped_data_bytes, lbabytes, "\
             "f2fs_gc_after_workload, ext4datamode, ext4hasjournal, "\
             "benchmarks, num, n_instances, one_by_one, n_pages_per_block, "\
-            "nkftl_n, nkftl_k, pre_run_kv_num, ftl, leveldb_threads"
+            "nkftl_n, nkftl_k, pre_run_kv_num, ftl, leveldb_threads, "\
+            "segment_bytes"
             )
 
         expname = get_expname()
