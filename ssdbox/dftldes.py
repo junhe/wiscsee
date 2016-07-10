@@ -114,6 +114,13 @@ class Ftl(object):
             trans_page_locks = self._trans_page_locks
             )
 
+        self._check_segment_config()
+
+    def _check_segment_config(self):
+        if self.conf['segment_bytes'] % (self.conf.n_pages_per_block \
+                * self.conf.page_size) != 0:
+            print 'WARNING: segment should be multiple of block size'
+
     def _ppns_to_write(self, ext, new_mappings):
         ppns = []
         for lpn in ext.lpn_iter():
