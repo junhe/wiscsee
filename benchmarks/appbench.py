@@ -371,6 +371,7 @@ def leveldbbench():
             self.conf['enable_blktrace'] = True
             self.conf['enable_simulation'] = False
             self.conf['stripe_size'] = self.para.stripe_size
+            self.conf['segment_bytes'] = self.para.segment_bytes
 
             if self.para.ftl == 'dftldes':
                 self.conf['simulator_class'] = 'SimulatorDESNew'
@@ -452,6 +453,7 @@ def leveldbbench():
                 'n_pages_per_block': [64],
                 'nkftl_n'        : [4],
                 'nkftl_k'        : [4],
+                'segment_bytes'  : [128*MB],
 
                 'f2fs_gc_after_workload': [True],
                 }
