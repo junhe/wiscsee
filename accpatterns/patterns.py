@@ -246,6 +246,11 @@ class HotNCold(PatternBase, InitMixin):
         raise StopIteration
 
 
+
+
+
+
+
 def mix(*pattern_iters):
     pattern_iters = list(pattern_iters)
     while True:
