@@ -376,19 +376,32 @@ def contract_bench():
             zone_size = flashbytes / 8
 
             self.conf["workload_src"] = LBAGENERATOR
-            self.conf["lba_workload_class"] = "ContractBench"
+            self.conf["lba_workload_class"] = "ContractBenchAdapter"
             self.conf["lba_workload_configs"]["ContractBench"] = {}
-            self.conf["lba_workload_configs"]["ContractBench"]["class"] = self.para.patternclass
+            self.conf["lba_workload_configs"]["ContractBench"]["class"] = self.para.bench['name']
             self.conf["lba_workload_configs"]["ContractBench"]["conf"] = {}
             self.conf["age_workload_class"] = "NoOp"
+
+            self._update_workload_conf()
 
         def _update_workload_conf(self):
             conf = self.conf["lba_workload_configs"]["ContractBench"]["conf"]
             classname = self.conf["lba_workload_configs"]["ContractBench"]["class"]
 
-            conf['space_size'] = self.para.flashbytes
-            conf['block_size'] = self.conf.page_size * self.conf.n_pages_per_block
+            # conf['space_size'] = self.para.flashbytes
 
+            if classname == 'Alignment':
+                conf['block_size'] = self.conf.page_size * self.conf.n_pages_per_block
+            elif classname == 'RequestScale':
+                conf['space_size'] = self.para.flashbytes
+            elif classname == 'Locality':
+                pass
+            elif classname == 'GroupByInvTimeAtAccTime':
+                conf['space_size'] = self.para.flashbytes
+            elif classname == 'GroupByInvTimeInSpace':
+                conf['space_size'] = self.para.flashbytes
+
+            conf.update(self.para.bench['conf'])
 
         def setup_ftl(self):
             self.conf['ftl_type'] = 'dftldes'
@@ -409,25 +422,108 @@ def contract_bench():
             self.setup_ftl()
             self.my_run()
 
-    def gen_parameters():
+    def gen_parameters_contract_alignment():
         expname = get_expname()
         para_dict = {
                 'expname'        : [expname],
                 'ncq_depth'      : [4],
-                'bench'          : [{'name': 'Alignment', 'conf': {'op': OP_WRITE}}, ],
-                'cache_mapped_data_bytes' :[8*MB, 128*MB],
+                'bench'          : [
+                    {'name': 'Alignment',
+                    'conf': {'op': OP_WRITE, 'aligned': True, 'traffic_size': 8*MB }},
+                    {'name': 'Alignment',
+                    'conf': {'op': OP_WRITE, 'aligned': False, 'traffic_size': 8*MB }},
+                    ],
+                'cache_mapped_data_bytes' :[128*MB],
                 'flashbytes'     : [128*MB],
-                'stripe_size'    : [1, 'infinity'],
-                'chunk_size'     : [4*KB, 128*KB]
+                'stripe_size'    : [1,],
                 }
+        parameter_combs = ParameterCombinations(para_dict)
+
+        return parameter_combs
+
+    def gen_parameters_contract_requestscale():
+        expname = get_expname()
+        para_dict = {
+                'expname'        : [expname],
+                'ncq_depth'      : [1],
+                'bench'          : [
+                    {'name': 'RequestScale',
+                     'conf': {'op': OP_WRITE, 'traffic_size': 8*MB,
+                             'chunk_size': 4*KB}},
+                     ],
+                'cache_mapped_data_bytes' :[128*MB],
+                'flashbytes'     : [128*MB],
+                'stripe_size'    : [1,],
+                }
+
+        # mode = 'count'
+        mode = 'size'
+        if mode == 'count':
+            para_dict['ncq_depth'] = [1, 8]
+        elif mode == 'size':
+            d2 = copy.deepcopy(para_dict['bench'][0])
+            d2['conf']['chunk_size'] = 128*KB
+            para_dict['bench'].append(d2)
+
+        parameter_combs = ParameterCombinations(para_dict)
+        return parameter_combs
+
+    def gen_parameters_contract_locality():
+        expname = get_expname()
+        para_dict = {
+                'expname'        : [expname],
+                'ncq_depth'      : [4],
+                'bench'          : [],
+                'cache_mapped_data_bytes' :[128*MB],
+                'flashbytes'     : [128*MB],
+                'stripe_size'    : [1,],
+                }
+
+        for space_size in [4*MB, 32*MB]:
+            d = {'name': 'Locality',
+                     'conf': {'op': OP_WRITE, 'traffic_size': 8*MB,
+                             'space_size': space_size,
+                             'chunk_size': 4*KB}}
+            para_dict['bench'].append(d)
 
         parameter_combs = ParameterCombinations(para_dict)
 
         return parameter_combs
 
+    def gen_parameters_contract_grouping():
+        expname = get_expname()
+        para_dict = {
+                'expname'        : [expname],
+                'ncq_depth'      : [4],
+                'bench'          : [],
+                'cache_mapped_data_bytes' :[128*MB],
+                'flashbytes'     : [128*MB],
+                'stripe_size'    : [1,],
+                }
+
+        name = 'GroupByInvTimeInSpace'
+        # name = 'GroupByInvTimeAtAccTime'
+        for grouping in [True, False]:
+            d = {'name': name,
+                     'conf': {'traffic_size': 8*MB,
+                             'chunk_size': 4*KB,
+                             'grouping': grouping
+                             }}
+            para_dict['bench'].append(d)
+
+        parameter_combs = ParameterCombinations(para_dict)
+
+        return parameter_combs
+
+
+    # parameters = gen_parameters_contract_requestscale()
+    # parameters = gen_parameters_contract_locality()
+    parameters = gen_parameters_contract_grouping()
+
     cnt = 0
-    for i, para in enumerate(gen_parameters()):
+    for i, para in enumerate(parameters):
         print 'exp', cnt
+        print para
         cnt += 1
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
         exp = Experiment( Parameters(**para) )

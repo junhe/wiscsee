@@ -10,6 +10,9 @@ fiobench:
 appbench:
 	sudo python -m benchmarks.appbench -t 'bench()'
 
+contractbench:
+	sudo python -m benchmarks.lbabench -t 'contract_bench()'
+
 leveldb:
 	sudo python -m benchmarks.appbench -t 'leveldbbench()'
 f2fsgc:

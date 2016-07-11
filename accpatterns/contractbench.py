@@ -2,9 +2,9 @@ from commons import *
 from .patterns import *
 
 class Alignment(object):
-    def __init__(self, block_size, space_size, aligned, op):
+    def __init__(self, block_size, traffic_size, aligned, op):
         self.block_size = block_size
-        self.space_size = space_size
+        self.traffic_size = traffic_size
         self.aligned = aligned
         self.op = op
 
@@ -12,7 +12,7 @@ class Alignment(object):
         return block_id * self.block_size + offset
 
     def __iter__(self):
-        n_blocks = self.space_size / self.block_size
+        n_blocks = self.traffic_size / self.block_size
         chunk_size = self.block_size / 2
         if self.aligned is True:
             offsets = [0, chunk_size]

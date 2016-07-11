@@ -7,6 +7,7 @@ from ssdbox import hostevent
 from commons import *
 from accpatterns import patterns
 from patternsuite import *
+from accpatterns.contractbench import *
 
 class LBAWorkloadGenerator(object):
     __metaclass__ = abc.ABCMeta
@@ -921,7 +922,7 @@ class ContractBenchAdapter(LBAWorkloadGenerator):
 
         bench_name = \
             self.conf['lba_workload_configs']['ContractBench']['class']
-        pattern_class = eval(pattern_class_name)
+        pattern_class = eval(bench_name)
         self.iterator = pattern_class(
             **self.conf['lba_workload_configs']['ContractBench']['conf'])
 

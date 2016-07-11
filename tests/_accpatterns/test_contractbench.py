@@ -7,13 +7,13 @@ from accpatterns.contractbench import *
 
 class TestAlignment(unittest.TestCase):
     def test_init(self):
-        alignbench = Alignment(block_size=128*KB, space_size=128*MB,
+        alignbench = Alignment(block_size=128*KB, traffic_size=128*MB,
                 aligned=True, op=OP_WRITE)
-        alignbench = Alignment(block_size=128*KB, space_size=128*MB,
+        alignbench = Alignment(block_size=128*KB, traffic_size=128*MB,
                 aligned=False, op=OP_READ)
 
     def test_aligned(self):
-        alignbench = Alignment(block_size=4, space_size=12,
+        alignbench = Alignment(block_size=4, traffic_size=12,
                 aligned=True, op=OP_WRITE)
 
         reqs = list(alignbench)
@@ -27,7 +27,7 @@ class TestAlignment(unittest.TestCase):
             self.assertEqual(req.size, 2)
 
     def test_unaligned(self):
-        alignbench = Alignment(block_size=4, space_size=12,
+        alignbench = Alignment(block_size=4, traffic_size=12,
                 aligned=False, op=OP_WRITE)
 
         reqs = list(alignbench)
