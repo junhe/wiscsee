@@ -340,6 +340,100 @@ def patterns_bench():
         exp.main()
 
 
+def contract_bench():
+    class Experiment(object):
+        def __init__(self, para):
+            self.para = para
+
+        def setup_config(self):
+            self.conf = ssdbox.dftldes.Config()
+            self.conf['SSDFramework']['ncq_depth'] = self.para.ncq_depth
+
+            self.conf['flash_config']['page_size'] = 2048
+            self.conf['flash_config']['n_pages_per_block'] = 64
+            self.conf['flash_config']['n_blocks_per_plane'] = 2
+            self.conf['flash_config']['n_planes_per_chip'] = 1
+            self.conf['flash_config']['n_chips_per_package'] = 1
+            self.conf['flash_config']['n_packages_per_channel'] = 1
+            self.conf['flash_config']['n_channels_per_dev'] = 4
+
+            self.conf['exp_parameters'] = self.para._asdict()
+
+            self.conf['do_not_check_gc_setting'] = True
+            self.conf.GC_high_threshold_ratio = 0.96
+            self.conf.GC_low_threshold_ratio = 0
+
+        def setup_environment(self):
+            set_exp_metadata(self.conf, save_data = True,
+                    expname = self.para.expname,
+                    subexpname = chain_items_as_filename(self.para))
+
+            self.conf['enable_blktrace'] = True
+            self.conf['enable_simulation'] = True
+
+        def setup_workload(self):
+            flashbytes = self.para.flashbytes
+            zone_size = flashbytes / 8
+
+            self.conf["workload_src"] = LBAGENERATOR
+            self.conf["lba_workload_class"] = "ContractBench"
+            self.conf["lba_workload_configs"]["ContractBench"] = {}
+            self.conf["lba_workload_configs"]["ContractBench"]["class"] = self.para.patternclass
+            self.conf["lba_workload_configs"]["ContractBench"]["conf"] = {}
+            self.conf["age_workload_class"] = "NoOp"
+
+        def _update_workload_conf(self):
+            conf = self.conf["lba_workload_configs"]["ContractBench"]["conf"]
+            classname = self.conf["lba_workload_configs"]["ContractBench"]["class"]
+
+            conf['space_size'] = self.para.flashbytes
+            conf['block_size'] = self.conf.page_size * self.conf.n_pages_per_block
+
+
+        def setup_ftl(self):
+            self.conf['ftl_type'] = 'dftldes'
+            self.conf['simulator_class'] = 'SimulatorDESNew'
+            self.conf['stripe_size'] = self.para.stripe_size
+
+            self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
+            self.conf.set_flash_num_blocks_by_bytes(self.para.flashbytes)
+
+        def my_run(self):
+            runtime_update(self.conf)
+            run_workflow(self.conf)
+
+        def main(self):
+            self.setup_config()
+            self.setup_environment()
+            self.setup_workload()
+            self.setup_ftl()
+            self.my_run()
+
+    def gen_parameters():
+        expname = get_expname()
+        para_dict = {
+                'expname'        : [expname],
+                'ncq_depth'      : [4],
+                'bench'          : [{'name': 'Alignment', 'conf': {'op': OP_WRITE}}, ],
+                'cache_mapped_data_bytes' :[8*MB, 128*MB],
+                'flashbytes'     : [128*MB],
+                'stripe_size'    : [1, 'infinity'],
+                'chunk_size'     : [4*KB, 128*KB]
+                }
+
+        parameter_combs = ParameterCombinations(para_dict)
+
+        return parameter_combs
+
+    cnt = 0
+    for i, para in enumerate(gen_parameters()):
+        print 'exp', cnt
+        cnt += 1
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        exp = Experiment( Parameters(**para) )
+        exp.main()
+
+
 
 
 def main(cmd_args):

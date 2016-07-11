@@ -914,3 +914,29 @@ class PatternAdapter(LBAWorkloadGenerator):
                     offset=req.offset, size=req.size)
 
 
+class ContractBenchAdapter(LBAWorkloadGenerator):
+    def __init__(self, conf):
+        self.conf = conf
+        self.sector_size = self.conf['sector_size']
+
+        bench_name = \
+            self.conf['lba_workload_configs']['ContractBench']['class']
+        pattern_class = eval(pattern_class_name)
+        self.iterator = pattern_class(
+            **self.conf['lba_workload_configs']['ContractBench']['conf'])
+
+    def __iter__(self):
+        yield hostevent.Event(sector_size=self.sector_size,
+                pid=0, operation=OP_ENABLE_RECORDER,
+                offset=0, size=0)
+
+        for req in self.iterator:
+            if isinstance(req, hostevent.HostEventBase):
+                yield req
+            else:
+                # need converting
+                yield hostevent.Event(sector_size=self.sector_size,
+                    pid=0, operation=req.op,
+                    offset=req.offset, size=req.size)
+
+
