@@ -355,7 +355,7 @@ def contract_bench():
             self.conf['flash_config']['n_planes_per_chip'] = 1
             self.conf['flash_config']['n_chips_per_package'] = 1
             self.conf['flash_config']['n_packages_per_channel'] = 1
-            self.conf['flash_config']['n_channels_per_dev'] = 4
+            self.conf['flash_config']['n_channels_per_dev'] = 16
 
             self.conf['exp_parameters'] = self.para._asdict()
 
@@ -422,6 +422,8 @@ def contract_bench():
             self.setup_ftl()
             self.my_run()
 
+    flashbytes = 128*MB
+
     def gen_parameters_contract_alignment():
         expname = get_expname()
         para_dict = {
@@ -433,8 +435,8 @@ def contract_bench():
                     {'name': 'Alignment',
                     'conf': {'op': OP_WRITE, 'aligned': False, 'traffic_size': 8*MB }},
                     ],
-                'cache_mapped_data_bytes' :[128*MB],
-                'flashbytes'     : [128*MB],
+                'cache_mapped_data_bytes' :[flashbytes],
+                'flashbytes'     : [flashbytes],
                 'stripe_size'    : [1,],
                 }
         parameter_combs = ParameterCombinations(para_dict)
@@ -448,21 +450,21 @@ def contract_bench():
                 'ncq_depth'      : [1],
                 'bench'          : [
                     {'name': 'RequestScale',
-                     'conf': {'op': OP_WRITE, 'traffic_size': 8*MB,
+                     'conf': {'op': OP_WRITE, 'traffic_size': 32*MB,
                              'chunk_size': 4*KB}},
                      ],
-                'cache_mapped_data_bytes' :[128*MB],
-                'flashbytes'     : [128*MB],
+                'cache_mapped_data_bytes' :[flashbytes],
+                'flashbytes'     : [flashbytes],
                 'stripe_size'    : [1,],
                 }
 
         # mode = 'count'
         mode = 'size'
         if mode == 'count':
-            para_dict['ncq_depth'] = [1, 8]
+            para_dict['ncq_depth'] = [1, 16]
         elif mode == 'size':
             d2 = copy.deepcopy(para_dict['bench'][0])
-            d2['conf']['chunk_size'] = 128*KB
+            d2['conf']['chunk_size'] = 512*KB
             para_dict['bench'].append(d2)
 
         parameter_combs = ParameterCombinations(para_dict)
@@ -474,8 +476,8 @@ def contract_bench():
                 'expname'        : [expname],
                 'ncq_depth'      : [4],
                 'bench'          : [],
-                'cache_mapped_data_bytes' :[128*MB],
-                'flashbytes'     : [128*MB],
+                'cache_mapped_data_bytes' :[flashbytes],
+                'flashbytes'     : [flashbytes],
                 'stripe_size'    : [1,],
                 }
 
@@ -496,8 +498,8 @@ def contract_bench():
                 'expname'        : [expname],
                 'ncq_depth'      : [4],
                 'bench'          : [],
-                'cache_mapped_data_bytes' :[128*MB],
-                'flashbytes'     : [128*MB],
+                'cache_mapped_data_bytes' :[flashbytes],
+                'flashbytes'     : [flashbytes],
                 'stripe_size'    : [1,],
                 }
 
@@ -516,9 +518,10 @@ def contract_bench():
         return parameter_combs
 
 
-    # parameters = gen_parameters_contract_requestscale()
+    # parameters = gen_parameters_contract_alignment()
+    parameters = gen_parameters_contract_requestscale()
     # parameters = gen_parameters_contract_locality()
-    parameters = gen_parameters_contract_grouping()
+    # parameters = gen_parameters_contract_grouping()
 
     cnt = 0
     for i, para in enumerate(parameters):
