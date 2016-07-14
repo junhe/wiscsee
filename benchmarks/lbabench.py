@@ -360,8 +360,8 @@ def contract_bench():
             self.conf['exp_parameters'] = self.para._asdict()
 
             self.conf['do_not_check_gc_setting'] = True
-            self.conf.GC_high_threshold_ratio = 0.96
-            self.conf.GC_low_threshold_ratio = 0
+            self.conf.GC_high_threshold_ratio = 0.90
+            self.conf.GC_low_threshold_ratio = 0.70
 
         def setup_environment(self):
             set_exp_metadata(self.conf, save_data = True,

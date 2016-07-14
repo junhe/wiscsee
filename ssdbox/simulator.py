@@ -85,7 +85,6 @@ class SimulatorDESNew(Simulator):
 
         self.recorder.close()
 
-
         gclog = GcLog(device_path=self.conf['device_path'],
                 result_dir=self.conf['result_dir'],
                 flash_page_size=self.conf.page_size)

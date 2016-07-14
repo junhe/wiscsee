@@ -92,7 +92,7 @@ class Ssd(SsdBase):
                 break
             elif operation == OP_CLEAN:
                 print 'start cleaning'
-                self.env.process(self._cleaner_process_forced())
+                self.env.process(self._cleaner_process(forced=True))
                 self.ncq.slots.release(slot_req)
                 break
             elif operation == OP_READ:
@@ -115,7 +115,6 @@ class Ssd(SsdBase):
                 sys.stdout.flush()
 
             if self.ftl.is_cleaning_needed() is True:
-                pass
                 self.env.process(self._cleaner_process())
 
             self.ncq.slots.release(slot_req)
@@ -125,18 +124,13 @@ class Ssd(SsdBase):
             yield self.ncq.queue.put(
                 hostevent.ControlEvent(OP_END_SSD_PROCESS))
 
-    def _cleaner_process(self):
+    def _cleaner_process(self, forced=False):
         held_slot_reqs = yield self.env.process(self.ncq.hold_all_slots())
 
         # things may have changed since last time we check, because of locks
-        if self.ftl.is_cleaning_needed():
+        if forced is True or self.ftl.is_cleaning_needed():
             yield self.env.process(self.ftl.clean())
 
-        self.ncq.release_all_slots(held_slot_reqs)
-
-    def _cleaner_process_forced(self):
-        held_slot_reqs = yield self.env.process(self.ncq.hold_all_slots())
-        yield self.env.process(self.ftl.clean())
         self.ncq.release_all_slots(held_slot_reqs)
 
     def run(self):
