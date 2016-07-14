@@ -458,8 +458,8 @@ def contract_bench():
                 'stripe_size'    : [1,],
                 }
 
-        # mode = 'count'
-        mode = 'size'
+        mode = 'count'
+        # mode = 'size'
         if mode == 'count':
             para_dict['ncq_depth'] = [1, 16]
         elif mode == 'size':
@@ -474,18 +474,18 @@ def contract_bench():
         expname = get_expname()
         para_dict = {
                 'expname'        : [expname],
-                'ncq_depth'      : [4],
+                'ncq_depth'      : [16],
                 'bench'          : [],
-                'cache_mapped_data_bytes' :[flashbytes],
+                'cache_mapped_data_bytes' :[32*MB],
                 'flashbytes'     : [flashbytes],
                 'stripe_size'    : [1,],
                 }
 
-        for space_size in [4*MB, 32*MB]:
+        for space_size in [16*MB, 64*MB]:
             d = {'name': 'Locality',
-                     'conf': {'op': OP_WRITE, 'traffic_size': 8*MB,
+                     'conf': {'op': OP_WRITE, 'traffic_size': 128*MB,
                              'space_size': space_size,
-                             'chunk_size': 4*KB}}
+                             'chunk_size': 2*KB}}
             para_dict['bench'].append(d)
 
         parameter_combs = ParameterCombinations(para_dict)
@@ -519,8 +519,8 @@ def contract_bench():
 
 
     # parameters = gen_parameters_contract_alignment()
-    parameters = gen_parameters_contract_requestscale()
-    # parameters = gen_parameters_contract_locality()
+    # parameters = gen_parameters_contract_requestscale()
+    parameters = gen_parameters_contract_locality()
     # parameters = gen_parameters_contract_grouping()
 
     cnt = 0

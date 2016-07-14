@@ -391,12 +391,16 @@ class FlashTransmitMixin(object):
             # all mappings are in cache, no need to read the translation page
             latest_mapping = mapping_in_cache
 
+        self.recorder.count_me("translation", "write_back")
+
         yield self.env.process(
             self.__update_mapping_on_flash(m_vpn, latest_mapping, tag))
 
     def _read_translation_page(self, m_vpn, tag=None):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
         mapping_dict = self.mapping_on_flash.lpns_to_ppns(lpns)
+
+        self.recorder.count_me("translation", 'read_trans_page')
 
         # as if we readlly read from flash
         m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
