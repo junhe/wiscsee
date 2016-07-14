@@ -471,6 +471,10 @@ def contract_bench():
         return parameter_combs
 
     def gen_parameters_contract_locality():
+        """
+        should not trigger GC
+        """
+        flashbytes = 256*MB
         expname = get_expname()
         para_dict = {
                 'expname'        : [expname],

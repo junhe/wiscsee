@@ -136,6 +136,8 @@ def create_datablockcleaner(objs):
             env = objs['env'])
     return datablockcleaner
 
+
+@unittest.skip("Need real device mounted")
 class TestMappingTable(unittest.TestCase):
     def test_modification(self):
         config = create_config()
