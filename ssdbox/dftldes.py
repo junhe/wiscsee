@@ -383,6 +383,7 @@ class FlashTransmitMixin(object):
 
         if len(mapping_in_cache) < self.conf.n_mapping_entries_per_page:
             # Not all mappings are in cache
+            self.recorder.count_me("translation", 'read_trans_page-for-write-back')
             mapping_in_flash = yield self.env.process(
                     self._read_translation_page(m_vpn, tag))
             latest_mapping = mapping_in_flash
@@ -391,8 +392,6 @@ class FlashTransmitMixin(object):
             # all mappings are in cache, no need to read the translation page
             latest_mapping = mapping_in_cache
 
-        self.recorder.count_me("translation", "write_back")
-
         yield self.env.process(
             self.__update_mapping_on_flash(m_vpn, latest_mapping, tag))
 
@@ -400,7 +399,6 @@ class FlashTransmitMixin(object):
         lpns = self.conf.m_vpn_to_lpns(m_vpn)
         mapping_dict = self.mapping_on_flash.lpns_to_ppns(lpns)
 
-        self.recorder.count_me("translation", 'read_trans_page')
 
         # as if we readlly read from flash
         m_ppn = self.directory.m_vpn_to_m_ppn(m_vpn)
@@ -496,6 +494,7 @@ class InsertMixin(object):
         self._trans_page_locks.locked_addrs.add(m_vpn)
 
         if victim_row.dirty == True:
+            self.recorder.count_me('translation', 'write-back-dirty-for-insert')
             yield self.env.process(self._write_back(m_vpn, tag))
 
         assert self._lpn_table.has_lpn(victim_row.lpn), \
@@ -508,7 +507,7 @@ class InsertMixin(object):
         assert victim_row.state == USED_AND_HOLD
         victim_row.state = USED
 
-        # This is the only place that we delete a lpn
+        self.recorder.count_me('translation', 'delete-lpn-in-table-for-insert')
         locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
 
         self._trans_page_locks.release_request(m_vpn, tp_req)
@@ -578,6 +577,7 @@ class LoadMixin(object):
         self._trans_page_locks.locked_addrs.add(m_vpn)
 
         if victim_row.dirty == True:
+            self.recorder.count_me('translation', 'write-back-dirty-for-load')
             yield self.env.process(self._write_back(m_vpn, tag))
 
         # after writing back, this lpn could already been deleted
@@ -589,6 +589,7 @@ class LoadMixin(object):
         victim_row.state = USED
 
         # This is the only place that we delete a lpn
+        self.recorder.count_me('translation', 'delete-lpn-in-table-for-load')
         locked_row_id = self._lpn_table.delete_lpn_and_lock(victim_row.lpn)
 
         self._trans_page_locks.release_request(m_vpn, tp_req)
@@ -601,6 +602,7 @@ class LoadMixin(object):
         It should not call _write_back() directly or indirectly as it
         will deadlock.
         """
+        self.recorder.count_me('translation', 'read-trans-for-load')
         mapping_dict = yield self.env.process(
                 self._read_translation_page(m_vpn, tag))
         uncached_mapping = self.__get_uncached_mappings(mapping_dict)
@@ -660,9 +662,11 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
         yield req
 
         if self._lpn_table.has_lpn(lpn):
+            self.recorder.count_me('translation', 'overwrite-in-cache')
             self._lpn_table.overwrite_lpn(lpn, ppn, dirty=True)
         else:
             if self._lpn_table.n_free_rows() > 0:
+                self.recorder.count_me('translation', 'insert-to-free')
                 self._add_to_free(lpn, ppn)
             else:
                 yield self.env.process(self._insert_new_mapping(lpn, ppn, tag))
