@@ -1157,6 +1157,222 @@ class TestFTLwithMoreData(unittest.TestCase):
         self.my_run()
 
 
+class TestTranslationWithWrite(unittest.TestCase):
+    def test(self):
+        conf = create_config()
+        conf['flash_config']['n_channels_per_dev'] = 4
+        conf['stripe_size'] = 1
+
+        conf.n_cache_entries = 4*conf.n_mapping_entries_per_page
+        conf.set_flash_num_blocks_by_bytes(128*MB)
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write(objs, dftl))
+        env.run()
+
+    def proc_test_write(self, objs, dftl):
+        env = objs['env']
+        rec = objs['rec']
+        rec.enable()
+
+        block_pool = dftl.block_pool
+        oob = dftl.oob
+        conf = objs['conf']
+        PAGE_SIZE = 2*KB
+
+        # Write first 4*MB
+        for i in range(4):
+            yield env.process(dftl.write_ext(
+                Extent((i*MB/PAGE_SIZE), 1*MB/PAGE_SIZE)))
+
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-load'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-insert'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'delete-lpn-in-table-for-load'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'delete-lpn-in-table-for-insert'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'read-trans-for-load'), 4)
+        self.assertEqual(rec.get_count_me('translation', 'overwrite-in-cache'), 4*512)
+        self.assertEqual(rec.get_count_me('translation', 'insert-to-free'), 0)
+
+        yield env.process(dftl.write_ext(Extent(4*MB/PAGE_SIZE, 1)))
+
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-load'), 0+1)
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-insert'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'delete-lpn-in-table-for-load'), 0+512)
+        self.assertEqual(rec.get_count_me('translation', 'delete-lpn-in-table-for-insert'), 0+0)
+        self.assertEqual(rec.get_count_me('translation', 'read-trans-for-load'), 4+1)
+        self.assertEqual(rec.get_count_me('translation', 'overwrite-in-cache'), 4*512+1)
+        self.assertEqual(rec.get_count_me('translation', 'insert-to-free'), 0+0)
+
+        yield env.process(dftl.write_ext(Extent(5*MB/PAGE_SIZE, 1)))
+
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-load'), 0+1+1)
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-insert'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'delete-lpn-in-table-for-load'), 0+512+512)
+        self.assertEqual(rec.get_count_me('translation', 'delete-lpn-in-table-for-insert'), 0+0+0)
+        self.assertEqual(rec.get_count_me('translation', 'read-trans-for-load'), 4+1+1)
+        self.assertEqual(rec.get_count_me('translation', 'overwrite-in-cache'), 4*512+1+1)
+        self.assertEqual(rec.get_count_me('translation', 'insert-to-free'), 0+0+0)
+
+
+class TestTranslationWithWriteTwice(unittest.TestCase):
+    def test(self):
+        conf = create_config()
+        conf['flash_config']['n_channels_per_dev'] = 4
+        conf['stripe_size'] = 1
+
+        conf.n_cache_entries = 4*conf.n_mapping_entries_per_page
+        conf.set_flash_num_blocks_by_bytes(128*MB)
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write(objs, dftl))
+        env.run()
+
+    def proc_test_write(self, objs, dftl):
+        env = objs['env']
+        rec = objs['rec']
+        rec.enable()
+
+        block_pool = dftl.block_pool
+        oob = dftl.oob
+        conf = objs['conf']
+        PAGE_SIZE = 2*KB
+
+        # Write first 4*MB
+        for i in range(4):
+            yield env.process(dftl.write_ext(
+                Extent((i*MB/PAGE_SIZE), 1*MB/PAGE_SIZE)))
+
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-load'), 0)
+
+        for i in range(4, 8):
+            yield env.process(dftl.write_ext(
+                Extent((i*MB/PAGE_SIZE), 1*MB/PAGE_SIZE)))
+
+        # should have purged previous mappings
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-load'), 4)
+
+        for i in range(4):
+            yield env.process(dftl.write_ext(
+                Extent((i*MB/PAGE_SIZE), 1*MB/PAGE_SIZE)))
+
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-load'), 8)
+
+
+class TestTranslationWriteBacks(unittest.TestCase):
+    def test(self):
+        conf = create_config()
+        conf['flash_config']['n_channels_per_dev'] = 4
+        conf['stripe_size'] = 1
+
+        conf.n_cache_entries = 4*conf.n_mapping_entries_per_page
+        conf.set_flash_num_blocks_by_bytes(1*GB)
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write(objs, dftl))
+        env.run()
+
+    def proc_test_write(self, objs, dftl):
+        return
+        env = objs['env']
+        rec = objs['rec']
+        rec.enable()
+
+        block_pool = dftl.block_pool
+        oob = dftl.oob
+        conf = objs['conf']
+        PAGE_SIZE = 2*KB
+
+        n = 4*512 - 511
+        npages = 32*MB/PAGE_SIZE
+        lpns = range(npages)
+        # random.shuffle(lpns)
+
+        print n
+        for i in range(4*512*2):
+            lpn = random.choice(lpns)
+            yield env.process(dftl.write_ext(Extent(lpn, 1)))
+            # yield env.process(dftl.write_ext(Extent(lpns[i], 1)))
+            print i, n,  rec.get_count_me('translation', 'write-back-dirty-for-load')
+
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-load'), 0)
+
+
+
+
+class TestTranslationWithWriteNotAligned(unittest.TestCase):
+    def test(self):
+        conf = create_config()
+        conf['flash_config']['n_channels_per_dev'] = 4
+        conf['stripe_size'] = 1
+
+        conf.n_cache_entries = 4*conf.n_mapping_entries_per_page
+        conf.set_flash_num_blocks_by_bytes(128*MB)
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write(objs, dftl))
+        env.run()
+
+    def proc_test_write(self, objs, dftl):
+        env = objs['env']
+        rec = objs['rec']
+        rec.enable()
+
+        block_pool = dftl.block_pool
+        oob = dftl.oob
+        conf = objs['conf']
+        PAGE_SIZE = 2*KB
+
+        # Write 4 places
+        for i in [8, 22, 33, 77]:
+            yield env.process(dftl.write_ext(
+                Extent((i*MB/PAGE_SIZE) + 1, 1)))
+
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-load'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-insert'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'delete-lpn-in-table-for-load'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'delete-lpn-in-table-for-insert'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'read-trans-for-load'), 4)
+        self.assertEqual(rec.get_count_me('translation', 'overwrite-in-cache'), 4)
+        self.assertEqual(rec.get_count_me('translation', 'insert-to-free'), 0)
+
+        yield env.process(dftl.write_ext(Extent(7*MB/PAGE_SIZE + 1, 1)))
+
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-load'), 0+0)
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-insert'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'delete-lpn-in-table-for-load'), 0+512)
+        self.assertEqual(rec.get_count_me('translation', 'delete-lpn-in-table-for-insert'), 0+0)
+        self.assertEqual(rec.get_count_me('translation', 'read-trans-for-load'), 4+1)
+        self.assertEqual(rec.get_count_me('translation', 'overwrite-in-cache'), 4+1)
+        self.assertEqual(rec.get_count_me('translation', 'insert-to-free'), 0+0)
+
+        yield env.process(dftl.write_ext(Extent(5*MB/PAGE_SIZE, 1)))
+
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-load'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'write-back-dirty-for-insert'), 0)
+        self.assertEqual(rec.get_count_me('translation', 'delete-lpn-in-table-for-load'), 0+512+512)
+        self.assertEqual(rec.get_count_me('translation', 'delete-lpn-in-table-for-insert'), 0+0+0)
+        self.assertEqual(rec.get_count_me('translation', 'read-trans-for-load'), 4+1+1)
+        self.assertEqual(rec.get_count_me('translation', 'overwrite-in-cache'), 4+1+1)
+        self.assertEqual(rec.get_count_me('translation', 'insert-to-free'), 0+0+0)
+
+
+
 class TestVictimBlocks(unittest.TestCase):
     def test_entry(self):
         ssdbox.dftldes.VictimBlocks
