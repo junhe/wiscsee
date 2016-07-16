@@ -622,8 +622,31 @@ class LoadMixin(object):
                 uncached_mapping[lpn] = ppn
         return uncached_mapping
 
+class FlushMixin(object):
+    """
+    Write back all dirty entries in translation cache
 
-class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
+    Flush has to be run alone without other processes. Run barrier before
+    calling flush
+    """
+    def _flush(self, tag=None):
+        for lpn, row in self._lpn_table.least_to_most_lpn_items():
+            if row.dirty is True:
+                # write back this m_vpn
+                m_vpn = self.conf.lpn_to_m_vpn(lpn)
+
+                tp_req = self._trans_page_locks.get_request(m_vpn)
+                yield tp_req
+                self._trans_page_locks.locked_addrs.add(m_vpn)
+
+                self.recorder.count_me('translation', 'write-back-dirty-for-flush')
+                yield self.env.process(self._write_back(m_vpn, tag))
+
+                self._trans_page_locks.release_request(m_vpn, tp_req)
+                self._trans_page_locks.locked_addrs.remove(m_vpn)
+
+
+class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin, FlushMixin):
     """
     TODO: should separate operations that do/do not change recency
     """
@@ -710,6 +733,16 @@ class MappingCache(FlashTransmitMixin, InsertMixin, LoadMixin):
         self._m_vpn_interface_lock.release_request(m_vpn, req)
         self.env.exit(ppn)
 
+    def flush(self):
+        yield self.env.process(self._flush())
+
+    def drop(self):
+        "flush before dropping, otherwise mapping will be lost"
+        for lpn, row in self._lpn_table.least_to_most_lpn_items():
+            self.recorder.count_me('translation', 'delete-lpn-in-table-for-drop')
+            self._lpn_table.delete_lpn_and_lock(lpn)
+            row.state = FREE
+
     def _victim_row(self, avoid_m_vpns):
         for lpn, row in self._lpn_table.least_to_most_lpn_items():
             if row.state == USED:
@@ -728,15 +761,21 @@ class LpnTable(object):
     def __init__(self, n_rows):
         self._n_rows = n_rows
 
-        self._rows = [
-            Row(lpn = None, ppn = None, dirty = False, state = FREE, rowid = i)
-            for i in range(self._n_rows) ]
+        self._rows = self._fresh_rows()
 
         # lpns to Row instances, it is a dict
         # {lpn1: row1, lpn2: row2, ...}
         # self._lpn_to_row = SegmentedLruCache(n_rows, 0.5)
         # self._lpn_to_row = LruDict()
         self._lpn_to_row = LruCache()
+
+    def _fresh_rows(self):
+         return [
+            Row(lpn = None, ppn = None, dirty = False, state = FREE, rowid = i)
+            for i in range(self._n_rows) ]
+
+    def rows(self):
+        return self._rows
 
     def _count_states(self):
         """

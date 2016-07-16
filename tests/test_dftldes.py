@@ -469,6 +469,153 @@ class TestMappingCacheEvictByTrans(unittest.TestCase):
 
         env.run()
 
+class TestMappingCacheFlush(unittest.TestCase):
+    def load(self, conf, env, mapping_cache):
+        """
+        There are 4 translation pages can be hold in RAM.
+        4 MB of data can be mapped.
+        translate pages across 4MB of data, translation memory should be full.
+        """
+        lpntable = mapping_cache._lpn_table
+        recorder = mapping_cache.recorder
+
+        recorder.enable()
+
+        # each tp has 512 entries
+        self.assertEqual(lpntable.n_free_rows(), 4*512)
+
+        for offset in [0*MB, 1*MB, 2*MB, 3*MB]:
+            lpn = offset / (2*KB)
+            ppn = yield env.process(mapping_cache.lpn_to_ppn(lpn=lpn, tag=None))
+
+        self.assertEqual(lpntable.n_free_rows(), 0)
+
+        yield env.process(mapping_cache.flush())
+
+        for row in lpntable.rows():
+            self.assertEqual(row.dirty, False)
+
+        self.assertEqual(len(lpntable.rows()), lpntable._n_rows)
+
+        self.assertEqual(lpntable.n_free_rows(), 0)
+        mapping_cache.drop()
+        self.assertEqual(lpntable.n_free_rows(), 4*512)
+
+        self.assertEqual(
+            recorder.get_count_me('translation', 'overwrite-in-cache'), 0)
+
+    def test_update(self):
+        conf = create_config()
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 4
+        objs = create_obj_set(conf)
+
+        mapping_cache = create_mapping_cache(objs)
+
+        env = objs['env']
+        env.process(self.load(conf, env, mapping_cache))
+
+        env.run()
+
+class TestMappingCacheFlushWithEviction(unittest.TestCase):
+    def load(self, conf, env, mapping_cache):
+        lpntable = mapping_cache._lpn_table
+        recorder = mapping_cache.recorder
+        recorder.enable()
+
+        for offset in [0*MB, 1*MB, 2*MB, 3*MB]:
+            lpn = offset / (2*KB)
+            ppn = yield env.process(mapping_cache.lpn_to_ppn(lpn=lpn, tag=None))
+            self.assertEqual(ppn, UNINITIATED)
+
+        # modify mapping
+        for offset in [0*MB, 1*MB, 2*MB, 3*MB]:
+            lpn = offset / (2*KB)
+            ppn = yield env.process(mapping_cache.update(lpn=lpn, ppn=lpn+1, tag=None))
+
+        self.assertEqual(
+            recorder.get_count_me('translation', 'overwrite-in-cache'), 4)
+
+        yield env.process(mapping_cache.flush())
+
+        self.assertEqual(
+            recorder.get_count_me('translation', 'overwrite-in-cache'), 4)
+        self.assertEqual(
+            recorder.get_count_me('translation', 'write-back-dirty-for-flush'), 4)
+
+        mapping_cache.drop()
+        self.assertEqual(
+            recorder.get_count_me('translation', 'delete-lpn-in-table-for-drop'), 512*4)
+
+    def test_update(self):
+        conf = create_config()
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 4
+        objs = create_obj_set(conf)
+
+        mapping_cache = create_mapping_cache(objs)
+
+        env = objs['env']
+        env.process(self.load(conf, env, mapping_cache))
+
+        env.run()
+
+
+class TestMappingCacheFlushAndLoad(unittest.TestCase):
+    def load(self, conf, env, mapping_cache):
+        lpntable = mapping_cache._lpn_table
+        recorder = mapping_cache.recorder
+        recorder.enable()
+
+        for offset in [0*MB, 1*MB, 2*MB, 3*MB]:
+            lpn = offset / (2*KB)
+            ppn = yield env.process(mapping_cache.lpn_to_ppn(lpn=lpn, tag=None))
+            self.assertEqual(ppn, UNINITIATED)
+
+        self.assertEqual(recorder.get_count_me('translation',
+            'read-trans-for-load'), 4)
+
+        # modify mapping
+        for offset in [0*MB, 1*MB, 2*MB, 3*MB]:
+            lpn = offset / (2*KB)
+            ppn = yield env.process(mapping_cache.update(lpn=lpn, ppn=lpn+1, tag=None))
+
+        self.assertEqual(recorder.get_count_me('translation',
+            'read-trans-for-load'), 4)
+        self.assertEqual(
+            recorder.get_count_me('translation', 'overwrite-in-cache'), 4)
+
+        yield env.process(mapping_cache.flush())
+
+        self.assertEqual(
+            recorder.get_count_me('translation', 'overwrite-in-cache'), 4)
+        self.assertEqual(
+            recorder.get_count_me('translation', 'write-back-dirty-for-flush'), 4)
+
+        mapping_cache.drop()
+        self.assertEqual(
+            recorder.get_count_me('translation', 'delete-lpn-in-table-for-drop'), 512*4)
+
+        for offset in [0*MB, 1*MB, 2*MB, 3*MB]:
+            lpn = offset / (2*KB)
+            ppn = yield env.process(mapping_cache.lpn_to_ppn(lpn=lpn, tag=None))
+            self.assertEqual(ppn, lpn+1) #stored previously
+
+        self.assertEqual(recorder.get_count_me('translation',
+            'read-trans-for-load'), 4+4)
+
+    def test_update(self):
+        conf = create_config()
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 4
+        objs = create_obj_set(conf)
+
+        mapping_cache = create_mapping_cache(objs)
+
+        env = objs['env']
+        env.process(self.load(conf, env, mapping_cache))
+
+        env.run()
+
+
+
 
 class TestMappingCacheSimpleTranslation(unittest.TestCase):
     def translate(self, conf, env, mapping_cache):
