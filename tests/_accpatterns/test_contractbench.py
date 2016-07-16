@@ -60,6 +60,25 @@ class TestRequestScale(unittest.TestCase):
             self.assertEqual(req.op, OP_WRITE)
             self.assertEqual(req.size, 2)
 
+    def test_scale_read(self):
+        bench = RequestScale(space_size=10, chunk_size=2,
+                traffic_size=20, op=OP_READ)
+
+        reqs = list(bench)
+
+        offs = [req.offset for req in reqs]
+
+        req0 = reqs[0]
+        self.assertEqual(req0.offset, 0)
+        self.assertEqual(req0.size, 10)
+        self.assertEqual(req0.op, OP_WRITE)
+
+        self.assertEqual(len(reqs), 11)
+
+        for req in reqs[1:]:
+            self.assertEqual(req.op, OP_READ)
+            self.assertEqual(req.size, 2)
+
 
 class TestGroupByInvTimeAtAccTime(unittest.TestCase):
     def test_init(self):

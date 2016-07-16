@@ -33,11 +33,18 @@ class RequestScale(object):
         self.traffic_size = traffic_size
         self.op = op
 
-    def __iter__(self):
+    def get_iter(self):
         req_iter = RandomNoHole(op=self.op, zone_offset=None,
                 zone_size=self.space_size, chunk_size=self.chunk_size,
                 traffic_size=self.traffic_size)
         for req in req_iter:
+            yield req
+
+    def __iter__(self):
+        if self.op == OP_READ:
+            yield Request(OP_WRITE, 0, self.space_size)
+
+        for req in self.get_iter():
             yield req
 
 
