@@ -74,38 +74,76 @@ class Ssd(SsdBase):
 
             if operation == OP_ENABLE_RECORDER:
                 self.recorder.enable()
+
             elif operation == OP_DISABLE_RECORDER:
                 self.recorder.disable()
+
             elif operation == OP_WORKLOADSTART:
                 pass
+
             elif operation == OP_SHUT_SSD:
                 print 'got shut_ssd'
                 sys.stdout.flush()
                 yield self.env.process(self._end_all_processes())
+
             elif operation == OP_BARRIER:
+                # The correct way of doing barrier is to use
+                # OP_BARRIER with more than n_ncq_slots OP_NOOP.
+                # the OP_NOOPs are to make sure no other operations
+                # can be scheduled before OP_BARRIER.
+                # for example, EventA, OP_BARRIER, EventB cannot garantee
+                # that B executed before A because all A, Barrier and B can
+                # get the slots at the same time. Schedule is free to run
+                # them in any order. EventA, OP_NOOP x 9999, EventB cannot
+                # garantee either because OP_NOOP takes no time and Event B
+                # can run at the same time as A..
+                # So the correct way is
+                # EventA, OP_NOOPsx9999, OP_BARRIER, OP_NOOPSX9999, EventB
+                # OP_BARRIER will wait util EventA finishes. The first OP_NOOP
+                # x9999 makes sure eventA get a slot before barrier
+
                 yield self.env.process(self._barrier())
+
+            elif operation == OP_NOOP:
+                pass
+
+            elif operation == OP_FLUSH_TRANS_CACHE:
+                yield self.env.process(self.ftl.flush_trans_cache())
+
+            elif operation == OP_PURGE_TRANS_CACHE:
+                yield self.env.process(self.ftl.purge_trans_cache())
+
+            elif operation == OP_DROP_TRANS_CACHE:
+                self.ftl.drop_trans_cache()
+
             elif operation == OP_REC_TIMESTAMP:
                 self.recorder.set_result_by_one_key(host_event.arg1,
                         self.env.now)
             elif operation == OP_END_SSD_PROCESS:
                 self.ncq.slots.release(slot_req)
                 break
+
             elif operation == OP_CLEAN:
                 print 'start cleaning'
                 self.env.process(self._cleaner_process(forced=True))
                 self.ncq.slots.release(slot_req)
                 break
+
             elif operation == OP_READ:
                 yield self.env.process(
                     self.ftl.read_ext(host_event.get_lpn_extent(self.conf)))
+
             elif  operation == OP_WRITE:
                 yield self.env.process(
                     self.ftl.write_ext(host_event.get_lpn_extent(self.conf)))
+
             elif  operation == OP_DISCARD:
                 yield self.env.process(
                     self.ftl.discard_ext(host_event.get_lpn_extent(self.conf)))
+
             elif operation in [OP_FALLOCATE]:
                 pass
+
             else:
                 raise NotImplementedError("Operation {} not supported."\
                         .format(host_event.operation))

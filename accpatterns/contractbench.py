@@ -26,13 +26,22 @@ class Alignment(object):
                 req = Request(self.op, req_off, chunk_size)
                 yield req
 
+class BarrierMixin(object):
+    def barrier_events(self):
+        for i in range(self.n_ncq_slots):
+            yield hostevent.ControlEvent(operation=OP_NOOP)
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        for i in range(self.n_ncq_slots):
+            yield hostevent.ControlEvent(operation=OP_NOOP)
 
-class RequestScale(object):
-    def __init__(self, space_size, chunk_size, traffic_size, op):
+
+class RequestScale(BarrierMixin):
+    def __init__(self, space_size, chunk_size, traffic_size, op, n_ncq_slots):
         self.space_size = space_size
         self.chunk_size = chunk_size
         self.traffic_size = traffic_size
         self.op = op
+        self.n_ncq_slots = n_ncq_slots
 
     def get_iter(self):
         req_iter = Random(op=self.op, zone_offset=None,
@@ -45,14 +54,23 @@ class RequestScale(object):
         if self.op == OP_READ:
             yield Request(OP_WRITE, 0, self.space_size)
 
-        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        for req in self.barrier_events():
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_PURGE_TRANS_CACHE)
+
+        for req in self.barrier_events():
+            yield req
+
         yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
                 arg1='interest_workload_start')
 
         for req in self.get_iter():
             yield req
 
-        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        for req in self.barrier_events():
+            yield req
+
         yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
                 arg1='interest_workload_end')
 

@@ -137,6 +137,16 @@ class Ftl(object):
             mapping.update( dict(zip(seg_ext.lpn_iter(), ppns)) )
         return mapping
 
+    def flush_trans_cache(self):
+        yield self.env.process(self._mappings.flush())
+
+    def drop_trans_cache(self):
+        self._mappings.drop()
+
+    def purge_trans_cache(self):
+        yield self.env.process(self._mappings.flush())
+        self._mappings.drop()
+
     def write_ext(self, extent):
         self.recorder.add_to_general_accumulater('traffic', 'write',
                 extent.lpn_count*self.conf.page_size)

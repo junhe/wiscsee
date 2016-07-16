@@ -395,7 +395,7 @@ def contract_bench():
             elif classname == 'RequestScale':
                 conf['space_size'] = self.para.flashbytes
             elif classname == 'Locality':
-                pass
+                conf['n_ncq_slots'] = self.para.ncq_depth
             elif classname == 'GroupByInvTimeAtAccTime':
                 conf['space_size'] = self.para.flashbytes
             elif classname == 'GroupByInvTimeInSpace':
