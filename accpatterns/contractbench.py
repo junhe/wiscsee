@@ -35,7 +35,7 @@ class RequestScale(object):
         self.op = op
 
     def get_iter(self):
-        req_iter = RandomNoHole(op=self.op, zone_offset=None,
+        req_iter = Random(op=self.op, zone_offset=None,
                 zone_size=self.space_size, chunk_size=self.chunk_size,
                 traffic_size=self.traffic_size)
         for req in req_iter:
