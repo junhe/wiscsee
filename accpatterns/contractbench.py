@@ -1,5 +1,6 @@
 from commons import *
 from .patterns import *
+from ssdbox import hostevent
 
 class Alignment(object):
     def __init__(self, block_size, traffic_size, aligned, op):
@@ -44,9 +45,16 @@ class RequestScale(object):
         if self.op == OP_READ:
             yield Request(OP_WRITE, 0, self.space_size)
 
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='interest_workload_start')
+
         for req in self.get_iter():
             yield req
 
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='interest_workload_end')
 
 class Locality(RequestScale):
     pass
