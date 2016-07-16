@@ -44,35 +44,58 @@ class RequestScale(BarrierMixin):
         self.n_ncq_slots = n_ncq_slots
 
     def get_iter(self):
-        req_iter = Random(op=self.op, zone_offset=None,
+        req_iter = RandomNoHole(op=self.op, zone_offset=None,
                 zone_size=self.space_size, chunk_size=self.chunk_size,
                 traffic_size=self.traffic_size)
         for req in req_iter:
+            yield req
+
+    def purge_cache(self):
+        # barrier
+        for req in self.barrier_events():
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_PURGE_TRANS_CACHE)
+
+    def discard_half(self, offset_history):
+        # discard half
+        offset_history = list(offset_history)
+        random.shuffle(offset_history)
+        n = len(offset_history)
+        for offset in offset_history[0:n/2]:
+            req = Request(OP_DISCARD, offset, self.chunk_size)
             yield req
 
     def __iter__(self):
         if self.op == OP_READ:
             yield Request(OP_WRITE, 0, self.space_size)
 
-        for req in self.barrier_events():
+        for req in self.purge_cache():
             yield req
 
-        yield hostevent.ControlEvent(operation=OP_PURGE_TRANS_CACHE)
-
+        # barrier
         for req in self.barrier_events():
             yield req
 
         yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
                 arg1='interest_workload_start')
 
+        offset_history = set()
         for req in self.get_iter():
+            offset_history.add(req.offset)
             yield req
 
+        # barrier
         for req in self.barrier_events():
             yield req
 
         yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
                 arg1='interest_workload_end')
+
+        if self.op == OP_WRITE:
+            for req in self.discard_half(offset_history):
+                yield req
+
 
 class Locality(RequestScale):
     pass

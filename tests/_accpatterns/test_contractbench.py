@@ -44,25 +44,26 @@ class TestAlignment(unittest.TestCase):
 class TestRequestScale(unittest.TestCase):
     def test_init(self):
         reqbench = RequestScale(space_size=128*MB, chunk_size=4*KB,
-                traffic_size=8*MB, op=OP_WRITE)
+                traffic_size=8*MB, op=OP_WRITE, n_ncq_slots=16)
 
-    def test_scale(self):
+    def test_scale_write(self):
         bench = RequestScale(space_size=10, chunk_size=2,
-                traffic_size=20, op=OP_WRITE)
+                traffic_size=10, op=OP_WRITE, n_ncq_slots=16)
 
         reqs = [req for req in list(bench) if isinstance(req, Request)]
 
         offs = [req.offset for req in reqs]
+        ops = [req.op for req in reqs]
 
-        self.assertEqual(len(reqs), 10)
+        self.assertEqual(len(reqs), 7)
+        self.assertListEqual(ops, [OP_WRITE] * 5 + [OP_DISCARD] * 2)
 
         for req in reqs:
-            self.assertEqual(req.op, OP_WRITE)
             self.assertEqual(req.size, 2)
 
     def test_scale_read(self):
         bench = RequestScale(space_size=10, chunk_size=2,
-                traffic_size=20, op=OP_READ)
+                traffic_size=20, op=OP_READ, n_ncq_slots=16)
 
         reqs = [req for req in list(bench) if isinstance(req, Request)]
 

@@ -485,11 +485,11 @@ def contract_bench():
                 'stripe_size'    : [1,],
                 }
 
-        for space_size in [1024*MB, 128*MB]:
+        for space_size in [8*MB]:
             d = {'name': 'Locality',
-                     'conf': {'op': OP_READ, 'traffic_size': 128*MB,
+                     'conf': {'op': OP_READ, 'traffic_size': 2*MB,
                              'space_size': space_size,
-                             'chunk_size': 2*KB}}
+                             'chunk_size': 8*KB}}
             para_dict['bench'].append(d)
 
         parameter_combs = ParameterCombinations(para_dict)
