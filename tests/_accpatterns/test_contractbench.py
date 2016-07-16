@@ -50,7 +50,7 @@ class TestRequestScale(unittest.TestCase):
         bench = RequestScale(space_size=10, chunk_size=2,
                 traffic_size=20, op=OP_WRITE)
 
-        reqs = list(bench)
+        reqs = [req for req in list(bench) if isinstance(req, Request)]
 
         offs = [req.offset for req in reqs]
 
@@ -64,7 +64,7 @@ class TestRequestScale(unittest.TestCase):
         bench = RequestScale(space_size=10, chunk_size=2,
                 traffic_size=20, op=OP_READ)
 
-        reqs = list(bench)
+        reqs = [req for req in list(bench) if isinstance(req, Request)]
 
         offs = [req.offset for req in reqs]
 
