@@ -120,6 +120,13 @@ class RequestScale(BarrierMixin):
             for req in self.discard_half(offset_history):
                 yield req
 
+            # barrier
+            for req in self.barrier_events():
+                yield req
+
+            for req in self.purge_cache():
+                yield req
+
             for req in self.clean():
                 yield req
 
