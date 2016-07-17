@@ -1709,7 +1709,7 @@ class Config(config.ConfigNCQFTL):
             "do_not_check_gc_setting": False,
             }
         self.update(local_itmes)
-        self['segment_bytes'] = self.total_flash_bytes()
+        self['segment_bytes'] = 1*TB
 
         # self['keeping_all_tp_entries'] = False
         self['keeping_all_tp_entries'] = True
