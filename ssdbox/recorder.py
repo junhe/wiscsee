@@ -110,6 +110,9 @@ class Recorder(object):
     def set_result_by_one_key(self, key, value):
         self.result_dict[key] = value
 
+    def get_result_by_one_key(self, key):
+        return self.result_dict[key]
+
     @switchable
     def count_me(self, counter_name, item):
         """

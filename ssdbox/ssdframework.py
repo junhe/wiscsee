@@ -107,6 +107,12 @@ class Ssd(SsdBase):
             elif operation == OP_NOOP:
                 pass
 
+            elif operation == OP_CALC_GC_DURATION:
+                dur = self.recorder.get_result_by_one_key('gc_end') - \
+                        self.recorder.get_result_by_one_key('gc_start')
+                self.recorder.set_result_by_one_key('gc_duration', dur)
+                self.recorder.set_result_by_one_key('gc_duration_sec', dur/SEC)
+
             elif operation == OP_FLUSH_TRANS_CACHE:
                 yield self.env.process(self.ftl.flush_trans_cache())
 
