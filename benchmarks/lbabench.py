@@ -474,7 +474,7 @@ def contract_bench():
         """
         should not trigger GC
         """
-        flashbytes = 2*GB
+        flashbytes = 8*GB
         expname = get_expname()
         para_dict = {
                 'expname'        : [expname],
@@ -485,11 +485,11 @@ def contract_bench():
                 'stripe_size'    : [1,],
                 }
 
-        for space_size in [8*MB]:
+        for space_size in [4*GB, 2*GB, 512*MB, 256*MB]:
             d = {'name': 'Locality',
-                     'conf': {'op': OP_READ, 'traffic_size': 2*MB,
+                     'conf': {'op': OP_WRITE, 'traffic_size': 128*MB,
                              'space_size': space_size,
-                             'chunk_size': 8*KB}}
+                             'chunk_size': 2*KB}}
             para_dict['bench'].append(d)
 
         parameter_combs = ParameterCombinations(para_dict)

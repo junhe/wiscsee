@@ -1330,7 +1330,7 @@ class Cleaner(object):
             )
 
         # limit number of cleaner processes
-        self.n_cleaners = 1
+        self.n_cleaners = 16
         self._cleaner_res = simpy.Resource(self.env, capacity=self.n_cleaners)
 
     def assert_threshold_sanity(self):
