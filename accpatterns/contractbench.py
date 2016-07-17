@@ -66,6 +66,30 @@ class RequestScale(BarrierMixin):
             req = Request(OP_DISCARD, offset, self.chunk_size)
             yield req
 
+    def clean(self):
+        # barrier
+        for req in self.barrier_events():
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
+
+        # barrier
+        for req in self.barrier_events():
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_end')
+
+        # barrier
+        for req in self.barrier_events():
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_CALC_GC_DURATION)
+
+
     def __iter__(self):
         if self.op == OP_READ:
             yield Request(OP_WRITE, 0, self.space_size)
@@ -94,6 +118,9 @@ class RequestScale(BarrierMixin):
 
         if self.op == OP_WRITE:
             for req in self.discard_half(offset_history):
+                yield req
+
+            for req in self.clean():
                 yield req
 
 
