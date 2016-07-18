@@ -142,24 +142,23 @@ class GroupByInvTimeAtAccTime(object):
         self.chunk_size = chunk_size
         self.grouping = grouping
 
-    def _get_reqs(self, start, op):
+    def _get_reqs(self, start, op, stride_size):
         n_chunks = self.traffic_size / self.chunk_size
 
         reqs = []
         for i in range(n_chunks):
-            off = start + i * self.chunk_size
+            off = start + i * stride_size
             req = Request(op, off, self.chunk_size)
             reqs.append(req)
 
         return reqs
 
     def __iter__(self):
-        reqs1 = self._get_reqs(0, OP_WRITE)
-        second_start = self.space_size - self.traffic_size
-        reqs_discard = self._get_reqs(0, OP_DISCARD)
+        reqs1 = self._get_reqs(0, OP_WRITE, 2 * self.chunk_size)
+        reqs_discard = self._get_reqs(0, OP_DISCARD, 2 * self.chunk_size)
 
-        assert second_start > 0 + self.traffic_size
-        reqs2 = self._get_reqs(second_start, OP_WRITE)
+        second_start = 0 + self.chunk_size
+        reqs2 = self._get_reqs(second_start, OP_WRITE, 2 * self.chunk_size)
 
         if self.grouping is True:
             reqs = reqs1 + reqs2

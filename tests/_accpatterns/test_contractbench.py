@@ -94,7 +94,7 @@ class TestGroupByInvTimeAtAccTime(unittest.TestCase):
         self.assertEqual(len(reqs), 6)
 
         offs = [req.offset for req in reqs]
-        self.assertListEqual(offs, [0, 2, 28, 30, 0, 2])
+        self.assertListEqual(offs, [0, 4, 2, 6, 0, 4])
 
         ops = [req.op for req in reqs]
         self.assertListEqual(ops, [OP_WRITE, OP_WRITE, OP_WRITE, OP_WRITE,
@@ -111,7 +111,7 @@ class TestGroupByInvTimeAtAccTime(unittest.TestCase):
         self.assertEqual(len(reqs), 6)
 
         offs = [req.offset for req in reqs]
-        self.assertListEqual(offs, [0, 28, 2, 30, 0, 2])
+        self.assertListEqual(offs, [0, 2, 4, 6, 0, 4])
 
         ops = [req.op for req in reqs]
         self.assertListEqual(ops, [OP_WRITE, OP_WRITE, OP_WRITE, OP_WRITE,
