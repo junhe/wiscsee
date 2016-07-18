@@ -348,7 +348,7 @@ class GroupByInvTimeInSpace(object):
             reqs1_discard = self._get_reqs(0, OP_DISCARD,
                     stride_size=self.chunk_size)
 
-            second_start = self.space_size - self.traffic_size
+            second_start = 0 + self.traffic_size
             reqs2 = self._get_reqs(second_start, OP_WRITE,
                     stride_size=self.chunk_size)
         else:
@@ -363,4 +363,6 @@ class GroupByInvTimeInSpace(object):
 
         for req in reqs:
             yield req
+
+
 

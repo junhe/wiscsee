@@ -133,8 +133,10 @@ class TestGroupInvTimeInSpace(unittest.TestCase):
         reqs = list(bench)
         self.assertEqual(len(reqs), 6)
 
+        # 0 2 4 6
+        # A A B B
         offs = [req.offset for req in reqs]
-        self.assertListEqual(offs, [0, 28, 2, 30, 0, 2])
+        self.assertListEqual(offs, [0, 4, 2, 6, 0, 2])
 
         ops = [req.op for req in reqs]
         self.assertListEqual(ops, [OP_WRITE, OP_WRITE, OP_WRITE, OP_WRITE,
@@ -150,6 +152,8 @@ class TestGroupInvTimeInSpace(unittest.TestCase):
         reqs = list(bench)
         self.assertEqual(len(reqs), 6)
 
+        # 0 2 4 6
+        # A B A B
         offs = [req.offset for req in reqs]
         self.assertListEqual(offs, [0, 2, 4, 6, 0, 4])
 
