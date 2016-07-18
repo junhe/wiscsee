@@ -8,6 +8,7 @@ import pprint
 import Queue
 import sys
 import simpy
+import copy
 
 import bidict
 
@@ -125,6 +126,21 @@ class Ssd(SsdBase):
             elif operation == OP_REC_TIMESTAMP:
                 self.recorder.set_result_by_one_key(host_event.arg1,
                         self.env.now)
+
+            elif operation == OP_REC_FLASH_OP_CNT:
+                result_dict = self.recorder.get_result_summary()
+                flashops = copy.deepcopy(
+                    result_dict['general_accumulator'].get('flash_ops', {}))
+                self.recorder.set_result_by_one_key(host_event.arg1,
+                        flashops)
+
+            elif operation == OP_REC_FOREGROUND_OP_CNT:
+                result_dict = self.recorder.get_result_summary()
+                traffic = copy.deepcopy(
+                    result_dict['general_accumulator'].get('traffic', {}))
+                self.recorder.set_result_by_one_key(host_event.arg1,
+                        traffic)
+
             elif operation == OP_END_SSD_PROCESS:
                 self.ncq.slots.release(slot_req)
                 break

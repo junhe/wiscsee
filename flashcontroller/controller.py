@@ -295,6 +295,7 @@ class Controller3(Controller):
         yield self.env.process( self.execute_request_list(flash_reqs, tag) )
 
     def execute_request(self, flash_request, tag):
+        self.recorder.count_me('flash_ops', flash_request.operation)
         if flash_request.operation == OP_READ:
             yield self.env.process(
                     self.read_page(addr = flash_request.addr, tag = tag))
