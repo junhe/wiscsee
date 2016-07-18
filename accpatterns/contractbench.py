@@ -181,12 +181,14 @@ class Locality(RequestScale):
     pass
 
 
-class GroupByInvTimeAtAccTime(object):
-    def __init__(self, space_size, traffic_size, chunk_size, grouping):
+class GroupByInvTimeAtAccTime(BarrierMixin):
+    def __init__(self, space_size, traffic_size, chunk_size, grouping,
+            n_ncq_slots):
         self.space_size = space_size
         self.traffic_size = traffic_size
         self.chunk_size = chunk_size
         self.grouping = grouping
+        self.n_ncq_slots = n_ncq_slots
 
     def _get_reqs(self, start, op, stride_size):
         n_chunks = self.traffic_size / self.chunk_size
@@ -199,7 +201,7 @@ class GroupByInvTimeAtAccTime(object):
 
         return reqs
 
-    def __iter__(self):
+    def interest_workload(self):
         reqs1 = self._get_reqs(0, OP_WRITE, 2 * self.chunk_size)
         reqs_discard = self._get_reqs(0, OP_DISCARD, 2 * self.chunk_size)
 
@@ -215,6 +217,112 @@ class GroupByInvTimeAtAccTime(object):
 
         for req in reqs:
             yield req
+
+    def snapshot_before_interest(self):
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='interest_workload_start')
+
+        yield hostevent.ControlEvent(operation=OP_REC_FLASH_OP_CNT,
+                arg1='flash_ops_before_interest')
+
+        yield hostevent.ControlEvent(operation=OP_REC_FOREGROUND_OP_CNT,
+                arg1='logical_ops_before_interest')
+
+        yield hostevent.ControlEvent(operation=OP_REC_CACHE_HITMISS,
+                arg1='hitmiss_before_interest')
+
+    def snapshot_after_interest(self):
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='interest_workload_end')
+
+        yield hostevent.ControlEvent(operation=OP_REC_FLASH_OP_CNT,
+                arg1='flash_ops_after_interest')
+
+        yield hostevent.ControlEvent(operation=OP_REC_FOREGROUND_OP_CNT,
+                arg1='logical_ops_after_interest')
+
+        yield hostevent.ControlEvent(operation=OP_REC_CACHE_HITMISS,
+                arg1='hitmiss_after_interest')
+
+    def snapshot_before_gc(self):
+        yield hostevent.ControlEvent(operation=OP_REC_FLASH_OP_CNT,
+                arg1='flash_ops_before_gc')
+
+        yield hostevent.ControlEvent(operation=OP_REC_FOREGROUND_OP_CNT,
+                arg1='logical_ops_before_gc')
+
+        yield hostevent.ControlEvent(operation=OP_REC_CACHE_HITMISS,
+                arg1='hitmiss_before_gc')
+
+    def snapshot_after_gc(self):
+        yield hostevent.ControlEvent(operation=OP_REC_FLASH_OP_CNT,
+                arg1='flash_ops_after_gc')
+
+        yield hostevent.ControlEvent(operation=OP_REC_FOREGROUND_OP_CNT,
+                arg1='logical_ops_after_gc')
+
+        yield hostevent.ControlEvent(operation=OP_REC_CACHE_HITMISS,
+                arg1='hitmiss_after_gc')
+
+    def __iter__(self):
+        for req in self.snapshot_before_interest():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        # interest workload
+        for req in self.interest_workload():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.snapshot_after_interest():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.snapshot_before_gc():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.clean():
+            yield req
+
+        for req in self.snapshot_after_gc():
+            yield req
+
+    def clean(self):
+        # barrier
+        for req in self.barrier_events():
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
+
+        # barrier
+        for req in self.barrier_events():
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_end')
+
+        # barrier
+        for req in self.barrier_events():
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_CALC_GC_DURATION)
+
 
 class GroupByInvTimeInSpace(object):
     def __init__(self, space_size, traffic_size, chunk_size, grouping):

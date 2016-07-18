@@ -398,6 +398,7 @@ def contract_bench():
                 conf['n_ncq_slots'] = self.para.ncq_depth
             elif classname == 'GroupByInvTimeAtAccTime':
                 conf['space_size'] = self.para.flashbytes
+                conf['n_ncq_slots'] = self.para.ncq_depth
             elif classname == 'GroupByInvTimeInSpace':
                 conf['space_size'] = self.para.flashbytes
 
@@ -496,23 +497,23 @@ def contract_bench():
 
         return parameter_combs
 
-    def gen_parameters_contract_grouping():
+    def gen_parameters_contract_grouping_in_timeline():
+        flashbytes = 1*GB
         expname = get_expname()
         para_dict = {
                 'expname'        : [expname],
-                'ncq_depth'      : [4],
+                'ncq_depth'      : [16],
                 'bench'          : [],
                 'cache_mapped_data_bytes' :[flashbytes],
                 'flashbytes'     : [flashbytes],
                 'stripe_size'    : [1,],
                 }
 
-        name = 'GroupByInvTimeInSpace'
-        # name = 'GroupByInvTimeAtAccTime'
+        name = 'GroupByInvTimeAtAccTime'
         for grouping in [True, False]:
             d = {'name': name,
-                     'conf': {'traffic_size': 8*MB,
-                             'chunk_size': 4*KB,
+                     'conf': {'traffic_size': 4*MB,
+                             'chunk_size': 128*KB,
                              'grouping': grouping
                              }}
             para_dict['bench'].append(d)
@@ -524,8 +525,8 @@ def contract_bench():
 
     # parameters = gen_parameters_contract_alignment()
     # parameters = gen_parameters_contract_requestscale()
-    parameters = gen_parameters_contract_locality()
-    # parameters = gen_parameters_contract_grouping()
+    # parameters = gen_parameters_contract_locality()
+    parameters = gen_parameters_contract_grouping_in_timeline()
 
     cnt = 0
     for i, para in enumerate(parameters):
