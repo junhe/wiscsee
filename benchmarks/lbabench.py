@@ -512,8 +512,8 @@ def contract_bench():
         name = 'GroupByInvTimeAtAccTime'
         for grouping in [True, False]:
             d = {'name': name,
-                     'conf': {'traffic_size': 4*MB,
-                             'chunk_size': 128*KB,
+                     'conf': {'traffic_size': 64*MB,
+                             'chunk_size': 2*KB,
                              'grouping': grouping
                              }}
             para_dict['bench'].append(d)
