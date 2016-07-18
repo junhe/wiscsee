@@ -141,6 +141,13 @@ class Ssd(SsdBase):
                 self.recorder.set_result_by_one_key(host_event.arg1,
                         traffic)
 
+            elif operation == OP_REC_CACHE_HITMISS:
+                result_dict = self.recorder.get_result_summary()
+                data = copy.deepcopy(
+                    result_dict['general_accumulator'].get('Mapping_Cache', {}))
+                self.recorder.set_result_by_one_key(host_event.arg1,
+                        data)
+
             elif operation == OP_END_SSD_PROCESS:
                 self.ncq.slots.release(slot_req)
                 break

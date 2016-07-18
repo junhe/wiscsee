@@ -111,6 +111,9 @@ class RequestScale(BarrierMixin):
         yield hostevent.ControlEvent(operation=OP_REC_FOREGROUND_OP_CNT,
                 arg1='logical_ops_before_interest')
 
+        yield hostevent.ControlEvent(operation=OP_REC_CACHE_HITMISS,
+                arg1='hitmiss_before_interest')
+
         # barrier
         for req in self.barrier_events():
             yield req
@@ -133,12 +136,8 @@ class RequestScale(BarrierMixin):
         yield hostevent.ControlEvent(operation=OP_REC_FOREGROUND_OP_CNT,
                 arg1='logical_ops_after_interest')
 
-
-        yield hostevent.ControlEvent(operation=OP_REC_FLASH_OP_CNT,
-                arg1='flash_ops_before_gc')
-
-        yield hostevent.ControlEvent(operation=OP_REC_FOREGROUND_OP_CNT,
-                arg1='logical_ops_before_gc')
+        yield hostevent.ControlEvent(operation=OP_REC_CACHE_HITMISS,
+                arg1='hitmiss_after_interest')
 
         if self.op == OP_WRITE:
             for req in self.discard_half(offset_history):
@@ -151,6 +150,19 @@ class RequestScale(BarrierMixin):
             for req in self.purge_cache():
                 yield req
 
+            yield hostevent.ControlEvent(operation=OP_REC_FLASH_OP_CNT,
+                    arg1='flash_ops_before_gc')
+
+            yield hostevent.ControlEvent(operation=OP_REC_FOREGROUND_OP_CNT,
+                    arg1='logical_ops_before_gc')
+
+            yield hostevent.ControlEvent(operation=OP_REC_CACHE_HITMISS,
+                    arg1='hitmiss_before_gc')
+
+            # barrier
+            for req in self.barrier_events():
+                yield req
+
             for req in self.clean():
                 yield req
 
@@ -160,6 +172,8 @@ class RequestScale(BarrierMixin):
             yield hostevent.ControlEvent(operation=OP_REC_FOREGROUND_OP_CNT,
                     arg1='logical_ops_after_gc')
 
+            yield hostevent.ControlEvent(operation=OP_REC_CACHE_HITMISS,
+                    arg1='hitmiss_after_gc')
 
 
 
