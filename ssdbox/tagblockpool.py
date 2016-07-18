@@ -52,8 +52,8 @@ class BlockPoolWithCurBlocks(TagBlockPool):
         super(BlockPoolWithCurBlocks, self).__init__(n, tags)
         self._n_pages_per_block = n_pages_per_block
 
-        # {TAG1: {0: CurrentBlock, 1: CurrentBlock},
-        #  TAG2: {0: CurrentBlock, 1: CurrentBlock}}
+        # {TAG1: {0: CurrentBlock obj, 1: CurrentBlock obj},
+        #  TAG2: {0: CurrentBlock obj, 1: CurrentBlock obj}}
         self._cur_blocks = {tag:{} for tag in tags}
 
     def get_cur_block_obj(self, tag, block_index=None):
@@ -79,6 +79,18 @@ class BlockPoolWithCurBlocks(TagBlockPool):
         else:
             ppns = cur_block_obj.next_ppns(n)
             return ppns
+
+    def remove_full_cur_blocks(self):
+        """
+        If cur block is full, we mark it as NON cur block. So garbage collector
+        can clean it.
+        """
+        for tag, cur_obj_dict in self._cur_blocks.items():
+            to_del_block_index = [
+                    block_index for block_index, obj in cur_obj_dict.items()
+                    if obj.is_full()]
+            for block_index in to_del_block_index:
+                del cur_obj_dict[block_index]
 
     def set_new_cur_block(self, tag, block_index, blocknum):
         """

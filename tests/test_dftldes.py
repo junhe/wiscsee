@@ -1792,7 +1792,7 @@ class TestTransBlockCleaner(unittest.TestCase):
         n_tp = conf.total_translation_pages()
 
         # try to evict many so we have a used translation block
-        yield env.process(self.evict(env, mappings, 0, k, n))
+        yield env.process(self.evict(env, mappings, 0, k, n/2))
 
         victim_blocks = list(victims.iterator_verbose())
         valid_ratio, block_type, victim_block = victim_blocks[0]
@@ -2021,7 +2021,7 @@ class TestCleaningTransBlocksByCleaner(unittest.TestCase):
         n_tp = conf.total_translation_pages()
 
         # try to evict many so we have a used translation block
-        yield env.process(self.evict(env, mappings, 0, k, n))
+        yield env.process(self.evict(env, mappings, 0, k, n/2))
 
         victim_blocks = list(victims.iterator_verbose())
         valid_ratio, block_type, victim_block = victim_blocks[0]
@@ -2282,12 +2282,10 @@ class TestCleaning4Channel(unittest.TestCase):
         yield env.process(dftl.write_ext(Extent(0, n)))
         yield env.process(dftl.write_ext(Extent(0, n)))
 
-        yield env.process(dftl.write_ext(Extent(0, n)))
-        yield env.process(dftl.write_ext(Extent(0, n)))
-        yield env.process(dftl.write_ext(Extent(0, n)))
-        yield env.process(dftl.write_ext(Extent(0, n)))
-
-
+        # yield env.process(dftl.write_ext(Extent(0, n)))
+        # yield env.process(dftl.write_ext(Extent(0, n)))
+        # yield env.process(dftl.write_ext(Extent(0, n)))
+        # yield env.process(dftl.write_ext(Extent(0, n)))
 
         victim_blocks = list(victims.iterator_verbose())
 

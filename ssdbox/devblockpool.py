@@ -79,6 +79,10 @@ class MultiChannelBlockPool(object):
 
         return blocknums
 
+    def remove_full_cur_blocks(self):
+        for pool in self._channel_pool:
+            pool.remove_full_cur_blocks()
+
     def next_ppns(self, n, tag, block_index, stripe_size):
         """
         We will try to use all the available pages in the one channels'

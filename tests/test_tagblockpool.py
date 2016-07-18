@@ -104,6 +104,26 @@ class TestBlockPoolWithCurBlocks(unittest.TestCase):
         for ppn in ppnlist1:
             self.assertNotIn(ppn, ppnlist2)
 
+    def test_remove_full_cur_blocks(self):
+        pool = BlockPoolWithCurBlocks(100, [TDATA], 8)
+        new_block = pool.pick_and_move(src=TFREE, dst=TDATA)
+        pool.set_new_cur_block(TDATA, block_index=0, blocknum=new_block)
+        ppnlist1 = pool.next_ppns_from_cur_block(n=8, tag=TDATA, block_index=0)
+
+        curblock = pool.get_cur_block_obj(tag=TDATA, block_index=0)
+        self.assertEqual(curblock.is_full(), True)
+        self.assertEqual(len(pool.get_cur_block_obj(tag=TDATA)), 1)
+
+        pool.remove_full_cur_blocks()
+        self.assertEqual(len(pool.get_cur_block_obj(tag=TDATA)), 0)
+
+        new_block = pool.pick_and_move(src=TFREE, dst=TDATA)
+        pool.set_new_cur_block(TDATA, block_index=0, blocknum=new_block)
+        ppnlist1 = pool.next_ppns_from_cur_block(n=8, tag=TDATA, block_index=0)
+        self.assertEqual(len(ppnlist1), 8)
+        self.assertEqual(pool.count_blocks(tag=TDATA), 2)
+        self.assertEqual(pool.count_blocks(tag=TFREE), 98)
+
     def test_next_ppns_from_cur_block_all(self):
         pool = BlockPoolWithCurBlocks(100, [TDATA], 8)
 

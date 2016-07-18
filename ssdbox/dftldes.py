@@ -1270,6 +1270,7 @@ class VictimBlocks(object):
     def _form_tuples(self, used_blocks, block_type):
         assert block_type in (self.TYPE_DATA, self.TYPE_TRANS)
 
+        self._block_pool.remove_full_cur_blocks()
         cur_blocks = self._block_pool.current_blocks()
 
         victim_candidates = []

@@ -158,6 +158,31 @@ class TestMultiChannelBlockPool(unittest.TestCase):
         for ppn in ppns:
             self.assertIn(ppn / 32, cur_blocks)
 
+    def test_remove_full_cur_blocks(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        # should use 1 block in each channel
+        ppns = pool.next_ppns(n=8*32, tag=TDATA, block_index=0, stripe_size=1)
+        self.assertEqual(len(ppns), 8*32)
+
+        cur_blocks = pool.current_blocks()
+        channels = set()
+        for block in cur_blocks:
+            channel_id, blockoff = pool.global_to_channel(block)
+            channels.add(channel_id)
+        self.assertEqual(len(channels), 8)
+
+        # ppns are from the current blocks
+        for ppn in ppns:
+            self.assertIn(ppn / 32, cur_blocks)
+
+        pool.remove_full_cur_blocks()
+        self.assertEqual(len(pool.current_blocks()), 0)
+
     def test_next_ppns_wrap_around(self):
         pool = MultiChannelBlockPool(
                 n_channels=8,

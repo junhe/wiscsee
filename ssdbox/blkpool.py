@@ -114,4 +114,7 @@ class BlockPool(object):
         nfree = self.pool.count_blocks(tag=TFREE)
         return nfree
 
+    def remove_full_cur_blocks(self):
+        self.pool.remove_full_cur_blocks()
+
 
