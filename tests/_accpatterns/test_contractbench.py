@@ -84,13 +84,13 @@ class TestRequestScale(unittest.TestCase):
 class TestGroupByInvTimeAtAccTime(unittest.TestCase):
     def test_init(self):
         bench = GroupByInvTimeAtAccTime(space_size=128*MB, traffic_size=128*MB,
-                chunk_size=4*KB, grouping=True)
+                chunk_size=4*KB, grouping=True, n_ncq_slots=16)
 
     def test_group_by_time(self):
         bench = GroupByInvTimeAtAccTime(space_size=32, traffic_size=4,
-                chunk_size=2, grouping=True)
+                chunk_size=2, grouping=True, n_ncq_slots=16)
 
-        reqs = list(bench)
+        reqs = [req for req in list(bench) if isinstance(req, Request)]
         self.assertEqual(len(reqs), 6)
 
         offs = [req.offset for req in reqs]
@@ -105,9 +105,9 @@ class TestGroupByInvTimeAtAccTime(unittest.TestCase):
 
     def test_not_group_by_time(self):
         bench = GroupByInvTimeAtAccTime(space_size=32, traffic_size=4,
-                chunk_size=2, grouping=False)
+                chunk_size=2, grouping=False, n_ncq_slots=16)
 
-        reqs = list(bench)
+        reqs = [req for req in list(bench) if isinstance(req, Request)]
         self.assertEqual(len(reqs), 6)
 
         offs = [req.offset for req in reqs]

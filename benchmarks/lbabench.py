@@ -522,7 +522,6 @@ def contract_bench():
 
         return parameter_combs
 
-
     # parameters = gen_parameters_contract_alignment()
     # parameters = gen_parameters_contract_requestscale()
     # parameters = gen_parameters_contract_locality()
