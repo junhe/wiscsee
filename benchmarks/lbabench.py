@@ -401,6 +401,7 @@ def contract_bench():
                 conf['n_ncq_slots'] = self.para.ncq_depth
             elif classname == 'GroupByInvTimeInSpace':
                 conf['space_size'] = self.para.flashbytes
+                conf['n_ncq_slots'] = self.para.ncq_depth
 
             conf.update(self.para.bench['conf'])
 
@@ -408,6 +409,7 @@ def contract_bench():
             self.conf['ftl_type'] = 'dftldes'
             self.conf['simulator_class'] = 'SimulatorDESNew'
             self.conf['stripe_size'] = self.para.stripe_size
+            self.conf['segment_bytes'] = self.para.segment_bytes
 
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
             self.conf.set_flash_num_blocks_by_bytes(self.para.flashbytes)
@@ -439,6 +441,7 @@ def contract_bench():
                 'cache_mapped_data_bytes' :[flashbytes],
                 'flashbytes'     : [flashbytes],
                 'stripe_size'    : [1,],
+                'segment_bytes'  : [flashbytes]
                 }
         parameter_combs = ParameterCombinations(para_dict)
 
@@ -457,6 +460,7 @@ def contract_bench():
                 'cache_mapped_data_bytes' :[flashbytes],
                 'flashbytes'     : [flashbytes],
                 'stripe_size'    : [1,],
+                'segment_bytes'  : [flashbytes]
                 }
 
         mode = 'count'
@@ -484,6 +488,7 @@ def contract_bench():
                 'cache_mapped_data_bytes' :[128*MB],
                 'flashbytes'     : [flashbytes],
                 'stripe_size'    : [1,],
+                'segment_bytes'  : [flashbytes]
                 }
 
         for space_size in [4*GB, 2*GB, 512*MB, 256*MB]:
@@ -507,13 +512,40 @@ def contract_bench():
                 'cache_mapped_data_bytes' :[flashbytes],
                 'flashbytes'     : [flashbytes],
                 'stripe_size'    : [1,],
+                'segment_bytes'  : [flashbytes],
                 }
 
         name = 'GroupByInvTimeAtAccTime'
         for grouping in [True, False]:
             d = {'name': name,
                      'conf': {'traffic_size': 64*MB,
-                             'chunk_size': 2*KB,
+                             'chunk_size': 128*KB,
+                             'grouping': grouping
+                             }}
+            para_dict['bench'].append(d)
+
+        parameter_combs = ParameterCombinations(para_dict)
+
+        return parameter_combs
+
+    def gen_parameters_contract_grouping_in_space():
+        flashbytes = 1*GB
+        expname = get_expname()
+        para_dict = {
+                'expname'        : [expname],
+                'ncq_depth'      : [16],
+                'bench'          : [],
+                'cache_mapped_data_bytes' :[flashbytes],
+                'flashbytes'     : [flashbytes],
+                'stripe_size'    : [1,],
+                'segment_bytes'  : [16*MB],
+                }
+
+        name = 'GroupByInvTimeInSpace'
+        for grouping in [True, False]:
+            d = {'name': name,
+                     'conf': {'traffic_size': 64*MB,
+                             'chunk_size': 128*KB,
                              'grouping': grouping
                              }}
             para_dict['bench'].append(d)
@@ -525,7 +557,8 @@ def contract_bench():
     # parameters = gen_parameters_contract_alignment()
     # parameters = gen_parameters_contract_requestscale()
     # parameters = gen_parameters_contract_locality()
-    parameters = gen_parameters_contract_grouping_in_timeline()
+    # parameters = gen_parameters_contract_grouping_in_timeline()
+    parameters = gen_parameters_contract_grouping_in_space()
 
     cnt = 0
     for i, para in enumerate(parameters):
