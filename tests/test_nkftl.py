@@ -2,6 +2,7 @@ import unittest
 import random
 
 from ssdbox.nkftl2 import *
+from ssdbox import flash
 import ssdbox
 import config
 from commons import *
@@ -758,8 +759,68 @@ class TestVictimBlocks(unittest.TestCase):
 
 
 class TestCleaningDataBlocks(unittest.TestCase):
-    def test_recycle_data(self):
-        pass
+    def test_init_gc(self):
+        conf = create_config()
+        conf['nkftl']['max_blocks_in_log_group'] = 4
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        logmaptable = LogMappingTable(conf, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
+        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
+        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+
+        gc = GarbageCollector(conf, block_pool, flash, oob, rec,
+                translator, helper, logmaptable, datablocktable)
+
+    def test_clean_data_blocks(self):
+        conf = create_config()
+        conf['nkftl']['max_blocks_in_log_group'] = 4
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        logmaptable = LogMappingTable(conf, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
+        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
+        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+
+        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
+                translator, helper, logmaptable, datablocktable)
+
+        lpb, blocknum = self.use_a_data_block(conf, block_pool, oob, datablocktable)
+
+        gc.recycle_empty_data_block(blocknum, tag="")
+
+        # states bitmap should be in 'erased' state
+
+
+
+        # oob ppn->lpn mapping should hold nothing
+        # blocknum should be free block in block_pool
+        # datablocktable should not hold mapping of blocknum
+        # not more victim blocks
+
+
+    def use_a_data_block(self, conf, block_pool, oob, datablocktable):
+        blocknum = block_pool.pop_a_free_block_to_data_blocks()
+        # mapping still exist
+        datablocktable.add_data_block_mapping(lbn=8, pbn=blocknum)
+
+        start, end = conf.block_to_page_range(blocknum)
+        for ppn in range(start, end):
+            oob.states.invalidate_page(ppn)
+
+        return lpb, blocknum
+
+    def use_a_data_block_no_mapping(self, conf, block_pool, oob, datablocktable):
+        blocknum = block_pool.pop_a_free_block_to_data_blocks()
+        start, end = conf.block_to_page_range(blocknum)
+        for ppn in range(start, end):
+            oob.states.invalidate_page(ppn)
+
+        return blocknum
 
 
 

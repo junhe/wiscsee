@@ -516,6 +516,7 @@ class LogGroupInfo(object):
         ret.append("cur_log_block:{}".format(self._cur_log_block))
         return '\n'.join(ret)
 
+
 class Translator(MappingBase):
     def __init__(self, confobj, recorderobj, global_helper_obj,
             log_mapping, data_block_mapping
