@@ -511,9 +511,9 @@ class LogGroupInfo(object):
         ret.append("cur_log_block:{}".format(self._cur_log_block))
         return '\n'.join(ret)
 
-class MappingManager(MappingBase):
+class Translator(MappingBase):
     def __init__(self, confobj, recorderobj, global_helper_obj):
-        super(MappingManager, self).__init__(confobj, recorderobj,
+        super(Translator, self).__init__(confobj, recorderobj,
             global_helper_obj)
         self.data_block_mapping_table = DataBlockMappingTable(confobj,
             recorderobj, global_helper_obj)
@@ -712,32 +712,29 @@ class BlockInfo(object):
 
 
 class VictimBlocks(object):
-    def __init__(self, conf, block_pool, oob, rec, mapping_manager):
+    def __init__(self, conf, block_pool, oob, rec, translator):
         self.conf = conf
         self.block_pool = block_pool
         self.oob = oob
         self.rec = rec
-        self.mapping_manager = mapping_manager
+        self.translator = translator
         self.priority_q = Queue.PriorityQueue()
 
         self.__init()
 
     def __init(self):
-        data_cnt = 0
-        for blocknum in self.block_pool.log_usedblocks:
-            if not self.oob.is_any_page_valid(blocknum):
-                # no page is valid
-                blk_info = BlockInfo(
-                    block_type = TYPE_LOG_BLOCK,
-                    block_num = blocknum,
-                    valid_ratio = self.oob.states.block_valid_ratio(blocknum),
-                    last_used_time = -1)  # high priority
-                self.priority_q.put(blk_info)
-                data_cnt += 1
+        # for blocknum in self.block_pool.log_usedblocks:
+            # if not self.oob.is_any_page_valid(blocknum):
+                # # no page is valid
+                # # TODO: why only handle blocks without valid pages?
+                # blk_info = BlockInfo(
+                    # block_type = TYPE_LOG_BLOCK,
+                    # block_num = blocknum,
+                    # valid_ratio = self.oob.states.block_valid_ratio(blocknum),
+                    # last_used_time = -1)  # high priority
+                # self.priority_q.put(blk_info)
 
-
-        log_cnt = 0
-        for data_group_no, log_group_info in self.mapping_manager\
+        for data_group_no, log_group_info in self.translator\
             .log_mapping_table.log_group_info.items():
             for log_pbn, single_log_block_info in \
                     log_group_info.log_blocks().items():
@@ -748,7 +745,6 @@ class VictimBlocks(object):
                     last_used_time = single_log_block_info.last_used_time,
                     data_group_no = data_group_no)
                 self.priority_q.put(blk_info)
-                log_cnt += 1
 
     def __iter__(self):
         while not self.priority_q.empty():
@@ -761,13 +757,13 @@ class VictimBlocks(object):
 
 class GarbageCollector(object):
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
-            mappingmanagerobj, global_helper_obj):
+            translatorobj, global_helper_obj):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
         self.block_pool = block_pool
         self.recorder = recorderobj
-        self.mapping_manager = mappingmanagerobj
+        self.translator = translatorobj
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
@@ -828,7 +824,7 @@ class GarbageCollector(object):
                 data_cnt += 1
 
         log_cnt = 0
-        for data_group_no, log_group_info in self.mapping_manager\
+        for data_group_no, log_group_info in self.translator\
             .log_mapping_table.log_group_info.items():
             for log_pbn, single_log_block_info in \
                     log_group_info.log_blocks().items():
@@ -866,7 +862,7 @@ class GarbageCollector(object):
             self.oob.erase_block(data_block)
             self.flash.block_erase(data_block, cat = tag)
             # need to remove data block mapping
-            self.mapping_manager.data_block_mapping_table\
+            self.translator.data_block_mapping_table\
                 .remove_data_block_mapping_by_pbn(data_block)
             self.block_pool.free_used_data_block(data_block)
 
@@ -880,7 +876,7 @@ class GarbageCollector(object):
             self.oob.erase_block(log_pbn)
             self.flash.block_erase(log_pbn, cat = tag)
             # remove log mapping
-            self.mapping_manager.log_mapping_table.remove_log_block(
+            self.translator.log_mapping_table.remove_log_block(
                 data_group_no = data_group_no,
                 log_pbn = log_pbn)
             self.block_pool.free_used_log_block(log_pbn)
@@ -902,7 +898,7 @@ class GarbageCollector(object):
 
         # Check to see if it is really the log block of the speicfed data
         # group
-        if log_pbn not in self.mapping_manager.log_mapping_table\
+        if log_pbn not in self.translator.log_mapping_table\
                 .log_group_info[data_group_no].log_blocks().keys():
             # TODO: maybe you should just return here instead of panic?
             raise RuntimeError("{} is not a log block of data group {}"\
@@ -913,7 +909,7 @@ class GarbageCollector(object):
             self.oob.erase_block(log_pbn)
             self.flash.block_erase(log_pbn, cat = tag)
             self.block_pool.free_used_log_block(log_pbn)
-            self.mapping_manager.log_mapping_table\
+            self.translator.log_mapping_table\
                 .remove_log_block(data_group_no = data_group_no,
                 log_pbn = log_pbn)
             return
@@ -950,7 +946,7 @@ class GarbageCollector(object):
         # because for example the first block may require full merge and the
         # second can be partial merged. Doing the full merge first may change
         # the states of the second log block and makes full merge impossible.
-        log_block_list = copy.copy(self.mapping_manager.log_mapping_table\
+        log_block_list = copy.copy(self.translator.log_mapping_table\
                 .log_group_info[data_group_no].log_blocks().keys())
         for log_block in log_block_list:
             # A log block may not be a log block anymore after the loop starts
@@ -1001,7 +997,7 @@ class GarbageCollector(object):
         print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
         print 'oob.states', self.oob.display_bitmap_by_block()
         print 'oob.ppn_to_lpn', self.oob.ppn_to_lpn
-        print str(self.mapping_manager)
+        print str(self.translator)
 
     def aggregate_logical_block(self, lbn, tag):
         """
@@ -1033,7 +1029,7 @@ class GarbageCollector(object):
             # print 'block_pool.log_usedblocks', self.block_pool.log_usedblocks
             # print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
             # print 'oob.states', self.oob.display_bitmap_by_block()
-            # print str(self.mapping_manager)
+            # print str(self.translator)
 
         # We have to make sure this does not fail, somehow.
         self.asserts()
@@ -1046,7 +1042,7 @@ class GarbageCollector(object):
                 in_block_page_off)
             data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
-            found, src_ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
+            found, src_ppn, loc = self.translator.lpn_to_ppn(lpn)
             if found == True and self.oob.states.is_page_valid(src_ppn):
                 data = self.flash.page_read(src_ppn, cat = tag)
                 self.flash.page_write(dst_ppn, cat = tag, data = data)
@@ -1061,7 +1057,7 @@ class GarbageCollector(object):
                 # Now you've moved lpn, you need to remove lpn mapping if it is
                 # in log blocks
                 if loc == IN_LOG_BLOCK:
-                    self.mapping_manager.log_mapping_table.remove_lpn(
+                    self.translator.log_mapping_table.remove_lpn(
                             data_group_no, lpn)
 
                 # After moving, you need to check if the source block of src_ppn
@@ -1076,11 +1072,11 @@ class GarbageCollector(object):
                     if loc == IN_DATA_BLOCK:
                         self.block_pool.free_used_data_block(src_pbn)
                         lbn, _ = self.conf.page_to_block_off(lpn)
-                        self.mapping_manager.data_block_mapping_table\
+                        self.translator.data_block_mapping_table\
                             .remove_data_block_mapping(lbn = lbn)
                     elif loc == IN_LOG_BLOCK:
                         self.block_pool.free_used_log_block(src_pbn)
-                        self.mapping_manager.log_mapping_table\
+                        self.translator.log_mapping_table\
                             .remove_log_block(data_group_no = data_group_no,
                             log_pbn = src_pbn)
             else:
@@ -1092,12 +1088,12 @@ class GarbageCollector(object):
 
         # Now we have all the pages in new block, we make the new block
         # the data block for lbn
-        found, old_pbn = self.mapping_manager.data_block_mapping_table\
+        found, old_pbn = self.translator.data_block_mapping_table\
             .lbn_to_pbn(lbn)
         if found == True:
             # old_pbn must not have any valid pages, so we free it
             self.recycle_empty_data_block(old_pbn, tag = tag)
-        self.mapping_manager.data_block_mapping_table.add_data_block_mapping(
+        self.translator.data_block_mapping_table.add_data_block_mapping(
             lbn = lbn, pbn = dst_phy_block_num)
 
         if global_debug:
@@ -1106,7 +1102,7 @@ class GarbageCollector(object):
             # print 'block_pool.log_usedblocks', self.block_pool.log_usedblocks
             # print 'block_pool.data_usedblocks', self.block_pool.data_usedblocks
             # print 'oob.states', self.oob.display_bitmap_by_block()
-            # print str(self.mapping_manager)
+            # print str(self.translator)
 
     def is_partial_mergable(self, log_pbn):
         """
@@ -1159,7 +1155,7 @@ class GarbageCollector(object):
 
                 # # the conent can be anywhere or not exist
                 # lpn = lpn_start + (ppn - ppn_start)
-                # has_it, tmp_ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
+                # has_it, tmp_ppn, loc = self.translator.lpn_to_ppn(lpn)
                 # if has_it == False or loc != IN_DATA_BLOCK or \
                     # not self.oob.states.is_page_valid(tmp_ppn):
                     # # ppn not exist
@@ -1191,7 +1187,7 @@ class GarbageCollector(object):
             lpn = self.conf.block_off_to_page(lbn, offset)
             dst_ppn = self.conf.block_off_to_page(log_pbn, offset)
 
-            found, src_ppn, location = self.mapping_manager.lpn_to_ppn(lpn)
+            found, src_ppn, location = self.translator.lpn_to_ppn(lpn)
             if not found or not self.oob.states.is_page_valid(src_ppn):
                 # the lpn does not exist
                 # 1. cannot find
@@ -1237,7 +1233,7 @@ class GarbageCollector(object):
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
 
                 # you need to remove lpn from log mapping here
-                self.mapping_manager.log_mapping_table.remove_lpn(
+                self.translator.log_mapping_table.remove_lpn(
                     data_group_no = data_group_no, lpn = lpn)
 
                 self.recycle_empty_log_block(data_group_no = data_group_no,
@@ -1245,18 +1241,18 @@ class GarbageCollector(object):
 
         # If there is an old data block, we need to recycle it because we
         # now have a new one.
-        found, old_pbn = self.mapping_manager.data_block_mapping_table\
+        found, old_pbn = self.translator.data_block_mapping_table\
             .lbn_to_pbn(lbn = lbn)
         if found:
             self.recycle_empty_data_block(old_pbn, tag = TAG_PARTIAL_MERGE)
 
         # Now the log block lgo_pbn has all the content of lbn
         # Now add the new mapping
-        self.mapping_manager.data_block_mapping_table\
+        self.translator.data_block_mapping_table\
             .add_data_block_mapping(lbn = lbn, pbn = log_pbn)
 
         # Remove log_pbn from log group
-        self.mapping_manager.log_mapping_table.remove_log_block(
+        self.translator.log_mapping_table.remove_log_block(
             data_group_no = data_group_no, log_pbn = log_pbn)
 
         # move from log pool to data pool
@@ -1310,7 +1306,7 @@ class GarbageCollector(object):
         self.recorder.count_me("garbage_collection", 'switch_merge')
 
         # erase old data block
-        found, old_physical_block = self.mapping_manager.data_block_mapping_table\
+        found, old_physical_block = self.translator.data_block_mapping_table\
             .lbn_to_pbn(logical_block)
 
         if found:
@@ -1318,18 +1314,18 @@ class GarbageCollector(object):
             self.oob.erase_block(old_physical_block)
             self.flash.block_erase(old_physical_block, cat = TAG_SWITCH_MERGE)
             self.block_pool.free_used_data_block(old_physical_block)
-            # self.mapping_manager.data_block_mapping_table.remove_mapping(
+            # self.translator.data_block_mapping_table.remove_mapping(
                 # logical_block)
 
         # update data block mapping table
         # This will override the old mapping if there is one
-        self.mapping_manager.data_block_mapping_table.add_data_block_mapping(
+        self.translator.data_block_mapping_table.add_data_block_mapping(
             logical_block, log_pbn)
 
         # Update log mapping table
         data_group_no = self.conf.nkftl_data_group_number_of_logical_block(
                 logical_block)
-        self.mapping_manager.log_mapping_table.remove_log_block(
+        self.translator.log_mapping_table.remove_log_block(
                 data_group_no = data_group_no,
                 log_pbn = log_pbn)
         # Need to mark the log block as used data block now
@@ -1337,10 +1333,10 @@ class GarbageCollector(object):
 
     def assert_mapping(self, lpn):
         # Try log blocks
-        log_found, log_ppn = self.mapping_manager.log_mapping_table.lpn_to_ppn(lpn)
+        log_found, log_ppn = self.translator.log_mapping_table.lpn_to_ppn(lpn)
 
         # Try data blocks
-        data_found, data_ppn = self.mapping_manager.data_block_mapping_table\
+        data_found, data_ppn = self.translator.data_block_mapping_table\
             .lpn_to_ppn(lpn)
 
         if log_found == True and self.oob.states.is_page_valid(log_ppn) and \
@@ -1352,7 +1348,7 @@ class GarbageCollector(object):
         # number of log blocks in logblockinfo should be equal to
         # used log blocks in block_pool
         log_block_cnt = 0
-        for dgn, loggroupinfo in self.mapping_manager.log_mapping_table\
+        for dgn, loggroupinfo in self.translator.log_mapping_table\
             .log_group_info.items():
             logblocks = loggroupinfo.log_blocks()
             log_block_cnt += len(logblocks)
@@ -1369,7 +1365,7 @@ class GarbageCollector(object):
 
         # number of data blocks in data_block_mapping_table should be equal to
         # used data blocks in block_pool
-        data_blocks_in_map = len(self.mapping_manager.data_block_mapping_table\
+        data_blocks_in_map = len(self.translator.data_block_mapping_table\
             .logical_to_physical_block)
         if not data_blocks_in_map == len(self.block_pool.data_usedblocks):
             raise RuntimeError(
@@ -1421,7 +1417,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.global_helper = GlobalHelper(confobj)
 
         ###### the managers ######
-        self.mapping_manager = MappingManager(
+        self.translator = Translator(
             confobj = self.conf,
             recorderobj = recorderobj,
             global_helper_obj = self.global_helper
@@ -1434,13 +1430,13 @@ class Ftl(ftlbuilder.FtlBuilder):
             flashobj = self.flash,
             oobobj = self.oob,
             recorderobj = recorderobj,
-            mappingmanagerobj = self.mapping_manager,
+            translatorobj = self.translator,
             global_helper_obj = self.global_helper
             )
         self.tmpcnt = 0
 
     def lpn_to_ppn(self, lpn):
-        found, ppn, location = self.mapping_manager.lpn_to_ppn(lpn)
+        found, ppn, location = self.translator.lpn_to_ppn(lpn)
         if found == True and self.oob.states.is_page_valid(ppn):
             return found, ppn, location
         return False, None, None
@@ -1458,7 +1454,7 @@ class Ftl(ftlbuilder.FtlBuilder):
             if loc == IN_LOG_BLOCK:
                 phy_block_num, _ = self.conf.page_to_block_off(ppn)
                 data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
-                self.mapping_manager.log_mapping_table\
+                self.translator.log_mapping_table\
                     .log_group_info[data_group_no]\
                     .update_block_use_time(phy_block_num)
         else:
@@ -1484,20 +1480,20 @@ class Ftl(ftlbuilder.FtlBuilder):
 
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
-        found, new_ppn = self.mapping_manager.log_mapping_table\
+        found, new_ppn = self.translator.log_mapping_table\
                 .next_ppn_to_program(data_group_no)
 
         # loop until we find a new ppn to program
         while found == False:
             if new_ppn == ERR_NEED_NEW_BLOCK:
                 new_block = self.block_pool.pop_a_free_block_to_log_blocks()
-                self.mapping_manager.log_mapping_table.add_log_block(
+                self.translator.log_mapping_table.add_log_block(
                     data_group_no, new_block)
             elif new_ppn == ERR_NEED_MERGING:
                 self.garbage_collector.clean_data_group(
                     data_group_no)
 
-            found, new_ppn = self.mapping_manager.log_mapping_table\
+            found, new_ppn = self.translator.log_mapping_table\
                 .next_ppn_to_program(data_group_no)
 
         # find old ppn, we have to invalidate it
@@ -1505,7 +1501,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         # We have to find the old_ppn right before writing the new one.
         # We cannot do it before the loop above because merging may change
         # the location of the old ppn
-        found, old_ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
+        found, old_ppn, loc = self.translator.lpn_to_ppn(lpn)
         if found == False:
             old_ppn = None
 
@@ -1517,19 +1513,19 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.flash.page_write(new_ppn, cat = TAG_FORGROUND, data = data)
 
         phy_block, _ = self.conf.page_to_block_off(new_ppn)
-        self.mapping_manager.log_mapping_table\
+        self.translator.log_mapping_table\
             .log_group_info[data_group_no]\
             .update_block_use_time(phy_block)
 
         # this may just update the current mapping, instead of 'add'ing.
-        self.mapping_manager.log_mapping_table.add_mapping(data_group_no,
+        self.translator.log_mapping_table.add_mapping(data_group_no,
             lpn, new_ppn)
 
         # print 'AFTER WRITE block_pool.freeblocks', self.block_pool.freeblocks
         # print 'AFTER WRITE block_pool.log_usedblocks', self.block_pool.log_usedblocks
         # print 'AFTER WRITE block_pool.data_usedblocks', self.block_pool.data_usedblocks
         # print 'AFTER WRITE oob.states', self.oob.display_bitmap_by_block()
-        # print 'AFTER WRITE mappings', str(self.mapping_manager)
+        # print 'AFTER WRITE mappings', str(self.translator)
 
         self.garbage_collector.try_gc()
 
@@ -1538,10 +1534,10 @@ class Ftl(ftlbuilder.FtlBuilder):
 
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
-        found, ppn, loc = self.mapping_manager.lpn_to_ppn(lpn)
+        found, ppn, loc = self.translator.lpn_to_ppn(lpn)
         if found == True:
             if loc == IN_LOG_BLOCK:
-                self.mapping_manager.log_mapping_table.remove_lpn(
+                self.translator.log_mapping_table.remove_lpn(
                     data_group_no, lpn)
             self.oob.wipe_ppn(ppn)
 

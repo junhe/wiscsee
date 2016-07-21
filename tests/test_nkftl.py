@@ -60,7 +60,7 @@ def create_loggroupinfo(conf, rec, globalhelper):
     return LogGroupInfo(conf, rec, globalhelper)
 
 def create_mappingmanager(conf, rec, globalhelper):
-    return MappingManager(conf, rec, globalhelper)
+    return Translator(conf, rec, globalhelper)
 
 class TestNkftl(unittest.TestCase):
     def test_init(self):
@@ -656,6 +656,7 @@ class TestVictimBlocks(unittest.TestCase):
 
         self.assertEqual(cnt, 0)
 
+    @unittest.skip("")
     def test_one_victim_blocks(self):
         conf = create_config()
         block_pool = BlockPool(conf)
@@ -664,7 +665,7 @@ class TestVictimBlocks(unittest.TestCase):
         helper = create_global_helper(conf)
         mapping = create_mappingmanager(conf, rec, helper)
 
-        # use one blocks
+        # use one block
         self.use_a_log_block(conf, oob, block_pool)
 
         # check the block
@@ -680,6 +681,15 @@ class TestVictimBlocks(unittest.TestCase):
             states.invalidate_page(ppn)
 
 
+    def test_log_used(self):
+        conf = create_config()
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        mapping = create_mappingmanager(conf, rec, helper)
+
+        mapping.
 
 
 
