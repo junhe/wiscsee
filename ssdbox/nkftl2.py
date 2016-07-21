@@ -152,8 +152,6 @@ class OutOfBandAreas(object):
 
         # Key data structures
         self.states = FlashBitmap2(confobj)
-        # ppn->lpn mapping stored in OOB, Note that for translation pages, this
-        # mapping is ppn -> m_vpn
         self.ppn_to_lpn = {}
 
     def display_bitmap_by_block(self):

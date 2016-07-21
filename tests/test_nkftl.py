@@ -247,7 +247,6 @@ class TestWithSimulator(unittest.TestCase):
         self.my_run()
 
 
-
 class TestBlockInfo(unittest.TestCase):
     def test_init(self):
         blkinfo = BlockInfo(block_type=TYPE_DATA_BLOCK,
@@ -264,6 +263,129 @@ class TestBlockInfo(unittest.TestCase):
                 data_group_no=8)
 
         self.assertTrue(blkinfo1 < blkinfo2)
+
+
+class TestSingleLogBlockInfo(unittest.TestCase):
+    def test_init(self):
+        conf = create_config()
+        blkinfo = SingleLogBlockInfo(conf, 7, last_used_time=8,
+                last_programmed_offset=1)
+
+    def test_next_ppn(self):
+        conf = create_config()
+        blkinfo = SingleLogBlockInfo(conf, 7, last_used_time=8)
+
+        n_pages_per_block = conf.n_pages_per_block
+        gotit, ppn = blkinfo.next_ppn_to_program()
+        self.assertTrue(gotit)
+        self.assertEqual(ppn, 7*n_pages_per_block)
+
+        gotit, ppn = blkinfo.next_ppn_to_program()
+        self.assertTrue(gotit)
+        self.assertEqual(ppn, 7*n_pages_per_block+1)
+
+    def test_has_free_page(self):
+        conf = create_config()
+        blkinfo = SingleLogBlockInfo(conf, 7, last_used_time=8)
+
+        self.assertTrue(blkinfo.has_free_page())
+
+        n_pages_per_block = conf.n_pages_per_block
+        for i in range(n_pages_per_block):
+            self.assertTrue(blkinfo.has_free_page())
+            ppn = blkinfo.next_ppn_to_program()
+
+        self.assertFalse(blkinfo.has_free_page())
+
+
+class TestOutOfBandAreas(unittest.TestCase):
+    def test_init(self):
+        conf = create_config()
+        oob = OutOfBandAreas(conf)
+
+        self.assertEqual(len(oob.ppn_to_lpn), 0)
+
+    def test_remap(self):
+        conf = create_config()
+        oob = OutOfBandAreas(conf)
+
+        oob.remap(lpn=8, old_ppn=None, new_ppn=88)
+        self.assertEqual(oob.translate_ppn_to_lpn(88), 8)
+        self.assertEqual(oob.states.is_page_valid(88), True)
+
+        oob.remap(lpn=8, old_ppn=88, new_ppn=89)
+        self.assertEqual(oob.translate_ppn_to_lpn(89), 8)
+        self.assertEqual(oob.translate_ppn_to_lpn(88), 8)
+        self.assertEqual(oob.states.is_page_valid(88), False)
+        self.assertEqual(oob.states.is_page_valid(89), True)
+
+    def test_wipe_ppn(self):
+        conf = create_config()
+        oob = OutOfBandAreas(conf)
+
+        oob.remap(lpn=8, old_ppn=None, new_ppn=88)
+        self.assertEqual(oob.translate_ppn_to_lpn(88), 8)
+        self.assertEqual(oob.states.is_page_valid(88), True)
+
+        oob.wipe_ppn(ppn=88)
+        self.assertEqual(oob.translate_ppn_to_lpn(88), 8)
+        self.assertEqual(oob.states.is_page_valid(88), False)
+
+    def test_erase_block(self):
+        conf = create_config()
+        oob = OutOfBandAreas(conf)
+
+        n_pages_per_block = conf.n_pages_per_block
+
+        ppns = range(1*n_pages_per_block, 1*n_pages_per_block+3)
+        for lpn, ppn in zip([3, 88, 23], ppns):
+            oob.remap(lpn=lpn, old_ppn=None, new_ppn=ppn)
+
+        oob.erase_block(1)
+
+        self.assertEqual(len(oob.ppn_to_lpn), 0)
+        for ppn in ppns:
+            self.assertTrue(oob.states.is_page_erased(ppn))
+
+    def test_lpns_of_block(self):
+        conf = create_config()
+        oob = OutOfBandAreas(conf)
+
+        n_pages_per_block = conf.n_pages_per_block
+
+        lpns = [3, 88, 23]
+        ppns = range(1*n_pages_per_block, 1*n_pages_per_block+3)
+        for lpn, ppn in zip(lpns, ppns):
+            oob.remap(lpn=lpn, old_ppn=None, new_ppn=ppn)
+
+        lpns_with_na = lpns + ['NA'] * (n_pages_per_block - 3)
+        self.assertListEqual(sorted(oob.lpns_of_block(1)), sorted(lpns_with_na))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
