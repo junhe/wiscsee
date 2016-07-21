@@ -418,6 +418,11 @@ class LogGroupInfo(object):
     def log_blocks(self):
         return self._log_blocks
 
+    def victim_candidates(self):
+        for log_pbn, singleblockinfo in self._log_blocks.items():
+            if log_pbn != self._cur_log_block:
+                yield log_pbn, singleblockinfo
+
     def add_mapping(self, lpn, ppn):
         """
         Note that this function may overwrite existing mapping. If later you
@@ -711,40 +716,18 @@ class BlockInfo(object):
         return cmp(self.last_used_time, other.last_used_time)
 
 
-class VictimBlocks(object):
-    def __init__(self, conf, block_pool, oob, rec, translator):
+class VictimBlocksBase(object):
+    def __init__(self, conf, block_pool, oob, rec, log_mapping_table,
+            data_block_mapping_table):
         self.conf = conf
         self.block_pool = block_pool
         self.oob = oob
         self.rec = rec
-        self.translator = translator
         self.priority_q = Queue.PriorityQueue()
+        self.log_mapping = log_mapping_table
+        self.data_mapping = data_block_mapping_table
 
-        self.__init()
-
-    def __init(self):
-        # for blocknum in self.block_pool.log_usedblocks:
-            # if not self.oob.is_any_page_valid(blocknum):
-                # # no page is valid
-                # # TODO: why only handle blocks without valid pages?
-                # blk_info = BlockInfo(
-                    # block_type = TYPE_LOG_BLOCK,
-                    # block_num = blocknum,
-                    # valid_ratio = self.oob.states.block_valid_ratio(blocknum),
-                    # last_used_time = -1)  # high priority
-                # self.priority_q.put(blk_info)
-
-        for data_group_no, log_group_info in self.translator\
-            .log_mapping_table.log_group_info.items():
-            for log_pbn, single_log_block_info in \
-                    log_group_info.log_blocks().items():
-                blk_info = BlockInfo(
-                    block_type = TYPE_LOG_BLOCK,
-                    block_num = log_pbn,
-                    valid_ratio = self.oob.states.block_valid_ratio(log_pbn),
-                    last_used_time = single_log_block_info.last_used_time,
-                    data_group_no = data_group_no)
-                self.priority_q.put(blk_info)
+        self._init()
 
     def __iter__(self):
         while not self.priority_q.empty():
@@ -753,6 +736,37 @@ class VictimBlocks(object):
 
     def __len__(self):
         return self.priority_q.qsize()
+
+class VictimDataBlocks(VictimBlocksBase):
+    def _init(self):
+        for blocknum in self.block_pool.data_usedblocks:
+            if not self.oob.is_any_page_valid(blocknum):
+                # no page is valid
+                # we can only clean data without valid pages
+                blk_info = BlockInfo(
+                    block_type = TYPE_DATA_BLOCK,
+                    block_num = blocknum,
+                    valid_ratio = self.oob.states.block_valid_ratio(blocknum),
+                    last_used_time = -1)  # high priority
+                self.priority_q.put(blk_info)
+
+
+class VictimLogBlocks(VictimBlocksBase):
+    def _init(self):
+        """
+        TODO: is there any log blocks that are not in log mapping but in
+        log_usedblocks?
+        """
+        for data_group_no, log_group_info in self.log_mapping.log_group_info.items():
+            for log_pbn, single_log_block_info in \
+                    log_group_info.victim_candidates():
+                blk_info = BlockInfo(
+                    block_type = TYPE_LOG_BLOCK,
+                    block_num = log_pbn,
+                    valid_ratio = self.oob.states.block_valid_ratio(log_pbn),
+                    last_used_time = single_log_block_info.last_used_time,
+                    data_group_no = data_group_no)
+                self.priority_q.put(blk_info)
 
 
 class GarbageCollector(object):

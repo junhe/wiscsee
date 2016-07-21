@@ -59,7 +59,7 @@ def create_global_helper(conf):
 def create_loggroupinfo(conf, rec, globalhelper):
     return LogGroupInfo(conf, rec, globalhelper)
 
-def create_mappingmanager(conf, rec, globalhelper):
+def create_translator(conf, rec, globalhelper):
     return Translator(conf, rec, globalhelper)
 
 class TestNkftl(unittest.TestCase):
@@ -636,19 +636,44 @@ class TestVictimBlocks(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        mapping = create_mappingmanager(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
 
-        vblocks = VictimBlocks(conf, block_pool, oob, rec, mapping)
+        vblocks = VictimDataBlocks(conf, block_pool, oob, rec, logmaptable,
+                datablocktable)
 
-    def test_empty_victims(self):
+        vblocks = VictimLogBlocks(conf, block_pool, oob, rec, logmaptable,
+                datablocktable)
+
+    def test_empty_victims_log(self):
         conf = create_config()
         block_pool = BlockPool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        mapping = create_mappingmanager(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
 
-        vblocks = VictimBlocks(conf, block_pool, oob, rec, mapping)
+        vblocks = VictimLogBlocks(conf, block_pool, oob, rec, logmaptable,
+                datablocktable)
+
+        cnt = 0
+        for blkinfo in vblocks:
+            cnt += 1
+
+        self.assertEqual(cnt, 0)
+
+    def test_empty_victims_data(self):
+        conf = create_config()
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        logmaptable = LogMappingTable(conf, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
+
+        vblocks = VictimDataBlocks(conf, block_pool, oob, rec, logmaptable,
+                datablocktable)
 
         cnt = 0
         for blkinfo in vblocks:
@@ -663,35 +688,73 @@ class TestVictimBlocks(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        mapping = create_mappingmanager(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
 
         # use one block
         self.use_a_log_block(conf, oob, block_pool)
 
         # check the block
-        vblocks = VictimBlocks(conf, block_pool, oob, rec, mapping)
+        vblocks = VictimLogBlocks(conf, block_pool, oob, rec, logmaptable,
+                datablocktable)
         self.assertEqual(len(vblocks), 1)
 
-    def use_a_log_block(self, conf, oob, block_pool):
-        blocknum = block_pool.pop_a_free_block_to_log_blocks()
+    def use_a_log_block(self, conf, oob, block_pool, logmapping):
         states = oob.states
-        start, end = conf.block_to_page_range(blocknum)
-        for ppn in range(start, end):
-            self.assertEqual(states.is_page_erased(ppn), True)
-            states.invalidate_page(ppn)
 
+        cnt = 2 * conf.n_pages_per_block + 1
+        while cnt > 0:
+            found, ppn = logmapping.next_ppn_to_program(dgn=1)
+            if found is False and ppn == ERR_NEED_NEW_BLOCK:
+                blocknum = block_pool.pop_a_free_block_to_log_blocks()
+                logmapping.add_log_block(dgn=1, flash_block=blocknum)
+            else:
+                # got a page
+                # invalidate it
+                states.invalidate_page(ppn)
+                cnt -= 1
 
     def test_log_used(self):
         conf = create_config()
+        conf['nkftl']['max_blocks_in_log_group'] = 4
         block_pool = BlockPool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        mapping = create_mappingmanager(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
 
-        mapping.
+        self.use_a_log_block(conf, oob, block_pool, logmaptable)
 
+        vblocks = VictimLogBlocks(conf, block_pool, oob, rec, logmaptable,
+                datablocktable)
 
+        self.assertEqual(len(vblocks), 2)
+
+    def test_data_used(self):
+        conf = create_config()
+        conf['nkftl']['max_blocks_in_log_group'] = 4
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        logmaptable = LogMappingTable(conf, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
+
+        self.use_a_data_block(conf, block_pool, oob)
+        self.use_a_data_block(conf, block_pool, oob)
+
+        vblocks = VictimDataBlocks(conf, block_pool, oob, rec, logmaptable,
+                datablocktable)
+
+        self.assertEqual(len(vblocks), 2)
+
+    def use_a_data_block(self, conf, block_pool, oob):
+        blocknum = block_pool.pop_a_free_block_to_data_blocks()
+        start, end = conf.block_to_page_range(blocknum)
+
+        for ppn in range(start, end):
+            oob.states.invalidate_page(ppn)
 
 
 
