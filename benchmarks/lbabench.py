@@ -393,7 +393,7 @@ def contract_bench():
             if classname == 'Alignment':
                 conf['block_size'] = self.conf.page_size * self.conf.n_pages_per_block
             elif classname == 'RequestScale':
-                conf['space_size'] = self.para.flashbytes
+                conf['n_ncq_slots'] = self.para.ncq_depth
             elif classname == 'Locality':
                 conf['n_ncq_slots'] = self.para.ncq_depth
             elif classname == 'GroupByInvTimeAtAccTime':
@@ -447,15 +447,26 @@ def contract_bench():
 
         return parameter_combs
 
-    def gen_parameters_contract_requestscale():
+    def gen_parameters_contract_requestscale_count():
         expname = get_expname()
+        traffic_size = 128*MB
+        chunk_size = 2*KB
+        flashbytes = 1*GB
+        space_size = 128*MB
         para_dict = {
                 'expname'        : [expname],
-                'ncq_depth'      : [1],
+                'ncq_depth'      : [1, 16],
                 'bench'          : [
                     {'name': 'RequestScale',
-                     'conf': {'op': OP_WRITE, 'traffic_size': 32*MB,
-                             'chunk_size': 4*KB}},
+                     'conf': {'op': OP_WRITE,
+                              'space_size'     : space_size,
+                              'traffic_size': traffic_size,
+                              'chunk_size': chunk_size}},
+                    {'name': 'RequestScale',
+                     'conf': {'op': OP_READ,
+                              'space_size'     : space_size,
+                              'traffic_size': traffic_size,
+                              'chunk_size': chunk_size}},
                      ],
                 'cache_mapped_data_bytes' :[flashbytes],
                 'flashbytes'     : [flashbytes],
@@ -463,14 +474,46 @@ def contract_bench():
                 'segment_bytes'  : [flashbytes]
                 }
 
-        mode = 'count'
-        # mode = 'size'
-        if mode == 'count':
-            para_dict['ncq_depth'] = [1, 16]
-        elif mode == 'size':
-            d2 = copy.deepcopy(para_dict['bench'][0])
-            d2['conf']['chunk_size'] = 512*KB
-            para_dict['bench'].append(d2)
+        parameter_combs = ParameterCombinations(para_dict)
+        return parameter_combs
+
+    def gen_parameters_contract_requestscale_size():
+        expname = get_expname()
+        traffic_size = 128*MB
+        chunk_size_1 = 2*KB
+        chunk_size_2 = 128*KB
+        flashbytes = 1*GB
+        space_size = 128*MB
+        para_dict = {
+                'expname'        : [expname],
+                'ncq_depth'      : [1],
+                'bench'          : [
+                    {'name': 'RequestScale',
+                     'conf': {'op': OP_WRITE,
+                              'space_size'     : space_size,
+                              'traffic_size': traffic_size,
+                              'chunk_size': chunk_size_1}},
+                    {'name': 'RequestScale',
+                     'conf': {'op': OP_WRITE,
+                              'space_size'     : space_size,
+                              'traffic_size': traffic_size,
+                              'chunk_size': chunk_size_2}},
+                    {'name': 'RequestScale',
+                     'conf': {'op': OP_READ,
+                              'space_size'     : space_size,
+                              'traffic_size': traffic_size,
+                              'chunk_size': chunk_size_1}},
+                    {'name': 'RequestScale',
+                     'conf': {'op': OP_READ,
+                              'space_size'     : space_size,
+                              'traffic_size': traffic_size,
+                              'chunk_size': chunk_size_2}},
+                     ],
+                'cache_mapped_data_bytes' :[flashbytes],
+                'flashbytes'     : [flashbytes],
+                'stripe_size'    : [1,],
+                'segment_bytes'  : [flashbytes]
+                }
 
         parameter_combs = ParameterCombinations(para_dict)
         return parameter_combs
@@ -556,9 +599,11 @@ def contract_bench():
 
     # parameters = gen_parameters_contract_alignment()
     # parameters = gen_parameters_contract_requestscale()
+    parameters = gen_parameters_contract_requestscale_count()
+    # parameters = gen_parameters_contract_requestscale_size()
     # parameters = gen_parameters_contract_locality()
     # parameters = gen_parameters_contract_grouping_in_timeline()
-    parameters = gen_parameters_contract_grouping_in_space()
+    # parameters = gen_parameters_contract_grouping_in_space()
 
     cnt = 0
     for i, para in enumerate(parameters):
