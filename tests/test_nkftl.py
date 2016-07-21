@@ -59,8 +59,8 @@ def create_global_helper(conf):
 def create_loggroupinfo(conf, rec, globalhelper):
     return LogGroupInfo(conf, rec, globalhelper)
 
-def create_translator(conf, rec, globalhelper):
-    return Translator(conf, rec, globalhelper)
+def create_translator(conf, rec, globalhelper, log_mapping, data_block_mapping):
+    return Translator(conf, rec, globalhelper, log_mapping, data_block_mapping)
 
 class TestNkftl(unittest.TestCase):
     def test_init(self):
@@ -757,6 +757,9 @@ class TestVictimBlocks(unittest.TestCase):
             oob.states.invalidate_page(ppn)
 
 
+class TestCleaningDataBlocks(unittest.TestCase):
+    def test_recycle_data(self):
+        pass
 
 
 

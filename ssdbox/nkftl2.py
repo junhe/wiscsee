@@ -517,13 +517,13 @@ class LogGroupInfo(object):
         return '\n'.join(ret)
 
 class Translator(MappingBase):
-    def __init__(self, confobj, recorderobj, global_helper_obj):
+    def __init__(self, confobj, recorderobj, global_helper_obj,
+            log_mapping, data_block_mapping
+            ):
         super(Translator, self).__init__(confobj, recorderobj,
             global_helper_obj)
-        self.data_block_mapping_table = DataBlockMappingTable(confobj,
-            recorderobj, global_helper_obj)
-        self.log_mapping_table = LogMappingTable(confobj,
-            recorderobj, global_helper_obj)
+        self.data_block_mapping_table = data_block_mapping
+        self.log_mapping_table = log_mapping
 
     def __str__(self):
         ret = []
@@ -737,6 +737,7 @@ class VictimBlocksBase(object):
     def __len__(self):
         return self.priority_q.qsize()
 
+
 class VictimDataBlocks(VictimBlocksBase):
     def _init(self):
         for blocknum in self.block_pool.data_usedblocks:
@@ -771,7 +772,7 @@ class VictimLogBlocks(VictimBlocksBase):
 
 class GarbageCollector(object):
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
-            translatorobj, global_helper_obj):
+            translatorobj, global_helper_obj, log_mapping, data_block_mapping):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
@@ -792,9 +793,7 @@ class GarbageCollector(object):
                     'freeblocks:', len(self.block_pool.freeblocks)
                 block_iter = self.victim_blocks_iter()
                 blk_cnt = 0
-            # victim_type, victim_block, valid_ratio = self.next_victim_block()
-            # victim_type, victim_block, valid_ratio = \
-                # self.next_victim_block_benefit_cost()
+
             try:
                 blockinfo = block_iter.next()
             except StopIteration:
@@ -812,53 +811,10 @@ class GarbageCollector(object):
             print 'GC is finished', self.block_pool.used_ratio(), \
                 blk_cnt, 'collected', \
                 'freeblocks:', len(self.block_pool.freeblocks)
-            # raise RuntimeError("intentional exit")
 
 
     def victim_blocks_iter(self):
-        """
-        It goes through all log blocks and sort them. It yields the
-        least recently used block first.
-
-        TODO: You need to also consider data blocks!!!
-        """
-        priority_q = Queue.PriorityQueue()
-
-        data_cnt = 0
-        # TODO: data block in log used blocks?
-        for data_block in self.block_pool.log_usedblocks:
-            if not self.oob.is_any_page_valid(data_block):
-                # no page is valid
-                blk_info = BlockInfo(
-                    block_type = TYPE_DATA_BLOCK,
-                    block_num = data_block,
-                    valid_ratio = self.oob.states.block_valid_ratio(block_num),
-                    last_used_time = -1)  # high priority
-                priority_q.put(blk_info)
-                data_cnt += 1
-
-        log_cnt = 0
-        for data_group_no, log_group_info in self.translator\
-            .log_mapping_table.log_group_info.items():
-            for log_pbn, single_log_block_info in \
-                    log_group_info.log_blocks().items():
-                blk_info = BlockInfo(
-                    block_type = TYPE_LOG_BLOCK,
-                    block_num = log_pbn,
-                    valid_ratio = self.oob.states.block_valid_ratio(log_pbn),
-                    last_used_time = single_log_block_info.last_used_time,
-                    data_group_no = data_group_no)
-                priority_q.put(blk_info)
-                log_cnt += 1
-        if True or global_debug:
-            print 'data_cnt', data_cnt, 'log_cnt', log_cnt, 'len(log_usedblocks)', \
-                len(self.block_pool.log_usedblocks), 'len(data_usedblocks)', \
-                len(self.block_pool.data_usedblocks), 'len(freeblocks)', \
-                len(self.block_pool.freeblocks)
-
-        while not priority_q.empty():
-            b_info =  priority_q.get()
-            yield b_info
+        return itertools.chain.from_iterable([VictimDataBlocks, VictimLogBlocks])
 
     def clean_block(self, blk_info, tag):
         """
@@ -1430,11 +1386,19 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.oob = OutOfBandAreas(confobj)
         self.global_helper = GlobalHelper(confobj)
 
+        self.data_block_mapping_table = DataBlockMappingTable(confobj,
+            recorderobj, self.global_helper)
+
+        self.log_mapping_table = LogMappingTable(confobj,
+            recorderobj, self.global_helper)
+
         ###### the managers ######
         self.translator = Translator(
             confobj = self.conf,
             recorderobj = recorderobj,
-            global_helper_obj = self.global_helper
+            global_helper_obj = self.global_helper,
+            log_mapping = self.log_mapping_table,
+            data_block_mapping = self.data_block_mapping_table
             )
 
         # Garbage collector is considered to be in the highest level
@@ -1445,7 +1409,9 @@ class Ftl(ftlbuilder.FtlBuilder):
             oobobj = self.oob,
             recorderobj = recorderobj,
             translatorobj = self.translator,
-            global_helper_obj = self.global_helper
+            global_helper_obj = self.global_helper,
+            log_mapping = self.log_mapping_table,
+            data_block_mapping = self.data_block_mapping_table
             )
         self.tmpcnt = 0
 
