@@ -59,6 +59,9 @@ def create_global_helper(conf):
 def create_loggroupinfo(conf, rec, globalhelper):
     return LogGroupInfo(conf, rec, globalhelper)
 
+def create_mappingmanager(conf, rec, globalhelper):
+    return MappingManager(conf, rec, globalhelper)
+
 class TestNkftl(unittest.TestCase):
     def test_init(self):
         ftl, conf, rec = create_nkftl()
@@ -356,7 +359,28 @@ class TestBlockInfo(unittest.TestCase):
                 block_num=23, last_used_time=89, valid_ratio=0.8,
                 data_group_no=8)
 
+        blkinfo3 = BlockInfo(block_type=TYPE_DATA_BLOCK,
+                block_num=23, last_used_time=87, valid_ratio=0.8,
+                data_group_no=8)
+
         self.assertTrue(blkinfo1 < blkinfo2)
+        self.assertTrue(blkinfo3 < blkinfo1)
+
+    def test_priority_queue(self):
+        priority_q = Queue.PriorityQueue()
+
+        for i in range(10):
+            blkinfo = BlockInfo(block_type=TYPE_DATA_BLOCK,
+                block_num=23, last_used_time=i, valid_ratio=0.8,
+                data_group_no=8)
+            priority_q.put(blkinfo)
+
+        used_times = []
+        while not priority_q.empty():
+            time  = priority_q.get().last_used_time
+            used_times.append( time )
+
+        self.assertListEqual(used_times, range(10))
 
 
 class TestSingleLogBlockInfo(unittest.TestCase):
@@ -603,6 +627,58 @@ class TestGcDecider(unittest.TestCase):
         block_pool.free_used_log_block(blocks[i+1])
         block_pool.free_used_log_block(blocks[i+2])
         self.assertEqual(gcdecider.need_cleaning(), False)
+
+
+class TestVictimBlocks(unittest.TestCase):
+    def test_init(self):
+        conf = create_config()
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        mapping = create_mappingmanager(conf, rec, helper)
+
+        vblocks = VictimBlocks(conf, block_pool, oob, rec, mapping)
+
+    def test_empty_victims(self):
+        conf = create_config()
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        mapping = create_mappingmanager(conf, rec, helper)
+
+        vblocks = VictimBlocks(conf, block_pool, oob, rec, mapping)
+
+        cnt = 0
+        for blkinfo in vblocks:
+            cnt += 1
+
+        self.assertEqual(cnt, 0)
+
+    def test_one_victim_blocks(self):
+        conf = create_config()
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        mapping = create_mappingmanager(conf, rec, helper)
+
+        # use one blocks
+        self.use_a_log_block(conf, oob, block_pool)
+
+        # check the block
+        vblocks = VictimBlocks(conf, block_pool, oob, rec, mapping)
+        self.assertEqual(len(vblocks), 1)
+
+    def use_a_log_block(self, conf, oob, block_pool):
+        blocknum = block_pool.pop_a_free_block_to_log_blocks()
+        states = oob.states
+        start, end = conf.block_to_page_range(blocknum)
+        for ppn in range(start, end):
+            self.assertEqual(states.is_page_erased(ppn), True)
+            states.invalidate_page(ppn)
+
 
 
 

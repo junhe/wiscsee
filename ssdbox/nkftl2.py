@@ -704,11 +704,59 @@ class BlockInfo(object):
         self.last_used_time = last_used_time
         self.data_group_no = data_group_no
 
-    def __comp__(self, other):
+    def __cmp__(self, other):
         """
         Low number will be retrieved first in priority queue
         """
         return cmp(self.last_used_time, other.last_used_time)
+
+
+class VictimBlocks(object):
+    def __init__(self, conf, block_pool, oob, rec, mapping_manager):
+        self.conf = conf
+        self.block_pool = block_pool
+        self.oob = oob
+        self.rec = rec
+        self.mapping_manager = mapping_manager
+        self.priority_q = Queue.PriorityQueue()
+
+        self.__init()
+
+    def __init(self):
+        data_cnt = 0
+        for blocknum in self.block_pool.log_usedblocks:
+            if not self.oob.is_any_page_valid(blocknum):
+                # no page is valid
+                blk_info = BlockInfo(
+                    block_type = TYPE_LOG_BLOCK,
+                    block_num = blocknum,
+                    valid_ratio = self.oob.states.block_valid_ratio(blocknum),
+                    last_used_time = -1)  # high priority
+                self.priority_q.put(blk_info)
+                data_cnt += 1
+
+
+        log_cnt = 0
+        for data_group_no, log_group_info in self.mapping_manager\
+            .log_mapping_table.log_group_info.items():
+            for log_pbn, single_log_block_info in \
+                    log_group_info.log_blocks().items():
+                blk_info = BlockInfo(
+                    block_type = TYPE_LOG_BLOCK,
+                    block_num = log_pbn,
+                    valid_ratio = self.oob.states.block_valid_ratio(log_pbn),
+                    last_used_time = single_log_block_info.last_used_time,
+                    data_group_no = data_group_no)
+                self.priority_q.put(blk_info)
+                log_cnt += 1
+
+    def __iter__(self):
+        while not self.priority_q.empty():
+            b_info =  priority_q.get()
+            yield b_info
+
+    def __len__(self):
+        return self.priority_q.qsize()
 
 
 class GarbageCollector(object):
