@@ -1,9 +1,7 @@
 import unittest
 import random
 
-from ssdbox.nkftl2 import Ftl
-from ssdbox.nkftl2 import LogGroupInfo, GlobalHelper, \
-        ERR_NEED_NEW_BLOCK, ERR_NEED_MERGING, BlockPool
+from ssdbox.nkftl2 import *
 import ssdbox
 import config
 from commons import *
@@ -247,6 +245,26 @@ class TestWithSimulator(unittest.TestCase):
         self.setup_workload()
         self.setup_ftl()
         self.my_run()
+
+
+
+class TestBlockInfo(unittest.TestCase):
+    def test_init(self):
+        blkinfo = BlockInfo(block_type=TYPE_DATA_BLOCK,
+                block_num=23, last_used_time=88, valid_ratio=0.8,
+                data_group_no=8)
+
+    def test_comp(self):
+        blkinfo1 = BlockInfo(block_type=TYPE_DATA_BLOCK,
+                block_num=23, last_used_time=88, valid_ratio=0.8,
+                data_group_no=8)
+
+        blkinfo2 = BlockInfo(block_type=TYPE_DATA_BLOCK,
+                block_num=23, last_used_time=89, valid_ratio=0.8,
+                data_group_no=8)
+
+        self.assertTrue(blkinfo1 < blkinfo2)
+
 
 
 def main():
