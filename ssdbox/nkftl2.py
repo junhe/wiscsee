@@ -369,14 +369,14 @@ class SingleLogBlockInfo(object):
 
 class LogGroupInfo(object):
     """
-    It keeps information of a paritical data group.
+    It keeps information of a paticular data group.
     """
     def __init__(self, confobj, recorderobj, global_helper_obj):
         self.conf = confobj
         self.recorder = recorderobj
         self.global_helper = global_helper_obj
 
-        # Set them to be private so I understand they are only accessed
+        # Set them to be protected so I understand they are only accessed
         # within this class. Less mess.
         # every time we update _page_map, we should also update
         self._page_map = bidict.bidict() # lpn->ppn
@@ -422,7 +422,19 @@ class LogGroupInfo(object):
         Note that this function may overwrite existing mapping. If later you
         need keeping everything, add one data structure.
         """
+        blk, off = self.conf.page_to_block_off(ppn)
+        assert blk in self._log_blocks.keys()
         self._page_map[lpn] = ppn
+
+    def lpn_to_ppn(self, lpn):
+        """
+        return found, ppn
+        """
+        ppn = self._page_map.get(lpn, None)
+        if ppn == None:
+            return False, None
+        else:
+            return True, ppn
 
     def update_block_use_time(self, blocknum):
         """
@@ -437,6 +449,7 @@ class LogGroupInfo(object):
         This should only be called when this log block used all free log pages
         """
         assert not self._log_blocks.has_key(block_num)
+
         for singleinfo in self._log_blocks.values():
             if singleinfo.has_free_page():
                 raise RuntimeError("Log Block {} should not have free page"\
@@ -452,7 +465,7 @@ class LogGroupInfo(object):
             return None
         return self._log_blocks[self._cur_log_block]
 
-    def reached_max_n_log_blocks(self):
+    def _reached_max_n_log_blocks(self):
         # print len(self._log_blocks), self.conf['nkftl']['max_blocks_in_log_group']
         return len(self._log_blocks) >= \
             self.conf['nkftl']['max_blocks_in_log_group']
@@ -472,24 +485,21 @@ class LogGroupInfo(object):
         # if the current log block has not free pages, but
         # the number of log blocks has not reached its max,
         # we need to get a new log block.
-        if self._cur_log_block == None or \
-            not self.cur_log_block_info().has_free_page():
-            if self.reached_max_n_log_blocks():
+        if self._cur_log_block != None:
+            if self.cur_log_block_info().has_free_page():
+                return self.cur_log_block_info().next_ppn_to_program()
+            else:
+                if self._reached_max_n_log_blocks():
+                    # we used up all log blocks
+                    return False, ERR_NEED_MERGING
+                else:
+                    return False, ERR_NEED_NEW_BLOCK
+        else:
+            if self._reached_max_n_log_blocks():
+                # we used up all log blocks
                 return False, ERR_NEED_MERGING
             else:
                 return False, ERR_NEED_NEW_BLOCK
-        else:
-            return self.cur_log_block_info().next_ppn_to_program()
-
-    def lpn_to_ppn(self, lpn):
-        """
-        return found, ppn
-        """
-        ppn = self._page_map.get(lpn, None)
-        if ppn == None:
-            return False, None
-        else:
-            return True, ppn
 
     def __str__(self):
         ret = []

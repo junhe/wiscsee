@@ -127,8 +127,17 @@ class TestLogGroupInfo(unittest.TestCase):
 
         loggroupinfo.add_log_block(8)
 
+        n_pages_per_block = conf.n_pages_per_block
+
         log_blocks = loggroupinfo.log_blocks()
         self.assertEqual(log_blocks.keys()[0], 8)
+        singlelogblockinfo = log_blocks.values()[0]
+        self.assertTrue(isinstance(singlelogblockinfo, SingleLogBlockInfo))
+        self.assertEqual(singlelogblockinfo.flash_block_num, 8)
+        self.assertEqual(singlelogblockinfo.has_free_page(), True)
+        gotit, ppn, = singlelogblockinfo.next_ppn_to_program()
+        self.assertEqual(gotit, True)
+        self.assertEqual(ppn, 8*n_pages_per_block)
 
     def test_next_ppn(self):
         ftl, conf, rec = create_nkftl()
@@ -152,6 +161,91 @@ class TestLogGroupInfo(unittest.TestCase):
         found, err = loggroupinfo.next_ppn_to_program()
         self.assertFalse(found)
         self.assertEqual(err, ERR_NEED_MERGING)
+
+    def test_init(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+
+        lginfo = LogGroupInfo(conf, rec, helper)
+
+    def test_add_mapping(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+
+        lginfo = LogGroupInfo(conf, rec, helper)
+        lginfo.add_log_block(1)
+
+        lpns = []
+        ppns = []
+        for i in range(conf.n_pages_per_block):
+            found, ppn = lginfo.next_ppn_to_program()
+            self.assertTrue(found)
+            lginfo.add_mapping(lpn=i, ppn=ppn)
+            lpns.append(i)
+            ppns.append(ppn)
+
+        for lpn, ppn in zip(lpns, ppns):
+            self.assertEqual(lginfo.lpn_to_ppn(lpn)[1], ppn)
+
+    def test_remove_log_block(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+
+        lginfo = LogGroupInfo(conf, rec, helper)
+        lginfo.add_log_block(1)
+
+        lpns = []
+        ppns = []
+        for i in range(conf.n_pages_per_block):
+            found, ppn = lginfo.next_ppn_to_program()
+            self.assertTrue(found)
+            lginfo.add_mapping(lpn=i, ppn=ppn)
+            lpns.append(i)
+            ppns.append(ppn)
+
+        lginfo.remove_log_block(1)
+
+        self.assertEqual(len(lginfo._page_map), 0)
+        self.assertEqual(len(lginfo._log_blocks), 0)
+        self.assertEqual(lginfo._cur_log_block, None)
+
+    def test_adding_log_blocks(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+
+        lginfo = LogGroupInfo(conf, rec, helper)
+        lginfo.add_log_block(1)
+
+        with self.assertRaisesRegexp(RuntimeError, 'should not have free page'):
+            lginfo.add_log_block(2)
+
+    def test_max_log_blocks(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+
+        max_n_blocks = conf['nkftl']['max_blocks_in_log_group']
+
+        lginfo = LogGroupInfo(conf, rec, helper)
+
+        for blocknum in range(max_n_blocks):
+            lginfo.add_log_block(blocknum)
+            for page in range(conf.n_pages_per_block):
+                found, ppn = lginfo.next_ppn_to_program()
+                self.assertTrue(found)
+                lginfo.add_mapping(lpn=blocknum*conf.n_pages_per_block+page,
+                        ppn=ppn)
+            found, err = lginfo.next_ppn_to_program()
+            self.assertEqual(found, False)
+
+            if blocknum == max_n_blocks - 1:
+                self.assertEqual(err, ERR_NEED_MERGING)
+            else:
+                self.assertEqual(err, ERR_NEED_NEW_BLOCK)
 
 
 class TestBlockPool(unittest.TestCase):
@@ -360,10 +454,6 @@ class TestOutOfBandAreas(unittest.TestCase):
 
         lpns_with_na = lpns + ['NA'] * (n_pages_per_block - 3)
         self.assertListEqual(sorted(oob.lpns_of_block(1)), sorted(lpns_with_na))
-
-
-
-
 
 
 
