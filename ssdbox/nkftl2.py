@@ -332,6 +332,7 @@ class DataBlockMappingTable(MappingBase):
     def __str__(self):
         return str(self.logical_to_physical_block)
 
+
 class SingleLogBlockInfo(object):
     def __init__(self, confobj, flash_block_num, last_used_time = None,
             last_programmed_offset = -1):
@@ -559,13 +560,32 @@ class LogMappingTable(MappingBase):
         super(LogMappingTable, self).__init__(confobj, recorderobj,
             global_helper_obj)
 
-        self.log_group_info = {} # dgn -> log block info of data group
+        # dgn -> log block info of data group (LogGroupInfo)
+        self.log_group_info = {}
+
+    def next_ppn_to_program(self, dgn):
+        loginfo = self.log_group_info.setdefault(dgn,
+            LogGroupInfo(self.conf, self.recorder, self.global_helper))
+        # it may return ERR_NEED_NEW_BLOCK or ERR_NEED_MERGING
+        return loginfo.next_ppn_to_program()
 
     def add_mapping(self, data_group_no, lpn, ppn):
+        # lpn must be in data_group_no
+        dgn = self.conf.nkftl_data_group_number_of_lpn(lpn)
+        assert dgn == data_group_no
+
         self.log_group_info[data_group_no].add_mapping(lpn, ppn)
 
     def remove_lpn(self, data_group_no, lpn):
         self.log_group_info[data_group_no].remove_lpn(lpn)
+
+    def add_log_block(self, dgn, flash_block):
+        """
+        Add a log block to data group dgn
+        """
+        loginfo = self.log_group_info.setdefault(dgn,
+            LogGroupInfo(self.conf, self.recorder, self.global_helper))
+        return loginfo.add_log_block(flash_block)
 
     def __str__(self):
         ret = []
@@ -576,20 +596,6 @@ class LogMappingTable(MappingBase):
 
     def clear_data_group_info(self, dgn):
         self.log_group_info[dgn].clear()
-
-    def add_log_block(self, dgn, flash_block):
-        """
-        Add a log block to data group dgn
-        """
-        loginfo = self.log_group_info.setdefault(dgn,
-            LogGroupInfo(self.conf, self.recorder, self.global_helper))
-        return loginfo.add_log_block(flash_block)
-
-    def next_ppn_to_program(self, dgn):
-        loginfo = self.log_group_info.setdefault(dgn,
-            LogGroupInfo(self.conf, self.recorder, self.global_helper))
-        # it may return ERR_NEED_NEW_BLOCK or ERR_NEED_MERGING
-        return loginfo.next_ppn_to_program()
 
     def lpn_to_ppn(self, lpn):
         """
@@ -620,9 +626,11 @@ class GcDecider(object):
 
         self.high_watermark = self.conf['nkftl']['GC_threshold_ratio'] * \
             self.conf.n_blocks_per_dev
-        self.low_watermark = max( self.conf['nkftl']['GC_low_threshold_ratio'] * \
-            self.conf.n_blocks_per_dev,
-            self.conf.n_blocks_per_dev / self.conf['nkftl']['provision_ratio'])
+        self.low_watermark = self.conf['nkftl']['GC_low_threshold_ratio'] * \
+            self.conf.n_blocks_per_dev
+        # self.low_watermark = max( self.conf['nkftl']['GC_low_threshold_ratio'] * \
+            # self.conf.n_blocks_per_dev,
+            # self.conf.n_blocks_per_dev / self.conf['nkftl']['provision_ratio'])
 
         assert self.high_watermark > self.low_watermark
 
@@ -646,7 +654,7 @@ class GcDecider(object):
             # clean when above high_watermark
             ret = n_used_blocks > self.high_watermark
         else:
-            if self.freezed_too_long(n_used_blocks):
+            if self._freezed_too_long(n_used_blocks):
                 ret = False
                 print 'freezed too long, stop GC'
             else:
@@ -654,7 +662,7 @@ class GcDecider(object):
                 ret = n_used_blocks > self.low_watermark
         return ret
 
-    def improved(self, cur_n_used_blocks):
+    def _improved(self, cur_n_used_blocks):
         """
         wether we get some free blocks since last call of this function
         """
@@ -667,9 +675,10 @@ class GcDecider(object):
         self.last_used_blocks = cur_n_used_blocks
         return ret
 
-    def freezed_too_long(self, cur_n_used_blocks):
+    def _freezed_too_long(self, cur_n_used_blocks):
         return False
-        if self.improved(cur_n_used_blocks):
+
+        if self._improved(cur_n_used_blocks):
             self.freeze_count = 0
             ret = False
         else:

@@ -456,16 +456,153 @@ class TestOutOfBandAreas(unittest.TestCase):
         self.assertListEqual(sorted(oob.lpns_of_block(1)), sorted(lpns_with_na))
 
 
+class TestLogBlockMappingTable(unittest.TestCase):
+    def test_init(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+
+        logmaptable = LogMappingTable(conf, rec, helper)
+
+    def test_add_log_block(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+
+        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable.add_log_block(dgn=1, flash_block=8)
+
+        self.assertEqual(logmaptable.log_group_info.keys()[0], 1)
+        self.assertEqual(
+                logmaptable.log_group_info.values()[0]._log_blocks.keys()[0], 8)
+
+    def test_next_ppn_error(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+
+        logmaptable = LogMappingTable(conf, rec, helper)
+        gotit, err = logmaptable.next_ppn_to_program(dgn=1)
+        self.assertEqual(gotit, False)
+        self.assertEqual(err, ERR_NEED_NEW_BLOCK)
+
+    def test_add_mapping(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+
+        logmaptable = LogMappingTable(conf, rec, helper)
+
+        logmaptable.add_log_block(dgn=1, flash_block=8)
+
+        gotit, ppn = logmaptable.next_ppn_to_program(dgn=1)
+        self.assertEqual(gotit, True)
+
+        n_blocks_in_data_group = conf['nkftl']['n_blocks_in_data_group']
+        n_pages_per_block = conf.n_pages_per_block
+        n_pages_per_dg = n_blocks_in_data_group * n_pages_per_block
+        lpn = n_pages_per_dg + 2
+        logmaptable.add_mapping(data_group_no=1, lpn=lpn, ppn=ppn)
+
+        # Test translation
+        found, ppn_retrieved = logmaptable.lpn_to_ppn(lpn)
+        self.assertEqual(found, True)
+        self.assertEqual(ppn_retrieved, ppn)
+
+        # Test removing
+        logmaptable.remove_lpn(data_group_no=1, lpn=lpn)
+
+        found, ppn_retrieved = logmaptable.lpn_to_ppn(lpn)
+        self.assertEqual(found, False)
 
 
+class TestDataBlockMappingTable(unittest.TestCase):
+    def test_init(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
+
+    def test_adding(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
+
+        n_pages_per_block = conf.n_pages_per_block
+        datablocktable.add_data_block_mapping(1, 8)
+
+        found, pbn = datablocktable.lbn_to_pbn(1)
+        self.assertEqual(found, True)
+        self.assertEqual(pbn, 8)
+
+        found, ppn = datablocktable.lpn_to_ppn(0)
+        self.assertEqual(found, False)
+
+        found, ppn = datablocktable.lpn_to_ppn(n_pages_per_block + 1)
+        self.assertEqual(found, True)
+        self.assertEqual(ppn, 8*n_pages_per_block + 1)
+
+    def test_removing(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
+
+        n_pages_per_block = conf.n_pages_per_block
+        datablocktable.add_data_block_mapping(1, 8)
+
+        found, pbn = datablocktable.lbn_to_pbn(1)
+        self.assertEqual(found, True)
+        self.assertEqual(pbn, 8)
+
+        datablocktable.remove_data_block_mapping(1)
+        found, _ = datablocktable.lbn_to_pbn(1)
+        self.assertEqual(found, False)
 
 
+class TestGcDecider(unittest.TestCase):
+    def test_init(self):
+        conf = create_config()
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
 
+        gcdecider = GcDecider(conf, block_pool, rec)
 
+    def test_high_threshold(self):
+        conf = create_config()
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
 
+        n = len(block_pool.freeblocks)
+        high_blocks = conf['nkftl']['GC_threshold_ratio'] * n
+        low_blocks = conf['nkftl']['GC_low_threshold_ratio'] * n
+        diff = high_blocks - low_blocks
+        print 'high..', high_blocks
 
+        gcdecider = GcDecider(conf, block_pool, rec)
 
+        blocks = []
+        for i in range(int(high_blocks)):
+            blk = block_pool.pop_a_free_block_to_log_blocks()
+            blocks.append(blk)
+            gcdecider.refresh()
+            self.assertEqual(gcdecider.need_cleaning(), False)
 
+        block_pool.pop_a_free_block_to_log_blocks()
+        gcdecider.refresh()
+        self.assertEqual(gcdecider.need_cleaning(), True)
+
+        for i in range(int(diff)):
+            block_pool.free_used_log_block(blocks[i])
+            self.assertEqual(gcdecider.need_cleaning(), True)
+
+        block_pool.free_used_log_block(blocks[i+1])
+        block_pool.free_used_log_block(blocks[i+2])
+        self.assertEqual(gcdecider.need_cleaning(), False)
 
 
 
