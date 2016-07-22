@@ -815,6 +815,52 @@ class TestCleaningDataBlocks(unittest.TestCase):
         # not more victim blocks
         self.assertEqual(len(block_pool.data_usedblocks), 0)
 
+    @unittest.skip("case not possible in global test?")
+    def test_clean_data_blocks_without_mapping(self):
+        conf = create_config()
+        conf['nkftl']['max_blocks_in_log_group'] = 4
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        logmaptable = LogMappingTable(conf, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
+        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
+        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+
+        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
+                translator, helper, logmaptable, datablocktable)
+
+        lbn = 8
+        blocknum = self.use_a_data_block_no_mapping(conf, block_pool,
+                oob, datablocktable)
+
+        gc.recycle_empty_data_block(blocknum, tag="")
+
+        # states bitmap should be in 'erased' state
+        start, end = conf.block_to_page_range(blocknum)
+        for ppn in range(start, end):
+            self.assertEqual(oob.states.is_page_erased(ppn), True)
+
+        # oob ppn->lpn mapping should hold nothing
+        for ppn in range(start, end):
+            with self.assertRaises(KeyError):
+                oob.translate_ppn_to_lpn(ppn)
+
+        # blocknum should be free block in block_pool
+        self.assertIn(blocknum, block_pool.freeblocks)
+        self.assertNotIn(blocknum, block_pool.data_usedblocks)
+
+        # datablocktable should not hold mapping of blocknum
+        found, _ = datablocktable.lbn_to_pbn(lbn)
+        self.assertEqual(found, False)
+
+        # not more victim blocks
+        self.assertEqual(len(block_pool.data_usedblocks), 0)
+
+
+
+
     def use_a_data_block(self, conf, block_pool, oob, datablocktable, lbn):
         blocknum = block_pool.pop_a_free_block_to_data_blocks()
         # mapping still exist
