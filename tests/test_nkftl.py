@@ -789,30 +789,42 @@ class TestCleaningDataBlocks(unittest.TestCase):
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
                 translator, helper, logmaptable, datablocktable)
 
-        lpb, blocknum = self.use_a_data_block(conf, block_pool, oob, datablocktable)
+        lbn = 8
+        blocknum = self.use_a_data_block(conf, block_pool, oob, datablocktable, lbn)
 
         gc.recycle_empty_data_block(blocknum, tag="")
 
         # states bitmap should be in 'erased' state
-
-
+        start, end = conf.block_to_page_range(blocknum)
+        for ppn in range(start, end):
+            self.assertEqual(oob.states.is_page_erased(ppn), True)
 
         # oob ppn->lpn mapping should hold nothing
+        for ppn in range(start, end):
+            with self.assertRaises(KeyError):
+                oob.translate_ppn_to_lpn(ppn)
+
         # blocknum should be free block in block_pool
+        self.assertIn(blocknum, block_pool.freeblocks)
+        self.assertNotIn(blocknum, block_pool.data_usedblocks)
+
         # datablocktable should not hold mapping of blocknum
+        found, _ = datablocktable.lbn_to_pbn(lbn)
+        self.assertEqual(found, False)
+
         # not more victim blocks
+        self.assertEqual(len(block_pool.data_usedblocks), 0)
 
-
-    def use_a_data_block(self, conf, block_pool, oob, datablocktable):
+    def use_a_data_block(self, conf, block_pool, oob, datablocktable, lbn):
         blocknum = block_pool.pop_a_free_block_to_data_blocks()
         # mapping still exist
-        datablocktable.add_data_block_mapping(lbn=8, pbn=blocknum)
+        datablocktable.add_data_block_mapping(lbn=lbn, pbn=blocknum)
 
         start, end = conf.block_to_page_range(blocknum)
         for ppn in range(start, end):
             oob.states.invalidate_page(ppn)
 
-        return lpb, blocknum
+        return blocknum
 
     def use_a_data_block_no_mapping(self, conf, block_pool, oob, datablocktable):
         blocknum = block_pool.pop_a_free_block_to_data_blocks()
