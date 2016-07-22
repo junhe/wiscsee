@@ -768,6 +768,8 @@ class GarbageCollector(object):
         self.block_pool = block_pool
         self.recorder = recorderobj
         self.translator = translatorobj
+        self.log_mapping_table = log_mapping
+        self.data_block_mapping_table = data_block_mapping
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
@@ -790,8 +792,6 @@ class GarbageCollector(object):
             self.recorder.count_me('victim_valid_ratio',
                     "{0:.2f}".format(valid_ratio))
             self.clean_block(blockinfo, tag = TAG_THRESHOLD_GC)
-
-            blk_cnt += 1
 
     def victim_blocks_iter(self):
         return itertools.chain.from_iterable([VictimDataBlocks, VictimLogBlocks])
@@ -896,7 +896,7 @@ class GarbageCollector(object):
         # because for example the first block may require full merge and the
         # second can be partial merged. Doing the full merge first may change
         # the states of the second log block and makes full merge impossible.
-        log_block_list = copy.copy(self.translator.log_mapping_table\
+        log_block_list = copy.copy(self.log_mapping_table\
                 .log_group_info[data_group_no].log_blocks().keys())
         for log_block in log_block_list:
             # A log block may not be a log block anymore after the loop starts
@@ -1401,10 +1401,6 @@ class Ftl(ftlbuilder.FtlBuilder):
         return False, None, None
 
     def lba_read(self, lpn):
-        """
-        Look for log blocks first since they have the latest data
-        Then go to data blocks
-        """
         self.global_helper.incr_lba_op_timestamp()
 
         hasit, ppn, loc = self.lpn_to_ppn(lpn)
@@ -1413,7 +1409,7 @@ class Ftl(ftlbuilder.FtlBuilder):
             if loc == IN_LOG_BLOCK:
                 phy_block_num, _ = self.conf.page_to_block_off(ppn)
                 data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
-                self.translator.log_mapping_table\
+                self.log_mapping_table\
                     .log_group_info[data_group_no]\
                     .update_block_use_time(phy_block_num)
         else:
@@ -1439,8 +1435,7 @@ class Ftl(ftlbuilder.FtlBuilder):
 
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
-        found, new_ppn = self.translator.log_mapping_table\
-                .next_ppn_to_program(data_group_no)
+        found, new_ppn = self.log_mapping_table.next_ppn_to_program(data_group_no)
 
         # loop until we find a new ppn to program
         while found == False:

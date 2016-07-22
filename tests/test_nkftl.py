@@ -1995,6 +1995,264 @@ class TestFullMerge(unittest.TestCase):
         return used_blocks
 
 
+class TestCleanDataGroup(unittest.TestCase):
+    def test_full_merge_two_in_two(self):
+        """
+        Data of two logical blocks spread in two physical blocks.
+        """
+        conf = create_config()
+        conf['nkftl']['max_blocks_in_log_group'] = 4
+        conf['nkftl']['n_blocks_in_data_group'] = 4
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        logmaptable = LogMappingTable(conf, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
+        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
+        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+
+        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
+                translator, helper, logmaptable, datablocktable)
+
+        half_block_pages = int(conf.n_pages_per_block/2)
+
+        ################## 1st physical block #################
+        # write logical block 1's second half
+        used_blocks1 = self.use_log_blocks(conf, oob, block_pool,
+                logmaptable, cnt=half_block_pages,
+                lpn_start=conf.n_pages_per_block + half_block_pages,
+                translator=translator
+                )
+        self.assertEqual(len(used_blocks1), 1)
+
+        # write logical block 2's second half
+        used_blocks2 = self.use_log_blocks(conf, oob, block_pool,
+                logmaptable, cnt=half_block_pages,
+                lpn_start=3 * conf.n_pages_per_block + half_block_pages,
+                translator=translator)
+        self.assertEqual(len(used_blocks2), 0)
+
+        ################## 2nd physical block #################
+        # write logical block 1's first half
+        used_blocks3 = self.use_log_blocks(conf, oob, block_pool,
+                logmaptable, cnt=half_block_pages,
+                lpn_start=1*conf.n_pages_per_block,
+                translator=translator
+                )
+        self.assertEqual(len(used_blocks3), 1)
+
+        # write logical block 2's first half
+        used_blocks4 = self.use_log_blocks(conf, oob, block_pool,
+                logmaptable, cnt=half_block_pages,
+                lpn_start=3*conf.n_pages_per_block,
+                translator=translator)
+        self.assertEqual(len(used_blocks2), 0)
+
+
+        ######## start checking ########
+        pbn1 = used_blocks1[0]
+        pbn2 = used_blocks3[0]
+        lbn1 = 1
+        lbn2 = 3
+
+        # data block mapping
+        found, _ = datablocktable.lbn_to_pbn(lbn1)
+        self.assertEqual(found, False)
+        found, _ = datablocktable.lbn_to_pbn(lbn2)
+        self.assertEqual(found, False)
+        # log mapping
+        # lbn1
+        for i in range(half_block_pages):
+            lpn = conf.block_off_to_page(lbn1, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            correct_ppn = conf.block_off_to_page(pbn2, i)
+            self.assertEqual(ppn, correct_ppn)
+        for i in range(half_block_pages, conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn1, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            correct_ppn = conf.block_off_to_page(pbn1, i - half_block_pages)
+            self.assertEqual(ppn, correct_ppn)
+        # lb2
+        for i in range(half_block_pages):
+            lpn = conf.block_off_to_page(lbn2, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            correct_ppn = conf.block_off_to_page(pbn2, i + half_block_pages)
+            self.assertEqual(ppn, correct_ppn)
+        for i in range(half_block_pages, conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn2, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            correct_ppn = conf.block_off_to_page(pbn1, i)
+            self.assertEqual(ppn, correct_ppn)
+
+        # oob states
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn1, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn2, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+
+        # oob ppn->lpn
+        for i in range(half_block_pages):
+            ppn = conf.block_off_to_page(pbn1, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn1,
+                    (i + half_block_pages) % conf.n_pages_per_block)
+            self.assertEqual(lpn, correct_lpn)
+        for i in range(half_block_pages, conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn1, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn2,
+                    i % conf.n_pages_per_block)
+            self.assertEqual(lpn, correct_lpn)
+        for i in range(half_block_pages):
+            ppn = conf.block_off_to_page(pbn2, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn1,
+                    i % conf.n_pages_per_block)
+            self.assertEqual(lpn, correct_lpn)
+        for i in range(half_block_pages, conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn2, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn2,
+                    (i-half_block_pages) % conf.n_pages_per_block)
+            self.assertEqual(lpn, correct_lpn)
+
+        # block pool
+        self.assertIn(pbn1, block_pool.log_usedblocks)
+        self.assertIn(pbn2, block_pool.log_usedblocks)
+
+        ########### full merge 1 ##############
+        gc.clean_data_group(
+            data_group_no=conf.nkftl_data_group_number_of_logical_block(lbn1))
+
+        ########### check #####################
+        # data block mapping
+        found, retrieved_pbn1 = datablocktable.lbn_to_pbn(lbn1)
+        self.assertEqual(found, True)
+        found, retrieved_pbn2 = datablocktable.lbn_to_pbn(lbn2)
+        self.assertEqual(found, True)
+
+        # log mapping
+        # should not exist
+        for i in range(conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn1, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, False)
+        for i in range(conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn2, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, False)
+
+        # oob states
+        # should have been erased
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn1, i)
+            self.assertTrue(oob.states.is_page_erased(ppn))
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn2, i)
+            self.assertTrue(oob.states.is_page_erased(ppn))
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn1, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn2, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+
+        # oob ppn->lpn
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn1, i)
+            with self.assertRaises(KeyError):
+                oob.translate_ppn_to_lpn(ppn)
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn2, i)
+            with self.assertRaises(KeyError):
+                oob.translate_ppn_to_lpn(ppn)
+
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn1, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn1, i)
+            self.assertEqual(lpn, correct_lpn)
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn2, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn2, i)
+            self.assertEqual(lpn, correct_lpn)
+
+        # block pool
+        self.assertIn(pbn1, block_pool.freeblocks)
+        self.assertIn(pbn2, block_pool.freeblocks)
+        self.assertIn(retrieved_pbn1, block_pool.data_usedblocks)
+        self.assertIn(retrieved_pbn2, block_pool.data_usedblocks)
+
+    def use_data_blocks(self, conf, block_pool, oob, datablocktable, lpn_start,
+            cnt, translator):
+
+        lpn = lpn_start
+        used_blocks = []
+        while cnt > 0:
+            lbn, off = conf.page_to_block_off(lpn)
+            found, _ = datablocktable.lbn_to_pbn(lbn)
+            if found is False:
+                blocknum = block_pool.pop_a_free_block_to_data_blocks()
+                used_blocks.append(blocknum)
+                datablocktable.add_data_block_mapping(lbn=lbn, pbn=blocknum)
+            else:
+                found, ppn = datablocktable.lpn_to_ppn(lpn)
+                self.assertEqual(found, True)
+
+                found, old_ppn, _ = translator.lpn_to_ppn(lpn)
+                if found is True and not oob.states.is_page_valid(old_ppn):
+                    old_ppn = None
+
+                oob.remap(lpn=lpn, old_ppn=old_ppn, new_ppn=ppn)
+
+                lpn += 1
+                cnt -= 1
+        return used_blocks
+
+    def use_log_blocks(self, conf, oob, block_pool, logmapping, cnt, lpn_start,
+            translator):
+        states = oob.states
+
+        used_blocks = []
+        # start aligned to make it switchable
+        lpn = lpn_start
+        while cnt > 0:
+            dgn = conf.nkftl_data_group_number_of_lpn(lpn)
+
+            found, ppn = logmapping.next_ppn_to_program(dgn=dgn)
+            if found is False and ppn == ERR_NEED_NEW_BLOCK:
+                blocknum = block_pool.pop_a_free_block_to_log_blocks()
+                used_blocks.append(blocknum)
+                logmapping.add_log_block(dgn=dgn, flash_block=blocknum)
+            else:
+                # ---- got a page ----
+                # oob states
+                states.validate_page(ppn)
+                # oob ppn->lpn
+                found, old_ppn, _ = translator.lpn_to_ppn(lpn)
+                if found is True and not oob.states.is_page_valid(old_ppn):
+                    old_ppn = None
+                oob.remap(lpn=lpn, old_ppn=old_ppn, new_ppn=ppn)
+                # data block mapping
+                pass
+                # log block mapping
+                logmapping.add_mapping(data_group_no=dgn, lpn=lpn, ppn=ppn)
+
+                cnt -= 1
+                lpn += 1
+
+        return used_blocks
+
+
+
 
 
 
