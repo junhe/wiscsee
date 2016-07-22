@@ -1844,6 +1844,98 @@ class TestFullMerge(unittest.TestCase):
         self.assertIn(log_pbn, block_pool.freeblocks)
         self.assertIn(retrieved_pbn1, block_pool.data_usedblocks)
 
+    def test_full_merge_one_page_used(self):
+        conf = create_config()
+        conf['nkftl']['max_blocks_in_log_group'] = 4
+        block_pool = BlockPool(conf)
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        logmaptable = LogMappingTable(conf, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
+        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
+        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+
+        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
+                translator, helper, logmaptable, datablocktable)
+
+        half_block_pages = int(conf.n_pages_per_block/2)
+
+        used_blocks1 = self.use_log_blocks(conf, oob, block_pool,
+                logmaptable, cnt=1,
+                lpn_start=conf.n_pages_per_block+half_block_pages,
+                translator=translator
+                )
+        self.assertEqual(len(used_blocks1), 1)
+
+        pbn = used_blocks1[0]
+        lbn = 1
+
+        # data block mapping
+        found, _ = datablocktable.lbn_to_pbn(lbn)
+        self.assertEqual(found, False)
+        # log mapping
+        for i in range(conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            if i == half_block_pages:
+                self.assertEqual(found, True)
+                correct_ppn = conf.block_off_to_page(pbn, 0)
+                self.assertEqual(ppn, correct_ppn)
+            else:
+                self.assertEqual(found, False)
+        # oob states
+        for i in range(1):
+            ppn = conf.block_off_to_page(pbn, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+        # oob ppn->lpn
+        for i in range(1):
+            ppn = conf.block_off_to_page(pbn, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn, half_block_pages)
+            self.assertEqual(lpn, correct_lpn)
+        # block pool
+        self.assertIn(pbn, block_pool.log_usedblocks)
+
+        gc.full_merge(log_pbn=pbn)
+
+        # data block mapping
+        found, retrieved_pbn = datablocktable.lbn_to_pbn(lbn)
+        self.assertEqual(found, True)
+        self.assertNotEqual(retrieved_pbn, pbn)
+        # log mapping
+        for i in range(1):
+            lpn = conf.block_off_to_page(lbn, half_block_pages)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, False)
+            self.assertEqual(ppn, None)
+        # oob states
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn, i)
+            self.assertTrue(oob.states.is_page_erased(ppn))
+        for i in range(1):
+            ppn = conf.block_off_to_page(retrieved_pbn, half_block_pages)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+
+        # oob ppn->lpn
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn, i)
+            if i != half_block_pages:
+                with self.assertRaises(KeyError):
+                    oob.translate_ppn_to_lpn(ppn)
+            else:
+                lpn = oob.translate_ppn_to_lpn(ppn)
+                correct_lpn = conf.block_off_to_page(lbn, i)
+                self.assertEqual(lpn, correct_lpn)
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn, i)
+            with self.assertRaises(KeyError):
+                oob.translate_ppn_to_lpn(ppn)
+
+        # block pool
+        self.assertIn(retrieved_pbn, block_pool.data_usedblocks)
+        self.assertIn(pbn, block_pool.freeblocks)
+
     def use_data_blocks(self, conf, block_pool, oob, datablocktable, lpn_start,
             cnt, translator):
 
@@ -1868,7 +1960,6 @@ class TestFullMerge(unittest.TestCase):
 
                 lpn += 1
                 cnt -= 1
-
         return used_blocks
 
     def use_log_blocks(self, conf, oob, block_pool, logmapping, cnt, lpn_start,
