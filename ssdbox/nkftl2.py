@@ -1088,51 +1088,41 @@ class GarbageCollector(object):
         Return: True/False, logical block, offset of the first erased page
         """
         ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
-        lpn_start = None
-        logical_block = None
-        check_mode = 'VALID'
-        first_free_ppn = None
+
+        # first k pages must be valid
+        last_valid_ppn = None
         for ppn in range(ppn_start, ppn_end):
-            if check_mode == 'VALID':
-                # For the first x pages, check if they are valid
-                if self.oob.states.is_page_valid(ppn):
-                    # valid, check if it is aligned
-                    lpn = self.oob.ppn_to_lpn[ppn]
-                    if lpn_start == None:
-                        logical_block, logical_off = self.conf.page_to_block_off(lpn)
-                        if logical_off != 0:
-                            # Not aligned
-                            return False, None, None
-                        lpn_start = lpn
-                        # Now we know at least the lpn_start and ppn_start are aligned
-                        continue
-                    if lpn - lpn_start != ppn - ppn_start:
-                        # Not aligned
-                        return False, None, None
-                else:
-                    # Not valid
-                    if ppn == ppn_start:
-                        # The first ppn is not valid, not partial mergable
-                        return False, None, None
-                    # if we find any page that is not valid, we start checking
-                    # erased pages, starting from this page
-                    check_mode = 'ERASED'
+            if self.oob.states.is_page_valid(ppn):
+                last_valid_ppn = ppn
+            else:
+                break
 
-            if check_mode == 'ERASED':
-                if not self.oob.states.is_page_erased(ppn):
-                    return False, None, None
-                if first_free_ppn == None:
-                    first_free_ppn = ppn
+        if last_valid_ppn == None or last_valid_ppn == ppn_end - 1:
+            # nobody is valid or everybody is valid
+            # if everybody is valid, it could be switch mergable, but not
+            # partial mergable.
+            return False, None, None
 
-                # # the conent can be anywhere or not exist
-                # lpn = lpn_start + (ppn - ppn_start)
-                # has_it, tmp_ppn, loc = self.translator.lpn_to_ppn(lpn)
-                # if has_it == False or loc != IN_DATA_BLOCK or \
-                    # not self.oob.states.is_page_valid(tmp_ppn):
-                    # # ppn not exist
-                #     return False, None, None
+        # the rest must be erased
+        for ppn in range(last_valid_ppn + 1, ppn_end):
+            if not self.oob.states.is_page_erased(ppn):
+                return False, None, None
 
-        return True, logical_block, first_free_ppn - ppn_start
+        # the valid pages must be aligned between logical and physical address
+        lpn_start = self.oob.ppn_to_lpn[ppn_start]
+        logical_block, off = self.conf.page_to_block_off(lpn_start)
+        if off != 0:
+            # the first lpn is not aligned
+            return False, None, None
+
+        for ppn in range(ppn_start, last_valid_ppn + 1):
+            lpn = self.oob.ppn_to_lpn[ppn]
+            if lpn - lpn_start != ppn - ppn_start:
+                # not aligned
+                return False, None, None
+
+        # now we know it is parital mergable
+        return True, logical_block, last_valid_ppn + 1 - ppn_start
 
     def partial_merge(self, log_pbn, lbn, first_free_offset):
         """
