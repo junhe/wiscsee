@@ -837,7 +837,7 @@ class GarbageCollector(object):
                 .remove_data_block_mapping_by_pbn(data_block)
             self.block_pool.free_used_data_block(data_block)
 
-    def recycle_empty_log_block(self, data_group_no, log_pbn, tag):
+    def _recycle_empty_log_block(self, data_group_no, log_pbn, tag):
         """
         We will double check to see if the block has any valid page
         Remove the log block in every relevant data structure
@@ -1207,7 +1207,7 @@ class GarbageCollector(object):
                 self.translator.log_mapping_table.remove_lpn(
                     data_group_no = data_group_no, lpn = lpn)
 
-                self.recycle_empty_log_block(data_group_no = data_group_no,
+                self._recycle_empty_log_block(data_group_no = data_group_no,
                     log_pbn = src_block, tag = TAG_PARTIAL_MERGE)
 
         # If there is an old data block, we need to recycle it because we

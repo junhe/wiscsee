@@ -682,7 +682,6 @@ class TestVictimBlocks(unittest.TestCase):
 
         self.assertEqual(cnt, 0)
 
-    @unittest.skip("")
     def test_one_victim_blocks(self):
         conf = create_config()
         block_pool = BlockPool(conf)
@@ -693,25 +692,26 @@ class TestVictimBlocks(unittest.TestCase):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
 
         # use one block
-        self.use_a_log_block(conf, oob, block_pool)
+        # +1 is because current log block may not be a victim
+        self.use_a_log_block(conf, oob, block_pool, logmaptable,
+                cnt=conf.n_pages_per_block+1, dgn=1)
 
         # check the block
         vblocks = VictimLogBlocks(conf, block_pool, oob, rec, logmaptable,
                 datablocktable)
         self.assertEqual(len(vblocks), 1)
 
-    def use_a_log_block(self, conf, oob, block_pool, logmapping):
+    def use_a_log_block(self, conf, oob, block_pool, logmapping, cnt, dgn):
         states = oob.states
 
-        cnt = 2 * conf.n_pages_per_block + 1
         while cnt > 0:
-            found, ppn = logmapping.next_ppn_to_program(dgn=1)
+            found, ppn = logmapping.next_ppn_to_program(dgn=dgn)
             if found is False and ppn == ERR_NEED_NEW_BLOCK:
                 blocknum = block_pool.pop_a_free_block_to_log_blocks()
                 logmapping.add_log_block(dgn=1, flash_block=blocknum)
             else:
                 # got a page
-                # invalidate it
+                # invalidate it (not the same as in production)
                 states.invalidate_page(ppn)
                 cnt -= 1
 
@@ -725,7 +725,8 @@ class TestVictimBlocks(unittest.TestCase):
         logmaptable = LogMappingTable(conf, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
 
-        self.use_a_log_block(conf, oob, block_pool, logmaptable)
+        self.use_a_log_block(conf, oob, block_pool, logmaptable,
+                cnt=2*conf.n_pages_per_block+1, dgn=1)
 
         vblocks = VictimLogBlocks(conf, block_pool, oob, rec, logmaptable,
                 datablocktable)
@@ -815,7 +816,7 @@ class TestCleaningDataBlocks(unittest.TestCase):
         # not more victim blocks
         self.assertEqual(len(block_pool.data_usedblocks), 0)
 
-    @unittest.skip("case not possible in global test?")
+    @unittest.skip("data block without mapping is impossible. (really?)")
     def test_clean_data_blocks_without_mapping(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
@@ -858,9 +859,6 @@ class TestCleaningDataBlocks(unittest.TestCase):
         # not more victim blocks
         self.assertEqual(len(block_pool.data_usedblocks), 0)
 
-
-
-
     def use_a_data_block(self, conf, block_pool, oob, datablocktable, lbn):
         blocknum = block_pool.pop_a_free_block_to_data_blocks()
         # mapping still exist
@@ -881,7 +879,12 @@ class TestCleaningDataBlocks(unittest.TestCase):
         return blocknum
 
 
+class TestSwitchMerge(unittest.TestCase):
+    def test_is_switch_mergable(self):
+        pass
 
+    def test_is_not_switch_mergable(self):
+        pass
 
 
 
