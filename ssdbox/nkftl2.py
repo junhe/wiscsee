@@ -642,33 +642,19 @@ class GcDecider(object):
 
         assert self.high_watermark > self.low_watermark
 
-        self.call_index = -1
-
-    def refresh(self):
-        """
-        TODO: this class needs refactoring.
-        """
-        self.call_index = -1
-        self.last_used_blocks = None
-        self.freeze_count = 0
-
-    def need_cleaning(self):
-        "The logic is a little complicated"
-        self.call_index += 1
-
+    def should_start(self):
         n_used_blocks = self.block_pool.total_used_blocks()
 
-        if self.call_index == 0:
-            # clean when above high_watermark
-            ret = n_used_blocks > self.high_watermark
+        return n_used_blocks > self.high_watermark
+
+    def should_stop(self):
+        n_used_blocks = self.block_pool.total_used_blocks()
+
+        if self._freezed_too_long(n_used_blocks):
+            return True
         else:
-            if self._freezed_too_long(n_used_blocks):
-                ret = False
-                print 'freezed too long, stop GC'
-            else:
-                # Is it higher than low watermark?
-                ret = n_used_blocks > self.low_watermark
-        return ret
+            # Is it higher than low watermark?
+            return n_used_blocks < self.low_watermark
 
     def _improved(self, cur_n_used_blocks):
         """
@@ -788,15 +774,12 @@ class GarbageCollector(object):
     def try_gc(self):
         triggered = False
 
-        self.decider.refresh()
-        while self.decider.need_cleaning():
-            if self.decider.call_index == 0:
-                triggered = True
-                print 'GC is triggerred', self.block_pool.used_ratio(), \
-                    'freeblocks:', len(self.block_pool.freeblocks)
-                block_iter = self.victim_blocks_iter()
-                blk_cnt = 0
+        if self.decider.should_start() is False:
+            return
 
+        block_iter = self.victim_blocks_iter()
+
+        while self.decider.should_stop() is False:
             try:
                 blockinfo = block_iter.next()
             except StopIteration:
@@ -809,12 +792,6 @@ class GarbageCollector(object):
             self.clean_block(blockinfo, tag = TAG_THRESHOLD_GC)
 
             blk_cnt += 1
-
-        if triggered:
-            print 'GC is finished', self.block_pool.used_ratio(), \
-                blk_cnt, 'collected', \
-                'freeblocks:', len(self.block_pool.freeblocks)
-
 
     def victim_blocks_iter(self):
         return itertools.chain.from_iterable([VictimDataBlocks, VictimLogBlocks])

@@ -614,20 +614,18 @@ class TestGcDecider(unittest.TestCase):
         for i in range(int(high_blocks)):
             blk = block_pool.pop_a_free_block_to_log_blocks()
             blocks.append(blk)
-            gcdecider.refresh()
-            self.assertEqual(gcdecider.need_cleaning(), False)
+            self.assertEqual(gcdecider.should_start(), False)
 
         block_pool.pop_a_free_block_to_log_blocks()
-        gcdecider.refresh()
-        self.assertEqual(gcdecider.need_cleaning(), True)
+        self.assertEqual(gcdecider.should_start(), True)
 
         for i in range(int(diff)):
             block_pool.free_used_log_block(blocks[i])
-            self.assertEqual(gcdecider.need_cleaning(), True)
+            self.assertEqual(gcdecider.should_stop(), False)
 
         block_pool.free_used_log_block(blocks[i+1])
         block_pool.free_used_log_block(blocks[i+2])
-        self.assertEqual(gcdecider.need_cleaning(), False)
+        self.assertEqual(gcdecider.should_stop(), True)
 
 
 class TestVictimBlocks(unittest.TestCase):
