@@ -545,6 +545,8 @@ class Translator(MappingBase):
         Note that you need to check if the returned ppn is valid. This function
         only tells you if there is a valid mapping.
 
+        (maybe you should not say found is True if it is not valid)
+
         Return: Found?, PPN, Location
         """
 
@@ -1084,6 +1086,15 @@ class GarbageCollector(object):
         2. the first k pages are aligned with logical block
         3. the kth-nth pages can exist in data block, other log blocks or not
         exist
+
+        TODO: we need to also handle the case of half the block is valid
+        and aligned, but the rest are invalid. The rest of the dat of this
+        logical block does not exist anywhere. So we don't need to copy
+        data to the physical block.
+
+        TODO: we need to handle the case of first half of data block is valid
+        and the rest is erased, in which case we can copy the data from log
+        block to data block.
 
         Return: True/False, logical block, offset of the first erased page
         """
