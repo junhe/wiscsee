@@ -9,6 +9,7 @@ import ftlbuilder
 import recorder
 from utilities import utils
 from .bitmap import FlashBitmap2
+from ssdbox.devblockpool import *
 
 from . import blkpool
 
@@ -224,6 +225,11 @@ class OutOfBandAreas(object):
                 return True
         return False
 
+TDATA = 'TDATA'
+TLOG = 'TLOG'
+
+class OutOfSpaceError(RuntimeError):
+    pass
 
 class BlockPool(object):
     """
@@ -233,44 +239,61 @@ class BlockPool(object):
     """
     def __init__(self, confobj):
         self.conf = confobj
-        self._pool = blkpool.BlockPool(self.conf)
+        self.n_channels = self.conf['flash_config']['n_channels_per_dev']
+        self.cur_channel = 0
+        self.stripe_size = self.conf['stripe_size']
+
+        self.pool = MultiChannelBlockPool(
+                n_channels=self.n_channels,
+                n_blocks_per_channel=self.conf.n_blocks_per_channel,
+                n_pages_per_block=self.conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
 
     @property
     def freeblocks(self):
-        return self._pool.freeblocks
+        blocks = self.pool.get_blocks_of_tag(tag=TFREE)
+        return blocks
 
     @property
     def log_usedblocks(self):
-        return self._pool.trans_usedblocks
+        blocks = self.pool.get_blocks_of_tag(tag=TLOG)
+        return blocks
 
     @property
     def data_usedblocks(self):
-        return self._pool.data_usedblocks
+        blocks = self.pool.get_blocks_of_tag(tag=TDATA)
+        return blocks
 
     def pop_a_free_block_to_log_blocks(self):
-        "take one block from freelist and add it to log block list"
-        blocknum = self._pool.pop_a_free_block_to_trans()
+        try:
+            blocknum = self.pool.pick_and_move(src=TFREE, dst=TLOG)
+        except TagOutOfSpaceError:
+            raise OutOfSpaceError
         return blocknum
 
     def move_used_log_to_data_block(self, blocknum):
-        self._pool.move_used_trans_block_to_data(blocknum)
+        self.pool.change_tag(blocknum, src=TLOG, dst=TDATA)
 
     def pop_a_free_block_to_data_blocks(self):
-        "take one block from freelist and add it to data block list"
-        blocknum = self._pool.pop_a_free_block_to_data()
+        try:
+            blocknum = self.pool.pick_and_move(src=TFREE, dst=TDATA)
+        except TagOutOfSpaceError:
+            raise OutOfSpaceError
         return blocknum
 
     def free_used_data_block(self, blocknum):
-        self._pool.move_used_data_block_to_free(blocknum)
+        self.pool.change_tag(blocknum, src=TDATA, dst=TFREE)
 
     def free_used_log_block(self, blocknum):
-        self._pool.move_used_trans_block_to_free(blocknum)
+        self.pool.change_tag(blocknum, src=TLOG, dst=TFREE)
 
     def total_used_blocks(self):
-        return self._pool.total_used_blocks()
+        nfree = self.pool.count_blocks(tag=TFREE)
+        return self.conf.n_blocks_per_dev - nfree
 
     def used_ratio(self):
-        return self._pool.used_ratio()
+        nfree = self.pool.count_blocks(tag=TFREE)
+        return (self.conf.n_blocks_per_dev - nfree) / float(self.conf.n_blocks_per_dev)
 
 
 class MappingBase(object):
