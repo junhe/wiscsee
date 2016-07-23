@@ -409,8 +409,27 @@ class LogGroupInfo(object):
         self._log_blocks = {}     #log_pbn -> Singlelogblockinfo
         self._cur_log_block = None
 
+    def add_mapping(self, lpn, ppn):
+        """
+        Note that this function may overwrite existing mapping. If later you
+        need keeping everything, add one data structure.
+        """
+        blk, off = self.conf.page_to_block_off(ppn)
+        assert blk in self._log_blocks.keys()
+        self._page_map[lpn] = ppn
+
     def remove_lpn(self, lpn):
         del self._page_map[lpn]
+
+    def lpn_to_ppn(self, lpn):
+        """
+        return found, ppn
+        """
+        ppn = self._page_map.get(lpn, None)
+        if ppn == None:
+            return False, None
+        else:
+            return True, ppn
 
     def remove_log_block(self, log_pbn):
         # remove all page maps
@@ -445,25 +464,6 @@ class LogGroupInfo(object):
         for log_pbn, singleblockinfo in self._log_blocks.items():
             if log_pbn != self._cur_log_block:
                 yield log_pbn, singleblockinfo
-
-    def add_mapping(self, lpn, ppn):
-        """
-        Note that this function may overwrite existing mapping. If later you
-        need keeping everything, add one data structure.
-        """
-        blk, off = self.conf.page_to_block_off(ppn)
-        assert blk in self._log_blocks.keys()
-        self._page_map[lpn] = ppn
-
-    def lpn_to_ppn(self, lpn):
-        """
-        return found, ppn
-        """
-        ppn = self._page_map.get(lpn, None)
-        if ppn == None:
-            return False, None
-        else:
-            return True, ppn
 
     def update_block_use_time(self, blocknum):
         """
