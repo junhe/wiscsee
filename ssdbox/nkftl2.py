@@ -391,7 +391,7 @@ class SingleLogBlockInfo(object):
             return False, None
 
 
-class LogGroupInfo(object):
+class LogGroup(object):
     """
     It keeps information of a paticular data group.
     """
@@ -532,7 +532,7 @@ class LogGroupInfo(object):
 
     def __str__(self):
         ret = []
-        ret.append("------- LogGroupInfo")
+        ret.append("------- LogGroup")
         ret.append("_page_map:" + str(self._page_map))
         for logblock, info in self._log_blocks.items():
             ret.append("Logblock {}{}".format(logblock, str(info)))
@@ -591,12 +591,12 @@ class LogMappingTable(MappingBase):
         super(LogMappingTable, self).__init__(confobj, recorderobj,
             global_helper_obj)
 
-        # dgn -> log block info of data group (LogGroupInfo)
+        # dgn -> log block info of data group (LogGroup)
         self.log_group_info = {}
 
     def next_ppn_to_program(self, dgn):
         loginfo = self.log_group_info.setdefault(dgn,
-            LogGroupInfo(self.conf, self.recorder, self.global_helper))
+            LogGroup(self.conf, self.recorder, self.global_helper))
         # it may return ERR_NEED_NEW_BLOCK or ERR_NEED_MERGING
         return loginfo.next_ppn_to_program()
 
@@ -615,7 +615,7 @@ class LogMappingTable(MappingBase):
         Add a log block to data group dgn
         """
         loginfo = self.log_group_info.setdefault(dgn,
-            LogGroupInfo(self.conf, self.recorder, self.global_helper))
+            LogGroup(self.conf, self.recorder, self.global_helper))
         return loginfo.add_log_block(flash_block)
 
     def __str__(self):

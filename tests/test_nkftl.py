@@ -58,7 +58,7 @@ def create_global_helper(conf):
     return GlobalHelper(conf)
 
 def create_loggroupinfo(conf, rec, globalhelper):
-    return LogGroupInfo(conf, rec, globalhelper)
+    return LogGroup(conf, rec, globalhelper)
 
 def create_translator(conf, rec, globalhelper, log_mapping, data_block_mapping):
     return Translator(conf, rec, globalhelper, log_mapping, data_block_mapping)
@@ -123,7 +123,7 @@ class TestNkftl(unittest.TestCase):
         self.write_and_check(ftl, lpns)
 
 
-class TestLogGroupInfo(unittest.TestCase):
+class TestLogGroup(unittest.TestCase):
     def test_add_log_blocks(self):
         ftl, conf, rec = create_nkftl()
         globalhelper = create_global_helper(conf)
@@ -171,14 +171,14 @@ class TestLogGroupInfo(unittest.TestCase):
         rec = create_recorder(conf)
         helper = create_global_helper(conf)
 
-        lginfo = LogGroupInfo(conf, rec, helper)
+        lginfo = LogGroup(conf, rec, helper)
 
     def test_add_mapping(self):
         conf = create_config()
         rec = create_recorder(conf)
         helper = create_global_helper(conf)
 
-        lginfo = LogGroupInfo(conf, rec, helper)
+        lginfo = LogGroup(conf, rec, helper)
         lginfo.add_log_block(1)
 
         lpns = []
@@ -198,7 +198,7 @@ class TestLogGroupInfo(unittest.TestCase):
         rec = create_recorder(conf)
         helper = create_global_helper(conf)
 
-        lginfo = LogGroupInfo(conf, rec, helper)
+        lginfo = LogGroup(conf, rec, helper)
         lginfo.add_log_block(1)
 
         lpns = []
@@ -221,7 +221,7 @@ class TestLogGroupInfo(unittest.TestCase):
         rec = create_recorder(conf)
         helper = create_global_helper(conf)
 
-        lginfo = LogGroupInfo(conf, rec, helper)
+        lginfo = LogGroup(conf, rec, helper)
         lginfo.add_log_block(1)
 
         with self.assertRaisesRegexp(RuntimeError, 'should not have free page'):
@@ -234,7 +234,7 @@ class TestLogGroupInfo(unittest.TestCase):
 
         max_n_blocks = conf['nkftl']['max_blocks_in_log_group']
 
-        lginfo = LogGroupInfo(conf, rec, helper)
+        lginfo = LogGroup(conf, rec, helper)
 
         for blocknum in range(max_n_blocks):
             lginfo.add_log_block(blocknum)
