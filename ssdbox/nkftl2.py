@@ -486,7 +486,7 @@ class LogGroupInfo(object):
         self._log_blocks[block_num] = SingleLogBlockInfo(self.conf, block_num)
         self._cur_log_block = block_num
 
-    def cur_log_block_info(self):
+    def _cur_log_block_info(self):
         """
         Return the current log block's SingleLogBlockInfo, for convienence.
         """
@@ -515,8 +515,8 @@ class LogGroupInfo(object):
         # the number of log blocks has not reached its max,
         # we need to get a new log block.
         if self._cur_log_block != None:
-            if self.cur_log_block_info().has_free_page():
-                return self.cur_log_block_info().next_ppn_to_program()
+            if self._cur_log_block_info().has_free_page():
+                return self._cur_log_block_info().next_ppn_to_program()
             else:
                 if self._reached_max_n_log_blocks():
                     # we used up all log blocks
