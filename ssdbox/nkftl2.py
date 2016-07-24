@@ -391,6 +391,68 @@ class SingleLogBlockInfo(object):
             return False, None
 
 
+class BlockAllocator(object):
+    """
+    - able to allocate a block from a specific channel
+    - able to allocate a block without specifying channels number
+    - able to tag a block as log or data
+    - able to change tag
+    - able to see number of free blocks in a channel
+
+    It should not maintain states?
+    """
+    def __init__(self, conf):
+        self.conf = conf
+
+    def num_freeblocks(self, channel_id):
+        pass
+
+    def allocate_block(self, n, channel_id=None):
+        pass
+
+
+class LogGroup2(object):
+    """
+    - keep track of log blocks of this group
+    - allocate pages from blocks of this group
+    - report need to merge
+    """
+    def __init__(self, conf, recorderobj, blockallocator):
+        pass
+
+    def ppns_to_write(self, lpn_extent):
+        """
+        - all channels need to increase and decrease log blocks for this
+        log group together
+        - if the num of log blocks does not reach max, we try to satisfy strip
+        unit size. In this case,  if a channel of this log group does not
+        have enough money, it will allocate one.
+        - if the num of log blocks has reached max, we may need to satisfy
+        block limits.
+        - if a channel of the log group cannot find available blocks in a channel
+        we need to do global GC
+        """
+
+    def _allocate_blocks(self):
+        """
+        Allocate one block from each channel, if one channel fails, the whole
+        thing fail
+        """
+
+    def _is_space_enough(self, extent):
+        """
+        Check if the current log blocks of this log group is large enough
+        for the strip_unit_size. If yes, we don't need to allocate log block
+        for this log group.
+        """
+
+    def _next_ppns_in_channel(self, n):
+        """
+        This function fails if a channel cannot get n free pages.
+        """
+
+
+
 class LogGroup(object):
     """
     It keeps information of a paticular data group.
@@ -1519,6 +1581,24 @@ class Ftl(ftlbuilder.FtlBuilder):
             self.oob.wipe_ppn(ppn)
 
     def write_ext(self, extent, data=None):
+        """
+        New design:
+        1. split extent if it goes across different data groups
+        2. pass the split extent to write_ext_datagroup()
+        3. write_ext_datagroup() will write the extent:
+            1. pass the extent to LogGroup, the LogGroup does the following
+                1. stripe the extent to strip unit
+                2. plan and check if we can put the strips to the log blocks
+                   of this log group without exceeding K
+                3. if not, return message saying this log group needs merging
+                4. if yes, stripe data of the extent to channels, LogGroup
+                   will maintain the current block in all channels.
+                5. LogGroup will return the lpn->ppn, where ppn is the page
+                   number that FTL needs to write to
+            2. write_ext_datagroup() writes to the ppns
+            3. it also update the mapping in loggroup
+            4. it also update all other data structure
+        """
         lpn_start = extent.lpn_start
         lpn_count = extent.lpn_count
         for lpn in range(lpn_start, lpn_start+lpn_count):
