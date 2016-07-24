@@ -4,6 +4,9 @@ test:
 testblockpools:
 	./run_testclass.sh tests.test_devblockpool && ./run_testclass.sh tests.test_tagblockpool  && ./run_testclass.sh tests.test_blockpool
 
+testnkftl:
+	./run_testclass.sh tests.test_nkftl
+
 patternbench:
 	sudo python -m benchmarks.patternbench -t "pattern_on_fs()"
 

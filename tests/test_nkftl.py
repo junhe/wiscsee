@@ -2252,14 +2252,41 @@ class TestCleanDataGroup(unittest.TestCase):
         return used_blocks
 
 
-class TestBlockAllocator(unittest.TestCase):
-    def test(self):
-        pass
+TDATA = 'TDATA'
+TTRANS = 'TTRANS'
+
+
+def create_loggroup2():
+    blockpool = NKBlockPool(
+            n_channels=8,
+            n_blocks_per_channel=64,
+            n_pages_per_block=32,
+            tags=[TDATA, TTRANS])
+    loggroup = LogGroup2(block_pool=blockpool, K=8)
+
+    return blockpool, loggroup
 
 
 class TestLogGroup2(unittest.TestCase):
-    def test(self):
-        pass
+    @unittest.skip("")
+    def test_next_ppns_in_channel(self):
+        blockpool, loggroup = create_loggroup2()
+
+        found, ppns = loggroup._next_ppns_in_channel(n=1)
+
+        self.assertEqual(found, True)
+        self.assertEqual(len(ppns), 1)
+
+    @unittest.skip("")
+    def test_next_ppns_in_channel_failure(self):
+        blockpool, loggroup = create_loggroup2()
+        n_pages_per_block = blockpool.n_pages_per_block
+
+        found, ppns = loggroup._next_ppns_in_channel(n=n_pages_per_block + 1)
+
+        self.assertEqual(found, False)
+        self.assertEqual(len(ppns), 0)
+
 
 
 

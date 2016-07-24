@@ -391,7 +391,7 @@ class SingleLogBlockInfo(object):
             return False, None
 
 
-class BlockAllocator(MultiChannelBlockPoolBase):
+class NKBlockPool(MultiChannelBlockPoolBase):
     """
     - able to allocate a block from a specific channel.           OK
     - able to allocate a block without specifying channels number OK
@@ -407,8 +407,11 @@ class LogGroup2(object):
     - allocate pages from blocks of this group
     - report need to merge
     """
-    def __init__(self, conf, recorderobj, blockallocator):
-        pass
+    def __init__(self, block_pool, K):
+        self.n_channels = block_pool.n_channels
+        self.block_pool = block_pool
+        self.K = K
+        # self.channels = [
 
     def ppns_to_write(self, lpn_extent):
         """
@@ -436,9 +439,10 @@ class LogGroup2(object):
         for this log group.
         """
 
-    def _next_ppns_in_channel(self, n):
+    def _next_ppns_in_channel(self, n, channel_id):
         """
         This function fails if a channel cannot get n free pages.
+        This function only use the blocks already in this log group.
         """
 
 

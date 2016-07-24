@@ -49,6 +49,9 @@ class CurrentBlock(object):
         self.next_page_offset = end_offset
         return ppns
 
+    def num_free(self):
+        return self.n_pages_per_block - self.next_page_offset
+
     def is_full(self):
         assert self.next_page_offset <= self.n_pages_per_block
         return self.next_page_offset == self.n_pages_per_block
