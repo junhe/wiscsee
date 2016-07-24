@@ -391,24 +391,14 @@ class SingleLogBlockInfo(object):
             return False, None
 
 
-class BlockAllocator(object):
+class BlockAllocator(MultiChannelBlockPoolBase):
     """
-    - able to allocate a block from a specific channel
-    - able to allocate a block without specifying channels number
-    - able to tag a block as log or data
-    - able to change tag
-    - able to see number of free blocks in a channel
-
-    It should not maintain states?
+    - able to allocate a block from a specific channel.           OK
+    - able to allocate a block without specifying channels number OK
+    - able to tag a block as log or data                          OK
+    - able to change tag                                          OK
+    - able to see number of free blocks in a channel              OK
     """
-    def __init__(self, conf):
-        self.conf = conf
-
-    def num_freeblocks(self, channel_id):
-        pass
-
-    def allocate_block(self, n, channel_id=None):
-        pass
 
 
 class LogGroup2(object):

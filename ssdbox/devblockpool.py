@@ -87,7 +87,6 @@ class MultiChannelBlockPoolBase(object):
         return [self._ppn_channel_to_global(channel_id, ppn) for ppn in ppns]
 
 
-
 class MultiChannelBlockPool(MultiChannelBlockPoolBase):
     """
     This is for DFTL
