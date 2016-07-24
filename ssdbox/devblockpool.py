@@ -1,7 +1,6 @@
 from tagblockpool import *
 
-
-class MultiChannelBlockPool(object):
+class MultiChannelBlockPoolBase(object):
     def __init__(self, n_channels, n_blocks_per_channel, n_pages_per_block, tags):
         self.n_channels = n_channels
         self.n_blocks_per_channel = n_blocks_per_channel
@@ -17,10 +16,12 @@ class MultiChannelBlockPool(object):
         # TODO: each tag has its own _next_channel
         self._next_channel = 0
 
-    def incr_next_channel(self):
+    def _incr_next_channel(self):
         self._next_channel = (self._next_channel + 1) % self.n_channels
         return self._next_channel
 
+
+class MultiChannelBlockPool(MultiChannelBlockPoolBase):
     def count_blocks(self, tag, channels=None):
         total = 0
 
@@ -45,7 +46,7 @@ class MultiChannelBlockPool(object):
     def pick_and_move(self, src, dst):
         "This function will advance self._next_channel"
         cur_channel = self._next_channel
-        self.incr_next_channel()
+        self._incr_next_channel()
 
         block_off = self._channel_pool[cur_channel].pick_and_move(src, dst)
 
@@ -106,7 +107,7 @@ class MultiChannelBlockPool(object):
 
             ppns = self.ppns_channel_to_global(cur_channel_id, ppns)
             ret_ppns.extend(ppns)
-            self.incr_next_channel()
+            self._incr_next_channel()
             remaining -= len(ppns)
 
         if remaining > 0:
