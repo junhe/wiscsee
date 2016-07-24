@@ -191,7 +191,7 @@ class TestMultiChannelBlockPool(unittest.TestCase):
         cur_blocks = pool.current_blocks()
         channels = set()
         for block in cur_blocks:
-            channel_id, blockoff = pool.global_to_channel(block)
+            channel_id, blockoff = pool._global_to_channel(block)
             channels.add(channel_id)
         self.assertEqual(len(channels), 3)
 
@@ -213,7 +213,7 @@ class TestMultiChannelBlockPool(unittest.TestCase):
         cur_blocks = pool.current_blocks()
         channels = set()
         for block in cur_blocks:
-            channel_id, blockoff = pool.global_to_channel(block)
+            channel_id, blockoff = pool._global_to_channel(block)
             channels.add(channel_id)
         self.assertEqual(len(channels), 8)
 
@@ -238,7 +238,7 @@ class TestMultiChannelBlockPool(unittest.TestCase):
         self.assertEqual(len(cur_blocks), 8)
         channels = set()
         for block in cur_blocks:
-            channel_id, blockoff = pool.global_to_channel(block)
+            channel_id, blockoff = pool._global_to_channel(block)
             channels.add(channel_id)
         self.assertEqual(len(channels), 8)
 
@@ -262,18 +262,18 @@ class TestMultiChannelBlockPool(unittest.TestCase):
                 n_pages_per_block=32,
                 tags=[TDATA, TTRANS])
 
-        self.assertEqual(pool.channel_to_global(0, 0), 0)
-        channel_id, block_off = pool.global_to_channel(0)
+        self.assertEqual(pool._channel_to_global(0, 0), 0)
+        channel_id, block_off = pool._global_to_channel(0)
         self.assertEqual(channel_id, 0)
         self.assertEqual(block_off, 0)
 
-        self.assertEqual(pool.channel_to_global(1, 0), 64)
-        channel_id, block_off = pool.global_to_channel(64)
+        self.assertEqual(pool._channel_to_global(1, 0), 64)
+        channel_id, block_off = pool._global_to_channel(64)
         self.assertEqual(channel_id, 1)
         self.assertEqual(block_off, 0)
 
-        self.assertEqual(pool.channel_to_global(3, 4), 3*64+4)
-        channel_id, block_off = pool.global_to_channel(3*64+4)
+        self.assertEqual(pool._channel_to_global(3, 4), 3*64+4)
+        channel_id, block_off = pool._global_to_channel(3*64+4)
         self.assertEqual(channel_id, 3)
         self.assertEqual(block_off, 4)
 
@@ -283,7 +283,7 @@ class TestMultiChannelBlockPool(unittest.TestCase):
                 n_blocks_per_channel=64,
                 n_pages_per_block=32,
                 tags=[TDATA, TTRANS])
-        ppn = pool.ppn_channel_to_global(1, 2)
+        ppn = pool._ppn_channel_to_global(1, 2)
         self.assertEqual(ppn, 64*32 + 2)
 
     def test_ppn_conversion2(self):

@@ -43,7 +43,7 @@ class MultiChannelBlockPoolBase(object):
 
         for pool in channels:
             blocks = pool.get_blocks_of_tag(tag)
-            ret.extend(self.blocks_channel_to_global(pool.channel_id, blocks))
+            ret.extend(self._blocks_channel_to_global(pool.channel_id, blocks))
 
         return ret
 
@@ -59,9 +59,39 @@ class MultiChannelBlockPoolBase(object):
         if block_off is None:
             return None
         else:
-            return self.channel_to_global(cur_channel, block_off)
+            return self._channel_to_global(cur_channel, block_off)
+
+    def change_tag(self, blocknum, src, dst):
+        channel_id, block_off = self._global_to_channel(blocknum)
+        self._channel_pool[channel_id].change_tag(block_off, src, dst)
+
+    def _channel_to_global(self, channel_id, blocknum):
+        ret = channel_id * self.n_blocks_per_channel + blocknum
+        assert ret < self.total_blocks
+        return ret
+
+    def _global_to_channel(self, blocknum):
+        "return channel_id, block_offset"
+        assert blocknum < self.total_blocks
+        return blocknum / self.n_blocks_per_channel, \
+                blocknum % self.n_blocks_per_channel
+
+    def _blocks_channel_to_global(self, channel_id, blocks):
+        return [self._channel_to_global(channel_id, block)
+                for block in blocks]
+
+    def _ppn_channel_to_global(self, channel_id, ppn):
+        return channel_id * self.n_pages_per_channel + ppn
+
+    def _ppns_channel_to_global(self, channel_id, ppns):
+        return [self._ppn_channel_to_global(channel_id, ppn) for ppn in ppns]
+
+
 
 class MultiChannelBlockPool(MultiChannelBlockPoolBase):
+    """
+    This is for DFTL
+    """
     def pick_and_move(self, src, dst):
         "This function will advance self._next_channel"
         blocknum = self.pick(tag=src)
@@ -72,21 +102,6 @@ class MultiChannelBlockPool(MultiChannelBlockPoolBase):
             self.change_tag(blocknum, src, dst)
             return blocknum
 
-    def change_tag(self, blocknum, src, dst):
-        channel_id, block_off = self.global_to_channel(blocknum)
-        self._channel_pool[channel_id].change_tag(block_off, src, dst)
-
-    def channel_to_global(self, channel_id, blocknum):
-        ret = channel_id * self.n_blocks_per_channel + blocknum
-        assert ret < self.total_blocks
-        return ret
-
-    def global_to_channel(self, blocknum):
-        "return channel_id, block_offset"
-        assert blocknum < self.total_blocks
-        return blocknum / self.n_blocks_per_channel, \
-                blocknum % self.n_blocks_per_channel
-
     def current_blocks(self):
         "return all current block numbers"
         blocknums = []
@@ -94,7 +109,7 @@ class MultiChannelBlockPool(MultiChannelBlockPoolBase):
             for tag in self.tags:
                 cur_blk_objs = pool.get_cur_block_obj(tag)
                 for obj in cur_blk_objs:
-                    global_blk = self.channel_to_global(pool.channel_id,
+                    global_blk = self._channel_to_global(pool.channel_id,
                             obj.blocknum)
                     blocknums.append(global_blk)
 
@@ -125,7 +140,7 @@ class MultiChannelBlockPool(MultiChannelBlockPoolBase):
                 # channel out of space
                 empty_channels.add(cur_channel_id)
 
-            ppns = self.ppns_channel_to_global(cur_channel_id, ppns)
+            ppns = self._ppns_channel_to_global(cur_channel_id, ppns)
             ret_ppns.extend(ppns)
             self._incr_next_channel()
             remaining -= len(ppns)
@@ -135,17 +150,6 @@ class MultiChannelBlockPool(MultiChannelBlockPoolBase):
             raise TagOutOfSpaceError
 
         return ret_ppns
-
-    def blocks_channel_to_global(self, channel_id, blocks):
-        return [self.channel_to_global(channel_id, block)
-                for block in blocks]
-
-    def ppn_channel_to_global(self, channel_id, ppn):
-        return channel_id * self.n_pages_per_channel + ppn
-
-    def ppns_channel_to_global(self, channel_id, ppns):
-        return [self.ppn_channel_to_global(channel_id, ppn) for ppn in ppns]
-
     def _next_ppns_in_channel(self, channel_id, n, tag, block_index):
         """
         Return ppns we can find. If returning [], it means this channel
