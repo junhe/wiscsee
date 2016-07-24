@@ -16,15 +16,22 @@ class TagBlockPool(object):
     def count_blocks(self, tag):
         return len(self._tag_subpool[tag])
 
-    def pick_and_move(self, src, dst):
+    def pick(self, tag):
         try:
-            block = self._tag_subpool[src][-1]
+            block = self._tag_subpool[tag][-1]
         except IndexError:
             # Out of Space of this tag
             return None
-
-        self.change_tag(block, src, dst)
         return block
+
+    def pick_and_move(self, src, dst):
+        block = self.pick(src)
+
+        if block is None:
+            return None
+        else:
+            self.change_tag(block, src, dst)
+            return block
 
 
 class CurrentBlock(object):

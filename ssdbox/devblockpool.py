@@ -20,8 +20,6 @@ class MultiChannelBlockPoolBase(object):
         self._next_channel = (self._next_channel + 1) % self.n_channels
         return self._next_channel
 
-
-class MultiChannelBlockPool(MultiChannelBlockPoolBase):
     def count_blocks(self, tag, channels=None):
         total = 0
 
@@ -35,22 +33,44 @@ class MultiChannelBlockPool(MultiChannelBlockPoolBase):
 
         return total
 
-    def get_blocks_of_tag(self, tag):
+    def get_blocks_of_tag(self, tag, channel_id=None):
         ret = []
-        for pool in self._channel_pool:
+
+        if channel_id is None:
+            channels =  self._channel_pool
+        else:
+            channels =  [self._channel_pool[channel_id]]
+
+        for pool in channels:
             blocks = pool.get_blocks_of_tag(tag)
             ret.extend(self.blocks_channel_to_global(pool.channel_id, blocks))
 
         return ret
 
+    def pick(self, tag, channel_id=None):
+        if channel_id is None:
+            cur_channel = self._next_channel
+            self._incr_next_channel()
+        else:
+            cur_channel = channel_id
+
+        block_off = self._channel_pool[cur_channel].pick(tag=tag)
+
+        if block_off is None:
+            return None
+        else:
+            return self.channel_to_global(cur_channel, block_off)
+
+class MultiChannelBlockPool(MultiChannelBlockPoolBase):
     def pick_and_move(self, src, dst):
         "This function will advance self._next_channel"
-        cur_channel = self._next_channel
-        self._incr_next_channel()
+        blocknum = self.pick(tag=src)
 
-        block_off = self._channel_pool[cur_channel].pick_and_move(src, dst)
-
-        return self.channel_to_global(cur_channel, block_off)
+        if blocknum is None:
+            return None
+        else:
+            self.change_tag(blocknum, src, dst)
+            return blocknum
 
     def change_tag(self, blocknum, src, dst):
         channel_id, block_off = self.global_to_channel(blocknum)

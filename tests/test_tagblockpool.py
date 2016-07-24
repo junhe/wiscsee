@@ -40,6 +40,20 @@ class TestTagBlockPool(unittest.TestCase):
 
         self.assertIn(block, pool.get_blocks_of_tag(TDATA))
 
+    def test_pick(self):
+        pool = TagBlockPool(100, [TDATA, TTRANS])
+        block = pool.pick(tag=TFREE)
+
+        self.assertIn(block, pool.get_blocks_of_tag(TFREE))
+        self.assertNotIn(block, pool.get_blocks_of_tag(TDATA))
+        self.assertNotIn(block, pool.get_blocks_of_tag(TTRANS))
+
+    def test_pick_empty(self):
+        pool = TagBlockPool(100, [TDATA, TTRANS])
+        block = pool.pick(tag=TDATA)
+
+        self.assertEqual(block, None)
+
 
 class TestBlockPoolWithCurBlocks(unittest.TestCase):
     def test_init(self):

@@ -74,6 +74,47 @@ class TestMultiChannelBlockPool(unittest.TestCase):
         datablocks = pool.get_blocks_of_tag(TDATA)
         self.assertListEqual(datablocks, [blocknum])
 
+    def test_pick(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        blocknum = pool.pick(tag=TFREE)
+        self.assertIn(blocknum, pool.get_blocks_of_tag(tag=TFREE))
+
+    def test_pick_failure(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        blocknum = pool.pick(tag=TDATA)
+        self.assertEqual(blocknum, None)
+
+    def test_pick_from_channel(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        blocknum = pool.pick(tag=TFREE, channel_id=2)
+        self.assertIn(blocknum, pool.get_blocks_of_tag(tag=TFREE,
+            channel_id=2))
+
+    def test_pick_from_channel_failure(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        blocknum = pool.pick(tag=TDATA, channel_id=2)
+        self.assertEqual(blocknum, None)
+
     def test_cur_blocks(self):
         pool = MultiChannelBlockPool(
                 n_channels=8,
