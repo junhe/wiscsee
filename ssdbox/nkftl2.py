@@ -225,8 +225,6 @@ class OutOfBandAreas(object):
                 return True
         return False
 
-TDATA = 'TDATA'
-TLOG = 'TLOG'
 
 class OutOfSpaceError(RuntimeError):
     pass
@@ -391,6 +389,8 @@ class SingleLogBlockInfo(object):
             return False, None
 
 
+TDATA = 'TDATA'
+TLOG = 'TLOG'
 class NKBlockPool(MultiChannelBlockPoolBase):
     """
     - able to allocate a block from a specific channel.           OK
@@ -407,11 +407,21 @@ class LogGroup2(object):
     - allocate pages from blocks of this group
     - report need to merge
     """
-    def __init__(self, block_pool, K):
-        self.n_channels = block_pool.n_channels
+    def __init__(self, block_pool, max_n_log_blocks):
         self.block_pool = block_pool
-        self.K = K
-        # self.channels = [
+        self.n_channels = block_pool.n_channels
+        self.n_pages_per_block = block_pool.n_pages_per_block
+
+        self.max_n_log_blocks = max_n_log_blocks
+        # each channel has a current block or None
+        self.log_channels = [[] for i in range(self.n_channels)]
+
+    def n_log_blocks(self):
+        total = 0
+        for channel_id in range(self.n_channels):
+            total += len(self.log_channels[channel_id])
+
+        return total
 
     def ppns_to_write(self, lpn_extent):
         """
@@ -426,25 +436,66 @@ class LogGroup2(object):
         we need to do global GC
         """
 
+    def n_free_pages(self):
+        total = 0
+        for channel_id in range(self.n_channels):
+            total += self.n_channel_free_pages(channel_id)
+        return total
+
+    def n_channel_free_pages(self, channel_id):
+        total = 0
+        for cur_block in self.log_channels[channel_id]:
+            total += cur_block.num_free_pages()
+        return total
+
     def _allocate_blocks(self):
         """
         Allocate one block from each channel, if one channel fails, the whole
         thing fail
+
+        Return: True: allocated, False: cannot find enough blocks
         """
+        # check if each channel in block pool has at least one free block
+        for channel_id in range(self.n_channels):
+            cnt = self.block_pool.count_blocks(tag=TFREE, channels=[channel_id])
+            if cnt < 1:
+                return False
+
+        # Now allocate one block from each channel
+        for channel_id in range(self.n_channels):
+            blocknum = self.block_pool.pick(tag=TFREE, channel_id=channel_id)
+            self.block_pool.change_tag(blocknum, src=TFREE, dst=TLOG)
+            self.log_channels[channel_id].append(
+                    CurrentBlock(self.n_pages_per_block, blocknum) )
+
+        assert self.n_log_blocks() <= self.max_n_log_blocks
+        return True
 
     def _is_space_enough(self, extent):
         """
         Check if the current log blocks of this log group is large enough
         for the strip_unit_size. If yes, we don't need to allocate log block
         for this log group.
+
+        return: NEED NEW BLOCKS, ENOUGH
         """
 
     def _next_ppns_in_channel(self, n, channel_id):
         """
-        This function fails if a channel cannot get n free pages.
         This function only use the blocks already in this log group.
+        It does it by best effort.
         """
+        remaining = n
+        cur_blocks = self.log_channels[channel_id]
 
+        ppns = []
+        for cur_block in cur_blocks:
+            if remaining > 0:
+                tmp_ppns = cur_block.next_ppns(remaining)
+                ppns.extend(tmp_ppns)
+                remaining -= len(tmp_ppns)
+
+        return ppns
 
 
 class LogGroup(object):

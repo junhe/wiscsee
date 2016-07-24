@@ -191,14 +191,13 @@ class TestCurrentBlock(unittest.TestCase):
 
     def test_num_free(self):
         cur_block = CurrentBlock(64, 0)
-        self.assertEqual(cur_block.num_free(), 64)
+        self.assertEqual(cur_block.num_free_pages(), 64)
 
         ppns = cur_block.next_ppns(5)
-        self.assertEqual(cur_block.num_free(), 59)
-
+        self.assertEqual(cur_block.num_free_pages(), 59)
 
         ppns = cur_block.next_ppns(64)
-        self.assertEqual(cur_block.num_free(), 0)
+        self.assertEqual(cur_block.num_free_pages(), 0)
 
 
 def main():
