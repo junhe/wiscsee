@@ -415,6 +415,15 @@ class LogGroup2(object):
         self.max_n_log_blocks = max_n_log_blocks
         # each channel has a current block or None
         self.log_channels = [[] for i in range(self.n_channels)]
+        self._cur_channel = 0
+
+    def _get_and_incr_cur_channel(self):
+        channel = self._cur_channel
+        self._cur_channel = (self._cur_channel + 1) % self.n_channels
+        return channel
+
+    def reached_max_log_blocks(self):
+        return self.n_log_blocks() == self.max_n_log_blocks
 
     def n_log_blocks(self):
         total = 0
@@ -447,6 +456,23 @@ class LogGroup2(object):
         for cur_block in self.log_channels[channel_id]:
             total += cur_block.num_free_pages()
         return total
+
+    def allocate_block_in_channel(self, channel_id):
+        cnt = self.block_pool.count_blocks(tag=TFREE, channels=[channel_id])
+        if cnt < 1:
+            return False
+
+        if self.reached_max_log_blocks() is True:
+            return False
+
+        blocknum = self.block_pool.pick(tag=TFREE, channel_id=channel_id)
+        self.block_pool.change_tag(blocknum, src=TFREE, dst=TLOG)
+        self.log_channels[channel_id].append(
+                CurrentBlock(self.n_pages_per_block, blocknum) )
+
+        assert self.n_log_blocks() <= self.max_n_log_blocks, "{} > {}".format(
+                self.n_log_blocks(), self.max_n_log_blocks)
+        return True
 
     def _allocate_blocks(self):
         """
@@ -496,6 +522,19 @@ class LogGroup2(object):
                 remaining -= len(tmp_ppns)
 
         return ppns
+
+    def next_ppns(self, n, strip_unit_size):
+        """
+        It does it by best effort.
+        - if it cannot allocate strip_unit_size pages in a channel, it will
+          try to allocate. If the allocating fails, it will try using the
+          available blocks.
+        - It is possible that it cannot find n pages, it will return the pages
+          that it has found. The caller will need to trigger GC to merge some
+          log blocks and make new ones available.
+        """
+        remaining = n
+
 
 
 class LogGroup(object):

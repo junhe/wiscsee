@@ -2287,6 +2287,58 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(found, False)
         self.assertEqual(len(ppns), 0)
 
+    def test_incr_channel(self):
+        blockpool = NKBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TLOG])
+        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+
+        self.assertEqual(loggroup._cur_channel, 0)
+        ret = loggroup._get_and_incr_cur_channel()
+        self.assertEqual(ret, 0)
+        self.assertEqual(loggroup._cur_channel, 1)
+
+        for i in range(8):
+            ret = loggroup._get_and_incr_cur_channel()
+
+        self.assertEqual(loggroup._cur_channel, 1)
+
+    def test_allocate_blocks_in_channel(self):
+        blockpool = NKBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TLOG])
+        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+        n_channels = blockpool.n_channels
+
+        self.assertEqual(loggroup.n_log_blocks(), 0)
+
+        allocated = loggroup.allocate_block_in_channel(channel_id=2)
+
+        self.assertEqual(allocated, True)
+        self.assertEqual(loggroup.n_log_blocks(), 1)
+        self.assertEqual(loggroup.n_channel_free_pages(channel_id=2), 32)
+
+        allocated = loggroup.allocate_block_in_channel(channel_id=2)
+
+        self.assertEqual(allocated, True)
+        self.assertEqual(loggroup.n_log_blocks(), 2)
+        self.assertEqual(loggroup.n_channel_free_pages(channel_id=2), 64)
+
+        for i in range(16-2):
+            loggroup.allocate_block_in_channel(channel_id=0)
+
+        self.assertEqual(loggroup.n_log_blocks(), 16)
+        self.assertEqual(loggroup.n_channel_free_pages(channel_id=0),
+                32 * (16 - 2))
+
+        allocated = loggroup.allocate_block_in_channel(channel_id=0)
+        self.assertEqual(allocated, False)
+        self.assertEqual(loggroup.n_log_blocks(), 16)
+
     def test_allocate_blocks(self):
         blockpool, loggroup = create_loggroup2()
         n_channels = blockpool.n_channels
@@ -2374,6 +2426,68 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(len(ppns), 32)
 
         self.assertEqual(loggroup.n_channel_free_pages(channel_id=1), 32 * 2 - 35)
+
+    def test_next_ppns_simple(self):
+        blockpool = NKBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TLOG])
+        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+
+        ppns = loggroup.next_ppns(n=8, strip_unit_size=1)
+
+        self.assertEqual(len(ppns), 8)
+        self.assertEqual(loggroup.n_log_blocks(), 8)
+        for i in range(8):
+            self.assertEqual(loggroup.n_channel_free_pages(i), 32 - 1)
+
+    def test_next_ppns_two_blocks_per_channel(self):
+        blockpool = NKBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TLOG])
+        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+
+        ppns = loggroup.next_ppns(n=33*8, strip_unit_size=32)
+
+        self.assertEqual(len(ppns), 33*8)
+        self.assertEqual(loggroup.n_log_blocks(), 8*2)
+        for i in range(8):
+            self.assertEqual(loggroup.n_channel_free_pages(i), 32 - 1)
+
+    def test_next_ppns_overflow_it(self):
+        blockpool = NKBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TLOG])
+        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+
+        ppns = loggroup.next_ppns(n=32*2*8 + 1, strip_unit_size=32)
+
+        self.assertEqual(len(ppns), 32*2*8)
+        self.assertEqual(loggroup.n_log_blocks(), 8*2)
+        for i in range(8):
+            self.assertEqual(loggroup.n_channel_free_pages(i), 0)
+
+    def test_next_ppns_channel_position(self):
+        blockpool = NKBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TLOG])
+        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+
+        self.assertEqual(loggroup._cur_channel, 0)
+        ppns = loggroup.next_ppns(n=1, strip_unit_size=32)
+        self.assertEqual(loggroup._cur_channel, 1)
+        ppns = loggroup.next_ppns(n=1, strip_unit_size=32)
+        self.assertEqual(loggroup._cur_channel, 2)
+
+        ppns = loggroup.next_ppns(n=64, strip_unit_size=32)
+        self.assertEqual(loggroup._cur_channel, 4)
 
 
 def main():
