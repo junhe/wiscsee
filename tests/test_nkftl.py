@@ -486,15 +486,17 @@ class TestLogBlockMappingTable(unittest.TestCase):
         conf = create_config()
         rec = create_recorder(conf)
         helper = create_global_helper(conf)
+        block_pool = BlockPool(conf)
 
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
 
     def test_add_log_block(self):
         conf = create_config()
         rec = create_recorder(conf)
         helper = create_global_helper(conf)
+        block_pool = BlockPool(conf)
 
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         logmaptable.add_log_block(dgn=1, flash_block=8)
 
         self.assertEqual(logmaptable.log_group_info.keys()[0], 1)
@@ -505,8 +507,9 @@ class TestLogBlockMappingTable(unittest.TestCase):
         conf = create_config()
         rec = create_recorder(conf)
         helper = create_global_helper(conf)
+        block_pool = BlockPool(conf)
 
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         gotit, err = logmaptable.next_ppn_to_program(dgn=1)
         self.assertEqual(gotit, False)
         self.assertEqual(err, ERR_NEED_NEW_BLOCK)
@@ -515,8 +518,9 @@ class TestLogBlockMappingTable(unittest.TestCase):
         conf = create_config()
         rec = create_recorder(conf)
         helper = create_global_helper(conf)
+        block_pool = BlockPool(conf)
 
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
 
         logmaptable.add_log_block(dgn=1, flash_block=8)
 
@@ -635,7 +639,7 @@ class TestVictimBlocks(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
 
         vblocks = VictimDataBlocks(conf, block_pool, oob, rec, logmaptable,
@@ -650,7 +654,7 @@ class TestVictimBlocks(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
 
         vblocks = VictimLogBlocks(conf, block_pool, oob, rec, logmaptable,
@@ -668,7 +672,7 @@ class TestVictimBlocks(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
 
         vblocks = VictimDataBlocks(conf, block_pool, oob, rec, logmaptable,
@@ -686,7 +690,7 @@ class TestVictimBlocks(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
 
         # use one block
@@ -720,7 +724,7 @@ class TestVictimBlocks(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
 
         self.use_a_log_block(conf, oob, block_pool, logmaptable,
@@ -738,7 +742,7 @@ class TestVictimBlocks(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
 
         self.use_a_data_block(conf, block_pool, oob)
@@ -765,7 +769,7 @@ class TestCleaningDataBlocks(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -780,7 +784,7 @@ class TestCleaningDataBlocks(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -822,7 +826,7 @@ class TestCleaningDataBlocks(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -885,7 +889,7 @@ class TestSwitchMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -908,7 +912,7 @@ class TestSwitchMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -931,7 +935,7 @@ class TestSwitchMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -954,7 +958,7 @@ class TestSwitchMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -1057,7 +1061,7 @@ class TestPartialMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -1081,7 +1085,7 @@ class TestPartialMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -1104,7 +1108,7 @@ class TestPartialMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -1127,7 +1131,7 @@ class TestPartialMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -1217,7 +1221,7 @@ class TestPartialMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -1350,7 +1354,7 @@ class TestFullMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -1446,7 +1450,7 @@ class TestFullMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -1703,7 +1707,7 @@ class TestFullMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -1849,7 +1853,7 @@ class TestFullMerge(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -2007,7 +2011,7 @@ class TestCleanDataGroup(unittest.TestCase):
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, rec, helper)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
@@ -2369,7 +2373,7 @@ class TestLogGroup2(unittest.TestCase):
     def test_next_ppns_simple(self):
         blockpool, loggroup = create_loggroup2()
 
-        ppns, err = loggroup.next_ppns(n=8, strip_unit_size=1)
+        ppns = loggroup.next_ppns(n=8, strip_unit_size=1)
 
         self.assertEqual(len(ppns), 8)
         self.assertEqual(loggroup.n_log_blocks(), 8)
@@ -2379,7 +2383,7 @@ class TestLogGroup2(unittest.TestCase):
     def test_next_ppns_two_blocks_per_channel(self):
         blockpool, loggroup = create_loggroup2()
 
-        ppns, err = loggroup.next_ppns(n=33*8, strip_unit_size=32)
+        ppns = loggroup.next_ppns(n=33*8, strip_unit_size=32)
 
         self.assertEqual(len(ppns), 33*8)
         self.assertEqual(loggroup.n_log_blocks(), 9)
@@ -2390,10 +2394,9 @@ class TestLogGroup2(unittest.TestCase):
     def test_next_ppns_overflow_it(self):
         blockpool, loggroup = create_loggroup2()
 
-        ppns, err = loggroup.next_ppns(n=32*2*8 + 1, strip_unit_size=32)
+        ppns = loggroup.next_ppns(n=32*2*8 + 1, strip_unit_size=32)
 
         self.assertEqual(len(ppns), 32*2*8)
-        self.assertEqual(err, ERR_NEED_MERGING)
         self.assertEqual(loggroup.n_log_blocks(), 8*2)
         for i in range(8):
             self.assertEqual(loggroup.n_channel_free_pages(i), 0)
@@ -2401,19 +2404,17 @@ class TestLogGroup2(unittest.TestCase):
     def test_next_ppns_infinit_stip(self):
         blockpool, loggroup = create_loggroup2()
 
-        ppns, err = loggroup.next_ppns(n=33, strip_unit_size='infinity')
+        ppns = loggroup.next_ppns(n=33, strip_unit_size='infinity')
 
         self.assertEqual(len(ppns), 33)
-        self.assertEqual(err, None)
         self.assertEqual(loggroup.n_log_blocks(), 2)
 
     def test_next_ppns_overflow_channel(self):
         blockpool, loggroup = create_loggroup2()
 
-        ppns, err = loggroup.next_ppns(n=65, strip_unit_size='infinity')
+        ppns = loggroup.next_ppns(n=65, strip_unit_size='infinity')
 
         self.assertEqual(len(set(ppns)), 65)
-        self.assertEqual(err, None)
         self.assertEqual(loggroup.n_log_blocks(), 3)
 
     def test_next_ppns_channel_position(self):
@@ -2425,7 +2426,7 @@ class TestLogGroup2(unittest.TestCase):
         ppns = loggroup.next_ppns(n=1, strip_unit_size=32)
         self.assertEqual(loggroup._cur_channel, 2)
 
-        ppns, _ = loggroup.next_ppns(n=64, strip_unit_size=32)
+        ppns = loggroup.next_ppns(n=64, strip_unit_size=32)
         self.assertEqual(len(ppns), 64)
         self.assertEqual(loggroup._cur_channel, 4)
 
@@ -2448,9 +2449,8 @@ class TestLogGroup2(unittest.TestCase):
         lpns = []
         ppns = []
         for i in range(16):
-            tmp_ppns, err = loggroup.next_ppns(n=1, strip_unit_size=1)
+            tmp_ppns = loggroup.next_ppns(n=1, strip_unit_size=1)
             ppn = tmp_ppns[0]
-            self.assertEqual(err, None)
             loggroup.add_mapping(lpn=i, ppn=ppn)
             lpns.append(i)
             ppns.append(ppn)
@@ -2462,10 +2462,9 @@ class TestLogGroup2(unittest.TestCase):
         blockpool, loggroup = create_loggroup2()
         conf = loggroup.conf
 
-        tmp_ppns, err = loggroup.next_ppns(n=1, strip_unit_size=1)
+        tmp_ppns = loggroup.next_ppns(n=1, strip_unit_size=1)
         ppn = tmp_ppns[0]
         block, _ = conf.page_to_block_off(ppn)
-        self.assertEqual(err, None)
         loggroup.add_mapping(lpn=1, ppn=ppn)
 
         loggroup.remove_log_block(block)

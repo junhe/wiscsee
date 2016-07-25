@@ -565,13 +565,13 @@ class LogGroup2(object):
             remaining -= len(ppns)
             if len(ppns) < reqsize:
                 if self.reached_max_log_blocks() is True:
-                    return ret_ppns, ERR_NEED_MERGING
+                    return ret_ppns
                 else:
                     assert self.block_pool.count_blocks(tag=TFREE,
                             channels=[cur_channel_id])
                     full_channels.add(cur_channel_id)
 
-        return ret_ppns, None
+        return ret_ppns
 
     def _next_ppns_in_channel_with_allocation(self, reqsize, channel_id):
         """
@@ -790,9 +790,11 @@ class Translator(MappingBase):
         return False, None, None
 
 class LogMappingTable(MappingBase):
-    def __init__(self, confobj, recorderobj, global_helper_obj):
+    def __init__(self, confobj, block_pool, recorderobj, global_helper_obj):
         super(LogMappingTable, self).__init__(confobj, recorderobj,
             global_helper_obj)
+
+        self.block_pool = block_pool
 
         # dgn -> log block info of data group (LogGroup)
         self.log_group_info = {}
@@ -802,6 +804,13 @@ class LogMappingTable(MappingBase):
             LogGroup(self.conf, self.recorder, self.global_helper))
         # it may return ERR_NEED_NEW_BLOCK or ERR_NEED_MERGING
         return loginfo.next_ppn_to_program()
+
+    def next_ppns_to_program(self, dgn, n):
+        loggroup = self.log_group_info.setdefault(dgn,
+            LogGroup2(self.conf, self.block_pool,
+                max_n_log_blocks=self.conf['nkftl']['max_blocks_in_log_group']))
+        return loggroup.next_ppns(n,
+                strip_unit_size=self.conf['stripe_size'])
 
     def add_mapping(self, data_group_no, lpn, ppn):
         # lpn must be in data_group_no
@@ -1595,7 +1604,7 @@ class Ftl(ftlbuilder.FtlBuilder):
             recorderobj, self.global_helper)
 
         self.log_mapping_table = LogMappingTable(confobj,
-            recorderobj, self.global_helper)
+            self.block_pool, recorderobj, self.global_helper)
 
         ###### the managers ######
         self.translator = Translator(
