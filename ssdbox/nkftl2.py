@@ -457,7 +457,7 @@ class LogGroup2(object):
             total += cur_block.num_free_pages()
         return total
 
-    def allocate_block_in_channel(self, channel_id):
+    def _allocate_block_in_channel(self, channel_id):
         cnt = self.block_pool.count_blocks(tag=TFREE, channels=[channel_id])
         if cnt < 1:
             return False
@@ -473,38 +473,6 @@ class LogGroup2(object):
         assert self.n_log_blocks() <= self.max_n_log_blocks, "{} > {}".format(
                 self.n_log_blocks(), self.max_n_log_blocks)
         return True
-
-    def _allocate_blocks(self):
-        """
-        Allocate one block from each channel, if one channel fails, the whole
-        thing fail
-
-        Return: True: allocated, False: cannot find enough blocks
-        """
-        # check if each channel in block pool has at least one free block
-        for channel_id in range(self.n_channels):
-            cnt = self.block_pool.count_blocks(tag=TFREE, channels=[channel_id])
-            if cnt < 1:
-                return False
-
-        # Now allocate one block from each channel
-        for channel_id in range(self.n_channels):
-            blocknum = self.block_pool.pick(tag=TFREE, channel_id=channel_id)
-            self.block_pool.change_tag(blocknum, src=TFREE, dst=TLOG)
-            self.log_channels[channel_id].append(
-                    CurrentBlock(self.n_pages_per_block, blocknum) )
-
-        assert self.n_log_blocks() <= self.max_n_log_blocks
-        return True
-
-    def _is_space_enough(self, extent):
-        """
-        Check if the current log blocks of this log group is large enough
-        for the strip_unit_size. If yes, we don't need to allocate log block
-        for this log group.
-
-        return: NEED NEW BLOCKS, ENOUGH
-        """
 
     def _next_ppns_in_channel(self, n, channel_id):
         """
@@ -534,7 +502,49 @@ class LogGroup2(object):
           log blocks and make new ones available.
         """
         remaining = n
+        if strip_unit_size == 'infinity':
+            strip_unit_size = float('inf')
 
+        ret_ppns = []
+        # dead channel: 1. no free pages, 2. log group num of log blocks reached
+        # max
+        full_channels = set()
+        while remaining > 0 and len(full_channels) < self.n_channels:
+            cur_channel_id = self._get_and_incr_cur_channel()
+            reqsize = min(remaining, strip_unit_size)
+            ppns = self._next_ppns_in_channel_with_allocation(
+                    reqsize, cur_channel_id)
+            ret_ppns.extend(ppns)
+            remaining -= len(ppns)
+            if len(ppns) < reqsize:
+                if self.reached_max_log_blocks() is True:
+                    return ret_ppns, ERR_NEED_MERGING
+                else:
+                    assert self.block_pool.count_blocks(tag=TFREE,
+                            channels=[cur_channel_id])
+                    full_channels.add(cur_channel_id)
+
+        return ret_ppns, None
+
+    def _next_ppns_in_channel_with_allocation(self, reqsize, channel_id):
+        """
+        Try allocate reqsize ppns from this channel, it may allocate more blocks
+
+        Return: ppns
+        """
+        ret_ppns = []
+        remaining = reqsize
+        while remaining > 0:
+            ppns = self._next_ppns_in_channel(remaining, channel_id=channel_id)
+            ret_ppns.extend(ppns)
+            remaining -= len(ppns)
+
+            if remaining > 0:
+                allocated = self._allocate_block_in_channel(channel_id)
+                if allocated is False:
+                    break
+
+        return ret_ppns
 
 
 class LogGroup(object):
