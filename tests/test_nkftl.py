@@ -60,9 +60,6 @@ def create_nkftl():
 def create_global_helper(conf):
     return GlobalHelper(conf)
 
-def create_loggroupinfo(conf, rec, globalhelper):
-    return LogGroup(conf, rec, globalhelper)
-
 def create_translator(conf, rec, globalhelper, log_mapping, data_block_mapping):
     return Translator(conf, rec, globalhelper, log_mapping, data_block_mapping)
 
@@ -126,146 +123,25 @@ class TestNkftl(unittest.TestCase):
         self.write_and_check(ftl, lpns)
 
 
-class TestLogGroup(unittest.TestCase):
-    def test_add_log_blocks(self):
-        ftl, conf, rec = create_nkftl()
-        globalhelper = create_global_helper(conf)
-        loggroupinfo = create_loggroupinfo(conf, rec, globalhelper)
-
-        loggroupinfo.add_log_block(8)
-
-        n_pages_per_block = conf.n_pages_per_block
-
-        log_blocks = loggroupinfo.log_blocks()
-        self.assertEqual(log_blocks.keys()[0], 8)
-        singlelogblockinfo = log_blocks.values()[0]
-        self.assertTrue(isinstance(singlelogblockinfo, SingleLogBlockInfo))
-        self.assertEqual(singlelogblockinfo.flash_block_num, 8)
-        self.assertEqual(singlelogblockinfo.has_free_page(), True)
-        gotit, ppn, = singlelogblockinfo.next_ppn_to_program()
-        self.assertEqual(gotit, True)
-        self.assertEqual(ppn, 8*n_pages_per_block)
-
-    def test_next_ppn(self):
-        ftl, conf, rec = create_nkftl()
-        globalhelper = create_global_helper(conf)
-        loggroupinfo = create_loggroupinfo(conf, rec, globalhelper)
-
-        loggroupinfo.add_log_block(0)
-        for i in range(conf.n_pages_per_block):
-            found, err = loggroupinfo.next_ppn_to_program()
-            self.assertTrue(found)
-
-        found, err = loggroupinfo.next_ppn_to_program()
-        self.assertFalse(found)
-        self.assertEqual(err, ERR_NEED_NEW_BLOCK)
-
-        loggroupinfo.add_log_block(1)
-        for i in range(conf.n_pages_per_block):
-            found, err = loggroupinfo.next_ppn_to_program()
-            self.assertTrue(found)
-
-        found, err = loggroupinfo.next_ppn_to_program()
-        self.assertFalse(found)
-        self.assertEqual(err, ERR_NEED_MERGING)
-
-    def test_init(self):
-        conf = create_config()
-        rec = create_recorder(conf)
-        helper = create_global_helper(conf)
-
-        lginfo = LogGroup(conf, rec, helper)
-
-    def test_add_mapping(self):
-        conf = create_config()
-        rec = create_recorder(conf)
-        helper = create_global_helper(conf)
-
-        lginfo = LogGroup(conf, rec, helper)
-        lginfo.add_log_block(1)
-
-        lpns = []
-        ppns = []
-        for i in range(conf.n_pages_per_block):
-            found, ppn = lginfo.next_ppn_to_program()
-            self.assertTrue(found)
-            lginfo.add_mapping(lpn=i, ppn=ppn)
-            lpns.append(i)
-            ppns.append(ppn)
-
-        for lpn, ppn in zip(lpns, ppns):
-            self.assertEqual(lginfo.lpn_to_ppn(lpn)[1], ppn)
-
-    def test_remove_log_block(self):
-        conf = create_config()
-        rec = create_recorder(conf)
-        helper = create_global_helper(conf)
-
-        lginfo = LogGroup(conf, rec, helper)
-        lginfo.add_log_block(1)
-
-        lpns = []
-        ppns = []
-        for i in range(conf.n_pages_per_block):
-            found, ppn = lginfo.next_ppn_to_program()
-            self.assertTrue(found)
-            lginfo.add_mapping(lpn=i, ppn=ppn)
-            lpns.append(i)
-            ppns.append(ppn)
-
-        lginfo.remove_log_block(1)
-
-        self.assertEqual(len(lginfo._page_map), 0)
-        self.assertEqual(len(lginfo._log_blocks), 0)
-        self.assertEqual(lginfo._cur_log_block, None)
-
-    def test_adding_log_blocks(self):
-        conf = create_config()
-        rec = create_recorder(conf)
-        helper = create_global_helper(conf)
-
-        lginfo = LogGroup(conf, rec, helper)
-        lginfo.add_log_block(1)
-
-        with self.assertRaisesRegexp(RuntimeError, 'should not have free page'):
-            lginfo.add_log_block(2)
-
-    def test_max_log_blocks(self):
-        conf = create_config()
-        rec = create_recorder(conf)
-        helper = create_global_helper(conf)
-
-        max_n_blocks = conf['nkftl']['max_blocks_in_log_group']
-
-        lginfo = LogGroup(conf, rec, helper)
-
-        for blocknum in range(max_n_blocks):
-            lginfo.add_log_block(blocknum)
-            for page in range(conf.n_pages_per_block):
-                found, ppn = lginfo.next_ppn_to_program()
-                self.assertTrue(found)
-                lginfo.add_mapping(lpn=blocknum*conf.n_pages_per_block+page,
-                        ppn=ppn)
-            found, err = lginfo.next_ppn_to_program()
-            self.assertEqual(found, False)
-
-            if blocknum == max_n_blocks - 1:
-                self.assertEqual(err, ERR_NEED_MERGING)
-            else:
-                self.assertEqual(err, ERR_NEED_NEW_BLOCK)
-
-
 class TestBlockPool(unittest.TestCase):
     def test_init(self):
         conf = create_config()
-        block_pool = BlockPool(conf)
+        block_pool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
 
         self.assertEqual(block_pool.used_ratio(), 0)
         self.assertEqual(block_pool.total_used_blocks(), 0)
 
     def test_log_blocks(self):
         conf = create_config()
-        block_pool = BlockPool(conf)
+        block_pool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
 
         blocknum = block_pool.pop_a_free_block_to_log_blocks()
         self.assertIn(blocknum, block_pool.log_usedblocks)
@@ -281,7 +157,11 @@ class TestBlockPool(unittest.TestCase):
 
     def test_data_blocks(self):
         conf = create_config()
-        block_pool = BlockPool(conf)
+        block_pool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
 
         blocknum = block_pool.pop_a_free_block_to_data_blocks()
         self.assertIn(blocknum, block_pool.data_usedblocks)
@@ -293,7 +173,11 @@ class TestBlockPool(unittest.TestCase):
 
     def test_free_used_log(self):
         conf = create_config()
-        block_pool = BlockPool(conf)
+        block_pool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
 
         blocknum = block_pool.pop_a_free_block_to_log_blocks()
         block_pool.free_used_log_block(blocknum)
@@ -302,7 +186,11 @@ class TestBlockPool(unittest.TestCase):
 
     def test_freeblocks(self):
         conf = create_config()
-        block_pool = BlockPool(conf)
+        block_pool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
 
         self.assertEqual(len(block_pool.freeblocks), conf.n_blocks_per_dev)
 
@@ -385,39 +273,6 @@ class TestBlockInfo(unittest.TestCase):
             used_times.append( time )
 
         self.assertListEqual(used_times, range(10))
-
-
-class TestSingleLogBlockInfo(unittest.TestCase):
-    def test_init(self):
-        conf = create_config()
-        blkinfo = SingleLogBlockInfo(conf, 7, last_used_time=8,
-                last_programmed_offset=1)
-
-    def test_next_ppn(self):
-        conf = create_config()
-        blkinfo = SingleLogBlockInfo(conf, 7, last_used_time=8)
-
-        n_pages_per_block = conf.n_pages_per_block
-        gotit, ppn = blkinfo.next_ppn_to_program()
-        self.assertTrue(gotit)
-        self.assertEqual(ppn, 7*n_pages_per_block)
-
-        gotit, ppn = blkinfo.next_ppn_to_program()
-        self.assertTrue(gotit)
-        self.assertEqual(ppn, 7*n_pages_per_block+1)
-
-    def test_has_free_page(self):
-        conf = create_config()
-        blkinfo = SingleLogBlockInfo(conf, 7, last_used_time=8)
-
-        self.assertTrue(blkinfo.has_free_page())
-
-        n_pages_per_block = conf.n_pages_per_block
-        for i in range(n_pages_per_block):
-            self.assertTrue(blkinfo.has_free_page())
-            ppn = blkinfo.next_ppn_to_program()
-
-        self.assertFalse(blkinfo.has_free_page())
 
 
 class TestOutOfBandAreas(unittest.TestCase):
@@ -686,7 +541,11 @@ class TestVictimBlocks(unittest.TestCase):
 
     def test_one_victim_blocks(self):
         conf = create_config()
-        block_pool = BlockPool(conf)
+        block_pool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -701,26 +560,29 @@ class TestVictimBlocks(unittest.TestCase):
         # check the block
         vblocks = VictimLogBlocks(conf, block_pool, oob, rec, logmaptable,
                 datablocktable)
-        self.assertEqual(len(vblocks), 1)
+        self.assertEqual(len(vblocks), 2)
 
     def use_a_log_block(self, conf, oob, block_pool, logmapping, cnt, dgn):
         states = oob.states
 
-        while cnt > 0:
-            found, ppn = logmapping.next_ppn_to_program(dgn=dgn)
-            if found is False and ppn == ERR_NEED_NEW_BLOCK:
-                blocknum = block_pool.pop_a_free_block_to_log_blocks()
-                logmapping.add_log_block(dgn=1, flash_block=blocknum)
-            else:
-                # got a page
-                # invalidate it (not the same as in production)
+        remaining = cnt
+        while remaining > 0:
+            ppns = logmapping.next_ppns_to_program(dgn=dgn,
+                n=remaining, strip_unit_size='infinity')
+            remaining = remaining - len(ppns)
+
+            # invalidate them (not the same as in production)
+            for ppn in ppns:
                 states.invalidate_page(ppn)
-                cnt -= 1
 
     def test_log_used(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -733,7 +595,7 @@ class TestVictimBlocks(unittest.TestCase):
         vblocks = VictimLogBlocks(conf, block_pool, oob, rec, logmaptable,
                 datablocktable)
 
-        self.assertEqual(len(vblocks), 2)
+        self.assertEqual(len(vblocks), 3)
 
     def test_data_used(self):
         conf = create_config()

@@ -4,6 +4,7 @@ class MultiChannelBlockPoolBase(object):
     def __init__(self, n_channels, n_blocks_per_channel, n_pages_per_block, tags):
         self.n_channels = n_channels
         self.n_blocks_per_channel = n_blocks_per_channel
+        self.n_blocks_per_dev = n_blocks_per_channel * n_channels
         self.n_pages_per_block = n_pages_per_block
         self.n_pages_per_channel = n_pages_per_block * n_blocks_per_channel
         self.total_blocks = n_blocks_per_channel * n_channels
@@ -46,6 +47,16 @@ class MultiChannelBlockPoolBase(object):
             ret.extend(self._blocks_channel_to_global(pool.channel_id, blocks))
 
         return ret
+
+    def pick_and_move(self, src, dst):
+        "This function will advance self._next_channel"
+        blocknum = self.pick(tag=src)
+
+        if blocknum is None:
+            return None
+        else:
+            self.change_tag(blocknum, src, dst)
+            return blocknum
 
     def pick(self, tag, channel_id=None):
         if channel_id is None:
@@ -91,16 +102,6 @@ class MultiChannelBlockPool(MultiChannelBlockPoolBase):
     """
     This is for DFTL
     """
-    def pick_and_move(self, src, dst):
-        "This function will advance self._next_channel"
-        blocknum = self.pick(tag=src)
-
-        if blocknum is None:
-            return None
-        else:
-            self.change_tag(blocknum, src, dst)
-            return blocknum
-
     def current_blocks(self):
         "return all current block numbers"
         blocknums = []

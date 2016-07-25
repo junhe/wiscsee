@@ -361,41 +361,6 @@ class DataBlockMappingTable(MappingBase):
         return str(self.logical_to_physical_block)
 
 
-class SingleLogBlockInfo(object):
-    def __init__(self, confobj, flash_block_num, last_used_time = None,
-            last_programmed_offset = -1):
-        self.conf = confobj
-        self.flash_block_num = flash_block_num
-        self.last_used_time = last_used_time
-        self.last_programmed_offset = last_programmed_offset
-
-    def __str__(self):
-        ret = []
-        ret.append('---------- SingleLogBlockInfo')
-        ret.append('flash_block_num:{}'.format(self.flash_block_num))
-        ret.append('last_used_time :{}'.format(self.last_used_time))
-        ret.append('last_programmed_offset:{}'.format(
-            self.last_programmed_offset))
-        return '\n'.join(ret)
-
-    def has_free_page(self):
-        return self.last_programmed_offset < \
-            self.conf.n_pages_per_block - 1
-
-    def next_ppn_to_program(self):
-        """
-        Note that this increment self.last_programmed_offset
-        If next_ppn_to_program() return True, you have to program the
-        returned ppn
-        """
-        if self.last_programmed_offset + 1 < self.conf.n_pages_per_block:
-            self.last_programmed_offset += 1
-            return True, self.conf.block_off_to_page(self.flash_block_num,
-                    self.last_programmed_offset)
-        else:
-            return False, None
-
-
 TDATA = 'TDATA'
 TLOG = 'TLOG'
 class NKBlockPool(MultiChannelBlockPoolBase):
@@ -406,6 +371,51 @@ class NKBlockPool(MultiChannelBlockPoolBase):
     - able to change tag                                          OK
     - able to see number of free blocks in a channel              OK
     """
+    @property
+    def freeblocks(self):
+        blocks = self.get_blocks_of_tag(tag=TFREE)
+        return blocks
+
+    @property
+    def log_usedblocks(self):
+        blocks = self.get_blocks_of_tag(tag=TLOG)
+        return blocks
+
+    @property
+    def data_usedblocks(self):
+        blocks = self.get_blocks_of_tag(tag=TDATA)
+        return blocks
+
+    def pop_a_free_block_to_log_blocks(self):
+        try:
+            blocknum = self.pick_and_move(src=TFREE, dst=TLOG)
+        except TagOutOfSpaceError:
+            raise OutOfSpaceError
+        return blocknum
+
+    def move_used_log_to_data_block(self, blocknum):
+        self.change_tag(blocknum, src=TLOG, dst=TDATA)
+
+    def pop_a_free_block_to_data_blocks(self):
+        try:
+            blocknum = self.pick_and_move(src=TFREE, dst=TDATA)
+        except TagOutOfSpaceError:
+            raise OutOfSpaceError
+        return blocknum
+
+    def free_used_data_block(self, blocknum):
+        self.change_tag(blocknum, src=TDATA, dst=TFREE)
+
+    def free_used_log_block(self, blocknum):
+        self.change_tag(blocknum, src=TLOG, dst=TFREE)
+
+    def total_used_blocks(self):
+        nfree = self.count_blocks(tag=TFREE)
+        return self.n_blocks_per_dev - nfree
+
+    def used_ratio(self):
+        nfree = self.count_blocks(tag=TFREE)
+        return (self.n_blocks_per_dev - nfree) / float(self.n_blocks_per_dev)
 
 
 class LogGroup2(object):
@@ -426,6 +436,10 @@ class LogGroup2(object):
         self._cur_channel = 0
 
         self._page_map = bidict.bidict() # lpn->ppn
+
+    def clear(self):
+        self._page_map.clear()
+        self.log_channels = [[] for i in range(self.n_channels)]
 
     def add_mapping(self, lpn, ppn):
         """
@@ -601,153 +615,140 @@ class LogGroup2(object):
         return ret_ppns
 
 
-class LogGroup(object):
-    """
-    It keeps information of a paticular data group.
-    """
-    def __init__(self, confobj, recorderobj, global_helper_obj):
-        self.conf = confobj
-        self.recorder = recorderobj
-        self.global_helper = global_helper_obj
+# class LogGroup(object):
+    # """
+    # It keeps information of a paticular data group.
+    # """
+    # def __init__(self, confobj, recorderobj, global_helper_obj):
+        # self.conf = confobj
+        # self.recorder = recorderobj
+        # self.global_helper = global_helper_obj
 
-        # Set them to be protected so I understand they are only accessed
-        # within this class. Less mess.
-        # every time we update _page_map, we should also update
-        self._page_map = bidict.bidict() # lpn->ppn
-        # flash block number -> SingleLogBlockInfo
-        #                       last_used_time, last_programmed_offset
-        self._log_blocks = {}     #log_pbn -> Singlelogblockinfo
-        self._cur_log_block = None
+        # # Set them to be protected so I understand they are only accessed
+        # # within this class. Less mess.
+        # # every time we update _page_map, we should also update
+        # self._page_map = bidict.bidict() # lpn->ppn
+        # # flash block number -> SingleLogBlockInfo
+        # #                       last_used_time, last_programmed_offset
+        # self._log_blocks = {}     #log_pbn -> Singlelogblockinfo
+        # self._cur_log_block = None
 
-    def add_mapping(self, lpn, ppn):
-        """
-        Note that this function may overwrite existing mapping. If later you
-        need keeping everything, add one data structure.
-        """
-        blk, off = self.conf.page_to_block_off(ppn)
-        assert blk in self._log_blocks.keys()
-        self._page_map[lpn] = ppn
+    # def add_mapping(self, lpn, ppn):
+        # """
+        # Note that this function may overwrite existing mapping. If later you
+        # need keeping everything, add one data structure.
+        # """
+        # blk, off = self.conf.page_to_block_off(ppn)
+        # assert blk in self._log_blocks.keys()
+        # self._page_map[lpn] = ppn
 
-    def remove_lpn(self, lpn):
-        del self._page_map[lpn]
+    # def remove_lpn(self, lpn):
+        # del self._page_map[lpn]
 
-    def lpn_to_ppn(self, lpn):
-        """
-        return found, ppn
-        """
-        ppn = self._page_map.get(lpn, None)
-        if ppn == None:
-            return False, None
-        else:
-            return True, ppn
+    # def lpn_to_ppn(self, lpn):
+        # """
+        # return found, ppn
+        # """
+        # ppn = self._page_map.get(lpn, None)
+        # if ppn == None:
+            # return False, None
+        # else:
+            # return True, ppn
 
-    def remove_log_block(self, log_pbn):
-        # remove all page maps
-        ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
-        for ppn in range(ppn_start, ppn_end):
-            try:
-                # del self._page_map[:ppn]
-                del self._page_map.inv[ppn]
-            except KeyError:
-                pass
+    # def remove_log_block(self, log_pbn):
+        # # remove all page maps
+        # ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
+        # for ppn in range(ppn_start, ppn_end):
+            # try:
+                # # del self._page_map[:ppn]
+                # del self._page_map.inv[ppn]
+            # except KeyError:
+                # pass
 
-        # remove log_pbn from _log_blocks
-        del self._log_blocks[log_pbn]
+        # # remove log_pbn from _log_blocks
+        # del self._log_blocks[log_pbn]
 
-        # handle current log block
-        if self._cur_log_block == log_pbn:
-            self._cur_log_block = None
+        # # handle current log block
+        # if self._cur_log_block == log_pbn:
+            # self._cur_log_block = None
 
-    def clear(self):
-        """
-        Reset it to original status
-        """
-        print 'clear is called'
-        self._page_map.clear()
-        self._log_blocks.clear()
-        self._cur_log_block = None
+    # def clear(self):
+        # """
+        # Reset it to original status
+        # """
+        # print 'clear is called'
+        # self._page_map.clear()
+        # self._log_blocks.clear()
+        # self._cur_log_block = None
 
-    def log_blocks(self):
-        return self._log_blocks
+    # def log_blocks(self):
+        # return self._log_blocks
 
-    def victim_candidates(self):
-        for log_pbn, singleblockinfo in self._log_blocks.items():
-            if log_pbn != self._cur_log_block:
-                yield log_pbn, singleblockinfo
+    # def victim_candidates(self):
+        # for log_pbn, singleblockinfo in self._log_blocks.items():
+            # if log_pbn != self._cur_log_block:
+                # yield log_pbn, singleblockinfo
 
-    def update_block_use_time(self, blocknum):
-        """
-        blocknum is a log block.
-        The time will be used when garbage collecting
-        """
-        self._log_blocks[blocknum].last_used_time = \
-            self.global_helper.cur_lba_op_timestamp
+    # def update_block_use_time(self, blocknum):
+        # """
+        # blocknum is a log block.
+        # The time will be used when garbage collecting
+        # """
+        # self._log_blocks[blocknum].last_used_time = \
+            # self.global_helper.cur_lba_op_timestamp
 
-    def add_log_block(self, block_num):
-        """
-        This should only be called when this log block used all free log pages
-        """
-        assert not self._log_blocks.has_key(block_num)
+    # def _cur_log_block_info(self):
+        # """
+        # Return the current log block's SingleLogBlockInfo, for convienence.
+        # """
+        # if self._cur_log_block == None:
+            # return None
+        # return self._log_blocks[self._cur_log_block]
 
-        for singleinfo in self._log_blocks.values():
-            if singleinfo.has_free_page():
-                raise RuntimeError("Log Block {} should not have free page"\
-                    .format(singleinfo.flash_block_num))
-        self._log_blocks[block_num] = SingleLogBlockInfo(self.conf, block_num)
-        self._cur_log_block = block_num
+    # def _reached_max_n_log_blocks(self):
+        # # print len(self._log_blocks), self.conf['nkftl']['max_blocks_in_log_group']
+        # return len(self._log_blocks) >= \
+            # self.conf['nkftl']['max_blocks_in_log_group']
 
-    def _cur_log_block_info(self):
-        """
-        Return the current log block's SingleLogBlockInfo, for convienence.
-        """
-        if self._cur_log_block == None:
-            return None
-        return self._log_blocks[self._cur_log_block]
+    # def next_ppn_to_program(self):
+        # """
+        # This function returns the next free ppn to program.
+        # This function fails when:
+            # 1. the current log block has no free pages
+            # 2. the number of log blocks have reached its max
 
-    def _reached_max_n_log_blocks(self):
-        # print len(self._log_blocks), self.conf['nkftl']['max_blocks_in_log_group']
-        return len(self._log_blocks) >= \
-            self.conf['nkftl']['max_blocks_in_log_group']
+        # return Found, ppn/states
+        # """
+        # # if the number of log blocks has reached max and
+        # # the current log block has not free pages, we need
+        # # to merge.
+        # # if the current log block has not free pages, but
+        # # the number of log blocks has not reached its max,
+        # # we need to get a new log block.
+        # if self._cur_log_block != None:
+            # if self._cur_log_block_info().has_free_page():
+                # return self._cur_log_block_info().next_ppn_to_program()
+            # else:
+                # if self._reached_max_n_log_blocks():
+                    # # we used up all log blocks
+                    # return False, ERR_NEED_MERGING
+                # else:
+                    # return False, ERR_NEED_NEW_BLOCK
+        # else:
+            # if self._reached_max_n_log_blocks():
+                # # we used up all log blocks
+                # return False, ERR_NEED_MERGING
+            # else:
+                # return False, ERR_NEED_NEW_BLOCK
 
-    def next_ppn_to_program(self):
-        """
-        This function returns the next free ppn to program.
-        This function fails when:
-            1. the current log block has no free pages
-            2. the number of log blocks have reached its max
-
-        return Found, ppn/states
-        """
-        # if the number of log blocks has reached max and
-        # the current log block has not free pages, we need
-        # to merge.
-        # if the current log block has not free pages, but
-        # the number of log blocks has not reached its max,
-        # we need to get a new log block.
-        if self._cur_log_block != None:
-            if self._cur_log_block_info().has_free_page():
-                return self._cur_log_block_info().next_ppn_to_program()
-            else:
-                if self._reached_max_n_log_blocks():
-                    # we used up all log blocks
-                    return False, ERR_NEED_MERGING
-                else:
-                    return False, ERR_NEED_NEW_BLOCK
-        else:
-            if self._reached_max_n_log_blocks():
-                # we used up all log blocks
-                return False, ERR_NEED_MERGING
-            else:
-                return False, ERR_NEED_NEW_BLOCK
-
-    def __str__(self):
-        ret = []
-        ret.append("------- LogGroup")
-        ret.append("_page_map:" + str(self._page_map))
-        for logblock, info in self._log_blocks.items():
-            ret.append("Logblock {}{}".format(logblock, str(info)))
-        ret.append("cur_log_block:{}".format(self._cur_log_block))
-        return '\n'.join(ret)
+    # def __str__(self):
+        # ret = []
+        # ret.append("------- LogGroup")
+        # ret.append("_page_map:" + str(self._page_map))
+        # for logblock, info in self._log_blocks.items():
+            # ret.append("Logblock {}{}".format(logblock, str(info)))
+        # ret.append("cur_log_block:{}".format(self._cur_log_block))
+        # return '\n'.join(ret)
 
 
 class Translator(MappingBase):
@@ -803,14 +804,8 @@ class LogMappingTable(MappingBase):
 
         self.block_pool = block_pool
 
-        # dgn -> log block info of data group (LogGroup)
+        # dgn -> log block info of data group (LogGroup2)
         self.log_group_info = {}
-
-    def next_ppn_to_program(self, dgn):
-        loginfo = self.log_group_info.setdefault(dgn,
-            LogGroup(self.conf, self.recorder, self.global_helper))
-        # it may return ERR_NEED_NEW_BLOCK or ERR_NEED_MERGING
-        return loginfo.next_ppn_to_program()
 
     def next_ppns_to_program(self, dgn, n, strip_unit_size):
         loggroup = self.log_group_info.setdefault(dgn,
@@ -825,21 +820,6 @@ class LogMappingTable(MappingBase):
     def remove_lpn(self, lpn):
         dgn = self.conf.nkftl_data_group_number_of_lpn(lpn)
         self.log_group_info[dgn].remove_lpn(lpn)
-
-    def add_log_block(self, dgn, flash_block):
-        """
-        Add a log block to data group dgn
-        """
-        loginfo = self.log_group_info.setdefault(dgn,
-            LogGroup(self.conf, self.recorder, self.global_helper))
-        return loginfo.add_log_block(flash_block)
-
-    def __str__(self):
-        ret = []
-        for k, v in self.log_group_info.items():
-            ret.append('-- data group no.' + str(k))
-            ret.append(str(v))
-        return '\n'.join(ret)
 
     def clear_data_group_info(self, dgn):
         self.log_group_info[dgn].clear()
@@ -987,13 +967,13 @@ class VictimLogBlocks(VictimBlocksBase):
         log_usedblocks?
         """
         for data_group_no, log_group_info in self.log_mapping.log_group_info.items():
-            for log_pbn, single_log_block_info in \
-                    log_group_info.victim_candidates():
+            for curblock in log_group_info.cur_blocks():
                 blk_info = BlockInfo(
                     block_type = TYPE_LOG_BLOCK,
-                    block_num = log_pbn,
-                    valid_ratio = self.oob.states.block_valid_ratio(log_pbn),
-                    last_used_time = single_log_block_info.last_used_time,
+                    block_num = curblock.blocknum,
+                    valid_ratio = self.oob.states.block_valid_ratio(
+                        curblock.blocknum),
+                    last_used_time = 0,
                     data_group_no = data_group_no)
                 self.priority_q.put(blk_info)
 
@@ -1674,26 +1654,13 @@ class Ftl(ftlbuilder.FtlBuilder):
 
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
 
-        found, new_ppn = self.log_mapping_table.next_ppn_to_program(data_group_no)
 
-        # loop until we find a new ppn to program
-        while found == False:
-            if new_ppn == ERR_NEED_NEW_BLOCK:
-                new_block = self.block_pool.pop_a_free_block_to_log_blocks()
-                self.translator.log_mapping_table.add_log_block(
-                    data_group_no, new_block)
-            elif new_ppn == ERR_NEED_MERGING:
-                self.garbage_collector.clean_data_group(
-                    data_group_no)
+        while True:
+            ppns = self.log_mapping_table.next_ppns_to_program(dgn=data_group_no,
+                    n=1, strip_unit_size=self.conf['stripe_size'])
+            if len(ppns) == 0:
+                self.garbage_collector.clean_data_group(data_group_no)
 
-            found, new_ppn = self.translator.log_mapping_table\
-                .next_ppn_to_program(data_group_no)
-
-        # find old ppn, we have to invalidate it
-        # Try log block first, then data block, it may not exist
-        # We have to find the old_ppn right before writing the new one.
-        # We cannot do it before the loop above because merging may change
-        # the location of the old ppn
         found, old_ppn, loc = self.translator.lpn_to_ppn(lpn)
         if found == False:
             old_ppn = None
@@ -1711,8 +1678,7 @@ class Ftl(ftlbuilder.FtlBuilder):
             .update_block_use_time(phy_block)
 
         # this may just update the current mapping, instead of 'add'ing.
-        self.translator.log_mapping_table.add_mapping(data_group_no,
-            lpn, new_ppn)
+        self.translator.log_mapping_table.add_mapping(lpn, new_ppn)
 
         # print 'AFTER WRITE block_pool.freeblocks', self.block_pool.freeblocks
         # print 'AFTER WRITE block_pool.log_usedblocks', self.block_pool.log_usedblocks
