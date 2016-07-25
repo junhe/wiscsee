@@ -236,71 +236,6 @@ class OutOfBandAreas(object):
 class OutOfSpaceError(RuntimeError):
     pass
 
-class BlockPool(object):
-    """
-    An adapter to use blkpool.BlockPool
-    log block -> trans block
-    data block -> data block
-    """
-    def __init__(self, confobj):
-        self.conf = confobj
-        self.n_channels = self.conf['flash_config']['n_channels_per_dev']
-        self.cur_channel = 0
-        self.stripe_size = self.conf['stripe_size']
-
-        self.pool = MultiChannelBlockPool(
-                n_channels=self.n_channels,
-                n_blocks_per_channel=self.conf.n_blocks_per_channel,
-                n_pages_per_block=self.conf.n_pages_per_block,
-                tags=[TDATA, TLOG])
-
-    @property
-    def freeblocks(self):
-        blocks = self.pool.get_blocks_of_tag(tag=TFREE)
-        return blocks
-
-    @property
-    def log_usedblocks(self):
-        blocks = self.pool.get_blocks_of_tag(tag=TLOG)
-        return blocks
-
-    @property
-    def data_usedblocks(self):
-        blocks = self.pool.get_blocks_of_tag(tag=TDATA)
-        return blocks
-
-    def pop_a_free_block_to_log_blocks(self):
-        try:
-            blocknum = self.pool.pick_and_move(src=TFREE, dst=TLOG)
-        except TagOutOfSpaceError:
-            raise OutOfSpaceError
-        return blocknum
-
-    def move_used_log_to_data_block(self, blocknum):
-        self.pool.change_tag(blocknum, src=TLOG, dst=TDATA)
-
-    def pop_a_free_block_to_data_blocks(self):
-        try:
-            blocknum = self.pool.pick_and_move(src=TFREE, dst=TDATA)
-        except TagOutOfSpaceError:
-            raise OutOfSpaceError
-        return blocknum
-
-    def free_used_data_block(self, blocknum):
-        self.pool.change_tag(blocknum, src=TDATA, dst=TFREE)
-
-    def free_used_log_block(self, blocknum):
-        self.pool.change_tag(blocknum, src=TLOG, dst=TFREE)
-
-    def total_used_blocks(self):
-        nfree = self.pool.count_blocks(tag=TFREE)
-        return self.conf.n_blocks_per_dev - nfree
-
-    def used_ratio(self):
-        nfree = self.pool.count_blocks(tag=TFREE)
-        return (self.conf.n_blocks_per_dev - nfree) / float(self.conf.n_blocks_per_dev)
-
-
 class MappingBase(object):
     """
     This class defines a __init__() that passes in necessary objects to the
@@ -436,6 +371,9 @@ class LogGroup2(object):
         self._cur_channel = 0
 
         self._page_map = bidict.bidict() # lpn->ppn
+
+    def update_block_use_time(self, blocknum):
+        pass
 
     def clear(self):
         self._page_map.clear()
@@ -1068,7 +1006,7 @@ class GarbageCollector(object):
         # Check to see if it is really the log block of the speicfed data
         # group
         if log_pbn not in self.translator.log_mapping_table\
-                .log_group_info[data_group_no].log_blocks().keys():
+                .log_group_info[data_group_no].log_block_numbers():
             # TODO: maybe you should just return here instead of panic?
             raise RuntimeError("{} is not a log block of data group {}"\
                 .format(log_pbn, data_group_no))
@@ -1116,7 +1054,7 @@ class GarbageCollector(object):
         # second can be partial merged. Doing the full merge first may change
         # the states of the second log block and makes full merge impossible.
         log_block_list = copy.copy(self.log_mapping_table\
-                .log_group_info[data_group_no].log_blocks().keys())
+                .log_group_info[data_group_no].log_block_numbers())
         for log_block in log_block_list:
             # A log block may not be a log block anymore after the loop starts
             # It may be freed, it may be a data block now,.. Be careful
@@ -1226,8 +1164,7 @@ class GarbageCollector(object):
                 # Now you've moved lpn, you need to remove lpn mapping if it is
                 # in log blocks
                 if loc == IN_LOG_BLOCK:
-                    self.translator.log_mapping_table.remove_lpn(
-                            data_group_no, lpn)
+                    self.translator.log_mapping_table.remove_lpn(lpn)
 
                 # After moving, you need to check if the source block of src_ppn
                 # is totally free. If it is, we have to erase it and put it to
@@ -1401,8 +1338,7 @@ class GarbageCollector(object):
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
 
                 # you need to remove lpn from log mapping here
-                self.translator.log_mapping_table.remove_lpn(
-                    data_group_no = data_group_no, lpn = lpn)
+                self.translator.log_mapping_table.remove_lpn(lpn=lpn)
 
                 self._recycle_empty_log_block(data_group_no = data_group_no,
                     log_pbn = src_block, tag = TAG_PARTIAL_MERGE)
@@ -1518,7 +1454,7 @@ class GarbageCollector(object):
         log_block_cnt = 0
         for dgn, loggroupinfo in self.translator.log_mapping_table\
             .log_group_info.items():
-            logblocks = loggroupinfo.log_blocks()
+            logblocks = loggroupinfo.log_block_numbers()
             log_block_cnt += len(logblocks)
             assert len(logblocks) <= self.conf['nkftl']['max_blocks_in_log_group']
 
@@ -1580,7 +1516,11 @@ class Ftl(ftlbuilder.FtlBuilder):
     def __init__(self, confobj, recorderobj, flashobj):
         super(Ftl, self).__init__(confobj, recorderobj, flashobj)
 
-        self.block_pool = BlockPool(confobj)
+        self.block_pool = NKBlockPool(
+            n_channels=self.conf.n_channels_per_dev,
+            n_blocks_per_channel=self.conf.n_blocks_per_channel,
+            n_pages_per_block=self.conf.n_pages_per_block,
+            tags=[TDATA, TLOG])
         self.oob = OutOfBandAreas(confobj)
         self.global_helper = GlobalHelper(confobj)
 
@@ -1660,6 +1600,9 @@ class Ftl(ftlbuilder.FtlBuilder):
                     n=1, strip_unit_size=self.conf['stripe_size'])
             if len(ppns) == 0:
                 self.garbage_collector.clean_data_group(data_group_no)
+            else:
+                new_ppn = ppns[0]
+                break
 
         found, old_ppn, loc = self.translator.lpn_to_ppn(lpn)
         if found == False:
@@ -1696,8 +1639,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         found, ppn, loc = self.translator.lpn_to_ppn(lpn)
         if found == True:
             if loc == IN_LOG_BLOCK:
-                self.translator.log_mapping_table.remove_lpn(
-                    data_group_no, lpn)
+                self.translator.log_mapping_table.remove_lpn(lpn)
             self.oob.wipe_ppn(ppn)
 
     def write_ext(self, extent, data=None):

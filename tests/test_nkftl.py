@@ -49,6 +49,15 @@ def create_recorder(conf):
     return rec
 
 
+def create_nkblockpool(conf):
+    block_pool = NKBlockPool(
+            n_channels=conf.n_channels_per_dev,
+            n_blocks_per_channel=conf.n_blocks_per_channel,
+            n_pages_per_block=conf.n_pages_per_block,
+            tags=[TDATA, TLOG])
+    return block_pool
+
+
 def create_nkftl():
     conf = create_config()
     rec = create_recorder(conf)
@@ -344,7 +353,7 @@ class TestLogBlockMappingTable(unittest.TestCase):
         conf = create_config()
         rec = create_recorder(conf)
         helper = create_global_helper(conf)
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
 
         logmaptable = LogMappingTable(conf, block_pool, rec, helper)
 
@@ -451,14 +460,14 @@ class TestDataBlockMappingTable(unittest.TestCase):
 class TestGcDecider(unittest.TestCase):
     def test_init(self):
         conf = create_config()
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
 
         gcdecider = GcDecider(conf, block_pool, rec)
 
     def test_high_threshold(self):
         conf = create_config()
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
 
         n = len(block_pool.freeblocks)
@@ -490,7 +499,7 @@ class TestGcDecider(unittest.TestCase):
 class TestVictimBlocks(unittest.TestCase):
     def test_init(self):
         conf = create_config()
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -505,7 +514,7 @@ class TestVictimBlocks(unittest.TestCase):
 
     def test_empty_victims_log(self):
         conf = create_config()
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -523,7 +532,7 @@ class TestVictimBlocks(unittest.TestCase):
 
     def test_empty_victims_data(self):
         conf = create_config()
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -600,7 +609,7 @@ class TestVictimBlocks(unittest.TestCase):
     def test_data_used(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -627,7 +636,7 @@ class TestCleaningDataBlocks(unittest.TestCase):
     def test_init_gc(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -642,7 +651,7 @@ class TestCleaningDataBlocks(unittest.TestCase):
     def test_clean_data_blocks(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -684,7 +693,7 @@ class TestCleaningDataBlocks(unittest.TestCase):
     def test_clean_data_blocks_without_mapping(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -747,7 +756,7 @@ class TestSwitchMerge(unittest.TestCase):
     def test_is_switch_mergable(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -770,7 +779,7 @@ class TestSwitchMerge(unittest.TestCase):
     def test_is_not_switch_mergable_half_used(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -793,7 +802,7 @@ class TestSwitchMerge(unittest.TestCase):
     def test_is_not_switch_mergable(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -816,7 +825,7 @@ class TestSwitchMerge(unittest.TestCase):
     def test_switch_merge(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -919,7 +928,7 @@ class TestPartialMerge(unittest.TestCase):
     def test_is_partial_mergable(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -943,7 +952,7 @@ class TestPartialMerge(unittest.TestCase):
     def test_is_not_partial_mergable_not_aligned(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -966,7 +975,7 @@ class TestPartialMerge(unittest.TestCase):
     def test_is_not_partial_mergable_because_its_switch_mergable(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -989,7 +998,7 @@ class TestPartialMerge(unittest.TestCase):
     def test_partial_merge(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -1079,7 +1088,7 @@ class TestPartialMerge(unittest.TestCase):
     def test_partial_merge_with_moving(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -1212,7 +1221,7 @@ class TestFullMerge(unittest.TestCase):
     def test_full_merge_unaligned(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -1308,7 +1317,7 @@ class TestFullMerge(unittest.TestCase):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
         conf['nkftl']['n_blocks_in_data_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -1565,7 +1574,7 @@ class TestFullMerge(unittest.TestCase):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
         conf['nkftl']['n_blocks_in_data_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -1711,7 +1720,7 @@ class TestFullMerge(unittest.TestCase):
     def test_full_merge_one_page_used(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
@@ -1869,7 +1878,7 @@ class TestCleanDataGroup(unittest.TestCase):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
         conf['nkftl']['n_blocks_in_data_group'] = 4
-        block_pool = BlockPool(conf)
+        block_pool = create_nkblockpool(conf)
         rec = create_recorder(conf)
         oob = OutOfBandAreas(conf)
         helper = create_global_helper(conf)
