@@ -11,6 +11,9 @@ from utilities.utils import choose_exp_metadata, runtime_update
 from workflow import run_workflow
 from config import LBAGENERATOR
 
+TDATA = 'TDATA'
+TLOG = 'TLOG'
+
 def create_config():
     conf = ssdbox.nkftl2.Config()
 
@@ -490,59 +493,56 @@ class TestLogBlockMappingTable(unittest.TestCase):
 
         logmaptable = LogMappingTable(conf, block_pool, rec, helper)
 
-    def test_add_log_block(self):
-        conf = create_config()
-        rec = create_recorder(conf)
-        helper = create_global_helper(conf)
-        block_pool = BlockPool(conf)
-
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        logmaptable.add_log_block(dgn=1, flash_block=8)
-
-        self.assertEqual(logmaptable.log_group_info.keys()[0], 1)
-        self.assertEqual(
-                logmaptable.log_group_info.values()[0]._log_blocks.keys()[0], 8)
-
-    def test_next_ppn_error(self):
-        conf = create_config()
-        rec = create_recorder(conf)
-        helper = create_global_helper(conf)
-        block_pool = BlockPool(conf)
-
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        gotit, err = logmaptable.next_ppn_to_program(dgn=1)
-        self.assertEqual(gotit, False)
-        self.assertEqual(err, ERR_NEED_NEW_BLOCK)
-
     def test_add_mapping(self):
         conf = create_config()
         rec = create_recorder(conf)
         helper = create_global_helper(conf)
-        block_pool = BlockPool(conf)
+        block_pool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
 
         logmaptable = LogMappingTable(conf, block_pool, rec, helper)
 
-        logmaptable.add_log_block(dgn=1, flash_block=8)
+        lpns = []
+        n_pages_per_data_group = conf.n_pages_per_data_group()
+        for lpn in range(n_pages_per_data_group, n_pages_per_data_group + 4):
+            lpns.append(lpn)
 
-        gotit, ppn = logmaptable.next_ppn_to_program(dgn=1)
-        self.assertEqual(gotit, True)
+        ppns = logmaptable.next_ppns_to_program(dgn=1, n=4, strip_unit_size=4)
 
-        n_blocks_in_data_group = conf['nkftl']['n_blocks_in_data_group']
-        n_pages_per_block = conf.n_pages_per_block
-        n_pages_per_dg = n_blocks_in_data_group * n_pages_per_block
-        lpn = n_pages_per_dg + 2
-        logmaptable.add_mapping(data_group_no=1, lpn=lpn, ppn=ppn)
+        for lpn, ppn in zip(lpns, ppns):
+            logmaptable.add_mapping(lpn=lpn, ppn=ppn)
 
         # Test translation
-        found, ppn_retrieved = logmaptable.lpn_to_ppn(lpn)
-        self.assertEqual(found, True)
-        self.assertEqual(ppn_retrieved, ppn)
+        for lpn, ppn in zip(lpns, ppns):
+            found, ppn_retrieved = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            self.assertEqual(ppn_retrieved, ppn)
 
         # Test removing
-        logmaptable.remove_lpn(data_group_no=1, lpn=lpn)
+        logmaptable.remove_lpn(lpn=lpn)
 
         found, ppn_retrieved = logmaptable.lpn_to_ppn(lpn)
         self.assertEqual(found, False)
+
+    def test_next_ppns(self):
+        conf = create_config()
+        rec = create_recorder(conf)
+        helper = create_global_helper(conf)
+        block_pool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
+
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
+
+        ppns = logmaptable.next_ppns_to_program(dgn=1, n=4, strip_unit_size=4)
+        self.assertEqual(len(ppns), 4)
+
+
 
 
 class TestDataBlockMappingTable(unittest.TestCase):
@@ -2256,8 +2256,6 @@ class TestCleanDataGroup(unittest.TestCase):
         return used_blocks
 
 
-TDATA = 'TDATA'
-TLOG = 'TLOG'
 
 def create_config_2():
     conf = ssdbox.nkftl2.Config()

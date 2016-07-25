@@ -78,6 +78,13 @@ class Config(config.ConfigNCQFTL):
         }
         self.update(local_itmes)
 
+    def n_pages_per_data_group(self):
+        n_blocks_in_data_group = self['nkftl']['n_blocks_in_data_group']
+        n_pages_per_block = self.n_pages_per_block
+        n_pages_per_dg = n_blocks_in_data_group * n_pages_per_block
+
+        return n_pages_per_dg
+
     def nkftl_data_group_number_of_lpn(self, lpn):
         """
         Given lpn, return its data group number
@@ -805,22 +812,19 @@ class LogMappingTable(MappingBase):
         # it may return ERR_NEED_NEW_BLOCK or ERR_NEED_MERGING
         return loginfo.next_ppn_to_program()
 
-    def next_ppns_to_program(self, dgn, n):
+    def next_ppns_to_program(self, dgn, n, strip_unit_size):
         loggroup = self.log_group_info.setdefault(dgn,
             LogGroup2(self.conf, self.block_pool,
                 max_n_log_blocks=self.conf['nkftl']['max_blocks_in_log_group']))
-        return loggroup.next_ppns(n,
-                strip_unit_size=self.conf['stripe_size'])
+        return loggroup.next_ppns(n, strip_unit_size=strip_unit_size)
 
-    def add_mapping(self, data_group_no, lpn, ppn):
-        # lpn must be in data_group_no
+    def add_mapping(self, lpn, ppn):
         dgn = self.conf.nkftl_data_group_number_of_lpn(lpn)
-        assert dgn == data_group_no
+        self.log_group_info[dgn].add_mapping(lpn, ppn)
 
-        self.log_group_info[data_group_no].add_mapping(lpn, ppn)
-
-    def remove_lpn(self, data_group_no, lpn):
-        self.log_group_info[data_group_no].remove_lpn(lpn)
+    def remove_lpn(self, lpn):
+        dgn = self.conf.nkftl_data_group_number_of_lpn(lpn)
+        self.log_group_info[dgn].remove_lpn(lpn)
 
     def add_log_block(self, dgn, flash_block):
         """
