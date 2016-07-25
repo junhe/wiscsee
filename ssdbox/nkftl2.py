@@ -407,7 +407,8 @@ class LogGroup2(object):
     - allocate pages from blocks of this group
     - report need to merge
     """
-    def __init__(self, block_pool, max_n_log_blocks):
+    def __init__(self, conf, block_pool, max_n_log_blocks):
+        self.conf = conf
         self.block_pool = block_pool
         self.n_channels = block_pool.n_channels
         self.n_pages_per_block = block_pool.n_pages_per_block
@@ -417,10 +418,69 @@ class LogGroup2(object):
         self.log_channels = [[] for i in range(self.n_channels)]
         self._cur_channel = 0
 
+        self._page_map = bidict.bidict() # lpn->ppn
+
+    def add_mapping(self, lpn, ppn):
+        """
+        Note that this function may overwrite existing mapping. If later you
+        need keeping everything, add one data structure.
+        """
+        blk, off = self.conf.page_to_block_off(ppn)
+        assert blk in self.log_block_numbers()
+        self._page_map[lpn] = ppn
+
+    def remove_lpn(self, lpn):
+        del self._page_map[lpn]
+
+    def lpn_to_ppn(self, lpn):
+        """
+        return found, ppn
+        """
+        ppn = self._page_map.get(lpn, None)
+        if ppn == None:
+            return False, None
+        else:
+            return True, ppn
+
+    def cur_blocks(self):
+        ret = []
+        for channel_id in range(self.n_channels):
+            for cur_block in self.log_channels[channel_id]:
+                ret.append(cur_block)
+        return ret
+
+    def log_block_numbers(self):
+        ret = []
+        for cur_block in self.cur_blocks():
+            ret.append(cur_block.blocknum)
+        return ret
+
     def _get_and_incr_cur_channel(self):
         channel = self._cur_channel
         self._cur_channel = (self._cur_channel + 1) % self.n_channels
         return channel
+
+    def remove_log_block(self, log_pbn):
+        # remove all page maps
+        ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
+        for ppn in range(ppn_start, ppn_end):
+            try:
+                # del self._page_map[:ppn]
+                del self._page_map.inv[ppn]
+            except KeyError:
+                pass
+
+        self._remove_block(log_pbn)
+
+    def _remove_block(self, blocknum):
+        channel_id = blocknum / self.conf.n_blocks_per_channel
+        channel_blocks = self.log_channels[channel_id]
+        to_del = None
+        for cur_block in channel_blocks:
+            if cur_block.blocknum == blocknum:
+                to_del = cur_block
+                break
+        channel_blocks.remove(to_del)
 
     def reached_max_log_blocks(self):
         return self.n_log_blocks() == self.max_n_log_blocks
@@ -431,19 +491,6 @@ class LogGroup2(object):
             total += len(self.log_channels[channel_id])
 
         return total
-
-    def ppns_to_write(self, lpn_extent):
-        """
-        - all channels need to increase and decrease log blocks for this
-        log group together
-        - if the num of log blocks does not reach max, we try to satisfy strip
-        unit size. In this case,  if a channel of this log group does not
-        have enough money, it will allocate one.
-        - if the num of log blocks has reached max, we may need to satisfy
-        block limits.
-        - if a channel of the log group cannot find available blocks in a channel
-        we need to do global GC
-        """
 
     def n_free_pages(self):
         total = 0

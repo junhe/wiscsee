@@ -2255,14 +2255,42 @@ class TestCleanDataGroup(unittest.TestCase):
 TDATA = 'TDATA'
 TLOG = 'TLOG'
 
+def create_config_2():
+    conf = ssdbox.nkftl2.Config()
+
+    conf['flash_config']['n_pages_per_block'] = 32
+    conf['flash_config']['n_blocks_per_plane'] = 64
+    conf['flash_config']['n_planes_per_chip'] = 1
+    conf['flash_config']['n_chips_per_package'] = 1
+    conf['flash_config']['n_packages_per_channel'] = 1
+    conf['flash_config']['n_channels_per_dev'] = 8
+
+    conf['nkftl']['max_blocks_in_log_group'] = 16
+    conf['nkftl']['n_blocks_in_data_group'] = 4
+
+    utils.set_exp_metadata(conf, save_data = False,
+            expname = 'test_expname',
+            subexpname = 'test_subexpname')
+
+    logicsize_mb = 64
+    conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
+
+    utils.runtime_update(conf)
+
+    return conf
+
 
 def create_loggroup2():
+    conf = create_config_2()
     blockpool = NKBlockPool(
-            n_channels=8,
-            n_blocks_per_channel=64,
-            n_pages_per_block=32,
+            n_channels=conf.n_channels_per_dev,
+            n_blocks_per_channel=conf.n_blocks_per_channel,
+            n_pages_per_block=conf.n_pages_per_block,
             tags=[TDATA, TLOG])
-    loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+    loggroup = LogGroup2(
+            conf = conf,
+            block_pool=blockpool,
+            max_n_log_blocks=conf['nkftl']['max_blocks_in_log_group'])
 
     return blockpool, loggroup
 
@@ -2288,12 +2316,16 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(len(ppns), 0)
 
     def test_incr_channel(self):
+        conf = create_config_2()
         blockpool = NKBlockPool(
-                n_channels=8,
-                n_blocks_per_channel=64,
-                n_pages_per_block=32,
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
                 tags=[TDATA, TLOG])
-        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+        loggroup = LogGroup2(
+                conf = conf,
+                block_pool=blockpool,
+                max_n_log_blocks=conf['nkftl']['max_blocks_in_log_group'])
 
         self.assertEqual(loggroup._cur_channel, 0)
         ret = loggroup._get_and_incr_cur_channel()
@@ -2306,12 +2338,7 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(loggroup._cur_channel, 1)
 
     def test_allocate_blocks_in_channel(self):
-        blockpool = NKBlockPool(
-                n_channels=8,
-                n_blocks_per_channel=64,
-                n_pages_per_block=32,
-                tags=[TDATA, TLOG])
-        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+        blockpool, loggroup = create_loggroup2()
         n_channels = blockpool.n_channels
 
         self.assertEqual(loggroup.n_log_blocks(), 0)
@@ -2340,12 +2367,7 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(loggroup.n_log_blocks(), 16)
 
     def test_next_ppns_simple(self):
-        blockpool = NKBlockPool(
-                n_channels=8,
-                n_blocks_per_channel=64,
-                n_pages_per_block=32,
-                tags=[TDATA, TLOG])
-        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+        blockpool, loggroup = create_loggroup2()
 
         ppns, err = loggroup.next_ppns(n=8, strip_unit_size=1)
 
@@ -2355,12 +2377,7 @@ class TestLogGroup2(unittest.TestCase):
             self.assertEqual(loggroup.n_channel_free_pages(i), 32 - 1)
 
     def test_next_ppns_two_blocks_per_channel(self):
-        blockpool = NKBlockPool(
-                n_channels=8,
-                n_blocks_per_channel=64,
-                n_pages_per_block=32,
-                tags=[TDATA, TLOG])
-        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+        blockpool, loggroup = create_loggroup2()
 
         ppns, err = loggroup.next_ppns(n=33*8, strip_unit_size=32)
 
@@ -2371,12 +2388,7 @@ class TestLogGroup2(unittest.TestCase):
             self.assertEqual(loggroup.n_channel_free_pages(i), 0)
 
     def test_next_ppns_overflow_it(self):
-        blockpool = NKBlockPool(
-                n_channels=8,
-                n_blocks_per_channel=64,
-                n_pages_per_block=32,
-                tags=[TDATA, TLOG])
-        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+        blockpool, loggroup = create_loggroup2()
 
         ppns, err = loggroup.next_ppns(n=32*2*8 + 1, strip_unit_size=32)
 
@@ -2387,12 +2399,7 @@ class TestLogGroup2(unittest.TestCase):
             self.assertEqual(loggroup.n_channel_free_pages(i), 0)
 
     def test_next_ppns_infinit_stip(self):
-        blockpool = NKBlockPool(
-                n_channels=8,
-                n_blocks_per_channel=64,
-                n_pages_per_block=32,
-                tags=[TDATA, TLOG])
-        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+        blockpool, loggroup = create_loggroup2()
 
         ppns, err = loggroup.next_ppns(n=33, strip_unit_size='infinity')
 
@@ -2401,12 +2408,7 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(loggroup.n_log_blocks(), 2)
 
     def test_next_ppns_overflow_channel(self):
-        blockpool = NKBlockPool(
-                n_channels=8,
-                n_blocks_per_channel=64,
-                n_pages_per_block=32,
-                tags=[TDATA, TLOG])
-        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+        blockpool, loggroup = create_loggroup2()
 
         ppns, err = loggroup.next_ppns(n=65, strip_unit_size='infinity')
 
@@ -2415,12 +2417,7 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(loggroup.n_log_blocks(), 3)
 
     def test_next_ppns_channel_position(self):
-        blockpool = NKBlockPool(
-                n_channels=8,
-                n_blocks_per_channel=64,
-                n_pages_per_block=32,
-                tags=[TDATA, TLOG])
-        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+        blockpool, loggroup = create_loggroup2()
 
         self.assertEqual(loggroup._cur_channel, 0)
         ppns = loggroup.next_ppns(n=1, strip_unit_size=32)
@@ -2433,12 +2430,7 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(loggroup._cur_channel, 4)
 
     def test_next_ppns_in_channel_with_allocation(self):
-        blockpool = NKBlockPool(
-                n_channels=8,
-                n_blocks_per_channel=64,
-                n_pages_per_block=32,
-                tags=[TDATA, TLOG])
-        loggroup = LogGroup2(block_pool=blockpool, max_n_log_blocks=16)
+        blockpool, loggroup = create_loggroup2()
 
         ppns = loggroup._next_ppns_in_channel_with_allocation(33, channel_id=3)
         self.assertEqual(len(ppns), 33)
@@ -2449,6 +2441,38 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(len(ppns), 33)
         self.assertEqual(loggroup.n_log_blocks(), 3)
         self.assertEqual(loggroup.n_channel_free_pages(channel_id=3), 30)
+
+    def test_add_mapping(self):
+        blockpool, loggroup = create_loggroup2()
+
+        lpns = []
+        ppns = []
+        for i in range(16):
+            tmp_ppns, err = loggroup.next_ppns(n=1, strip_unit_size=1)
+            ppn = tmp_ppns[0]
+            self.assertEqual(err, None)
+            loggroup.add_mapping(lpn=i, ppn=ppn)
+            lpns.append(i)
+            ppns.append(ppn)
+
+        for lpn, ppn in zip(lpns, ppns):
+            self.assertEqual(loggroup.lpn_to_ppn(lpn)[1], ppn)
+
+    def test_remove_log_block(self):
+        blockpool, loggroup = create_loggroup2()
+        conf = loggroup.conf
+
+        tmp_ppns, err = loggroup.next_ppns(n=1, strip_unit_size=1)
+        ppn = tmp_ppns[0]
+        block, _ = conf.page_to_block_off(ppn)
+        self.assertEqual(err, None)
+        loggroup.add_mapping(lpn=1, ppn=ppn)
+
+        loggroup.remove_log_block(block)
+
+        self.assertEqual(len(loggroup._page_map), 0)
+        self.assertEqual(loggroup.n_log_blocks(), 0)
+
 
 def main():
     unittest.main()
