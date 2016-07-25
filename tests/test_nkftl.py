@@ -752,7 +752,49 @@ class TestCleaningDataBlocks(unittest.TestCase):
         return blocknum
 
 
-class TestSwitchMerge(unittest.TestCase):
+class UseLogBlocksMixin(object):
+    def use_log_blocks(self, conf, oob, block_pool,
+            logmapping, cnt, lpn_start):
+        dgn = conf.nkftl_data_group_number_of_lpn(lpn_start)
+        used_blocks, ppns = self.get_ppns_from_data_group(
+                conf, oob, block_pool, logmapping, cnt=cnt, dgn=dgn)
+
+        self.assertEqual(len(ppns), cnt)
+        lpns = range(lpn_start, lpn_start + cnt)
+        self.set_mappings(oob, block_pool, logmapping, lpns, ppns)
+
+        return used_blocks
+
+    def get_ppns_from_data_group(self,
+            conf, oob, block_pool, logmapping, cnt, dgn):
+        used_blocks = []
+
+        ppns = logmapping.next_ppns_to_program(dgn=dgn, n=cnt,
+                strip_unit_size='infinity')
+        for ppn in ppns:
+            block, _ = conf.page_to_block_off(ppn)
+            if block not in used_blocks:
+                used_blocks.append(block)
+
+        return used_blocks, ppns
+
+    def page_ext(self, start, cnt):
+        return range(start, start + cnt)
+
+    def set_mappings(self, oob, block_pool, logmapping, lpns, ppns):
+        states = oob.states
+        for lpn, ppn in zip(lpns, ppns):
+            # oob states
+            states.validate_page(ppn)
+            # oob ppn->lpn
+            oob.remap(lpn=lpn, old_ppn=None, new_ppn=ppn)
+            # data block mapping
+            pass
+            # log block mapping
+            logmapping.add_mapping(lpn=lpn, ppn=ppn)
+
+
+class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
     def test_is_switch_mergable(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
@@ -769,7 +811,7 @@ class TestSwitchMerge(unittest.TestCase):
                 translator, helper, logmaptable, datablocktable)
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
-                logmaptable, cnt=conf.n_pages_per_block+1,
+                logmaptable, cnt=conf.n_pages_per_block,
                 lpn_start=conf.n_pages_per_block)
 
         mergable, lbn = gc.is_switch_mergable(log_pbn=used_blocks[0])
@@ -892,39 +934,8 @@ class TestSwitchMerge(unittest.TestCase):
         # block pool
         self.assertIn(pbn, block_pool.data_usedblocks)
 
-    def use_log_blocks(self, conf, oob, block_pool,
-            logmapping, cnt, lpn_start):
-        states = oob.states
 
-        used_blocks = []
-        # start aligned to make it switchable
-        lpn = lpn_start
-        while cnt > 0:
-            dgn = conf.nkftl_data_group_number_of_lpn(lpn)
-
-            found, ppn = logmapping.next_ppn_to_program(dgn=dgn)
-            if found is False and ppn == ERR_NEED_NEW_BLOCK:
-                blocknum = block_pool.pop_a_free_block_to_log_blocks()
-                used_blocks.append(blocknum)
-                logmapping.add_log_block(dgn=dgn, flash_block=blocknum)
-            else:
-                # ---- got a page ----
-                # oob states
-                states.validate_page(ppn)
-                # oob ppn->lpn
-                oob.remap(lpn=lpn, old_ppn=None, new_ppn=ppn)
-                # data block mapping
-                pass
-                # log block mapping
-                logmapping.add_mapping(data_group_no=dgn, lpn=lpn, ppn=ppn)
-
-                cnt -= 1
-                lpn += 1
-
-        return used_blocks
-
-
-class TestPartialMerge(unittest.TestCase):
+class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
     def test_is_partial_mergable(self):
         conf = create_config()
         conf['nkftl']['max_blocks_in_log_group'] = 4
@@ -1101,33 +1112,29 @@ class TestPartialMerge(unittest.TestCase):
                 translator, helper, logmaptable, datablocktable)
 
         half_block_pages = int(conf.n_pages_per_block/2)
-        # unaligned
-        used_blocks_1 = self.use_log_blocks(conf, oob, block_pool,
-                logmaptable, cnt=half_block_pages,
-                lpn_start=conf.n_pages_per_block+1)
-        self.assertEqual(len(used_blocks_1), 1)
-        # second half
-        used_blocks_2 = self.use_log_blocks(conf, oob, block_pool,
-                logmaptable, cnt=half_block_pages,
-                lpn_start=2 * conf.n_pages_per_block + half_block_pages)
-        self.assertEqual(len(used_blocks_2), 0)
-        # first half
-        used_blocks_3 = self.use_log_blocks(conf, oob, block_pool,
-                logmaptable, cnt=half_block_pages,
-                lpn_start=2*conf.n_pages_per_block)
-        self.assertEqual(len(used_blocks_3), 1)
 
-        mergable, lbn, off = gc.is_partial_mergable(log_pbn=used_blocks_3[0])
+        ##########################
+        # unaligned, second half, first half
+        used_blocks, ppns = self.get_ppns_from_data_group(
+                conf, oob, block_pool, logmaptable, cnt=half_block_pages * 3,
+                dgn=0)
+        lpns = self.page_ext(conf.n_pages_per_block + 1, half_block_pages) +\
+               self.page_ext(2 * conf.n_pages_per_block + half_block_pages, half_block_pages) +\
+               self.page_ext(2 * conf.n_pages_per_block, half_block_pages)
+        self.set_mappings(oob, block_pool, logmaptable, lpns, ppns)
+        self.assertEqual(len(used_blocks), 2)
+
+        mergable, lbn, off = gc.is_partial_mergable(log_pbn=used_blocks[1])
         self.assertEqual(mergable, True)
         self.assertEqual(lbn, 2)
         self.assertEqual(off, half_block_pages)
 
-        mergable, lbn1, off1 = gc.is_partial_mergable(log_pbn=used_blocks_1[0])
+        mergable, lbn1, off1 = gc.is_partial_mergable(log_pbn=used_blocks[0])
         self.assertEqual(mergable, False)
         self.assertEqual(lbn1, None)
         self.assertEqual(off1, None)
 
-        pbn = used_blocks_3[0]
+        pbn = used_blocks[1]
         # data block mapping
         found, _ = datablocktable.lbn_to_pbn(lbn)
         self.assertEqual(found, False)
@@ -1184,37 +1191,6 @@ class TestPartialMerge(unittest.TestCase):
             self.assertEqual(lpn, correct_lpn)
         # block pool
         self.assertIn(pbn, block_pool.data_usedblocks)
-
-    def use_log_blocks(self, conf, oob, block_pool,
-            logmapping, cnt, lpn_start):
-        states = oob.states
-
-        used_blocks = []
-        # start aligned to make it switchable
-        lpn = lpn_start
-        while cnt > 0:
-            dgn = conf.nkftl_data_group_number_of_lpn(lpn)
-
-            found, ppn = logmapping.next_ppn_to_program(dgn=dgn)
-            if found is False and ppn == ERR_NEED_NEW_BLOCK:
-                blocknum = block_pool.pop_a_free_block_to_log_blocks()
-                used_blocks.append(blocknum)
-                logmapping.add_log_block(dgn=dgn, flash_block=blocknum)
-            else:
-                # ---- got a page ----
-                # oob states
-                states.validate_page(ppn)
-                # oob ppn->lpn
-                oob.remap(lpn=lpn, old_ppn=None, new_ppn=ppn)
-                # data block mapping
-                pass
-                # log block mapping
-                logmapping.add_mapping(data_group_no=dgn, lpn=lpn, ppn=ppn)
-
-                cnt -= 1
-                lpn += 1
-
-        return used_blocks
 
 
 class TestFullMerge(unittest.TestCase):
