@@ -10,6 +10,7 @@ from utilities import utils
 from utilities.utils import choose_exp_metadata, runtime_update
 from workflow import run_workflow
 from config import LBAGENERATOR
+from ssdbox.ftlsim_commons import *
 
 TDATA = 'TDATA'
 TLOG = 'TLOG'
@@ -2216,6 +2217,41 @@ class TestLogGroup2(unittest.TestCase):
 
         self.assertEqual(len(loggroup._page_map), 0)
         self.assertEqual(loggroup.n_log_blocks(), 0)
+
+
+class TestFTLOperations(unittest.TestCase):
+    def test_write(self):
+        ftl, conf, rec = create_nkftl()
+
+        ext = Extent(lpn_start=1, lpn_count=20)
+        ftl.write_ext(ext)
+
+        for lpn in ext.lpn_iter():
+            found, ppn, _ = ftl.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+
+    def test_read(self):
+        ftl, conf, rec = create_nkftl()
+
+        ext = Extent(lpn_start=1, lpn_count=20)
+        ftl.write_ext(ext)
+
+        data = ftl.read_ext(ext)
+        self.assertEqual(len(data), ext.lpn_count)
+
+    def test_discard(self):
+        ftl, conf, rec = create_nkftl()
+
+        ext = Extent(lpn_start=1, lpn_count=20)
+        ftl.write_ext(ext)
+
+        ftl.discard_ext(ext)
+
+        for lpn in ext.lpn_iter():
+            found, ppn, _ = ftl.lpn_to_ppn(lpn)
+            self.assertEqual(found, False)
+
+
 
 
 def main():
