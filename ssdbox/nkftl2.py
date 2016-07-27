@@ -1438,6 +1438,9 @@ class Ftl(ftlbuilder.FtlBuilder):
         hasit, ppn, loc = self.lpn_to_ppn(lpn)
         if hasit == True:
             content = self.flash.page_read(ppn, cat = TAG_FORGROUND)
+            yield self.env.process(
+                self.des_flash.rw_ppns([ppn], 'read', tag = "Unknown"))
+
             if loc == IN_LOG_BLOCK:
                 phy_block_num, _ = self.conf.page_to_block_off(ppn)
                 data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
@@ -1448,10 +1451,11 @@ class Ftl(ftlbuilder.FtlBuilder):
             content = None
 
         # print 'lba_read', lpn, 'ppn', ppn, 'got', content
-        return content
+        self.env.exit(content)
 
     def lba_write(self, lpn, data=None):
-        self.write_ext(Extent(lpn_start=lpn, lpn_count=1), [data])
+        yield self.env.process(
+                self.write_ext(Extent(lpn_start=lpn, lpn_count=1), [data]))
 
         self.garbage_collector.try_gc()
 
@@ -1473,7 +1477,8 @@ class Ftl(ftlbuilder.FtlBuilder):
                 region_data = None
             else:
                 region_data = self._sub_ext_data(data, extent, region_ext)
-            self.write_region(region_ext, data=region_data)
+            yield self.env.process(
+                    self.write_region(region_ext, data=region_data))
 
     def write_region(self, extent, data=None):
         """
@@ -1498,7 +1503,8 @@ class Ftl(ftlbuilder.FtlBuilder):
                 loop_data = None
             else:
                 loop_data = self._sub_ext_data(data, extent, loop_ext)
-            self._write_log_ppns(mappings, data=loop_data)
+            yield self.env.process(
+                    self._write_log_ppns(mappings, data=loop_data))
 
             if n_ppns < loop_ext.lpn_count:
                 # we cannot find vailable pages in log blocks
@@ -1540,6 +1546,11 @@ class Ftl(ftlbuilder.FtlBuilder):
                 pagedata = data[i]
             self.flash.page_write(ppn, cat='', data=pagedata)
 
+        # des flash
+        yield self.env.process(
+            self.des_flash.rw_ppns(mappings.values(), 'write',
+                tag = "Unknown"))
+
     def _update_log_mappings(self, mappings):
         """
         The ppns in mappings must have been get by loggroup.next_ppns()
@@ -1561,10 +1572,9 @@ class Ftl(ftlbuilder.FtlBuilder):
     def read_ext(self, extent):
         data = []
         for lpn in extent.lpn_iter():
-            ret = self.lba_read(lpn)
+            ret = yield self.env.process(self.lba_read(lpn))
             data.append(ret)
-
-        return data
+        self.env.exit(data)
 
     def post_processing(self):
         pass

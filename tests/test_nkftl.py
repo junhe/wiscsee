@@ -68,7 +68,7 @@ def create_env():
 
 def create_flash_controller(env, conf, rec):
     flash_controller = flashcontroller.controller.Controller3(
-            env, conf, recorder)
+            env, conf, rec)
     return flash_controller
 
 def create_nkftl():
@@ -80,7 +80,7 @@ def create_nkftl():
     ftl = Ftl(conf, rec,
         ssdbox.flash.Flash(recorder=rec, confobj=conf), env,
         des_flash)
-    return ftl, conf, rec
+    return ftl, conf, rec, env
 
 def create_global_helper(conf):
     return GlobalHelper(conf)
@@ -90,10 +90,10 @@ def create_translator(conf, rec, globalhelper, log_mapping, data_block_mapping):
 
 class TestNkftl(unittest.TestCase):
     def test_init(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
     def test_write_and_read(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
         ftl.lba_write(8, data='3')
         ret = ftl.lba_read(8)
@@ -114,7 +114,7 @@ class TestNkftl(unittest.TestCase):
             self.assertEqual(ret, data)
 
     def test_data_integrity(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
         total_pages = conf.total_num_pages()
         lpns = random.sample(range(total_pages), 1000)
@@ -122,26 +122,26 @@ class TestNkftl(unittest.TestCase):
         self.write_and_check(ftl, lpns)
 
     def test_GC_simple(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
         lpns = [0] * 4 * conf.n_pages_per_block * conf['nkftl']['max_blocks_in_log_group']
         self.write_and_check(ftl, lpns)
 
     def test_GC_harder(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
         lpns = [0, 3, 1] * 4 * conf.n_pages_per_block * conf['nkftl']['max_blocks_in_log_group']
         self.write_and_check(ftl, lpns)
 
     def test_GC_harder2(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
         lpns = [0, 128, 3, 129, 1] * 4 * conf.n_pages_per_block * conf['nkftl']['max_blocks_in_log_group']
         self.write_and_check(ftl, lpns)
 
     @unittest.skipUnless(TESTALL == True, "Skip unless we want to test all")
     def test_GC_harder_super(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
         print 'total pages', conf.total_num_pages()
         lpns = [0, 128, 3, 129, 1] * 4 * conf.total_num_pages()
@@ -2278,7 +2278,7 @@ class TestLogGroup2(unittest.TestCase):
 
 class TestFTLOperations(unittest.TestCase):
     def test_write(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
         ext = Extent(lpn_start=1, lpn_count=20)
         ftl.write_ext(ext)
@@ -2288,7 +2288,7 @@ class TestFTLOperations(unittest.TestCase):
             self.assertEqual(found, True)
 
     def test_read(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
         ext = Extent(lpn_start=1, lpn_count=20)
         ftl.write_ext(ext)
@@ -2297,7 +2297,7 @@ class TestFTLOperations(unittest.TestCase):
         self.assertEqual(len(data), ext.lpn_count)
 
     def test_discard(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
         ext = Extent(lpn_start=1, lpn_count=20)
         ftl.write_ext(ext)
@@ -2309,7 +2309,7 @@ class TestFTLOperations(unittest.TestCase):
             self.assertEqual(found, False)
 
     def test_write_region(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
         ext = Extent(lpn_start=1, lpn_count=3)
         ftl.write_region(ext)
@@ -2334,7 +2334,7 @@ class TestFTLOperations(unittest.TestCase):
             self.assertNotEqual(ppn1, ppn2)
 
     def test_write_region_overflow(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
         for i in range(3):
             ext = Extent(lpn_start=0, lpn_count=8)
@@ -2354,7 +2354,7 @@ class TestFTLOperations(unittest.TestCase):
         self.assertEqual(ftl.block_pool.total_used_blocks(), 3)
 
     def test_write_large_extent(self):
-        ftl, conf, rec = create_nkftl()
+        ftl, conf, rec, env = create_nkftl()
 
         for i in range(8):
             ext = Extent(lpn_start=1, lpn_count=conf.n_pages_per_block*63)
@@ -2371,7 +2371,7 @@ class TestFTLOperations(unittest.TestCase):
         pass
 
     # def test_update_log_mapping(self):
-        # ftl, conf, rec = create_nkftl()
+        # ftl, conf, rec, env = create_nkftl()
 
         # mappings = {2:3, 4:5}
         # ftl._update_log_mappings(mappings)
@@ -2382,8 +2382,40 @@ class TestFTLOperations(unittest.TestCase):
 
 
 class TestSimpyIntegration(unittest.TestCase):
-    def test_init(self):
-        pass
+    def write_proc(self, env, ftl, extent, data=None):
+        yield env.process(ftl.write_ext(extent, data))
+
+    def data_of_extent(self, extent):
+        d = []
+        for lpn in extent.lpn_iter():
+            d.append(str(lpn))
+        return d
+
+    def test_write(self):
+        ftl, conf, rec, env = create_nkftl()
+
+        env.process(self.write_proc(env, ftl, Extent(0, 3)))
+        env.run()
+
+    def read_proc(self, env, ftl, extent):
+        data = yield env.process(ftl.read_ext(extent))
+        env.exit(data)
+
+    def reader_main(self, env, ftl):
+        ext = Extent(0, 3)
+        yield env.process(
+            self.write_proc(env, ftl, ext, self.data_of_extent(ext)))
+        ret_data = yield env.process(self.read_proc(env, ftl, ext))
+        self.assertListEqual(ret_data, [str(x) for x in ext.lpn_iter()])
+
+    def test_read(self):
+        ftl, conf, rec, env = create_nkftl()
+
+        env.process(self.reader_main(env, ftl))
+        env.run()
+
+
+
 
 
 
