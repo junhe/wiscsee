@@ -786,7 +786,8 @@ class VictimLogBlocks(VictimBlocksBase):
 
 class GarbageCollector(object):
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
-            translatorobj, global_helper_obj, log_mapping, data_block_mapping):
+            translatorobj, global_helper_obj, log_mapping, data_block_mapping,
+            simpy_env):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
@@ -795,6 +796,7 @@ class GarbageCollector(object):
         self.translator = translatorobj
         self.log_mapping_table = log_mapping
         self.data_block_mapping_table = data_block_mapping
+        self.env = simpy_env
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
@@ -1381,9 +1383,11 @@ class Ftl(ftlbuilder.FtlBuilder):
     This is an FTL implemented according to paper:
         A reconfigurable FTL Architecture for NAND Flash-Based Applications
     """
-    def __init__(self, confobj, recorderobj, flashobj):
+    def __init__(self, confobj, recorderobj, flashobj, simpy_env, des_flash):
         super(Ftl, self).__init__(confobj, recorderobj, flashobj)
 
+        self.des_flash = des_flash
+        self.env = simpy_env
         self.block_pool = NKBlockPool(
             n_channels=self.conf.n_channels_per_dev,
             n_blocks_per_channel=self.conf.n_blocks_per_channel,
@@ -1417,7 +1421,8 @@ class Ftl(ftlbuilder.FtlBuilder):
             translatorobj = self.translator,
             global_helper_obj = self.global_helper,
             log_mapping = self.log_mapping_table,
-            data_block_mapping = self.data_block_mapping_table
+            data_block_mapping = self.data_block_mapping_table,
+            simpy_env = self.env
             )
         self.tmpcnt = 0
 

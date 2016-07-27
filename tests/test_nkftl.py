@@ -1,5 +1,6 @@
 import unittest
 import random
+import simpy
 
 from ssdbox.nkftl2 import *
 from ssdbox import flash
@@ -11,6 +12,7 @@ from utilities.utils import choose_exp_metadata, runtime_update
 from workflow import run_workflow
 from config import LBAGENERATOR
 from ssdbox.ftlsim_commons import *
+import flashcontroller
 
 TDATA = 'TDATA'
 TLOG = 'TLOG'
@@ -60,13 +62,24 @@ def create_nkblockpool(conf):
             tags=[TDATA, TLOG])
     return block_pool
 
+def create_env():
+    env = simpy.Environment()
+    return env
+
+def create_flash_controller(env, conf, rec):
+    flash_controller = flashcontroller.controller.Controller3(
+            env, conf, recorder)
+    return flash_controller
 
 def create_nkftl():
     conf = create_config()
     rec = create_recorder(conf)
+    env = create_env()
+    des_flash = create_flash_controller(env, conf, rec)
 
     ftl = Ftl(conf, rec,
-        ssdbox.flash.Flash(recorder=rec, confobj=conf))
+        ssdbox.flash.Flash(recorder=rec, confobj=conf), env,
+        des_flash)
     return ftl, conf, rec
 
 def create_global_helper(conf):
@@ -647,9 +660,10 @@ class TestCleaningDataBlocks(unittest.TestCase):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
     def test_clean_data_blocks(self):
         conf = create_config()
@@ -662,9 +676,10 @@ class TestCleaningDataBlocks(unittest.TestCase):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         lbn = 8
         blocknum = self.use_a_data_block(conf, block_pool, oob, datablocktable, lbn)
@@ -704,9 +719,10 @@ class TestCleaningDataBlocks(unittest.TestCase):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         lbn = 8
         blocknum = self.use_a_data_block_no_mapping(conf, block_pool,
@@ -814,9 +830,10 @@ class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=conf.n_pages_per_block,
@@ -838,9 +855,10 @@ class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=int(conf.n_pages_per_block/2),
@@ -862,9 +880,10 @@ class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=conf.n_pages_per_block+1,
@@ -886,9 +905,10 @@ class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=conf.n_pages_per_block+1,
@@ -959,9 +979,10 @@ class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=int(conf.n_pages_per_block/2),
@@ -984,9 +1005,10 @@ class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=int(conf.n_pages_per_block/2),
@@ -1008,9 +1030,10 @@ class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=conf.n_pages_per_block,
@@ -1032,9 +1055,10 @@ class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=int(conf.n_pages_per_block/2),
@@ -1123,9 +1147,10 @@ class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         half_block_pages = int(conf.n_pages_per_block/2)
 
@@ -1222,9 +1247,10 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         half_block_pages = int(conf.n_pages_per_block/2)
 
@@ -1316,9 +1342,10 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         half_block_pages = int(conf.n_pages_per_block/2)
 
@@ -1552,9 +1579,10 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         half_block_pages = int(conf.n_pages_per_block/2)
 
@@ -1695,9 +1723,10 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         half_block_pages = int(conf.n_pages_per_block/2)
 
@@ -1820,9 +1849,10 @@ class TestCleanDataGroup(unittest.TestCase, UseLogBlocksMixin):
         datablocktable = DataBlockMappingTable(conf, rec, helper)
         translator = Translator(conf, rec, helper, logmaptable, datablocktable)
         flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+        simpy_env = create_env()
 
         gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable)
+                translator, helper, logmaptable, datablocktable, simpy_env)
 
         half_block_pages = int(conf.n_pages_per_block/2)
 
@@ -2349,6 +2379,12 @@ class TestFTLOperations(unittest.TestCase):
             # found, retrieved_ppn, loc = ftl.lpn_to_ppn(lpn)
             # self.assertTrue(found)
             # self.assertEqual(retrieved_ppn, ppn)
+
+
+class TestSimpyIntegration(unittest.TestCase):
+    def test_init(self):
+        pass
+
 
 
 def main():
