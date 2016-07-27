@@ -1433,24 +1433,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         return False, None, None
 
     def lba_read(self, lpn):
-        self.global_helper.incr_lba_op_timestamp()
-
-        hasit, ppn, loc = self.lpn_to_ppn(lpn)
-        if hasit == True:
-            content = self.flash.page_read(ppn, cat = TAG_FORGROUND)
-            yield self.env.process(
-                self.des_flash.rw_ppns([ppn], 'read', tag = "Unknown"))
-
-            if loc == IN_LOG_BLOCK:
-                phy_block_num, _ = self.conf.page_to_block_off(ppn)
-                data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
-                self.log_mapping_table\
-                    .log_group_info[data_group_no]\
-                    .update_block_use_time(phy_block_num)
-        else:
-            content = None
-
-        # print 'lba_read', lpn, 'ppn', ppn, 'got', content
+        content = yield self.env.process(self.read_ext(Extent(lpn, 1)))
         self.env.exit(content)
 
     def lba_write(self, lpn, data=None):
