@@ -88,29 +88,51 @@ def create_global_helper(conf):
 def create_translator(conf, rec, globalhelper, log_mapping, data_block_mapping):
     return Translator(conf, rec, globalhelper, log_mapping, data_block_mapping)
 
-class TestNkftl(unittest.TestCase):
+
+
+class RWMixin(object):
+    def write_proc(self, env, ftl, extent, data=None):
+        yield env.process(ftl.write_ext(extent, data))
+
+    def read_proc(self, env, ftl, extent):
+        data = yield env.process(ftl.read_ext(extent))
+        env.exit(data)
+
+    def data_of_extent(self, extent):
+        d = []
+        for lpn in extent.lpn_iter():
+            d.append(str(lpn))
+        return d
+
+
+class TestNkftl(unittest.TestCase, RWMixin):
     def test_init(self):
         ftl, conf, rec, env = create_nkftl()
-
-    def test_write_and_read(self):
-        ftl, conf, rec, env = create_nkftl()
-
-        ftl.lba_write(8, data='3')
-        ret = ftl.lba_read(8)
-        self.assertEqual(ret, '3')
 
     def randomdata(self, lpn):
         return str(random.randint(0, 100))
 
-    def write_and_check(self, ftl, lpns):
+    def test_write_and_read(self):
+        ftl, conf, rec, env = create_nkftl()
+
+        env.process(self.proc_test_write_and_read(env, ftl, conf))
+        env.run()
+
+    def proc_test_write_and_read(self, env, ftl, conf):
+        yield env.process(ftl.lba_write(8, data='3'))
+        ret = yield env.process( ftl.lba_read(8) )
+        self.assertEqual(ret, '3')
+
+
+    def write_and_check(self, ftl, lpns, env):
         data_mirror = {}
         for lpn in lpns:
             data = self.randomdata(lpn)
             data_mirror[lpn] = data
-            ftl.lba_write(lpn, data)
+            yield env.process(ftl.lba_write(lpn, data))
 
         for lpn, data in data_mirror.items():
-            ret = ftl.lba_read(lpn)
+            ret = yield env.process(ftl.lba_read(lpn))
             self.assertEqual(ret, data)
 
     def test_data_integrity(self):
@@ -119,25 +141,32 @@ class TestNkftl(unittest.TestCase):
         total_pages = conf.total_num_pages()
         lpns = random.sample(range(total_pages), 1000)
 
-        self.write_and_check(ftl, lpns)
+        env.process(self.write_and_check(ftl, lpns, env))
+        env.run()
 
     def test_GC_simple(self):
         ftl, conf, rec, env = create_nkftl()
 
         lpns = [0] * 4 * conf.n_pages_per_block * conf['nkftl']['max_blocks_in_log_group']
-        self.write_and_check(ftl, lpns)
+
+        env.process(self.write_and_check(ftl, lpns, env))
+        env.run()
 
     def test_GC_harder(self):
         ftl, conf, rec, env = create_nkftl()
 
         lpns = [0, 3, 1] * 4 * conf.n_pages_per_block * conf['nkftl']['max_blocks_in_log_group']
-        self.write_and_check(ftl, lpns)
+
+        env.process(self.write_and_check(ftl, lpns, env))
+        env.run()
 
     def test_GC_harder2(self):
         ftl, conf, rec, env = create_nkftl()
 
         lpns = [0, 128, 3, 129, 1] * 4 * conf.n_pages_per_block * conf['nkftl']['max_blocks_in_log_group']
-        self.write_and_check(ftl, lpns)
+
+        env.process(self.write_and_check(ftl, lpns, env))
+        env.run()
 
     @unittest.skipUnless(TESTALL == True, "Skip unless we want to test all")
     def test_GC_harder_super(self):
@@ -145,7 +174,10 @@ class TestNkftl(unittest.TestCase):
 
         print 'total pages', conf.total_num_pages()
         lpns = [0, 128, 3, 129, 1] * 4 * conf.total_num_pages()
-        self.write_and_check(ftl, lpns)
+
+        env.process(self.write_and_check(ftl, lpns, env))
+        env.run()
+
 
 
 class TestBlockPool(unittest.TestCase):
@@ -2379,21 +2411,6 @@ class TestFTLOperations(unittest.TestCase):
             # found, retrieved_ppn, loc = ftl.lpn_to_ppn(lpn)
             # self.assertTrue(found)
             # self.assertEqual(retrieved_ppn, ppn)
-
-
-class RWMixin(object):
-    def write_proc(self, env, ftl, extent, data=None):
-        yield env.process(ftl.write_ext(extent, data))
-
-    def read_proc(self, env, ftl, extent):
-        data = yield env.process(ftl.read_ext(extent))
-        env.exit(data)
-
-    def data_of_extent(self, extent):
-        d = []
-        for lpn in extent.lpn_iter():
-            d.append(str(lpn))
-        return d
 
 
 class TestSimpyIntegration(unittest.TestCase, RWMixin):

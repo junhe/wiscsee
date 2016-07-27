@@ -1445,7 +1445,7 @@ class Ftl(ftlbuilder.FtlBuilder):
 
     def lba_read(self, lpn):
         content = yield self.env.process(self.read_ext(Extent(lpn, 1)))
-        self.env.exit(content)
+        self.env.exit(content[0])
 
     def read_ext(self, extent):
         extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
