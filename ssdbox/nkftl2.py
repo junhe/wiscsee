@@ -1540,7 +1540,9 @@ class Ftl(ftlbuilder.FtlBuilder):
             for lpn in loop_ext.lpn_iter():
                 found, ppn = self.log_mapping_table.lpn_to_ppn(lpn)
 
+            print 'n, lpn count', n, loop_ext.lpn_count
             if n < loop_ext.lpn_count:
+                print 'gcccccccccccccccccccccccccccccccccc'
                 self.garbage_collector.clean_data_group(data_group_no)
 
             loop_ext.lpn_start += n

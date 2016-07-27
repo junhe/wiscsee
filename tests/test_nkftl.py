@@ -28,6 +28,8 @@ def create_config():
     conf['nkftl']['max_blocks_in_log_group'] = 2
     conf['nkftl']['n_blocks_in_data_group'] = 4
 
+    conf['n_pages_per_region'] = conf.n_pages_per_block,
+
     utils.set_exp_metadata(conf, save_data = False,
             expname = 'test_expname',
             subexpname = 'test_subexpname')
@@ -2018,6 +2020,8 @@ def create_config_2():
     conf['nkftl']['max_blocks_in_log_group'] = 16
     conf['nkftl']['n_blocks_in_data_group'] = 4
 
+    conf['n_pages_per_region'] = conf.n_pages_per_block,
+
     utils.set_exp_metadata(conf, save_data = False,
             expname = 'test_expname',
             subexpname = 'test_subexpname')
@@ -2242,7 +2246,6 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(loggroup.n_log_blocks(), 0)
 
 
-@unittest.skip("")
 class TestFTLOperations(unittest.TestCase):
     def test_write(self):
         ftl, conf, rec = create_nkftl()
@@ -2315,8 +2318,10 @@ class TestFTLOperations(unittest.TestCase):
                 self.assertEqual(found, True)
                 ppns.append(ppn)
 
-        self.assertEqual(ftl.block_pool.total_used_blocks(), 1)
-
+        # 1 data block with no valid pages
+        # 1 data block with valid pages
+        # 1 log block with valid pages
+        self.assertEqual(ftl.block_pool.total_used_blocks(), 3)
 
     # def test_update_log_mapping(self):
         # ftl, conf, rec = create_nkftl()
