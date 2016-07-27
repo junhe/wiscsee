@@ -2381,15 +2381,24 @@ class TestFTLOperations(unittest.TestCase):
             # self.assertEqual(retrieved_ppn, ppn)
 
 
-class TestSimpyIntegration(unittest.TestCase):
+class RWMixin(object):
     def write_proc(self, env, ftl, extent, data=None):
         yield env.process(ftl.write_ext(extent, data))
+
+    def read_proc(self, env, ftl, extent):
+        data = yield env.process(ftl.read_ext(extent))
+        env.exit(data)
 
     def data_of_extent(self, extent):
         d = []
         for lpn in extent.lpn_iter():
             d.append(str(lpn))
         return d
+
+
+class TestSimpyIntegration(unittest.TestCase, RWMixin):
+    def write_proc(self, env, ftl, extent, data=None):
+        yield env.process(ftl.write_ext(extent, data))
 
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
@@ -2414,9 +2423,59 @@ class TestSimpyIntegration(unittest.TestCase):
         env.process(self.reader_main(env, ftl))
         env.run()
 
+class TestRegionSerialization_DifferentRegion(unittest.TestCase, RWMixin):
+    def test_write(self):
+        ftl, conf, rec, env = create_nkftl()
+
+        env.process(self.main_proc(env, ftl, conf))
+        env.run()
+
+    def main_proc(self, env, ftl, conf):
+        # write different regions at the same time
+        p1 = env.process(ftl.write_ext(Extent(0, 1)))
+        p2 = env.process(ftl.write_ext(
+            Extent(conf.n_pages_per_region(), 1)))
+
+        yield simpy.AllOf(env, [p1, p2])
+
+        self.assertEqual(env.now, conf.page_prog_time())
 
 
+class TestRegionSerialization_SameRegion(unittest.TestCase, RWMixin):
+    def test_write(self):
+        ftl, conf, rec, env = create_nkftl()
 
+        env.process(self.main_proc(env, ftl, conf))
+        env.run()
+
+    def main_proc(self, env, ftl, conf):
+        # write different regions at the same time
+        p1 = env.process(ftl.write_ext(Extent(0, 1)))
+        p2 = env.process(ftl.write_ext(Extent(0, 1)))
+
+        yield simpy.AllOf(env, [p1, p2])
+
+        self.assertEqual(env.now, conf.page_prog_time() * 2)
+
+class TestRegionSerialization_WriteAndRead(unittest.TestCase, RWMixin):
+    def test_write(self):
+        ftl, conf, rec, env = create_nkftl()
+
+        env.process(self.main_proc(env, ftl, conf))
+        env.run()
+
+    def main_proc(self, env, ftl, conf):
+        # write different regions at the same time
+        extent = Extent(0, 1)
+        yield env.process(ftl.write_ext(extent,
+            self.data_of_extent(extent)))
+        ret_data = yield env.process(ftl.read_ext(extent))
+
+        self.assertListEqual(ret_data, [str(x)
+            for x in self.data_of_extent(extent)])
+
+        self.assertEqual(env.now, conf.page_prog_time() +
+                conf.page_read_time())
 
 
 def main():

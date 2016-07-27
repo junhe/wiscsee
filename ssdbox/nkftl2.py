@@ -80,6 +80,9 @@ class Config(config.ConfigNCQFTL):
         }
         self.update(local_itmes)
 
+    def n_pages_per_region(self):
+        return self['n_pages_per_region']
+
     def n_pages_per_data_group(self):
         n_blocks_in_data_group = self['nkftl']['n_blocks_in_data_group']
         n_pages_per_block = self.n_pages_per_block
@@ -106,6 +109,9 @@ class Config(config.ConfigNCQFTL):
         """
         return self['nkftl']['max_blocks_in_log_group'] * \
             self.n_pages_per_block
+
+    def region_id_of_lpn(self, lpn):
+        return lpn / self['n_pages_per_region']
 
     def nkftl_allowed_num_of_data_blocks(self):
         """
@@ -137,6 +143,7 @@ class Config(config.ConfigNCQFTL):
             "of data blocks and log blocks in flash to be proportional "
             "following N/K. In fact, the number of log blocks in flash can be "
             "less than total.flash.block * K/(N+K).")
+
 
 
 class GlobalHelper(object):
@@ -1424,7 +1431,8 @@ class Ftl(ftlbuilder.FtlBuilder):
             data_block_mapping = self.data_block_mapping_table,
             simpy_env = self.env
             )
-        self.tmpcnt = 0
+
+        self.region_locks = LockPool(self.env)
 
     def lpn_to_ppn(self, lpn):
         found, ppn, location = self.translator.lpn_to_ppn(lpn)
@@ -1443,14 +1451,10 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.garbage_collector.try_gc()
 
     def lba_discard(self, lpn):
-        found, ppn, loc = self.translator.lpn_to_ppn(lpn)
-        if found == True:
-            if loc == IN_LOG_BLOCK:
-                self.translator.log_mapping_table.remove_lpn(lpn)
-            self.oob.wipe_ppn(ppn)
+        yield self.env.process(self.discard_region(Extent(lpn, 1)))
 
     def write_ext(self, extent, data=None):
-        extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
+        extents = split_ext_by_region(self.conf.n_pages_per_region(), extent)
         for region_ext in extents:
             if data is None:
                 region_data = None
@@ -1464,6 +1468,10 @@ class Ftl(ftlbuilder.FtlBuilder):
         lpns in extent must be in the same region
         a region must in the same data group
         """
+        region_id = self.conf.region_id_of_lpn(extent.lpn_start)
+        req = self.region_locks.get_request(region_id)
+        yield req
+
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(extent.lpn_start)
         for lpn in extent.lpn_iter():
             assert self.conf.nkftl_data_group_number_of_lpn(lpn) == data_group_no
@@ -1491,6 +1499,8 @@ class Ftl(ftlbuilder.FtlBuilder):
 
             loop_ext.lpn_start += n_ppns
             loop_ext.lpn_count -= n_ppns
+
+        self.region_locks.release_request(region_id, req)
 
     def _sub_ext_data(self, data, extent, sub_ext):
         start = sub_ext.lpn_start - extent.lpn_start
@@ -1545,8 +1555,23 @@ class Ftl(ftlbuilder.FtlBuilder):
             self.oob.remap(lpn = lpn, old_ppn = old_ppn, new_ppn = new_ppn)
 
     def discard_ext(self, extent):
+        extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
+        for region_ext in extents:
+            yield self.env.process(self.discard_region(region_ext))
+
+    def discard_region(self, extent):
+        region_id = self.conf.region_id_of_lpn(extent.lpn_start)
+        req = self.region_locks.get_request(region_id)
+        yield req
+
         for lpn in extent.lpn_iter():
-            self.lba_discard(lpn)
+            found, ppn, loc = self.translator.lpn_to_ppn(lpn)
+            if found == True:
+                if loc == IN_LOG_BLOCK:
+                    self.translator.log_mapping_table.remove_lpn(lpn)
+                self.oob.wipe_ppn(ppn)
+
+        self.region_locks.release_request(region_id, req)
 
     def read_ext(self, extent):
         extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
@@ -1558,6 +1583,10 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.env.exit(ext_data)
 
     def read_region(self, extent):
+        region_id = self.conf.region_id_of_lpn(extent.lpn_start)
+        req = self.region_locks.get_request(region_id)
+        yield req
+
         ppns_to_read = []
         contents = []
         for lpn in extent.lpn_iter():
@@ -1572,6 +1601,8 @@ class Ftl(ftlbuilder.FtlBuilder):
 
         yield self.env.process(
             self.des_flash.rw_ppns(ppns_to_read, 'read', tag = "Unknown"))
+
+        self.region_locks.release_request(region_id, req)
 
         self.env.exit(contents)
 
