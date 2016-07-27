@@ -1460,10 +1460,6 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.garbage_collector.try_gc()
 
     def lba_discard(self, lpn):
-        self.global_helper.incr_lba_op_timestamp()
-
-        data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
-
         found, ppn, loc = self.translator.lpn_to_ppn(lpn)
         if found == True:
             if loc == IN_LOG_BLOCK:
