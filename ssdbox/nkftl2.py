@@ -1472,7 +1472,7 @@ class Ftl(ftlbuilder.FtlBuilder):
 
     def write_ext(self, extent, data=None):
         extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
-        for region_id, region_ext in extents.items():
+        for region_ext in extents:
             if data is None:
                 region_data = None
             else:
@@ -1570,16 +1570,56 @@ class Ftl(ftlbuilder.FtlBuilder):
             self.lba_discard(lpn)
 
     def read_ext(self, extent):
-        data = []
+        extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
+        ext_data = []
+        for region_ext in extents:
+            ret_data = yield self.env.process(self.read_region(region_ext))
+            ext_data.extend(ret_data)
+
+        self.env.exit(ext_data)
+
+    def read_region(self, extent):
+        ppns_to_read = []
+        contents = []
         for lpn in extent.lpn_iter():
-            ret = yield self.env.process(self.lba_read(lpn))
-            data.append(ret)
-        self.env.exit(data)
+            hasit, ppn, loc = self.lpn_to_ppn(lpn)
+
+            if hasit == True:
+                content = self.flash.page_read(ppn, cat = TAG_FORGROUND)
+                ppns_to_read.append(ppn)
+            else:
+                content = None
+            contents.append(content)
+
+        yield self.env.process(
+            self.des_flash.rw_ppns(ppns_to_read, 'read', tag = "Unknown"))
+
+        self.env.exit(contents)
 
     def post_processing(self):
         pass
 
+
 def split_ext_by_region(n_pages_per_region, extent):
-    return split_ext_by_segment(n_pages_per_region, extent)
+    if extent.lpn_count == 0:
+        return None
+
+    last_seg_id = -1
+    cur_ext = None
+    exts = []
+    for lpn in extent.lpn_iter():
+        seg_id = lpn / n_pages_per_region
+        if seg_id == last_seg_id:
+            cur_ext.lpn_count += 1
+        else:
+            if cur_ext is not None:
+                exts.append(cur_ext)
+            cur_ext = Extent(lpn_start=lpn, lpn_count=1)
+        last_seg_id = seg_id
+
+    if cur_ext is not None:
+        exts.append(cur_ext)
+
+    return exts
 
 
