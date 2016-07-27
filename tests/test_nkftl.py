@@ -2478,6 +2478,34 @@ class TestRegionSerialization_WriteAndRead(unittest.TestCase, RWMixin):
                 conf.page_read_time())
 
 
+class TestRegionSerialization_Discard(unittest.TestCase, RWMixin):
+    def test(self):
+        ftl, conf, rec, env = create_nkftl()
+
+        env.process(self.main_proc(env, ftl, conf))
+        env.run()
+
+    def main_proc(self, env, ftl, conf):
+        # write different regions at the same time
+        extent = Extent(0, 1)
+        yield env.process(ftl.write_ext(extent,
+            self.data_of_extent(extent)))
+
+        ret_data = yield env.process(ftl.read_ext(extent))
+        self.assertListEqual(ret_data, [str(x)
+            for x in self.data_of_extent(extent)])
+
+        yield env.process(ftl.discard_ext(extent))
+
+        # not ppn is valid
+        for lpn in extent.lpn_iter():
+            found, ppn, loc = ftl.lpn_to_ppn(lpn)
+            self.assertEqual(found, False)
+
+        ret_data = yield env.process(ftl.read_ext(extent))
+        self.assertListEqual(ret_data, [None
+            for x in self.data_of_extent(extent)])
+
 def main():
     unittest.main()
 
