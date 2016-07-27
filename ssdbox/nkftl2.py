@@ -1512,7 +1512,7 @@ class Ftl(ftlbuilder.FtlBuilder):
 
     def write_ext(self, extent, data=None):
         extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
-        for region_ext in extents:
+        for region_id, region_ext in extents.items():
             self.write_region(region_ext)
 
     def write_region(self, extent):
@@ -1520,6 +1520,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         lpns in extent must be in the same region
         a region must in the same data group
         """
+        print 'write', str(extent)
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(extent.lpn_start)
         for lpn in extent.lpn_iter():
             assert self.conf.nkftl_data_group_number_of_lpn(lpn) == data_group_no
@@ -1530,23 +1531,21 @@ class Ftl(ftlbuilder.FtlBuilder):
                 dgn=data_group_no,
                 n=loop_ext.lpn_count,
                 strip_unit_size=self.conf['stripe_size'])
-            print ppns
 
-            n = len(ppns)
+            n_ppns = len(ppns)
             mappings = dict(zip(loop_ext.lpn_iter(), ppns))
-            assert len(mappings) == n
+            assert len(mappings) == n_ppns
             self._write_log_ppns(mappings)
 
             for lpn in loop_ext.lpn_iter():
                 found, ppn = self.log_mapping_table.lpn_to_ppn(lpn)
 
-            print 'n, lpn count', n, loop_ext.lpn_count
-            if n < loop_ext.lpn_count:
-                print 'gcccccccccccccccccccccccccccccccccc'
+            if n_ppns < loop_ext.lpn_count:
+                # we cannot find vailable pages in log blocks
                 self.garbage_collector.clean_data_group(data_group_no)
 
-            loop_ext.lpn_start += n
-            loop_ext.lpn_count -= n
+            loop_ext.lpn_start += n_ppns
+            loop_ext.lpn_count -= n_ppns
 
     def _write_log_ppns(self, mappings):
         """

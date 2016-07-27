@@ -28,7 +28,7 @@ def create_config():
     conf['nkftl']['max_blocks_in_log_group'] = 2
     conf['nkftl']['n_blocks_in_data_group'] = 4
 
-    conf['n_pages_per_region'] = conf.n_pages_per_block,
+    conf['n_pages_per_region'] = conf.n_pages_per_block
 
     utils.set_exp_metadata(conf, save_data = False,
             expname = 'test_expname',
@@ -2020,7 +2020,7 @@ def create_config_2():
     conf['nkftl']['max_blocks_in_log_group'] = 16
     conf['nkftl']['n_blocks_in_data_group'] = 4
 
-    conf['n_pages_per_region'] = conf.n_pages_per_block,
+    conf['n_pages_per_region'] = conf.n_pages_per_block
 
     utils.set_exp_metadata(conf, save_data = False,
             expname = 'test_expname',
@@ -2322,6 +2322,20 @@ class TestFTLOperations(unittest.TestCase):
         # 1 data block with valid pages
         # 1 log block with valid pages
         self.assertEqual(ftl.block_pool.total_used_blocks(), 3)
+
+    def test_write_large_extent(self):
+        ftl, conf, rec = create_nkftl()
+
+        for i in range(8):
+            ext = Extent(lpn_start=1, lpn_count=conf.n_pages_per_block*63)
+            print str(ext)
+            ftl.write_ext(ext)
+
+            ppns = []
+            for lpn in ext.lpn_iter():
+                found, ppn, loc = ftl.lpn_to_ppn(lpn)
+                self.assertEqual(ftl.oob.states.is_page_valid(ppn), True)
+                self.assertEqual(found, True)
 
     # def test_update_log_mapping(self):
         # ftl, conf, rec = create_nkftl()
