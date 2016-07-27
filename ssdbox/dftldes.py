@@ -358,22 +358,6 @@ def split_ext_to_mvpngroups(conf, extent):
     return group_extent_list
 
 
-class LockPool(object):
-    def __init__(self, simpy_env):
-        self.resources = {} # addr: lock
-        self.env = simpy_env
-        self.locked_addrs = set()
-
-    def get_request(self, addr):
-        res = self.resources.setdefault(addr,
-                                    simpy.Resource(self.env, capacity = 1))
-        return res.request()
-
-    def release_request(self, addr, request):
-        res = self.resources[addr]
-        res.release(request)
-
-
 class MappingDict(dict):
     """
     Used to map lpn->ppn
