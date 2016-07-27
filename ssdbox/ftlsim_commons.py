@@ -26,6 +26,9 @@ class Extent(object):
     def __contains__(self, lpn):
         return lpn >= self.lpn_start and lpn < self.end_lpn()
 
+    def __copy__(self):
+        return Extent(self.lpn_start, self.lpn_count)
+
 
 class CacheExtent(Extent):
     def __init__(self, lpn_start, lpn_count, in_cache):
@@ -95,5 +98,27 @@ class NCQSingleQueue(object):
         for req in held_slot_reqs:
             self.slots.release(req)
 
+
+def split_ext_by_segment(n_pages_per_segment, extent):
+    if extent.lpn_count == 0:
+        return None
+
+    last_seg_id = -1
+    cur_ext = None
+    exts = {}
+    for lpn in extent.lpn_iter():
+        seg_id = lpn / n_pages_per_segment
+        if seg_id == last_seg_id:
+            cur_ext.lpn_count += 1
+        else:
+            if cur_ext is not None:
+                exts[last_seg_id] = cur_ext
+            cur_ext = Extent(lpn_start=lpn, lpn_count=1)
+        last_seg_id = seg_id
+
+    if cur_ext is not None:
+        exts[seg_id] = cur_ext
+
+    return exts
 
 

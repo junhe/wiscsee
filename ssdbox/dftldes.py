@@ -1827,28 +1827,6 @@ def write_timeline(conf, recorder, op_id, op, arg, start_time, end_time):
             op_id = op_id, op = op, arg = arg,
             start_time = start_time, end_time = end_time)
 
-def split_ext_by_segment(n_pages_per_segment, extent):
-    if extent.lpn_count == 0:
-        return None
-
-    last_seg_id = -1
-    cur_ext = None
-    exts = {}
-    for lpn in extent.lpn_iter():
-        seg_id = lpn / n_pages_per_segment
-        if seg_id == last_seg_id:
-            cur_ext.lpn_count += 1
-        else:
-            if cur_ext is not None:
-                exts[last_seg_id] = cur_ext
-            cur_ext = Extent(lpn_start=lpn, lpn_count=1)
-        last_seg_id = seg_id
-
-    if cur_ext is not None:
-        exts[seg_id] = cur_ext
-
-    return exts
-
 
 
 

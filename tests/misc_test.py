@@ -1,6 +1,7 @@
 import socket
 import unittest
 import time
+import copy
 
 import workrunner
 import ssdbox
@@ -8,6 +9,7 @@ from utilities import utils
 from config import MountOption as MOpt
 from workflow import run_workflow
 from ssdbox.simulator import GcLog
+from ssdbox.ftlsim_commons import Extent
 
 class TestCpuhandler(unittest.TestCase):
     def test_cpu(self):
@@ -120,6 +122,18 @@ class TestClassifyGcLOG(unittest.TestCase):
                 )
         print gclog._get_range_table()
         gclog.classify_lpn_in_gclog()
+
+class TestExtent(unittest.TestCase):
+    def test_copy(self):
+        ext1 = Extent(lpn_start=3, lpn_count=8)
+        ext2 = copy.copy(ext1)
+
+        self.assertEqual(ext1.lpn_start, ext2.lpn_start)
+        self.assertEqual(ext1.lpn_count, ext2.lpn_count)
+        self.assertNotEqual(ext1, ext2)
+
+        ext2.lpn_start = 100
+        self.assertEqual(ext1.lpn_start, 3)
 
 
 

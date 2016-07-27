@@ -10,6 +10,7 @@ import recorder
 from utilities import utils
 from .bitmap import FlashBitmap2
 from ssdbox.devblockpool import *
+from ftlsim_commons import *
 
 from . import blkpool
 
@@ -75,6 +76,7 @@ class Config(config.ConfigNCQFTL):
 
                 "provision_ratio": 1.5 # 1.5: 1GB user size, 1.5 flash size behind
             },
+            'n_pages_per_region': self.n_pages_per_block,
         }
         self.update(local_itmes)
 
@@ -213,6 +215,7 @@ class OutOfBandAreas(object):
         if old_ppn != None:
             # the lpn has mapping before this write
             self.states.invalidate_page(old_ppn)
+
 
     def lpns_of_block(self, flash_block):
         s, e = self.conf.block_to_page_range(flash_block)
@@ -512,10 +515,11 @@ class LogGroup2(object):
             strip_unit_size = float('inf')
 
         ret_ppns = []
-        # dead channel: 1. no free pages, 2. log group num of log blocks reached
-        # max
-        full_channels = set()
-        while remaining > 0 and len(full_channels) < self.n_channels:
+        dead_channels = set()
+        while remaining > 0 and len(dead_channels) < self.n_channels:
+            # we do not need to check if number of log blocks exceed
+            # max, because it is impossible. We check before we allocate
+            # block.
             cur_channel_id = self._get_and_incr_cur_channel()
             reqsize = min(remaining, strip_unit_size)
             ppns = self._next_ppns_in_channel_with_allocation(
@@ -523,12 +527,12 @@ class LogGroup2(object):
             ret_ppns.extend(ppns)
             remaining -= len(ppns)
             if len(ppns) < reqsize:
-                if self.reached_max_log_blocks() is True:
-                    return ret_ppns
-                else:
-                    assert self.block_pool.count_blocks(tag=TFREE,
-                            channels=[cur_channel_id])
-                    full_channels.add(cur_channel_id)
+                # we cannot allocate more blocks in this channel because:
+                # 1. no available blocks, or
+                # 2. # of blocks reached max for this log group
+                assert self.block_pool.count_blocks(tag=TFREE,
+                        channels=[cur_channel_id])
+                dead_channels.add(cur_channel_id)
 
         return ret_ppns
 
@@ -1507,31 +1511,77 @@ class Ftl(ftlbuilder.FtlBuilder):
             self.oob.wipe_ppn(ppn)
 
     def write_ext(self, extent, data=None):
+        extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
+        for region_ext in extents:
+            self.write_region(region_ext)
+
+    def write_region(self, extent):
         """
-        New design:
-        1. split extent if it goes across different data groups
-        2. pass the split extent to write_ext_datagroup()
-        3. write_ext_datagroup() will write the extent:
-            1. pass the extent to LogGroup, the LogGroup does the following
-                1. stripe the extent to strip unit
-                2. plan and check if we can put the strips to the log blocks
-                   of this log group without exceeding K
-                3. if not, return message saying this log group needs merging
-                4. if yes, stripe data of the extent to channels, LogGroup
-                   will maintain the current block in all channels.
-                5. LogGroup will return the lpn->ppn, where ppn is the page
-                   number that FTL needs to write to
-            2. write_ext_datagroup() writes to the ppns
-            3. it also update the mapping in loggroup
-            4. it also update all other data structure
+        lpns in extent must be in the same region
+        a region must in the same data group
         """
-        lpn_start = extent.lpn_start
-        lpn_count = extent.lpn_count
-        for lpn in range(lpn_start, lpn_start+lpn_count):
-            if data is None:
-                self.lba_write(lpn)
-            else:
-                self.lba_write(lpn, data[lpn-lpn_start])
+        data_group_no = self.conf.nkftl_data_group_number_of_lpn(extent.lpn_start)
+        for lpn in extent.lpn_iter():
+            assert self.conf.nkftl_data_group_number_of_lpn(lpn) == data_group_no
+
+        loop_ext = copy.copy(extent)
+        while loop_ext.lpn_count > 0:
+            ppns = self.log_mapping_table.next_ppns_to_program(
+                dgn=data_group_no,
+                n=loop_ext.lpn_count,
+                strip_unit_size=self.conf['stripe_size'])
+            print ppns
+
+            n = len(ppns)
+            mappings = dict(zip(loop_ext.lpn_iter(), ppns))
+            assert len(mappings) == n
+            self._write_log_ppns(mappings)
+
+            for lpn in loop_ext.lpn_iter():
+                found, ppn = self.log_mapping_table.lpn_to_ppn(lpn)
+
+            if n < loop_ext.lpn_count:
+                self.garbage_collector.clean_data_group(data_group_no)
+
+            loop_ext.lpn_start += n
+            loop_ext.lpn_count -= n
+
+    def _write_log_ppns(self, mappings):
+        """
+        The ppns in mappings is obtained from loggroup.next_ppns()
+        """
+        # data block mapping
+        pass
+
+        # oob states,    invalidate old ppn, validate new ppn
+        # oob ppn->lpn
+        # must remap oob before _update_log_mappings because once we
+        # update log mappings, we lose the old ppn
+        self._remap_oob(mappings)
+
+        # log mapping
+        self._update_log_mappings(mappings)
+
+        # block pool
+        # no need to handle because it has been handled when we got the ppns
+
+        # flash
+        for ppn in mappings.values():
+            self.flash.page_write(ppn, cat='', data=None)
+
+    def _update_log_mappings(self, mappings):
+        """
+        The ppns in mappings must have been get by loggroup.next_ppns()
+        """
+        for lpn, ppn in mappings.items():
+            self.log_mapping_table.add_mapping(lpn, ppn)
+
+    def _remap_oob(self, new_mappings):
+        for lpn, new_ppn in new_mappings.items():
+            found, old_ppn, loc = self.translator.lpn_to_ppn(lpn)
+            if found == False:
+                old_ppn = None
+            self.oob.remap(lpn = lpn, old_ppn = old_ppn, new_ppn = new_ppn)
 
     def discard_ext(self, extent):
         for lpn in extent.lpn_iter():
@@ -1547,4 +1597,8 @@ class Ftl(ftlbuilder.FtlBuilder):
 
     def post_processing(self):
         pass
+
+def split_ext_by_region(n_pages_per_region, extent):
+    return split_ext_by_segment(n_pages_per_region, extent)
+
 

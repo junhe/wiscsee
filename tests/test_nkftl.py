@@ -2155,6 +2155,29 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(len(ppns), 33)
         self.assertEqual(loggroup.n_log_blocks(), 2)
 
+    def test_next_ppns_small_strip(self):
+        conf = create_config_2()
+        conf['nkftl']['max_blocks_in_log_group'] = 2
+        blockpool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
+        loggroup = LogGroup2(
+                conf = conf,
+                block_pool=blockpool,
+                max_n_log_blocks=conf['nkftl']['max_blocks_in_log_group'])
+
+        ppns = loggroup.next_ppns(n=32, strip_unit_size=16)
+        self.assertEqual(len(ppns), 32)
+
+        ppns = loggroup.next_ppns(n=32, strip_unit_size=16)
+        self.assertEqual(len(ppns), 32)
+
+        ppns = loggroup.next_ppns(n=32, strip_unit_size=16)
+        self.assertEqual(len(ppns), 0)
+        self.assertEqual(loggroup.n_log_blocks(), 2)
+
     def test_next_ppns_overflow_channel(self):
         blockpool, loggroup = create_loggroup2()
 
@@ -2219,6 +2242,7 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(loggroup.n_log_blocks(), 0)
 
 
+@unittest.skip("")
 class TestFTLOperations(unittest.TestCase):
     def test_write(self):
         ftl, conf, rec = create_nkftl()
@@ -2251,7 +2275,58 @@ class TestFTLOperations(unittest.TestCase):
             found, ppn, _ = ftl.lpn_to_ppn(lpn)
             self.assertEqual(found, False)
 
+    def test_write_region(self):
+        ftl, conf, rec = create_nkftl()
 
+        ext = Extent(lpn_start=1, lpn_count=3)
+        ftl.write_region(ext)
+
+        ppns = []
+        for lpn in ext.lpn_iter():
+            found, ppn = ftl.log_mapping_table.lpn_to_ppn(lpn)
+            self.assertEqual(ftl.oob.states.is_page_valid(ppn), True)
+            found, ppn, _ = ftl.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            ppns.append(ppn)
+
+        ftl.write_region(ext)
+
+        ppns2 = []
+        for lpn in ext.lpn_iter():
+            found, ppn, _ = ftl.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            ppns2.append(ppn)
+
+        for ppn1, ppn2 in zip(ppns, ppns2):
+            self.assertNotEqual(ppn1, ppn2)
+
+    def test_write_region_overflow(self):
+        ftl, conf, rec = create_nkftl()
+
+        for i in range(3):
+            ext = Extent(lpn_start=0, lpn_count=8)
+            ftl.write_region(ext)
+
+            ppns = []
+            for lpn in ext.lpn_iter():
+                found, ppn = ftl.log_mapping_table.lpn_to_ppn(lpn)
+                self.assertEqual(ftl.oob.states.is_page_valid(ppn), True)
+                found, ppn, _ = ftl.lpn_to_ppn(lpn)
+                self.assertEqual(found, True)
+                ppns.append(ppn)
+
+        self.assertEqual(ftl.block_pool.total_used_blocks(), 1)
+
+
+    # def test_update_log_mapping(self):
+        # ftl, conf, rec = create_nkftl()
+
+        # mappings = {2:3, 4:5}
+        # ftl._update_log_mappings(mappings)
+        # for lpn, ppn in mappings.items():
+            # found, retrieved_ppn, loc = ftl.lpn_to_ppn(lpn)
+            # self.assertTrue(found)
+            # self.assertEqual(retrieved_ppn, ppn)
 
 
 def main():
