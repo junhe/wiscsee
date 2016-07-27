@@ -1445,57 +1445,8 @@ class Ftl(ftlbuilder.FtlBuilder):
         # print 'lba_read', lpn, 'ppn', ppn, 'got', content
         return content
 
-    def lba_write(self, lpn, data = None):
-        """
-        1. get data group number of lpn
-        2. check if it has a writable log block by LBMT
-        3. it does not have writable log block, and the number of log blocks
-        have not reached max, get one block from free block pool and add to
-        LGMT as a log block.
-        4. if it does not have writable log block and the number of log blocks
-        have reached max, merge the log blocks first and then get a free
-        block as log block
-        5. Add the mapping of LPN to PPN to LPMT
-        6. if we are out of free blocks, start garbage collection.
-        """
-        self.global_helper.incr_lba_op_timestamp()
-
-        data_group_no = self.conf.nkftl_data_group_number_of_lpn(lpn)
-
-
-        while True:
-            ppns = self.log_mapping_table.next_ppns_to_program(dgn=data_group_no,
-                    n=1, strip_unit_size=self.conf['stripe_size'])
-            if len(ppns) == 0:
-                self.garbage_collector.clean_data_group(data_group_no)
-            else:
-                new_ppn = ppns[0]
-                break
-
-        found, old_ppn, loc = self.translator.lpn_to_ppn(lpn)
-        if found == False:
-            old_ppn = None
-
-        # OOB
-        # print "lpn{}, old_ppn{}, new_ppn{}".format(lpn, old_ppn, new_ppn)
-        # Note that this may create empty data block, which need to be cleaned
-        self.oob.remap(lpn = lpn, old_ppn = old_ppn, new_ppn = new_ppn)
-
-        self.flash.page_write(new_ppn, cat = TAG_FORGROUND, data = data)
-
-        phy_block, _ = self.conf.page_to_block_off(new_ppn)
-        self.translator.log_mapping_table\
-            .log_group_info[data_group_no]\
-            .update_block_use_time(phy_block)
-
-        # this may just update the current mapping, instead of 'add'ing.
-        self.translator.log_mapping_table.add_mapping(lpn, new_ppn)
-
-        # print 'AFTER WRITE block_pool.freeblocks', self.block_pool.freeblocks
-        # print 'AFTER WRITE block_pool.log_usedblocks', self.block_pool.log_usedblocks
-        # print 'AFTER WRITE block_pool.data_usedblocks', self.block_pool.data_usedblocks
-        # print 'AFTER WRITE oob.states', self.oob.display_bitmap_by_block()
-        # print 'AFTER WRITE mappings', str(self.translator)
+    def lba_write(self, lpn, data=None):
+        self.write_ext(Extent(lpn_start=lpn, lpn_count=1), [data])
 
         self.garbage_collector.try_gc()
 
@@ -1513,14 +1464,17 @@ class Ftl(ftlbuilder.FtlBuilder):
     def write_ext(self, extent, data=None):
         extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
         for region_id, region_ext in extents.items():
-            self.write_region(region_ext)
+            if data is None:
+                region_data = None
+            else:
+                region_data = self._sub_ext_data(data, extent, region_ext)
+            self.write_region(region_ext, data=region_data)
 
-    def write_region(self, extent):
+    def write_region(self, extent, data=None):
         """
         lpns in extent must be in the same region
         a region must in the same data group
         """
-        print 'write', str(extent)
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(extent.lpn_start)
         for lpn in extent.lpn_iter():
             assert self.conf.nkftl_data_group_number_of_lpn(lpn) == data_group_no
@@ -1535,10 +1489,11 @@ class Ftl(ftlbuilder.FtlBuilder):
             n_ppns = len(ppns)
             mappings = dict(zip(loop_ext.lpn_iter(), ppns))
             assert len(mappings) == n_ppns
-            self._write_log_ppns(mappings)
-
-            for lpn in loop_ext.lpn_iter():
-                found, ppn = self.log_mapping_table.lpn_to_ppn(lpn)
+            if data is None:
+                loop_data = None
+            else:
+                loop_data = self._sub_ext_data(data, extent, loop_ext)
+            self._write_log_ppns(mappings, data=loop_data)
 
             if n_ppns < loop_ext.lpn_count:
                 # we cannot find vailable pages in log blocks
@@ -1547,7 +1502,13 @@ class Ftl(ftlbuilder.FtlBuilder):
             loop_ext.lpn_start += n_ppns
             loop_ext.lpn_count -= n_ppns
 
-    def _write_log_ppns(self, mappings):
+    def _sub_ext_data(self, data, extent, sub_ext):
+        start = sub_ext.lpn_start - extent.lpn_start
+        count = sub_ext.lpn_count
+        sub_data = data[start:(start + count)]
+        return sub_data
+
+    def _write_log_ppns(self, mappings, data=None):
         """
         The ppns in mappings is obtained from loggroup.next_ppns()
         """
@@ -1567,8 +1528,12 @@ class Ftl(ftlbuilder.FtlBuilder):
         # no need to handle because it has been handled when we got the ppns
 
         # flash
-        for ppn in mappings.values():
-            self.flash.page_write(ppn, cat='', data=None)
+        for i, ppn in enumerate(mappings.values()):
+            if data is None:
+                pagedata = None
+            else:
+                pagedata = data[i]
+            self.flash.page_write(ppn, cat='', data=pagedata)
 
     def _update_log_mappings(self, mappings):
         """

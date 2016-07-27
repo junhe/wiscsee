@@ -2337,6 +2337,9 @@ class TestFTLOperations(unittest.TestCase):
                 self.assertEqual(ftl.oob.states.is_page_valid(ppn), True)
                 self.assertEqual(found, True)
 
+    def test_random_write(self):
+        pass
+
     # def test_update_log_mapping(self):
         # ftl, conf, rec = create_nkftl()
 
