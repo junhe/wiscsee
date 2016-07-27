@@ -1440,18 +1440,56 @@ class Ftl(ftlbuilder.FtlBuilder):
             return found, ppn, location
         return False, None, None
 
+
+
+
     def lba_read(self, lpn):
         content = yield self.env.process(self.read_ext(Extent(lpn, 1)))
         self.env.exit(content)
+
+    def read_ext(self, extent):
+        extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
+        ext_data = []
+        for region_ext in extents:
+            ret_data = yield self.env.process(self.read_region(region_ext))
+            ext_data.extend(ret_data)
+
+        self.env.exit(ext_data)
+
+    def read_region(self, extent):
+        region_id = self.conf.region_id_of_lpn(extent.lpn_start)
+        req = self.region_locks.get_request(region_id)
+        yield req
+
+        ppns_to_read = []
+        contents = []
+        for lpn in extent.lpn_iter():
+            hasit, ppn, loc = self.lpn_to_ppn(lpn)
+
+            if hasit == True:
+                content = self.flash.page_read(ppn, cat = TAG_FORGROUND)
+                ppns_to_read.append(ppn)
+            else:
+                content = None
+            contents.append(content)
+
+        yield self.env.process(
+            self.des_flash.rw_ppns(ppns_to_read, 'read', tag = "Unknown"))
+
+        self.region_locks.release_request(region_id, req)
+
+        self.env.exit(contents)
+
+
+
+
+
 
     def lba_write(self, lpn, data=None):
         yield self.env.process(
                 self.write_ext(Extent(lpn_start=lpn, lpn_count=1), [data]))
 
         self.garbage_collector.try_gc()
-
-    def lba_discard(self, lpn):
-        yield self.env.process(self.discard_region(Extent(lpn, 1)))
 
     def write_ext(self, extent, data=None):
         extents = split_ext_by_region(self.conf.n_pages_per_region(), extent)
@@ -1554,12 +1592,21 @@ class Ftl(ftlbuilder.FtlBuilder):
                 old_ppn = None
             self.oob.remap(lpn = lpn, old_ppn = old_ppn, new_ppn = new_ppn)
 
+
+
+
+
+
+
+    def lba_discard(self, lpn):
+        yield self.env.process(self._discard_region(Extent(lpn, 1)))
+
     def discard_ext(self, extent):
         extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
         for region_ext in extents:
-            yield self.env.process(self.discard_region(region_ext))
+            yield self.env.process(self._discard_region(region_ext))
 
-    def discard_region(self, extent):
+    def _discard_region(self, extent):
         region_id = self.conf.region_id_of_lpn(extent.lpn_start)
         req = self.region_locks.get_request(region_id)
         yield req
@@ -1572,39 +1619,6 @@ class Ftl(ftlbuilder.FtlBuilder):
                 self.oob.wipe_ppn(ppn)
 
         self.region_locks.release_request(region_id, req)
-
-    def read_ext(self, extent):
-        extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
-        ext_data = []
-        for region_ext in extents:
-            ret_data = yield self.env.process(self.read_region(region_ext))
-            ext_data.extend(ret_data)
-
-        self.env.exit(ext_data)
-
-    def read_region(self, extent):
-        region_id = self.conf.region_id_of_lpn(extent.lpn_start)
-        req = self.region_locks.get_request(region_id)
-        yield req
-
-        ppns_to_read = []
-        contents = []
-        for lpn in extent.lpn_iter():
-            hasit, ppn, loc = self.lpn_to_ppn(lpn)
-
-            if hasit == True:
-                content = self.flash.page_read(ppn, cat = TAG_FORGROUND)
-                ppns_to_read.append(ppn)
-            else:
-                content = None
-            contents.append(content)
-
-        yield self.env.process(
-            self.des_flash.rw_ppns(ppns_to_read, 'read', tag = "Unknown"))
-
-        self.region_locks.release_request(region_id, req)
-
-        self.env.exit(contents)
 
     def post_processing(self):
         pass
