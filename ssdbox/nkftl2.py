@@ -793,7 +793,7 @@ class VictimLogBlocks(VictimBlocksBase):
 class GarbageCollector(object):
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
             translatorobj, global_helper_obj, log_mapping, data_block_mapping,
-            simpy_env, des_flash):
+            simpy_env, des_flash, region_locks):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
@@ -804,6 +804,7 @@ class GarbageCollector(object):
         self.data_block_mapping_table = data_block_mapping
         self.env = simpy_env
         self.des_flash = des_flash
+        self.region_locks = region_locks
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
@@ -1376,6 +1377,8 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.log_mapping_table = LogMappingTable(confobj,
             self.block_pool, recorderobj, self.global_helper)
 
+        self.region_locks = LockPool(self.env)
+
         ###### the managers ######
         self.translator = Translator(
             confobj = self.conf,
@@ -1397,10 +1400,9 @@ class Ftl(ftlbuilder.FtlBuilder):
             log_mapping = self.log_mapping_table,
             data_block_mapping = self.data_block_mapping_table,
             simpy_env = self.env,
-            des_flash = self.des_flash
+            des_flash = self.des_flash,
+            region_locks = self.region_locks
             )
-
-        self.region_locks = LockPool(self.env)
 
     def lpn_to_ppn(self, lpn):
         found, ppn, location = self.translator.lpn_to_ppn(lpn)
