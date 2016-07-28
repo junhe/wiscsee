@@ -843,35 +843,6 @@ class GarbageCollector(object):
         elif blk_info.block_type == TYPE_LOG_BLOCK:
             yield self.env.process(self.clean_log_block(blk_info, tag))
 
-    def recycle_empty_data_block(self, data_block, tag):
-        if data_block in self.block_pool.data_usedblocks and \
-            not self.oob.is_any_page_valid(data_block):
-            self.oob.erase_block(data_block)
-            self.flash.block_erase(data_block, cat = tag)
-            yield self.env.process(
-                self.des_flash.erase_pbn_extent(data_block, 1, tag=tag))
-            # need to remove data block mapping
-            self.translator.data_block_mapping_table\
-                .remove_data_block_mapping_by_pbn(data_block)
-            self.block_pool.free_used_data_block(data_block)
-
-    def _recycle_empty_log_block(self, data_group_no, log_pbn, tag):
-        """
-        We will double check to see if the block has any valid page
-        Remove the log block in every relevant data structure
-        """
-        if log_pbn in self.block_pool.log_usedblocks and \
-            not self.oob.is_any_page_valid(log_pbn):
-            self.oob.erase_block(log_pbn)
-            self.flash.block_erase(log_pbn, cat = tag)
-            yield self.env.process(
-                self.des_flash.erase_pbn_extent(log_pbn, 1, tag=tag))
-            # remove log mapping
-            self.translator.log_mapping_table.remove_log_block(
-                data_group_no = data_group_no,
-                log_pbn = log_pbn)
-            self.block_pool.free_used_log_block(log_pbn)
-
     def clean_log_block(self, blk_info, tag):
         """
         0. If not valid page in log_pbn, simply erase and free it
@@ -897,14 +868,8 @@ class GarbageCollector(object):
 
         # Just free it?
         if not self.oob.is_any_page_valid(log_pbn):
-            self.oob.erase_block(log_pbn)
-            self.flash.block_erase(log_pbn, cat=tag)
-            yield self.env.process(
-                self.des_flash.erase_pbn_extent(log_pbn, 1, tag=tag))
-            self.block_pool.free_used_log_block(log_pbn)
-            self.translator.log_mapping_table\
-                .remove_log_block(data_group_no = data_group_no,
-                log_pbn = log_pbn)
+            yield self.env.process(self._recycle_empty_log_block(
+                data_group_no, log_pbn, tag))
             return
 
         is_mergable, logical_block = self.is_switch_mergable(log_pbn)
@@ -1309,6 +1274,38 @@ class GarbageCollector(object):
                 log_pbn = log_pbn)
         # Need to mark the log block as used data block now
         self.block_pool.move_used_log_to_data_block(log_pbn)
+
+    def recycle_empty_data_block(self, data_block, tag):
+        if data_block in self.block_pool.data_usedblocks and \
+            not self.oob.is_any_page_valid(data_block):
+            self.oob.erase_block(data_block)
+            self.flash.block_erase(data_block, cat = tag)
+            yield self.env.process(
+                self.des_flash.erase_pbn_extent(data_block, 1, tag=tag))
+            # need to remove data block mapping
+            self.translator.data_block_mapping_table\
+                .remove_data_block_mapping_by_pbn(data_block)
+            self.block_pool.free_used_data_block(data_block)
+
+    def _recycle_empty_log_block(self, data_group_no, log_pbn, tag):
+        """
+        We will double check to see if the block has any valid page
+        Remove the log block in every relevant data structure
+        """
+        if log_pbn in self.block_pool.log_usedblocks and \
+            not self.oob.is_any_page_valid(log_pbn):
+
+            self.oob.erase_block(log_pbn)
+
+            self.flash.block_erase(log_pbn, cat = tag)
+            yield self.env.process(
+                self.des_flash.erase_pbn_extent(log_pbn, 1, tag=tag))
+
+            self.block_pool.free_used_log_block(log_pbn)
+            # remove log mapping
+            self.translator.log_mapping_table.remove_log_block(
+                data_group_no = data_group_no,
+                log_pbn = log_pbn)
 
     def assert_mapping(self, lpn):
         # Try log blocks
