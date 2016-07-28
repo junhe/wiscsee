@@ -851,18 +851,17 @@ class GarbageCollector(object):
             yield self.env.process(
                 self.recycle_empty_data_block(blk_info.block_num, tag))
         elif blk_info.block_type == TYPE_LOG_BLOCK:
-            yield self.env.process(self.clean_log_block(blk_info, tag))
+            yield self.env.process(
+                self.clean_log_block(blk_info.block_num, blk_info.data_group_no,
+                    tag))
 
-    def clean_log_block(self, blk_info, tag):
+    def clean_log_block(self, log_pbn, data_group_no, tag):
         """
         0. If not valid page in log_pbn, simply erase and free it
         1. Try switch merge
         2. Try copy merge
         3. Try full merge
         """
-        log_pbn = blk_info.block_num
-        data_group_no = blk_info.data_group_no
-
         if log_pbn not in self.block_pool.log_usedblocks:
             # it is quite dynamic, this log block may have been
             # GCed with previous blocks
@@ -921,13 +920,10 @@ class GarbageCollector(object):
             # A log block may not be a log block anymore after the loop starts
             # It may be freed, it may be a data block now,.. Be careful
             yield self.env.process(
-                    self.clean_log_block(BlockInfo(
-                        block_type = TYPE_LOG_BLOCK,
-                        block_num = log_block,
-                        last_used_time = None,
-                        valid_ratio = self.oob.states.block_valid_ratio(log_block),
-                        data_group_no = data_group_no),
-                        tag = TAG_WRITE_DRIVEN))
+                    self.clean_log_block(
+                        log_pbn=log_block,
+                        data_group_no=data_group_no,
+                        tag=TAG_WRITE_DRIVEN))
             self.asserts()
 
     def full_merge(self, log_pbn):
