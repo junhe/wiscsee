@@ -1139,11 +1139,11 @@ class GarbageCollector(object):
                 src_block, _ = self.conf.page_to_block_off(src_ppn)
                 data = self.flash.page_read(src_ppn, cat = TAG_PARTIAL_MERGE)
                 yield self.env.process(
-                    self.des_flash.rw_ppns([src_ppn], 'read', tag = tag))
+                    self.des_flash.rw_ppns([src_ppn], 'read', tag=TAG_PARTIAL_MERGE))
                 self.flash.page_write(dst_ppn, cat = TAG_PARTIAL_MERGE,
                     data = data)
                 yield self.env.process(
-                    self.des_flash.rw_ppns([dst_ppn], 'write', tag = tag))
+                    self.des_flash.rw_ppns([dst_ppn], 'write', tag=TAG_PARTIAL_MERGE))
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
 
                 # This branch may never be called because the none of the rest
@@ -1507,6 +1507,8 @@ class Ftl(ftlbuilder.FtlBuilder):
 
             if n_ppns < loop_ext.lpn_count:
                 # we cannot find vailable pages in log blocks
+                # TODO: we should release the lock before calling gc, which
+                # also needs the lock
                 yield self.env.process(
                     self.garbage_collector.clean_data_group(data_group_no))
 
