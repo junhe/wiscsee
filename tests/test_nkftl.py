@@ -179,7 +179,6 @@ class TestNkftl(unittest.TestCase, RWMixin):
         env.run()
 
 
-
 class TestBlockPool(unittest.TestCase):
     def test_init(self):
         conf = create_config()
@@ -250,47 +249,6 @@ class TestBlockPool(unittest.TestCase):
                 tags=[TDATA, TLOG])
 
         self.assertEqual(len(block_pool.freeblocks), conf.n_blocks_per_dev)
-
-
-@unittest.skip("Failed?")
-class TestWithSimulator(unittest.TestCase):
-    def setup_config(self):
-        self.conf = ssdbox.nkftl2.Config()
-        self.conf.n_channels_per_dev = 4
-
-    def setup_environment(self):
-        metadata_dic = choose_exp_metadata(self.conf, interactive = False)
-        self.conf.update(metadata_dic)
-
-        self.conf['enable_blktrace'] = True
-        self.conf['enable_simulation'] = True
-
-    def setup_workload(self):
-        self.conf["workload_src"] = LBAGENERATOR
-        self.conf["lba_workload_class"] = "ExtentTestWorkload"
-        self.conf["lba_workload_configs"]["ExtentTestWorkload"] = {
-            "op_count": 1000}
-        self.conf["age_workload_class"] = "NoOp"
-
-    def setup_ftl(self):
-        self.conf['ftl_type'] = 'nkftl2'
-        self.conf['simulator_class'] = 'SimulatorNonDESe2eExtent'
-
-        logicsize_mb = 16
-        entries_need = int(logicsize_mb * 2**20 * 0.03 / self.conf['flash_config']['page_size'])
-        self.conf.mapping_cache_bytes = int(entries_need * 8) # 8 bytes (64bits) needed in mem
-        self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
-
-    def my_run(self):
-        runtime_update(self.conf)
-        run_workflow(self.conf)
-
-    def test_main(self):
-        self.setup_config()
-        self.setup_environment()
-        self.setup_workload()
-        self.setup_ftl()
-        self.my_run()
 
 
 class TestBlockInfo(unittest.TestCase):
@@ -453,8 +411,6 @@ class TestLogBlockMappingTable(unittest.TestCase):
 
         ppns = logmaptable.next_ppns_to_program(dgn=1, n=4, strip_unit_size=4)
         self.assertEqual(len(ppns), 4)
-
-
 
 
 class TestDataBlockMappingTable(unittest.TestCase):
@@ -2312,39 +2268,59 @@ class TestFTLOperations(unittest.TestCase):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
 
+        env.process(self.proc_test_write(env, ftl, conf))
+        env.run()
+
+    def proc_test_write(self, env, ftl, conf):
         ext = Extent(lpn_start=1, lpn_count=20)
-        ftl.write_ext(ext)
+        yield env.process(ftl.write_ext(ext))
 
         for lpn in ext.lpn_iter():
             found, ppn, _ = ftl.lpn_to_ppn(lpn)
             self.assertEqual(found, True)
 
+
+
     def test_read(self):
         ftl, conf, rec, env = create_nkftl()
 
-        ext = Extent(lpn_start=1, lpn_count=20)
-        ftl.write_ext(ext)
+        env.process(self.proc_test_read(env, ftl, conf))
+        env.run()
 
-        data = ftl.read_ext(ext)
+    def proc_test_read(self, env, ftl, conf):
+        ext = Extent(lpn_start=1, lpn_count=20)
+        yield env.process(ftl.write_ext(ext))
+
+        data = yield env.process(ftl.read_ext(ext))
         self.assertEqual(len(data), ext.lpn_count)
+
 
     def test_discard(self):
         ftl, conf, rec, env = create_nkftl()
 
-        ext = Extent(lpn_start=1, lpn_count=20)
-        ftl.write_ext(ext)
+        env.process(self.proc_test_discard(env, ftl, conf))
+        env.run()
 
-        ftl.discard_ext(ext)
+    def proc_test_discard(self, env, ftl, conf):
+        ext = Extent(lpn_start=1, lpn_count=20)
+        yield env.process(ftl.write_ext(ext))
+
+        yield env.process(ftl.discard_ext(ext))
 
         for lpn in ext.lpn_iter():
             found, ppn, _ = ftl.lpn_to_ppn(lpn)
             self.assertEqual(found, False)
 
+
     def test_write_region(self):
         ftl, conf, rec, env = create_nkftl()
 
+        env.process(self.proc_test_write_region(env, ftl, conf))
+        env.run()
+
+    def proc_test_write_region(self, env, ftl, conf):
         ext = Extent(lpn_start=1, lpn_count=3)
-        ftl.write_region(ext)
+        yield env.process(ftl.write_region(ext))
 
         ppns = []
         for lpn in ext.lpn_iter():
@@ -2354,7 +2330,7 @@ class TestFTLOperations(unittest.TestCase):
             self.assertEqual(found, True)
             ppns.append(ppn)
 
-        ftl.write_region(ext)
+        yield env.process(ftl.write_region(ext))
 
         ppns2 = []
         for lpn in ext.lpn_iter():
@@ -2365,12 +2341,17 @@ class TestFTLOperations(unittest.TestCase):
         for ppn1, ppn2 in zip(ppns, ppns2):
             self.assertNotEqual(ppn1, ppn2)
 
+
     def test_write_region_overflow(self):
         ftl, conf, rec, env = create_nkftl()
 
+        env.process(self.proc_test_write_region_overflow(env, ftl, conf))
+        env.run()
+
+    def proc_test_write_region_overflow(self, env, ftl, conf):
         for i in range(3):
             ext = Extent(lpn_start=0, lpn_count=8)
-            ftl.write_region(ext)
+            yield env.process(ftl.write_region(ext))
 
             ppns = []
             for lpn in ext.lpn_iter():
@@ -2385,13 +2366,17 @@ class TestFTLOperations(unittest.TestCase):
         # 1 log block with valid pages
         self.assertEqual(ftl.block_pool.total_used_blocks(), 3)
 
+
     def test_write_large_extent(self):
         ftl, conf, rec, env = create_nkftl()
 
+        env.process(self.proc_test_write_large_extent(env, ftl, conf))
+        env.run()
+
+    def proc_test_write_large_extent(self, env, ftl, conf):
         for i in range(8):
             ext = Extent(lpn_start=1, lpn_count=conf.n_pages_per_block*63)
-            print str(ext)
-            ftl.write_ext(ext)
+            yield env.process(ftl.write_ext(ext))
 
             ppns = []
             for lpn in ext.lpn_iter():
