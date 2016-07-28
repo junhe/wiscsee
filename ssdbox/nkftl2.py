@@ -3,6 +3,7 @@ import copy
 from collections import deque
 import datetime
 import Queue
+import itertools
 
 import config
 import ftlbuilder
@@ -537,8 +538,6 @@ class LogGroup2(object):
                 # we cannot allocate more blocks in this channel because:
                 # 1. no available blocks, or
                 # 2. # of blocks reached max for this log group
-                assert self.block_pool.count_blocks(tag=TFREE,
-                        channels=[cur_channel_id])
                 dead_channels.add(cur_channel_id)
 
         return ret_ppns
@@ -752,7 +751,7 @@ class VictimBlocksBase(object):
 
     def __iter__(self):
         while not self.priority_q.empty():
-            b_info =  priority_q.get()
+            b_info = self.priority_q.get()
             yield b_info
 
     def __len__(self):
@@ -820,17 +819,28 @@ class GarbageCollector(object):
             try:
                 blockinfo = block_iter.next()
             except StopIteration:
-                print 'GC stoped from StopIteration exception'
+                print 'Out of victim blocks'
                 self.recorder.count_me("GC", "StopIteration")
                 break
 
-            self.recorder.count_me('victim_valid_ratio',
-                    "{0:.2f}".format(valid_ratio))
             yield self.env.process(
                     self.clean_block(blockinfo, tag = TAG_THRESHOLD_GC))
 
     def victim_blocks_iter(self):
-        return itertools.chain.from_iterable([VictimDataBlocks, VictimLogBlocks])
+        return itertools.chain.from_iterable(
+                [VictimDataBlocks(conf=self.conf,
+                    block_pool=self.block_pool,
+                    oob=self.oob,
+                    rec=self.recorder,
+                    log_mapping_table=self.log_mapping_table,
+                    data_block_mapping_table=self.data_block_mapping_table),
+                VictimLogBlocks(conf=self.conf,
+                    block_pool=self.block_pool,
+                    oob=self.oob,
+                    rec=self.recorder,
+                    log_mapping_table=self.log_mapping_table,
+                    data_block_mapping_table=self.data_block_mapping_table)
+                ])
 
     def clean_block(self, blk_info, tag):
         """

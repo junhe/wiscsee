@@ -602,6 +602,12 @@ class TestVictimBlocks(unittest.TestCase):
                 datablocktable)
         self.assertEqual(len(vblocks), 2)
 
+        cnt = 0
+        for binfo in vblocks:
+            cnt += 1
+
+        self.assertEqual(cnt, 2)
+
     def use_a_log_block(self, conf, oob, block_pool, logmapping, cnt, dgn):
         states = oob.states
 
