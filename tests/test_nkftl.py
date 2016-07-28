@@ -112,7 +112,6 @@ def create_gc():
             translator, helper, logmaptable, datablocktable, simpy_env,
             des_flash, region_locks)
 
-
     GCPack = namedtuple('GCPack', 'gc, conf, block_pool, rec, oob, helper,' \
         'logmaptable, datablocktable, translator, flashobj, simpy_env, des_flash')
 

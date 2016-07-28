@@ -1116,6 +1116,19 @@ class GarbageCollector(object):
 
         After this function, log_pbn will become a data block
         """
+        req = self.region_locks.get_request(lbn)
+        yield req
+
+        is_mergable, logical_block_ret, offset_ret = self.is_partial_mergable(
+                log_pbn)
+        if is_mergable is False or logical_block_ret != lbn or \
+                offset_ret != first_free_offset:
+            # we need to double check here since while we wait, things may
+            # have changed. We check logical_block_ret != logical_block
+            # because we only lock logical block, it is possible that
+            # two switch_merge for the same log block run in parallel.
+            return
+
         self.recorder.count_me("garbage_collection", 'partial_merge')
 
         data_group_no = self.conf.nkftl_data_group_number_of_logical_block(
@@ -1206,6 +1219,8 @@ class GarbageCollector(object):
         # move from log pool to data pool
         self.block_pool.move_used_log_to_data_block(log_pbn)
 
+        self.region_locks.release_request(lbn, req)
+
     def is_switch_mergable(self, log_pbn):
         """
         To be switch mergable, the block has to satisfy the following
@@ -1251,6 +1266,18 @@ class GarbageCollector(object):
              remove all page mappings in page_map
              set _cur_log_block to None
         """
+
+        req = self.region_locks.get_request(logical_block)
+        yield req
+
+        is_mergable, logical_block_ret = self.is_switch_mergable(log_pbn)
+        if is_mergable is False or logical_block_ret != logical_block:
+            # we need to double check here since while we wait, things may
+            # have changed. We check logical_block_ret != logical_block
+            # because we only lock logical block, it is possible that
+            # two switch_merge for the same log block run in parallel.
+            return
+
         self.recorder.count_me("garbage_collection", 'switch_merge')
 
         # erase old data block
@@ -1281,6 +1308,8 @@ class GarbageCollector(object):
                 log_pbn = log_pbn)
         # Need to mark the log block as used data block now
         self.block_pool.move_used_log_to_data_block(log_pbn)
+
+        self.region_locks.release_request(logical_block, req)
 
     def recycle_empty_data_block(self, data_block, tag):
         if data_block in self.block_pool.data_usedblocks and \
