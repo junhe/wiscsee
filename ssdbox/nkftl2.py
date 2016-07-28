@@ -862,7 +862,6 @@ class GarbageCollector(object):
         2. Try copy merge
         3. Try full merge
         """
-        print 'calling clean_log_block()'
         if log_pbn not in self.block_pool.log_usedblocks:
             # it is quite dynamic, this log block may have been
             # GCed with previous blocks
@@ -1448,8 +1447,6 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.region_locks.release_request(region_id, req)
 
         self.env.exit(contents)
-
-
 
 
 
