@@ -92,6 +92,7 @@ def create_translator(conf, rec, globalhelper, log_mapping, data_block_mapping):
 def create_gc():
     conf = create_config()
     conf['nkftl']['max_blocks_in_log_group'] = 4
+    conf['nkftl']['n_blocks_in_data_group'] = 4
     block_pool = create_nkblockpool(conf)
     rec = create_recorder(conf)
     oob = OutOfBandAreas(conf)
@@ -1192,26 +1193,23 @@ class TestPartialMergeWithMoving(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(pbn, block_pool.data_usedblocks)
 
 
-class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
-    def test_full_merge_unaligned(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+class TestFullMerge_Unaligned(unittest.TestCase, UseLogBlocksMixin):
+    def test(self):
+        pk = create_gc()
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(self.proc(pk))
+        simpy_env.run()
+
+    def proc(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         half_block_pages = int(conf.n_pages_per_block/2)
-
 
         used_blocks, ppns = self.get_ppns_from_data_group(
                 conf, oob, block_pool, logmaptable, cnt=half_block_pages * 2,
@@ -1250,7 +1248,7 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
         # block pool
         self.assertIn(pbn, block_pool.log_usedblocks)
 
-        gc.full_merge(log_pbn=pbn)
+        yield simpy_env.process(gc.full_merge(log_pbn=pbn))
 
         # data block mapping
         found, retrieved_pbn = datablocktable.lbn_to_pbn(lbn)
@@ -1285,29 +1283,26 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(retrieved_pbn, block_pool.data_usedblocks)
         self.assertIn(pbn, block_pool.freeblocks)
 
-    def test_full_merge_two_in_two(self):
+class TestFullMerge_two_in_two(unittest.TestCase, UseLogBlocksMixin):
+    def test(self):
         """
         Data of two logical blocks spread in two physical blocks.
         """
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        conf['nkftl']['n_blocks_in_data_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+        pk = create_gc()
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(self.proc(pk))
+        simpy_env.run()
+
+    def proc(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         half_block_pages = int(conf.n_pages_per_block/2)
-
 
         used_blocks, ppns = self.get_ppns_from_data_group(
                 conf, oob, block_pool, logmaptable, cnt=half_block_pages * 4,
@@ -1398,7 +1393,7 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(pbn2, block_pool.log_usedblocks)
 
         ########### full merge 1 ##############
-        gc.full_merge(log_pbn=pbn1)
+        yield simpy_env.process(gc.full_merge(log_pbn=pbn1))
 
         ########### check #####################
         # data block mapping
@@ -1463,7 +1458,7 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
 
         ########### the following full merge call should do nothing
         # as all logical blocks are already merged
-        gc.full_merge(log_pbn=pbn2)
+        yield simpy_env.process(gc.full_merge(log_pbn=pbn2))
 
         ########### check #####################
         # data block mapping
@@ -1526,28 +1521,24 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(retrieved_pbn1, block_pool.data_usedblocks)
         self.assertIn(retrieved_pbn2, block_pool.data_usedblocks)
 
-    def test_full_merge_with_data_blocks(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        conf['nkftl']['n_blocks_in_data_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+class TestFullMerge_with_data_blocks(unittest.TestCase, UseLogBlocksMixin):
+    def test(self):
+        pk = create_gc()
+
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(self.proc(pk))
+        simpy_env.run()
+
+    def proc(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         half_block_pages = int(conf.n_pages_per_block/2)
-
-
-
 
         lbn1=3
         # put first half of lba1 in data block
@@ -1627,7 +1618,7 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(log_pbn, block_pool.log_usedblocks)
 
         #################### Full merge ##################
-        gc.full_merge(log_pbn=log_pbn)
+        yield simpy_env.process(gc.full_merge(log_pbn=log_pbn))
 
         ################# check
         # data block mapping
@@ -1672,22 +1663,48 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(log_pbn, block_pool.freeblocks)
         self.assertIn(retrieved_pbn1, block_pool.data_usedblocks)
 
-    def test_full_merge_one_page_used(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+    def use_data_blocks(self, conf, block_pool, oob, datablocktable, lpn_start,
+            cnt, translator):
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+        lpn = lpn_start
+        used_blocks = []
+        while cnt > 0:
+            lbn, off = conf.page_to_block_off(lpn)
+            found, _ = datablocktable.lbn_to_pbn(lbn)
+            if found is False:
+                blocknum = block_pool.pop_a_free_block_to_data_blocks()
+                used_blocks.append(blocknum)
+                datablocktable.add_data_block_mapping(lbn=lbn, pbn=blocknum)
+            else:
+                found, ppn = datablocktable.lpn_to_ppn(lpn)
+                self.assertEqual(found, True)
+
+                found, old_ppn, _ = translator.lpn_to_ppn(lpn)
+                if found is True and not oob.states.is_page_valid(old_ppn):
+                    old_ppn = None
+
+                oob.remap(lpn=lpn, old_ppn=old_ppn, new_ppn=ppn)
+
+                lpn += 1
+                cnt -= 1
+        return used_blocks
+
+
+class TestFullMergeOnePage(unittest.TestCase, UseLogBlocksMixin):
+    def test(self):
+        pk = create_gc()
+
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(self.proc(pk))
+        simpy_env.run()
+
+    def proc(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         half_block_pages = int(conf.n_pages_per_block/2)
 
@@ -1728,7 +1745,7 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
         # block pool
         self.assertIn(pbn, block_pool.log_usedblocks)
 
-        gc.full_merge(log_pbn=pbn)
+        yield simpy_env.process(gc.full_merge(log_pbn=pbn))
 
         # data block mapping
         found, retrieved_pbn = datablocktable.lbn_to_pbn(lbn)
@@ -1767,54 +1784,24 @@ class TestFullMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(retrieved_pbn, block_pool.data_usedblocks)
         self.assertIn(pbn, block_pool.freeblocks)
 
-    def use_data_blocks(self, conf, block_pool, oob, datablocktable, lpn_start,
-            cnt, translator):
-
-        lpn = lpn_start
-        used_blocks = []
-        while cnt > 0:
-            lbn, off = conf.page_to_block_off(lpn)
-            found, _ = datablocktable.lbn_to_pbn(lbn)
-            if found is False:
-                blocknum = block_pool.pop_a_free_block_to_data_blocks()
-                used_blocks.append(blocknum)
-                datablocktable.add_data_block_mapping(lbn=lbn, pbn=blocknum)
-            else:
-                found, ppn = datablocktable.lpn_to_ppn(lpn)
-                self.assertEqual(found, True)
-
-                found, old_ppn, _ = translator.lpn_to_ppn(lpn)
-                if found is True and not oob.states.is_page_valid(old_ppn):
-                    old_ppn = None
-
-                oob.remap(lpn=lpn, old_ppn=old_ppn, new_ppn=ppn)
-
-                lpn += 1
-                cnt -= 1
-        return used_blocks
-
-
 class TestCleanDataGroup(unittest.TestCase, UseLogBlocksMixin):
-    def test_full_merge_two_in_two(self):
+    def test(self):
         """
         Data of two logical blocks spread in two physical blocks.
         """
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        conf['nkftl']['n_blocks_in_data_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+        pk = create_gc()
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(self.proc(pk))
+        simpy_env.run()
+
+    def proc(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         half_block_pages = int(conf.n_pages_per_block/2)
 
@@ -1909,8 +1896,8 @@ class TestCleanDataGroup(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(pbn2, block_pool.log_usedblocks)
 
         ########### clean ##############
-        gc.clean_data_group(
-            data_group_no=conf.nkftl_data_group_number_of_logical_block(lbn1))
+        yield simpy_env.process(gc.clean_data_group(
+            data_group_no=conf.nkftl_data_group_number_of_logical_block(lbn1)))
 
         ########### check #####################
         # data block mapping
