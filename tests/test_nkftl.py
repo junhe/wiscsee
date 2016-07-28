@@ -31,6 +31,9 @@ def create_config():
     conf['nkftl']['max_blocks_in_log_group'] = 2
     conf['nkftl']['n_blocks_in_data_group'] = 4
 
+    conf['nkftl']['GC_threshold_ratio'] = 0.8
+    conf['nkftl']['GC_low_threshold_ratio'] = 0
+
     conf['n_pages_per_region'] = conf.n_pages_per_block
 
     utils.set_exp_metadata(conf, save_data = False,
@@ -2475,6 +2478,461 @@ class TestRegionSerialization_Discard(unittest.TestCase, RWMixin):
         ret_data = yield env.process(ftl.read_ext(extent))
         self.assertListEqual(ret_data, [None
             for x in self.data_of_extent(extent)])
+
+class WriteNCheckMixin(object):
+    def write_and_check(self, ftl, extents, env):
+        data_mirror = {}
+        for ext in extents:
+            data = self.random_data(ext)
+            self.update_data_mirror(data_mirror, ext, data)
+            yield env.process(ftl.write_ext(ext, data))
+
+        for lpn, data in data_mirror.items():
+            ret = yield env.process(ftl.lba_read(lpn))
+            self.assertEqual(ret, data)
+
+    def update_data_mirror(self, data_mirror, extent, data):
+        data_mirror.update(dict(zip(extent.lpn_iter(), data)))
+
+    def random_data(self, extent):
+        data = []
+        for lpn in extent.lpn_iter():
+            d = str(lpn) + '.' + str(random.randint(0, 100))
+            data.append(d)
+        return data
+
+
+class TestConcurrency_DataGroupGC(unittest.TestCase, WriteNCheckMixin):
+    def test_write(self):
+        ftl, conf, rec, env = create_nkftl()
+
+        env.process(self.main_proc(env, ftl, conf))
+        env.run()
+
+    def main_proc(self, env, ftl, conf):
+        # write different regions at the same time
+        n = conf.n_pages_per_data_group()
+        extents = []
+        for i in range(100):
+            start = random.randint(0, n-1)
+            cnt = random.randint(1, n - start)
+            ext = Extent(start, cnt)
+            extents.append( ext )
+        yield env.process(self.write_and_check(ftl, extents, env))
+
+
+@unittest.skip("Takes too long")
+class TestConcurrency_RandomWritesBroad(unittest.TestCase, WriteNCheckMixin):
+    def test_write(self):
+        ftl, conf, rec, env = create_nkftl()
+
+        env.process(self.main_proc(env, ftl, conf))
+        env.run()
+
+    def main_proc(self, env, ftl, conf):
+        # write different regions at the same time
+        n = int(conf.total_num_pages() * 0.8)
+        extents = []
+        for i in range(10000):
+            start = random.randint(0, n-1)
+            cnt = max(1, int(random.randint(1, n - start) / 100))
+            ext = Extent(start, cnt)
+            extents.append( ext )
+        yield env.process(self.write_and_check(ftl, extents, env))
+
+
+@unittest.skip("")
+class TestConcurrency_FullMerge(unittest.TestCase, UseLogBlocksMixin):
+    def test(self):
+        """
+        Data of two logical blocks spread in two physical blocks.
+        """
+        pk = create_gc()
+
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(self.proc(pk))
+        simpy_env.run()
+
+    def proc(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        half_block_pages = int(conf.n_pages_per_block/2)
+
+        used_blocks, ppns = self.get_ppns_from_data_group(
+                conf, oob, block_pool, logmaptable, cnt=half_block_pages * 4,
+                dgn=0)
+        lbn1 = 1
+        lbn2 = 3
+        lpns = self.page_ext(lbn1 * conf.n_pages_per_block + half_block_pages, half_block_pages) +\
+               self.page_ext(lbn2 * conf.n_pages_per_block + half_block_pages, half_block_pages) +\
+               self.page_ext(lbn1 * conf.n_pages_per_block, half_block_pages) +\
+               self.page_ext(lbn2 * conf.n_pages_per_block, half_block_pages)
+        self.set_mappings(oob, block_pool, logmaptable, lpns, ppns,
+                translator)
+        self.assertEqual(len(used_blocks), 2)
+
+        ######## start checking ########
+        pbn1 = used_blocks[0]
+        pbn2 = used_blocks[1]
+
+        # data block mapping
+        found, _ = datablocktable.lbn_to_pbn(lbn1)
+        self.assertEqual(found, False)
+        found, _ = datablocktable.lbn_to_pbn(lbn2)
+        self.assertEqual(found, False)
+        # log mapping
+        # lbn1
+        for i in range(half_block_pages):
+            lpn = conf.block_off_to_page(lbn1, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            correct_ppn = conf.block_off_to_page(pbn2, i)
+            self.assertEqual(ppn, correct_ppn)
+        for i in range(half_block_pages, conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn1, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            correct_ppn = conf.block_off_to_page(pbn1, i - half_block_pages)
+            self.assertEqual(ppn, correct_ppn)
+        # lb2
+        for i in range(half_block_pages):
+            lpn = conf.block_off_to_page(lbn2, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            correct_ppn = conf.block_off_to_page(pbn2, i + half_block_pages)
+            self.assertEqual(ppn, correct_ppn)
+        for i in range(half_block_pages, conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn2, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            correct_ppn = conf.block_off_to_page(pbn1, i)
+            self.assertEqual(ppn, correct_ppn)
+
+        # oob states
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn1, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn2, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+
+        # oob ppn->lpn
+        for i in range(half_block_pages):
+            ppn = conf.block_off_to_page(pbn1, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn1,
+                    (i + half_block_pages) % conf.n_pages_per_block)
+            self.assertEqual(lpn, correct_lpn)
+        for i in range(half_block_pages, conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn1, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn2,
+                    i % conf.n_pages_per_block)
+            self.assertEqual(lpn, correct_lpn)
+        for i in range(half_block_pages):
+            ppn = conf.block_off_to_page(pbn2, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn1,
+                    i % conf.n_pages_per_block)
+            self.assertEqual(lpn, correct_lpn)
+        for i in range(half_block_pages, conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn2, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn2,
+                    (i-half_block_pages) % conf.n_pages_per_block)
+            self.assertEqual(lpn, correct_lpn)
+
+        # block pool
+        self.assertIn(pbn1, block_pool.log_usedblocks)
+        self.assertIn(pbn2, block_pool.log_usedblocks)
+
+        ########### full merge 1 ##############
+        p1 = simpy_env.process(gc.full_merge(log_pbn=pbn1))
+        p2 = simpy_env.process(gc.full_merge(log_pbn=pbn2))
+        yield simpy.AllOf(simpy_env, [p1, p2])
+
+        ########### check #####################
+        # data block mapping
+        found, retrieved_pbn1 = datablocktable.lbn_to_pbn(lbn1)
+        self.assertEqual(found, True)
+        found, retrieved_pbn2 = datablocktable.lbn_to_pbn(lbn2)
+        self.assertEqual(found, True)
+
+        # log mapping
+        # should not exist
+        for i in range(conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn1, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, False)
+        for i in range(conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn2, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, False)
+
+        # oob states
+        # should have been erased
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn1, i)
+            self.assertTrue(oob.states.is_page_erased(ppn))
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn2, i)
+            self.assertTrue(oob.states.is_page_erased(ppn))
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn1, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn2, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+
+        # oob ppn->lpn
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn1, i)
+            with self.assertRaises(KeyError):
+                oob.translate_ppn_to_lpn(ppn)
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn2, i)
+            with self.assertRaises(KeyError):
+                oob.translate_ppn_to_lpn(ppn)
+
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn1, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn1, i)
+            self.assertEqual(lpn, correct_lpn)
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn2, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn2, i)
+            self.assertEqual(lpn, correct_lpn)
+
+
+        # block pool
+        self.assertIn(pbn1, block_pool.freeblocks)
+        self.assertIn(pbn2, block_pool.freeblocks)
+        self.assertIn(retrieved_pbn1, block_pool.data_usedblocks)
+        self.assertIn(retrieved_pbn2, block_pool.data_usedblocks)
+
+
+class TestConcurrency_cleanlogblock(unittest.TestCase, UseLogBlocksMixin):
+    def test(self):
+        """
+        Data of two logical blocks spread in two physical blocks.
+        """
+        pk = create_gc()
+
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(self.proc(pk))
+        simpy_env.run()
+
+    def proc(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        half_block_pages = int(conf.n_pages_per_block/2)
+
+        used_blocks, ppns = self.get_ppns_from_data_group(
+                conf, oob, block_pool, logmaptable, cnt=half_block_pages * 4,
+                dgn=0)
+        lbn1 = 1
+        lbn2 = 3
+        lpns = self.page_ext(lbn1 * conf.n_pages_per_block + half_block_pages, half_block_pages) +\
+               self.page_ext(lbn2 * conf.n_pages_per_block + half_block_pages, half_block_pages) +\
+               self.page_ext(lbn1 * conf.n_pages_per_block, half_block_pages) +\
+               self.page_ext(lbn2 * conf.n_pages_per_block, half_block_pages)
+        self.set_mappings(oob, block_pool, logmaptable, lpns, ppns,
+                translator)
+        self.assertEqual(len(used_blocks), 2)
+
+        ######## start checking ########
+        pbn1 = used_blocks[0]
+        pbn2 = used_blocks[1]
+
+        # data block mapping
+        found, _ = datablocktable.lbn_to_pbn(lbn1)
+        self.assertEqual(found, False)
+        found, _ = datablocktable.lbn_to_pbn(lbn2)
+        self.assertEqual(found, False)
+        # log mapping
+        # lbn1
+        for i in range(half_block_pages):
+            lpn = conf.block_off_to_page(lbn1, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            correct_ppn = conf.block_off_to_page(pbn2, i)
+            self.assertEqual(ppn, correct_ppn)
+        for i in range(half_block_pages, conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn1, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            correct_ppn = conf.block_off_to_page(pbn1, i - half_block_pages)
+            self.assertEqual(ppn, correct_ppn)
+        # lb2
+        for i in range(half_block_pages):
+            lpn = conf.block_off_to_page(lbn2, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            correct_ppn = conf.block_off_to_page(pbn2, i + half_block_pages)
+            self.assertEqual(ppn, correct_ppn)
+        for i in range(half_block_pages, conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn2, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, True)
+            correct_ppn = conf.block_off_to_page(pbn1, i)
+            self.assertEqual(ppn, correct_ppn)
+
+        # oob states
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn1, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn2, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+
+        # oob ppn->lpn
+        for i in range(half_block_pages):
+            ppn = conf.block_off_to_page(pbn1, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn1,
+                    (i + half_block_pages) % conf.n_pages_per_block)
+            self.assertEqual(lpn, correct_lpn)
+        for i in range(half_block_pages, conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn1, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn2,
+                    i % conf.n_pages_per_block)
+            self.assertEqual(lpn, correct_lpn)
+        for i in range(half_block_pages):
+            ppn = conf.block_off_to_page(pbn2, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn1,
+                    i % conf.n_pages_per_block)
+            self.assertEqual(lpn, correct_lpn)
+        for i in range(half_block_pages, conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn2, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn2,
+                    (i-half_block_pages) % conf.n_pages_per_block)
+            self.assertEqual(lpn, correct_lpn)
+
+        # block pool
+        self.assertIn(pbn1, block_pool.log_usedblocks)
+        self.assertIn(pbn2, block_pool.log_usedblocks)
+
+        ########### full merge 1 ##############
+        p1 = simpy_env.process(
+            gc.clean_log_block(log_pbn=pbn1, data_group_no=0, tag=""))
+        p2 = simpy_env.process(
+            gc.clean_log_block(log_pbn=pbn2, data_group_no=0, tag=""))
+        yield simpy.AllOf(simpy_env, [p1, p2])
+
+        ########### check #####################
+        # data block mapping
+        found, retrieved_pbn1 = datablocktable.lbn_to_pbn(lbn1)
+        self.assertEqual(found, True)
+        found, retrieved_pbn2 = datablocktable.lbn_to_pbn(lbn2)
+        self.assertEqual(found, True)
+
+        # log mapping
+        # should not exist
+        for i in range(conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn1, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, False)
+        for i in range(conf.n_pages_per_block):
+            lpn = conf.block_off_to_page(lbn2, i)
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            self.assertEqual(found, False)
+
+        # oob states
+        # should have been erased
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn1, i)
+            self.assertTrue(oob.states.is_page_erased(ppn))
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn2, i)
+            self.assertTrue(oob.states.is_page_erased(ppn))
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn1, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn2, i)
+            self.assertTrue(oob.states.is_page_valid(ppn))
+
+        # oob ppn->lpn
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn1, i)
+            with self.assertRaises(KeyError):
+                oob.translate_ppn_to_lpn(ppn)
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(pbn2, i)
+            with self.assertRaises(KeyError):
+                oob.translate_ppn_to_lpn(ppn)
+
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn1, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn1, i)
+            self.assertEqual(lpn, correct_lpn)
+        for i in range(conf.n_pages_per_block):
+            ppn = conf.block_off_to_page(retrieved_pbn2, i)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            correct_lpn = conf.block_off_to_page(lbn2, i)
+            self.assertEqual(lpn, correct_lpn)
+
+
+        # block pool
+        self.assertIn(pbn1, block_pool.freeblocks)
+        self.assertIn(pbn2, block_pool.freeblocks)
+        self.assertIn(retrieved_pbn1, block_pool.data_usedblocks)
+        self.assertIn(retrieved_pbn2, block_pool.data_usedblocks)
+
+        print 'end'
+
+
+class TestConcurrency_WriteNGC(unittest.TestCase, WriteNCheckMixin):
+    """
+    Write a logical space.
+    Trigger GC and Write the logical space, the write and gc may
+    mess with each other.
+    """
+    def test_write(self):
+        ftl, conf, rec, env = create_nkftl()
+
+        env.process(self.main_proc(env, ftl, conf))
+        env.run()
+
+    def main_proc(self, env, ftl, conf):
+        n = conf.n_pages_per_data_group()
+        extents = []
+        for i in range(10):
+            start = 1 * n + random.randint(0, 2*n-1)
+            cnt = random.randint(1, 3 * n - start)
+            ext = Extent(start, cnt)
+            extents.append( ext )
+        yield env.process(self.write_and_check(ftl, extents, env))
+
+        # gc and write
+        extents = []
+        for i in range(10):
+            start = 1 * n + random.randint(0, 2*n-1)
+            cnt = random.randint(1, 3 * n - start)
+            ext = Extent(start, cnt)
+            extents.append( ext )
+
+        p_gc = env.process(ftl.garbage_collector.try_gc())
+        p_write = env.process(self.write_and_check(ftl, extents, env))
+
+        yield simpy.AllOf(env, [p_gc, p_write])
+
 
 def main():
     unittest.main()

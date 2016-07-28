@@ -862,6 +862,7 @@ class GarbageCollector(object):
         2. Try copy merge
         3. Try full merge
         """
+        print 'calling clean_log_block()'
         if log_pbn not in self.block_pool.log_usedblocks:
             # it is quite dynamic, this log block may have been
             # GCed with previous blocks
@@ -1351,8 +1352,6 @@ class GarbageCollector(object):
                 "not data_blocks_in_map{} == len(self.block_pool.data_usedblocks){}"\
                 .format(data_blocks_in_map, len(self.block_pool.data_usedblocks)))
 
-        return
-
 
 class Ftl(ftlbuilder.FtlBuilder):
     """
@@ -1512,6 +1511,9 @@ class Ftl(ftlbuilder.FtlBuilder):
             loop_ext.lpn_count -= n_ppns
 
         self.region_locks.release_request(region_id, req)
+
+        # TODO: maybe this should not be here.
+        # yield self.env.process(self.garbage_collector.try_gc())
 
     def _sub_ext_data(self, data, extent, sub_ext):
         start = sub_ext.lpn_start - extent.lpn_start
