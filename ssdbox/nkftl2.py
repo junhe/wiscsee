@@ -826,7 +826,8 @@ class GarbageCollector(object):
 
             self.recorder.count_me('victim_valid_ratio',
                     "{0:.2f}".format(valid_ratio))
-            self.clean_block(blockinfo, tag = TAG_THRESHOLD_GC)
+            yield self.env.process(
+                    self.clean_block(blockinfo, tag = TAG_THRESHOLD_GC))
 
     def victim_blocks_iter(self):
         return itertools.chain.from_iterable([VictimDataBlocks, VictimLogBlocks])
@@ -837,15 +838,18 @@ class GarbageCollector(object):
         update all the relevant information such as mapping, oob, flash.
         """
         if blk_info.block_type == TYPE_DATA_BLOCK:
-            self.recycle_empty_data_block(blk_info.block_num, tag)
+            yield self.env.process(
+                self.recycle_empty_data_block(blk_info.block_num, tag))
         elif blk_info.block_type == TYPE_LOG_BLOCK:
-            self.clean_log_block(blk_info, tag)
+            yield self.env.process(self.clean_log_block(blk_info, tag))
 
     def recycle_empty_data_block(self, data_block, tag):
         if data_block in self.block_pool.data_usedblocks and \
             not self.oob.is_any_page_valid(data_block):
             self.oob.erase_block(data_block)
             self.flash.block_erase(data_block, cat = tag)
+            yield self.env.process(
+                self.des_flash.erase_pbn_extent(data_block, 1, tag=tag))
             # need to remove data block mapping
             self.translator.data_block_mapping_table\
                 .remove_data_block_mapping_by_pbn(data_block)
@@ -860,6 +864,8 @@ class GarbageCollector(object):
             not self.oob.is_any_page_valid(log_pbn):
             self.oob.erase_block(log_pbn)
             self.flash.block_erase(log_pbn, cat = tag)
+            yield self.env.process(
+                self.des_flash.erase_pbn_extent(log_pbn, 1, tag=tag))
             # remove log mapping
             self.translator.log_mapping_table.remove_log_block(
                 data_group_no = data_group_no,
@@ -892,7 +898,9 @@ class GarbageCollector(object):
         # Just free it?
         if not self.oob.is_any_page_valid(log_pbn):
             self.oob.erase_block(log_pbn)
-            self.flash.block_erase(log_pbn, cat = tag)
+            self.flash.block_erase(log_pbn, cat=tag)
+            yield self.env.process(
+                self.des_flash.erase_pbn_extent(log_pbn, 1, tag=tag))
             self.block_pool.free_used_log_block(log_pbn)
             self.translator.log_mapping_table\
                 .remove_log_block(data_group_no = data_group_no,
@@ -902,20 +910,21 @@ class GarbageCollector(object):
         is_mergable, logical_block = self.is_switch_mergable(log_pbn)
         # print 'switch merge  is_mergable:', is_mergable, 'logical_block:', logical_block
         if is_mergable == True:
-            self.switch_merge(log_pbn = log_pbn,
-                    logical_block = logical_block)
+            yield self.env.process(
+                    self.switch_merge(log_pbn = log_pbn,
+                    logical_block = logical_block))
             return
 
         is_mergable, logical_block, offset = self.is_partial_mergable(
             log_pbn)
         # print 'partial merge  is_mergable:', is_mergable, 'logical_block:', logical_block
         if is_mergable == True:
-            self.partial_merge(log_pbn = log_pbn,
-                lbn = logical_block,
-                first_free_offset = offset)
+            yield self.env.process(
+                self.partial_merge(log_pbn = log_pbn, lbn = logical_block,
+                first_free_offset = offset))
             return
 
-        self.full_merge(log_pbn)
+        yield self.env.process(self.full_merge(log_pbn))
 
     def clean_data_group(self, data_group_no):
         """
@@ -936,13 +945,14 @@ class GarbageCollector(object):
         for log_block in log_block_list:
             # A log block may not be a log block anymore after the loop starts
             # It may be freed, it may be a data block now,.. Be careful
-            self.clean_log_block(BlockInfo(
+            yield self.env.process(
+                    self.clean_log_block(BlockInfo(
                         block_type = TYPE_LOG_BLOCK,
                         block_num = log_block,
                         last_used_time = None,
                         valid_ratio = self.oob.states.block_valid_ratio(log_block),
                         data_group_no = data_group_no),
-                        tag = TAG_WRITE_DRIVEN)
+                        tag = TAG_WRITE_DRIVEN))
             self.asserts()
 
     def full_merge(self, log_pbn):
@@ -967,7 +977,8 @@ class GarbageCollector(object):
 
         # Move all the pages of a logical block to new block
         for logical_block in logical_blocks:
-            self.aggregate_logical_block(logical_block, TAG_FULL_MERGE)
+            yield self.env.process(
+                self.aggregate_logical_block(logical_block, TAG_FULL_MERGE))
             self.asserts()
 
     def aggregate_logical_block(self, lbn, tag):
@@ -1008,7 +1019,11 @@ class GarbageCollector(object):
             found, src_ppn, loc = self.translator.lpn_to_ppn(lpn)
             if found == True and self.oob.states.is_page_valid(src_ppn):
                 data = self.flash.page_read(src_ppn, cat = tag)
+                yield self.env.process(
+                    self.des_flash.rw_ppns([src_ppn], 'read', tag = tag))
                 self.flash.page_write(dst_ppn, cat = tag, data = data)
+                yield self.env.process(
+                    self.des_flash.rw_ppns([dst_ppn], 'write', tag = tag))
 
                 self.oob.remap(lpn = lpn, old_ppn = src_ppn,
                     new_ppn = dst_ppn)
@@ -1027,6 +1042,8 @@ class GarbageCollector(object):
                     # We erase and free src_pbn, and clean up its mappings
                     self.oob.erase_block(src_pbn)
                     self.flash.block_erase(src_pbn, cat = tag)
+                    yield self.env.process(
+                        self.des_flash.erase_pbn_extent(src_pbn, 1, tag=tag))
                     if loc == IN_DATA_BLOCK:
                         self.block_pool.free_used_data_block(src_pbn)
                         lbn, _ = self.conf.page_to_block_off(lpn)
@@ -1050,7 +1067,8 @@ class GarbageCollector(object):
             .lbn_to_pbn(lbn)
         if found == True:
             # old_pbn must not have any valid pages, so we free it
-            self.recycle_empty_data_block(old_pbn, tag = tag)
+            yield self.env.process(
+                    self.recycle_empty_data_block(old_pbn, tag = tag))
         self.translator.data_block_mapping_table.add_data_block_mapping(
             lbn = lbn, pbn = dst_phy_block_num)
 
@@ -1145,8 +1163,12 @@ class GarbageCollector(object):
             elif found == True and location == IN_DATA_BLOCK:
                 src_block, _ = self.conf.page_to_block_off(src_ppn)
                 data = self.flash.page_read(src_ppn, cat = TAG_PARTIAL_MERGE)
+                yield self.env.process(
+                    self.des_flash.rw_ppns([src_ppn], 'read', tag = tag))
                 self.flash.page_write(dst_ppn, cat = TAG_PARTIAL_MERGE,
                     data = data)
+                yield self.env.process(
+                    self.des_flash.rw_ppns([dst_ppn], 'write', tag = tag))
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
 
                 # This branch may never be called because the none of the rest
@@ -1177,22 +1199,28 @@ class GarbageCollector(object):
                 src_block, _ = self.conf.page_to_block_off(src_ppn)
                 # If the lpn is in log block
                 data = self.flash.page_read(src_ppn, cat = TAG_PARTIAL_MERGE)
+                yield self.env.process(
+                    self.des_flash.rw_ppns([src_ppn], 'read', tag = tag))
                 self.flash.page_write(dst_ppn, cat = TAG_PARTIAL_MERGE,
                     data = data)
+                yield self.env.process(
+                    self.des_flash.rw_ppns([dst_ppn], 'write', tag = tag))
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
 
                 # you need to remove lpn from log mapping here
                 self.translator.log_mapping_table.remove_lpn(lpn=lpn)
 
-                self._recycle_empty_log_block(data_group_no = data_group_no,
-                    log_pbn = src_block, tag = TAG_PARTIAL_MERGE)
+                yield self.env.process(
+                    self._recycle_empty_log_block(data_group_no = data_group_no,
+                    log_pbn = src_block, tag = TAG_PARTIAL_MERGE))
 
         # If there is an old data block, we need to recycle it because we
         # now have a new one.
         found, old_pbn = self.translator.data_block_mapping_table\
             .lbn_to_pbn(lbn = lbn)
         if found:
-            self.recycle_empty_data_block(old_pbn, tag = TAG_PARTIAL_MERGE)
+            yield self.env.process(
+                self.recycle_empty_data_block(old_pbn, tag = TAG_PARTIAL_MERGE))
 
         # Now the log block lgo_pbn has all the content of lbn
         # Now add the new mapping
@@ -1261,6 +1289,9 @@ class GarbageCollector(object):
             # clean up old_physical_block
             self.oob.erase_block(old_physical_block)
             self.flash.block_erase(old_physical_block, cat = TAG_SWITCH_MERGE)
+            yield self.env.process(
+                self.des_flash.erase_pbn_extent(old_physical_block, 1,
+                    tag=TAG_SWITCH_MERGE))
             self.block_pool.free_used_data_block(old_physical_block)
             # self.translator.data_block_mapping_table.remove_mapping(
                 # logical_block)
@@ -1425,7 +1456,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(
                 self.write_ext(Extent(lpn_start=lpn, lpn_count=1), [data]))
 
-        self.garbage_collector.try_gc()
+        yield self.env.process(self.garbage_collector.try_gc())
 
     def write_ext(self, extent, data=None):
         extents = split_ext_by_region(self.conf.n_pages_per_region(), extent)
@@ -1469,7 +1500,8 @@ class Ftl(ftlbuilder.FtlBuilder):
 
             if n_ppns < loop_ext.lpn_count:
                 # we cannot find vailable pages in log blocks
-                self.garbage_collector.clean_data_group(data_group_no)
+                yield self.env.process(
+                    self.garbage_collector.clean_data_group(data_group_no))
 
             loop_ext.lpn_start += n_ppns
             loop_ext.lpn_count -= n_ppns

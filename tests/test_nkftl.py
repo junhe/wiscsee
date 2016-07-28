@@ -1,6 +1,7 @@
 import unittest
 import random
 import simpy
+from collections import namedtuple
 
 from ssdbox.nkftl2 import *
 from ssdbox import flash
@@ -88,6 +89,31 @@ def create_global_helper(conf):
 def create_translator(conf, rec, globalhelper, log_mapping, data_block_mapping):
     return Translator(conf, rec, globalhelper, log_mapping, data_block_mapping)
 
+def create_gc():
+    conf = create_config()
+    conf['nkftl']['max_blocks_in_log_group'] = 4
+    block_pool = create_nkblockpool(conf)
+    rec = create_recorder(conf)
+    oob = OutOfBandAreas(conf)
+    helper = create_global_helper(conf)
+    logmaptable = LogMappingTable(conf, block_pool, rec, helper)
+    datablocktable = DataBlockMappingTable(conf, rec, helper)
+    translator = Translator(conf, rec, helper, logmaptable, datablocktable)
+    flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
+    simpy_env = create_env()
+    des_flash = create_flash_controller(simpy_env, conf, rec)
+
+    gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
+            translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+
+
+    GCPack = namedtuple('GCPack', 'gc, conf, block_pool, rec, oob, helper,' \
+        'logmaptable, datablocktable, translator, flashobj, simpy_env, des_flash')
+
+    return GCPack(gc=gc, conf=conf, block_pool=block_pool, rec=rec, oob=oob, helper=helper,
+        logmaptable=logmaptable, datablocktable=datablocktable,
+        translator=translator, flashobj=flashobj, simpy_env=simpy_env,
+        des_flash=des_flash)
 
 
 class RWMixin(object):
@@ -638,43 +664,32 @@ class TestVictimBlocks(unittest.TestCase):
 
 class TestCleaningDataBlocks(unittest.TestCase):
     def test_init_gc(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = create_gc()
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
 
     def test_clean_data_blocks(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+        pk = create_gc()
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(
+            self.proc_test_clean_data_blocks(pk))
+        simpy_env.run()
+
+
+    def proc_test_clean_data_blocks(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         lbn = 8
         blocknum = self.use_a_data_block(conf, block_pool, oob, datablocktable, lbn)
 
-        gc.recycle_empty_data_block(blocknum, tag="")
+        yield simpy_env.process(gc.recycle_empty_data_block(blocknum, tag=""))
 
         # states bitmap should be in 'erased' state
         start, end = conf.block_to_page_range(blocknum)
@@ -811,21 +826,11 @@ class UseLogBlocksMixin(object):
 
 class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
     def test_is_switch_mergable(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+        pk = create_gc()
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=conf.n_pages_per_block,
@@ -836,22 +841,13 @@ class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertEqual(mergable, True)
         self.assertEqual(lbn, 1)
 
-    def test_is_not_switch_mergable_half_used(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+    def test_is_not_switch_mergable_half_used(self):
+        pk = create_gc()
+
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=int(conf.n_pages_per_block/2),
@@ -863,21 +859,11 @@ class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertEqual(lbn, None)
 
     def test_is_not_switch_mergable(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+        pk = create_gc()
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=conf.n_pages_per_block+1,
@@ -889,21 +875,20 @@ class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertEqual(lbn, None)
 
     def test_switch_merge(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+        pk = create_gc()
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(
+            self.proc_test_switch_merge(pk))
+        simpy_env.run()
+
+    def proc_test_switch_merge(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=conf.n_pages_per_block+1,
@@ -936,7 +921,7 @@ class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
         # block pool
         self.assertIn(pbn, block_pool.log_usedblocks)
 
-        gc.switch_merge(log_pbn=pbn, logical_block=lbn)
+        yield simpy_env.process(gc.switch_merge(log_pbn=pbn, logical_block=lbn))
 
         # data block mapping
         found, retrieved_pbn = datablocktable.lbn_to_pbn(lbn)
