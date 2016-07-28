@@ -947,23 +947,13 @@ class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(pbn, block_pool.data_usedblocks)
 
 
-class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
+class TestPartialMergeMergable(unittest.TestCase, UseLogBlocksMixin):
     def test_is_partial_mergable(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+        pk = create_gc()
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=int(conf.n_pages_per_block/2),
@@ -976,21 +966,11 @@ class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertEqual(off, int(conf.n_pages_per_block/2))
 
     def test_is_not_partial_mergable_not_aligned(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+        pk = create_gc()
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=int(conf.n_pages_per_block/2),
@@ -1002,21 +982,11 @@ class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertEqual(lbn, None)
 
     def test_is_not_partial_mergable_because_its_switch_mergable(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+        pk = create_gc()
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=conf.n_pages_per_block,
@@ -1027,22 +997,21 @@ class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertEqual(mergable, False)
         self.assertEqual(lbn, None)
 
+class TestPartialMerge_Merge(unittest.TestCase, UseLogBlocksMixin):
     def test_partial_merge(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
+        pk = create_gc()
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(self.proc_test_partial_merge(pk))
+        simpy_env.run()
+
+    def proc_test_partial_merge(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         used_blocks = self.use_log_blocks(conf, oob, block_pool,
                 logmaptable, cnt=int(conf.n_pages_per_block/2),
@@ -1085,7 +1054,9 @@ class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
         # block pool
         self.assertIn(pbn, block_pool.log_usedblocks)
 
-        gc.partial_merge(log_pbn=used_blocks[0], lbn=lbn, first_free_offset=off)
+        yield simpy_env.process(
+            gc.partial_merge(log_pbn=used_blocks[0], lbn=lbn,
+            first_free_offset=off))
 
         # data block mapping
         found, retrieved_pbn = datablocktable.lbn_to_pbn(lbn)
@@ -1120,22 +1091,22 @@ class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
         # block pool
         self.assertIn(pbn, block_pool.data_usedblocks)
 
-    def test_partial_merge_with_moving(self):
-        conf = create_config()
-        conf['nkftl']['max_blocks_in_log_group'] = 4
-        block_pool = create_nkblockpool(conf)
-        rec = create_recorder(conf)
-        oob = OutOfBandAreas(conf)
-        helper = create_global_helper(conf)
-        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
-        datablocktable = DataBlockMappingTable(conf, rec, helper)
-        translator = Translator(conf, rec, helper, logmaptable, datablocktable)
-        flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
-        simpy_env = create_env()
-        des_flash = create_flash_controller(simpy_env, conf, rec)
 
-        gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
-                translator, helper, logmaptable, datablocktable, simpy_env, des_flash)
+class TestPartialMergeWithMoving(unittest.TestCase, UseLogBlocksMixin):
+    def test(self):
+        pk = create_gc()
+
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(self.proc(pk))
+        simpy_env.run()
+
+    def proc(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
 
         half_block_pages = int(conf.n_pages_per_block/2)
 
@@ -1192,7 +1163,8 @@ class TestPartialMerge(unittest.TestCase, UseLogBlocksMixin):
         # block pool
         self.assertIn(pbn, block_pool.log_usedblocks)
 
-        gc.partial_merge(log_pbn=pbn, lbn=lbn, first_free_offset=off)
+        yield simpy_env.process(
+            gc.partial_merge(log_pbn=pbn, lbn=lbn, first_free_offset=off))
 
         # data block mapping
         found, retrieved_pbn = datablocktable.lbn_to_pbn(lbn)

@@ -1200,11 +1200,11 @@ class GarbageCollector(object):
                 # If the lpn is in log block
                 data = self.flash.page_read(src_ppn, cat = TAG_PARTIAL_MERGE)
                 yield self.env.process(
-                    self.des_flash.rw_ppns([src_ppn], 'read', tag = tag))
+                    self.des_flash.rw_ppns([src_ppn], 'read', tag = TAG_PARTIAL_MERGE))
                 self.flash.page_write(dst_ppn, cat = TAG_PARTIAL_MERGE,
                     data = data)
                 yield self.env.process(
-                    self.des_flash.rw_ppns([dst_ppn], 'write', tag = tag))
+                    self.des_flash.rw_ppns([dst_ppn], 'write', tag = TAG_PARTIAL_MERGE))
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
 
                 # you need to remove lpn from log mapping here
