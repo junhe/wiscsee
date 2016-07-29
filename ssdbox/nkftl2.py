@@ -1300,7 +1300,7 @@ class GarbageCollector(object):
             .lbn_to_pbn(logical_block)
         if found:
             # clean up old_physical_block
-            self.recycle_empty_data_block(old_physical_block)
+            self.recycle_empty_data_block(old_physical_block, tag='Unknown')
 
         # update data block mapping table
         # This will override the old mapping if there is one
