@@ -969,7 +969,7 @@ class GarbageCollector(object):
         req = self.region_locks.get_request(lbn)
         yield req
 
-        # TODO: we should stop aggregating this logical block if all its
+        # We should stop aggregating this logical block if all its
         # data are already in data block (in other words, log mapping has
         # no mapping for this logical block), because this means the data
         # has been already merged.
@@ -980,6 +980,7 @@ class GarbageCollector(object):
         # someone else is modifying without lock).
         if self._is_any_lpn_in_logmapping(lbn) is False:
             # nothing to merge now
+            self.region_locks.release_request(lbn, req)
             return
 
         self.asserts()
@@ -1143,6 +1144,7 @@ class GarbageCollector(object):
             # have changed. We check logical_block_ret != logical_block
             # because we only lock logical block, it is possible that
             # two switch_merge for the same log block run in parallel.
+            self.region_locks.release_request(lbn, req)
             return
 
         self.recorder.count_me("garbage_collection", 'partial_merge')
@@ -1292,6 +1294,7 @@ class GarbageCollector(object):
             # have changed. We check logical_block_ret != logical_block
             # because we only lock logical block, it is possible that
             # two switch_merge for the same log block run in parallel.
+            self.region_locks.release_request(logical_block, req)
             return
 
         self.recorder.count_me("garbage_collection", 'switch_merge')
