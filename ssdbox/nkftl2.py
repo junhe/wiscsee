@@ -978,6 +978,20 @@ class GarbageCollector(object):
         in which case you need to specifically remove the data block mapping
         """
         # We have to make sure this does not fail, somehow.
+
+        req = self.region_locks.get_request(lbn)
+        yield req
+
+        # TODO: we should stop aggregating this logical block if all its
+        # data are already in data block (in other words, log mapping has
+        # no mapping for this logical block), because this means the data
+        # has been already merged.
+        # It does not hurt consistency even if
+        # we do aggregate the logical block because locking the logical space
+        # (logical block) means locking the corresponding physical space. And
+        # If we have locked the logical block, every thing should be fine (unless
+        # someone else is modifying without lock).
+        #
         self.asserts()
         dst_phy_block_num = self.block_pool.pop_a_free_block_to_data_blocks()
 
@@ -1043,6 +1057,8 @@ class GarbageCollector(object):
                     self.recycle_empty_data_block(old_pbn, tag = tag))
         self.translator.data_block_mapping_table.add_data_block_mapping(
             lbn = lbn, pbn = dst_phy_block_num)
+
+        self.region_locks.release_request(lbn, req)
 
     def is_partial_mergable(self, log_pbn):
         """
@@ -1116,6 +1132,8 @@ class GarbageCollector(object):
 
         After this function, log_pbn will become a data block
         """
+        # TODO: should we call partial merge by logical block number, in
+        # stead of physical block number? Easier to reason about the locks
         req = self.region_locks.get_request(lbn)
         yield req
 
@@ -1374,12 +1392,15 @@ class GarbageCollector(object):
 
         # number of data blocks in data_block_mapping_table should be equal to
         # used data blocks in block_pool
-        data_blocks_in_map = len(self.translator.data_block_mapping_table\
-            .logical_to_physical_block)
-        if not data_blocks_in_map == len(self.block_pool.data_usedblocks):
-            raise RuntimeError(
-                "not data_blocks_in_map{} == len(self.block_pool.data_usedblocks){}"\
-                .format(data_blocks_in_map, len(self.block_pool.data_usedblocks)))
+        # NEW WITH CONCURRENCY: This may not be true when a transaction of
+        # full merge, or others, is going on. An asserts() check could be
+        # triggered when a transaction is going on.
+        # data_blocks_in_map = len(self.translator.data_block_mapping_table\
+            # .logical_to_physical_block)
+        # if not data_blocks_in_map == len(self.block_pool.data_usedblocks):
+            # raise RuntimeError(
+                # "not data_blocks_in_map ({}) == len(self.block_pool.data_usedblocks) ({})"\
+                # .format(data_blocks_in_map, len(self.block_pool.data_usedblocks)))
 
 
 class Ftl(ftlbuilder.FtlBuilder):

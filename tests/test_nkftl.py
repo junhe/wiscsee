@@ -2497,7 +2497,7 @@ class TestConcurrency_RandomWritesBroad(unittest.TestCase, WriteNCheckMixin):
         yield env.process(self.write_and_check(ftl, extents, env))
 
 
-@unittest.skip("")
+# @unittest.skip("")
 class TestConcurrency_FullMerge(unittest.TestCase, UseLogBlocksMixin):
     def test(self):
         """
@@ -2674,7 +2674,7 @@ class TestConcurrency_FullMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(retrieved_pbn2, block_pool.data_usedblocks)
 
 
-@unittest.skip("")
+# @unittest.skip("")
 class TestConcurrency_cleanlogblock(unittest.TestCase, UseLogBlocksMixin):
     def test(self):
         """
@@ -2855,7 +2855,7 @@ class TestConcurrency_cleanlogblock(unittest.TestCase, UseLogBlocksMixin):
         print 'end'
 
 
-@unittest.skip("")
+# @unittest.skip("")
 class TestConcurrency_WriteNGC(unittest.TestCase, WriteNCheckMixin):
     """
     Write a logical space.
