@@ -857,6 +857,7 @@ class GarbageCollector(object):
         if log_pbn not in self.translator.log_mapping_table\
                 .log_group_info[data_group_no].log_block_numbers():
             # TODO: maybe you should just return here instead of panic?
+            return
             raise RuntimeError("{} is not a log block of data group {}"\
                 .format(log_pbn, data_group_no))
 
@@ -1014,22 +1015,18 @@ class GarbageCollector(object):
                 # free block pool
                 src_pbn, _ = self.conf.page_to_block_off(src_ppn)
                 if not self.oob.is_any_page_valid(src_pbn):
-                    # No page is valid
-                    # We erase and free src_pbn, and clean up its mappings
-                    self.oob.erase_block(src_pbn)
-                    self.flash.block_erase(src_pbn, cat = tag)
-                    yield self.env.process(
-                        self.des_flash.erase_pbn_extent(src_pbn, 1, tag=tag))
                     if loc == IN_DATA_BLOCK:
-                        self.block_pool.free_used_data_block(src_pbn)
-                        lbn, _ = self.conf.page_to_block_off(lpn)
-                        self.translator.data_block_mapping_table\
-                            .remove_data_block_mapping(lbn = lbn)
+                        yield self.env.process(
+                                self.recycle_empty_data_block(data_block=src_pbn,
+                                tag='Unknown'))
+
                     elif loc == IN_LOG_BLOCK:
-                        self.block_pool.free_used_log_block(src_pbn)
-                        self.translator.log_mapping_table\
-                            .remove_log_block(data_group_no = data_group_no,
-                            log_pbn = src_pbn)
+                        yield self.env.process(
+                            self._recycle_empty_log_block(
+                                data_group_no=data_group_no,
+                                log_pbn=src_pbn,
+                                tag='Unknown'))
+
             else:
                 # This lpn does not exist, so we just invalidate the
                 # destination page. We have to do this because we can only
@@ -1346,20 +1343,22 @@ class GarbageCollector(object):
         We will double check to see if the block has any valid page
         Remove the log block in every relevant data structure
         """
-        if log_pbn in self.block_pool.log_usedblocks and \
-            not self.oob.is_any_page_valid(log_pbn):
-
+        is_log_block = log_pbn in self.block_pool.log_usedblocks
+        no_valid_pages = not self.oob.is_any_page_valid(log_pbn)
+        is_in_dg = log_pbn in self.log_mapping_table\
+                .log_group_info[data_group_no].log_block_numbers()
+        if all([is_log_block, no_valid_pages, is_in_dg]):
+            # all true, it should be OK to delete it
             self.oob.erase_block(log_pbn)
+            self.block_pool.free_used_log_block(log_pbn)
+            # remove log mapping TODO: Try?
+            self.translator.log_mapping_table.remove_log_block(
+                data_group_no = data_group_no,
+                log_pbn = log_pbn)
 
             self.flash.block_erase(log_pbn, cat = tag)
             yield self.env.process(
                 self.des_flash.erase_pbn_extent(log_pbn, 1, tag=tag))
-
-            self.block_pool.free_used_log_block(log_pbn)
-            # remove log mapping
-            self.translator.log_mapping_table.remove_log_block(
-                data_group_no = data_group_no,
-                log_pbn = log_pbn)
 
     def assert_mapping(self, lpn):
         # Try log blocks

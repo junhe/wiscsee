@@ -2978,7 +2978,7 @@ class TestConcurrency_RandomOperations(AssertFinishTestCase):
         env.run()
 
     def main_proc(self, env, ftl, conf):
-        for i in range(10000):
+        for i in range(1000):
             # print i
             if i % 1000 == 0:
                 print i
@@ -3032,6 +3032,77 @@ class TestConcurrency_RandomOperations(AssertFinishTestCase):
                     ftl.read_ext(Extent(lpn, 1)))
             self.assertEqual(data, data_read[0])
 
+@unittest.skip("")
+class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
+    def test_write(self):
+        ftl, conf, rec, env = create_nkftl()
+        self.data_mirror = {}
+
+        env.process(self.main_proc(env, ftl, conf))
+        env.run()
+
+    def main_proc(self, env, ftl, conf):
+        procs = []
+        for i in range(32):
+            p = env.process(self.op_proc(env, ftl, conf))
+            procs.append(p)
+        yield simpy.AllOf(env, procs)
+
+    def op_proc(self, env, ftl, conf):
+        for i in range(100):
+            # print i
+            ext = self.random_extent(conf)
+            op = self.random_op()
+            yield env.process(self.operate(env, ftl, conf, op, ext))
+
+            if i % 1000 == 0:
+                yield env.process(ftl.clean(forced=False))
+
+        # yield env.process(self.check_mirror(env, ftl, conf))
+
+        self.set_finished()
+
+    def random_extent(self, conf):
+        n = int(conf.total_num_pages() * 0.8) # don't use the full logical space
+        start = random.randint(0, n-1)
+        cnt = max(1, int(random.randint(1, n - start) / 100))
+        ext = Extent(start, cnt)
+        return ext
+
+    def random_op(self):
+        return random.choice(['read', 'write', 'discard'])
+
+    def operate(self, env, ftl, conf, op, extent):
+        # print str(extent)
+        if op == 'write':
+            extent_data = random_data_of_extent(extent)
+            yield env.process(ftl.write_ext(extent, extent_data))
+            self.write_mirror(extent, extent_data)
+        elif op == 'read':
+            yield env.process(ftl.read_ext(extent))
+        elif op == 'discard':
+            self.discard_mirror(extent)
+            yield env.process(ftl.discard_ext(extent))
+
+    def write_mirror(self, extent, data):
+        for lpn, pagedata in zip(extent.lpn_iter(), data):
+            self.data_mirror[lpn] = pagedata
+
+    def discard_mirror(self, extent):
+        for lpn in extent.lpn_iter():
+            try:
+                del self.data_mirror[lpn]
+            except KeyError:
+                pass
+
+    def check_mirror(self, env, ftl, conf):
+        for lpn, data in self.data_mirror.items():
+            data_read = yield env.process(
+                    ftl.read_ext(Extent(lpn, 1)))
+            self.assertEqual(data, data_read[0])
+
+
+# Add test without lpn overlap
 
 def main():
     unittest.main()
