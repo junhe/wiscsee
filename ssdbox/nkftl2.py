@@ -1298,17 +1298,9 @@ class GarbageCollector(object):
         # erase old data block
         found, old_physical_block = self.translator.data_block_mapping_table\
             .lbn_to_pbn(logical_block)
-
         if found:
             # clean up old_physical_block
-            self.oob.erase_block(old_physical_block)
-            self.flash.block_erase(old_physical_block, cat = TAG_SWITCH_MERGE)
-            yield self.env.process(
-                self.des_flash.erase_pbn_extent(old_physical_block, 1,
-                    tag=TAG_SWITCH_MERGE))
-            self.block_pool.free_used_data_block(old_physical_block)
-            # self.translator.data_block_mapping_table.remove_mapping(
-                # logical_block)
+            self.recycle_empty_data_block(old_physical_block)
 
         # update data block mapping table
         # This will override the old mapping if there is one
@@ -1349,16 +1341,20 @@ class GarbageCollector(object):
                 .log_group_info[data_group_no].log_block_numbers()
         if all([is_log_block, no_valid_pages, is_in_dg]):
             # all true, it should be OK to delete it
+
+            # we need to modify the metadata first so nobody will try to
+            # read a block that is being erased.
             self.oob.erase_block(log_pbn)
             self.block_pool.free_used_log_block(log_pbn)
             # remove log mapping TODO: Try?
             self.translator.log_mapping_table.remove_log_block(
                 data_group_no = data_group_no,
                 log_pbn = log_pbn)
-
             self.flash.block_erase(log_pbn, cat = tag)
+
             yield self.env.process(
                 self.des_flash.erase_pbn_extent(log_pbn, 1, tag=tag))
+
 
     def assert_mapping(self, lpn):
         # Try log blocks

@@ -2978,7 +2978,7 @@ class TestConcurrency_RandomOperations(AssertFinishTestCase):
         env.run()
 
     def main_proc(self, env, ftl, conf):
-        for i in range(1000):
+        for i in range(100):
             # print i
             if i % 1000 == 0:
                 print i
