@@ -1321,14 +1321,17 @@ class GarbageCollector(object):
     def recycle_empty_data_block(self, data_block, tag):
         if data_block in self.block_pool.data_usedblocks and \
             not self.oob.is_any_page_valid(data_block):
+
             self.oob.erase_block(data_block)
             self.flash.block_erase(data_block, cat = tag)
-            yield self.env.process(
-                self.des_flash.erase_pbn_extent(data_block, 1, tag=tag))
             # need to remove data block mapping
             self.translator.data_block_mapping_table\
                 .remove_data_block_mapping_by_pbn(data_block)
             self.block_pool.free_used_data_block(data_block)
+
+            yield self.env.process(
+                self.des_flash.erase_pbn_extent(data_block, 1, tag=tag))
+
 
     def _recycle_empty_log_block(self, data_group_no, log_pbn, tag):
         """

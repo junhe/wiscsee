@@ -3032,7 +3032,7 @@ class TestConcurrency_RandomOperations(AssertFinishTestCase):
                     ftl.read_ext(Extent(lpn, 1)))
             self.assertEqual(data, data_read[0])
 
-@unittest.skip("")
+# @unittest.skip("")
 class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
@@ -3043,10 +3043,12 @@ class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
 
     def main_proc(self, env, ftl, conf):
         procs = []
-        for i in range(32):
+        for i in range(64):
             p = env.process(self.op_proc(env, ftl, conf))
             procs.append(p)
         yield simpy.AllOf(env, procs)
+
+        self.set_finished()
 
     def op_proc(self, env, ftl, conf):
         for i in range(100):
@@ -3055,12 +3057,11 @@ class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
             op = self.random_op()
             yield env.process(self.operate(env, ftl, conf, op, ext))
 
-            if i % 1000 == 0:
+            if i % 20 == 0:
                 yield env.process(ftl.clean(forced=False))
 
         # yield env.process(self.check_mirror(env, ftl, conf))
 
-        self.set_finished()
 
     def random_extent(self, conf):
         n = int(conf.total_num_pages() * 0.8) # don't use the full logical space
