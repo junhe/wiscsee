@@ -991,7 +991,10 @@ class GarbageCollector(object):
         # (logical block) means locking the corresponding physical space. And
         # If we have locked the logical block, every thing should be fine (unless
         # someone else is modifying without lock).
-        #
+        if self._is_any_lpn_in_logmapping(lbn) is False:
+            # nothing to merge now
+            return
+
         self.asserts()
         dst_phy_block_num = self.block_pool.pop_a_free_block_to_data_blocks()
 
@@ -1059,6 +1062,14 @@ class GarbageCollector(object):
             lbn = lbn, pbn = dst_phy_block_num)
 
         self.region_locks.release_request(lbn, req)
+
+    def _is_any_lpn_in_logmapping(self, lbn):
+        start, end = self.conf.block_to_page_range(lbn)
+        for lpn in range(start, end):
+            found, _ = self.log_mapping_table.lpn_to_ppn(lpn)
+            if found is True:
+                return True
+        return False
 
     def is_partial_mergable(self, log_pbn):
         """
