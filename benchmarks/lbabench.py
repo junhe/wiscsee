@@ -346,7 +346,11 @@ def contract_bench():
             self.para = para
 
         def setup_config(self):
-            self.conf = ssdbox.dftldes.Config()
+            if self.para.ftl_type == 'dftldes':
+                self.conf = ssdbox.dftldes.Config()
+            elif self.para.ftl_type == 'nkftl2':
+                self.conf = ssdbox.nkftl2.Config()
+
             self.conf['SSDFramework']['ncq_depth'] = self.para.ncq_depth
 
             self.conf['flash_config']['page_size'] = 2048
@@ -406,7 +410,7 @@ def contract_bench():
             conf.update(self.para.bench['conf'])
 
         def setup_ftl(self):
-            self.conf['ftl_type'] = 'dftldes'
+            self.conf['ftl_type'] = self.para.ftl_type
             self.conf['simulator_class'] = 'SimulatorDESNew'
             self.conf['stripe_size'] = self.para.stripe_size
             self.conf['segment_bytes'] = self.para.segment_bytes
@@ -610,6 +614,8 @@ def contract_bench():
         print 'exp', cnt
         print para
         cnt += 1
+        # para['ftl_type'] = 'dftldes'
+        para['ftl_type'] = 'nkftl2'
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
         exp = Experiment( Parameters(**para) )
         exp.main()

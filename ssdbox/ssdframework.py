@@ -24,6 +24,7 @@ import lrulist
 import recorder
 from utilities import utils
 import dftldes
+import nkftl2
 
 import prepare4pyreuse
 from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
@@ -47,8 +48,19 @@ class Ssd(SsdBase):
         self.flash_controller = flashcontroller.controller.Controller3(
                 self.env, self.conf, self.recorder)
 
-        self.ftl = eval("{}.Ftl(self.conf, self.recorder, self.flash_controller, "
-                "self.env)".format(self.conf['ftl_type']))
+        print 'initializing ssd...........', self.conf['ftl_type']
+
+        self.ftl = self._create_ftl()
+
+    def _create_ftl(self):
+        if self.conf['ftl_type'] == 'dftldes':
+            return dftldes.Ftl(self.conf, self.recorder, self.flash_controller,
+                self.env)
+        elif self.conf['ftl_type'] == 'nkftl2':
+            print 'we will use nkftl2'
+            simpleflash = flash.Flash(recorder=self.recorder, confobj=self.conf)
+            return nkftl2.Ftl(self.conf, self.recorder, simpleflash, self.env,
+                    self.flash_controller)
 
     def _barrier(self):
         """
@@ -115,13 +127,16 @@ class Ssd(SsdBase):
                 self.recorder.set_result_by_one_key('gc_duration_sec', dur/SEC)
 
             elif operation == OP_FLUSH_TRANS_CACHE:
-                yield self.env.process(self.ftl.flush_trans_cache())
+                if self.conf['ftl_type'] == 'dftldes':
+                    yield self.env.process(self.ftl.flush_trans_cache())
 
             elif operation == OP_PURGE_TRANS_CACHE:
-                yield self.env.process(self.ftl.purge_trans_cache())
+                if self.conf['ftl_type'] == 'dftldes':
+                    yield self.env.process(self.ftl.purge_trans_cache())
 
             elif operation == OP_DROP_TRANS_CACHE:
-                self.ftl.drop_trans_cache()
+                if self.conf['ftl_type'] == 'dftldes':
+                    self.ftl.drop_trans_cache()
 
             elif operation == OP_REC_TIMESTAMP:
                 self.recorder.set_result_by_one_key(host_event.arg1,
