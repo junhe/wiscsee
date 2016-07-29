@@ -54,7 +54,6 @@ TYPE_LOG_BLOCK, TYPE_DATA_BLOCK = ('TYPE_LOG_BLOCK', 'TYPE_DATA_BLOCK')
 global_debug = False
 
 TAG_PARTIAL_MERGE   = 'PARTIAL.MERGE'
-TAG_TRY_GC          = 'TRY.GC'
 TAG_SWITCH_MERGE    = 'SWITCH.MERGE'
 TAG_FULL_MERGE      = 'FULL.MERGE'
 TAG_FORGROUND       = 'FORGROUND'
@@ -795,10 +794,8 @@ class GarbageCollector(object):
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
-    def try_gc(self):
-        triggered = False
-
-        if self.decider.should_start() is False:
+    def clean(self, forced=False):
+        if forced is False and self.decider.should_start() is False:
             return
 
         block_iter = self.victim_blocks_iter()
@@ -985,6 +982,8 @@ class GarbageCollector(object):
 
         self.asserts()
         dst_phy_block_num = self.block_pool.pop_a_free_block_to_data_blocks()
+        if dst_phy_block_num is None:
+            raise OutOfSpaceError("Fail to find free block for full merge")
 
         lpn_start, lpn_end = self.conf.block_to_page_range(lbn)
         for lpn in range(lpn_start, lpn_end):
@@ -1508,7 +1507,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(
                 self.write_ext(Extent(lpn_start=lpn, lpn_count=1), [data]))
 
-        yield self.env.process(self.garbage_collector.try_gc())
+        yield self.env.process(self.garbage_collector.clean())
 
     def write_ext(self, extent, data=None):
         extents = split_ext_by_region(self.conf.n_pages_per_region(), extent)
@@ -1566,7 +1565,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.region_locks.release_request(region_id, req)
 
         # TODO: maybe this should not be here.
-        # yield self.env.process(self.garbage_collector.try_gc())
+        # yield self.env.process(self.garbage_collector.clean())
 
     def _sub_ext_data(self, data, extent, sub_ext):
         start = sub_ext.lpn_start - extent.lpn_start

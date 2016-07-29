@@ -2960,7 +2960,7 @@ class TestConcurrency_WriteNGC(AssertFinishTestCase, WriteNCheckMixin):
             ext = Extent(start, cnt)
             extents.append( ext )
 
-        p_gc = env.process(ftl.garbage_collector.try_gc())
+        p_gc = env.process(ftl.garbage_collector.clean())
         p_write = env.process(self.write_and_check(ftl, extents, env))
 
         yield simpy.AllOf(env, [p_gc, p_write])
