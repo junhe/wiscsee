@@ -1650,6 +1650,9 @@ class Ftl(ftlbuilder.FtlBuilder):
     def post_processing(self):
         pass
 
+    def clean(self, forced):
+        yield self.env.process(self.garbage_collector.clean(forced))
+
 
 def split_ext_by_region(n_pages_per_region, extent):
     if extent.lpn_count == 0:

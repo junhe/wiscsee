@@ -2968,7 +2968,7 @@ class TestConcurrency_WriteNGC(AssertFinishTestCase, WriteNCheckMixin):
         self.set_finished()
 
 
-@unittest.skip("")
+# @unittest.skip("")
 class TestConcurrency_RandomOperations(AssertFinishTestCase):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
@@ -2986,12 +2986,15 @@ class TestConcurrency_RandomOperations(AssertFinishTestCase):
             op = self.random_op()
             yield env.process(self.operate(env, ftl, conf, op, ext))
 
+            if i % 1000 == 0:
+                yield env.process(ftl.clean(forced=False))
+
         yield env.process(self.check_mirror(env, ftl, conf))
 
         self.set_finished()
 
     def random_extent(self, conf):
-        n = int(conf.total_num_pages() * 0.8)
+        n = int(conf.total_num_pages() * 0.8) # don't use the full logical space
         start = random.randint(0, n-1)
         cnt = max(1, int(random.randint(1, n - start) / 100))
         ext = Extent(start, cnt)
