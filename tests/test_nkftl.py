@@ -2477,7 +2477,7 @@ class TestConcurrency_DataGroupGC(unittest.TestCase, WriteNCheckMixin):
         yield env.process(self.write_and_check(ftl, extents, env))
 
 
-@unittest.skip("Takes too long")
+# @unittest.skip("Takes too long")
 class TestConcurrency_RandomWritesBroad(unittest.TestCase, WriteNCheckMixin):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
@@ -2495,6 +2495,7 @@ class TestConcurrency_RandomWritesBroad(unittest.TestCase, WriteNCheckMixin):
             ext = Extent(start, cnt)
             extents.append( ext )
         yield env.process(self.write_and_check(ftl, extents, env))
+        print 'end'
 
 
 # @unittest.skip("")
@@ -2890,6 +2891,42 @@ class TestConcurrency_WriteNGC(unittest.TestCase, WriteNCheckMixin):
         p_write = env.process(self.write_and_check(ftl, extents, env))
 
         yield simpy.AllOf(env, [p_gc, p_write])
+
+
+class TestConcurrency_RandomOperations(unittest.TestCase):
+    def test_write(self):
+        ftl, conf, rec, env = create_nkftl()
+        self.data_mirror = {}
+
+        env.process(self.main_proc(env, ftl, conf))
+        env.run()
+
+    def main_proc(self, env, ftl, conf):
+        for i in range(100):
+            print i
+            ext = self.random_extent(conf)
+            op = self.random_op()
+            yield env.process(self.operate(env, ftl, conf, op, ext))
+        print 'end'
+
+    def random_extent(self, conf):
+        n = int(conf.total_num_pages() * 0.8)
+        start = random.randint(0, n-1)
+        cnt = max(1, int(random.randint(1, n - start) / 100))
+        ext = Extent(start, cnt)
+        return ext
+
+    def random_op(self):
+        return random.choice(['read', 'write', 'discard'])
+
+    def operate(self, env, ftl, conf, op, extent):
+        print op, str(extent)
+        if op == 'write':
+            yield env.process(ftl.write_ext(extent))
+        elif op == 'read':
+            yield env.process(ftl.read_ext(extent))
+        elif op == 'discard':
+            yield env.process(ftl.discard_ext(extent))
 
 
 def main():
