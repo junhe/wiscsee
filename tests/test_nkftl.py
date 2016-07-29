@@ -120,6 +120,19 @@ def create_gc():
         translator=translator, flashobj=flashobj, simpy_env=simpy_env,
         des_flash=des_flash)
 
+class AssertFinishTestCase(unittest.TestCase):
+    def setUp(self):
+        self.finished = False
+        print 'setting up'
+
+    def set_finished(self):
+        print 'setting finsihed'
+        self.finished = True
+
+    def tearDown(self):
+        self.assertTrue(self.finished)
+        print 'asserted finished'
+
 
 class RWMixin(object):
     def write_proc(self, env, ftl, extent, data=None):
@@ -136,9 +149,10 @@ class RWMixin(object):
         return d
 
 
-class TestNkftl(unittest.TestCase, RWMixin):
+class TestNkftl(AssertFinishTestCase, RWMixin):
     def test_init(self):
         ftl, conf, rec, env = create_nkftl()
+        self.set_finished()
 
     def randomdata(self, lpn):
         return str(random.randint(0, 100))
@@ -153,6 +167,7 @@ class TestNkftl(unittest.TestCase, RWMixin):
         yield env.process(ftl.lba_write(8, data='3'))
         ret = yield env.process( ftl.lba_read(8) )
         self.assertEqual(ret, '3')
+        self.set_finished()
 
 
     def write_and_check(self, ftl, lpns, env):
@@ -165,6 +180,7 @@ class TestNkftl(unittest.TestCase, RWMixin):
         for lpn, data in data_mirror.items():
             ret = yield env.process(ftl.lba_read(lpn))
             self.assertEqual(ret, data)
+        self.set_finished()
 
     def test_data_integrity(self):
         ftl, conf, rec, env = create_nkftl()
@@ -673,12 +689,13 @@ class TestVictimBlocks(unittest.TestCase):
             oob.states.invalidate_page(ppn)
 
 
-class TestCleaningDataBlocks(unittest.TestCase):
+class TestCleaningDataBlocks(AssertFinishTestCase):
     def test_init_gc(self):
         gc, conf, block_pool, rec, oob, helper, \
         logmaptable, datablocktable, translator, \
         flashobj, simpy_env, des_flash = create_gc()
 
+        self.set_finished()
 
     def test_clean_data_blocks(self):
         pk = create_gc()
@@ -722,6 +739,8 @@ class TestCleaningDataBlocks(unittest.TestCase):
 
         # not more victim blocks
         self.assertEqual(len(block_pool.data_usedblocks), 0)
+
+        self.set_finished()
 
     def use_a_data_block(self, conf, block_pool, oob, datablocktable, lbn):
         blocknum = block_pool.pop_a_free_block_to_data_blocks()
@@ -840,6 +859,7 @@ class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertEqual(mergable, False)
         self.assertEqual(lbn, None)
 
+class TestSwitchMerge(AssertFinishTestCase, UseLogBlocksMixin):
     def test_switch_merge(self):
         pk = create_gc()
 
@@ -912,6 +932,7 @@ class TestSwitchMerge(unittest.TestCase, UseLogBlocksMixin):
         # block pool
         self.assertIn(pbn, block_pool.data_usedblocks)
 
+        self.set_finished()
 
 class TestPartialMergeMergable(unittest.TestCase, UseLogBlocksMixin):
     def test_is_partial_mergable(self):
@@ -963,7 +984,8 @@ class TestPartialMergeMergable(unittest.TestCase, UseLogBlocksMixin):
         self.assertEqual(mergable, False)
         self.assertEqual(lbn, None)
 
-class TestPartialMerge_Merge(unittest.TestCase, UseLogBlocksMixin):
+
+class TestPartialMerge_Merge(AssertFinishTestCase, UseLogBlocksMixin):
     def test_partial_merge(self):
         pk = create_gc()
 
@@ -1057,8 +1079,9 @@ class TestPartialMerge_Merge(unittest.TestCase, UseLogBlocksMixin):
         # block pool
         self.assertIn(pbn, block_pool.data_usedblocks)
 
+        self.set_finished()
 
-class TestPartialMergeWithMoving(unittest.TestCase, UseLogBlocksMixin):
+class TestPartialMergeWithMoving(AssertFinishTestCase, UseLogBlocksMixin):
     def test(self):
         pk = create_gc()
 
@@ -1068,6 +1091,7 @@ class TestPartialMergeWithMoving(unittest.TestCase, UseLogBlocksMixin):
 
         simpy_env.process(self.proc(pk))
         simpy_env.run()
+
 
     def proc(self, pk):
         gc, conf, block_pool, rec, oob, helper, \
@@ -1157,8 +1181,9 @@ class TestPartialMergeWithMoving(unittest.TestCase, UseLogBlocksMixin):
         # block pool
         self.assertIn(pbn, block_pool.data_usedblocks)
 
+        self.set_finished()
 
-class TestFullMerge_Unaligned(unittest.TestCase, UseLogBlocksMixin):
+class TestFullMerge_Unaligned(AssertFinishTestCase, UseLogBlocksMixin):
     def test(self):
         pk = create_gc()
 
@@ -1248,7 +1273,10 @@ class TestFullMerge_Unaligned(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(retrieved_pbn, block_pool.data_usedblocks)
         self.assertIn(pbn, block_pool.freeblocks)
 
-class TestFullMerge_two_in_two(unittest.TestCase, UseLogBlocksMixin):
+        self.set_finished()
+
+
+class TestFullMerge_two_in_two(AssertFinishTestCase, UseLogBlocksMixin):
     def test(self):
         """
         Data of two logical blocks spread in two physical blocks.
@@ -1486,8 +1514,10 @@ class TestFullMerge_two_in_two(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(retrieved_pbn1, block_pool.data_usedblocks)
         self.assertIn(retrieved_pbn2, block_pool.data_usedblocks)
 
+        self.set_finished()
 
-class TestFullMerge_with_data_blocks(unittest.TestCase, UseLogBlocksMixin):
+
+class TestFullMerge_with_data_blocks(AssertFinishTestCase, UseLogBlocksMixin):
     def test(self):
         pk = create_gc()
 
@@ -1628,6 +1658,8 @@ class TestFullMerge_with_data_blocks(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(log_pbn, block_pool.freeblocks)
         self.assertIn(retrieved_pbn1, block_pool.data_usedblocks)
 
+        self.set_finished()
+
     def use_data_blocks(self, conf, block_pool, oob, datablocktable, lpn_start,
             cnt, translator):
 
@@ -1655,7 +1687,7 @@ class TestFullMerge_with_data_blocks(unittest.TestCase, UseLogBlocksMixin):
         return used_blocks
 
 
-class TestFullMergeOnePage(unittest.TestCase, UseLogBlocksMixin):
+class TestFullMergeOnePage(AssertFinishTestCase, UseLogBlocksMixin):
     def test(self):
         pk = create_gc()
 
@@ -1749,7 +1781,10 @@ class TestFullMergeOnePage(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(retrieved_pbn, block_pool.data_usedblocks)
         self.assertIn(pbn, block_pool.freeblocks)
 
-class TestCleanDataGroup(unittest.TestCase, UseLogBlocksMixin):
+        self.set_finished()
+
+
+class TestCleanDataGroup(AssertFinishTestCase, UseLogBlocksMixin):
     def test(self):
         """
         Data of two logical blocks spread in two physical blocks.
@@ -1923,6 +1958,8 @@ class TestCleanDataGroup(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(pbn2, block_pool.freeblocks)
         self.assertIn(retrieved_pbn1, block_pool.data_usedblocks)
         self.assertIn(retrieved_pbn2, block_pool.data_usedblocks)
+
+        self.set_finished()
 
     def use_data_blocks(self, conf, block_pool, oob, datablocktable, lpn_start,
             cnt, translator):
@@ -2190,7 +2227,7 @@ class TestLogGroup2(unittest.TestCase):
         self.assertEqual(loggroup.n_log_blocks(), 0)
 
 
-class TestFTLOperations(unittest.TestCase):
+class TestFTLOperations(AssertFinishTestCase):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
 
@@ -2205,6 +2242,7 @@ class TestFTLOperations(unittest.TestCase):
             found, ppn, _ = ftl.lpn_to_ppn(lpn)
             self.assertEqual(found, True)
 
+        self.set_finished()
 
 
     def test_read(self):
@@ -2220,6 +2258,7 @@ class TestFTLOperations(unittest.TestCase):
         data = yield env.process(ftl.read_ext(ext))
         self.assertEqual(len(data), ext.lpn_count)
 
+        self.set_finished()
 
     def test_discard(self):
         ftl, conf, rec, env = create_nkftl()
@@ -2237,6 +2276,7 @@ class TestFTLOperations(unittest.TestCase):
             found, ppn, _ = ftl.lpn_to_ppn(lpn)
             self.assertEqual(found, False)
 
+        self.set_finished()
 
     def test_write_region(self):
         ftl, conf, rec, env = create_nkftl()
@@ -2267,6 +2307,7 @@ class TestFTLOperations(unittest.TestCase):
         for ppn1, ppn2 in zip(ppns, ppns2):
             self.assertNotEqual(ppn1, ppn2)
 
+        self.set_finished()
 
     def test_write_region_overflow(self):
         ftl, conf, rec, env = create_nkftl()
@@ -2292,6 +2333,7 @@ class TestFTLOperations(unittest.TestCase):
         # 1 log block with valid pages
         self.assertEqual(ftl.block_pool.total_used_blocks(), 3)
 
+        self.set_finished()
 
     def test_write_large_extent(self):
         ftl, conf, rec, env = create_nkftl()
@@ -2310,23 +2352,14 @@ class TestFTLOperations(unittest.TestCase):
                 self.assertEqual(ftl.oob.states.is_page_valid(ppn), True)
                 self.assertEqual(found, True)
 
-    def test_random_write(self):
-        pass
-
-    # def test_update_log_mapping(self):
-        # ftl, conf, rec, env = create_nkftl()
-
-        # mappings = {2:3, 4:5}
-        # ftl._update_log_mappings(mappings)
-        # for lpn, ppn in mappings.items():
-            # found, retrieved_ppn, loc = ftl.lpn_to_ppn(lpn)
-            # self.assertTrue(found)
-            # self.assertEqual(retrieved_ppn, ppn)
+        self.set_finished()
 
 
-class TestSimpyIntegration(unittest.TestCase, RWMixin):
+class TestSimpyIntegration(AssertFinishTestCase, RWMixin):
     def write_proc(self, env, ftl, extent, data=None):
         yield env.process(ftl.write_ext(extent, data))
+
+        self.set_finished()
 
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
@@ -2336,7 +2369,9 @@ class TestSimpyIntegration(unittest.TestCase, RWMixin):
 
     def read_proc(self, env, ftl, extent):
         data = yield env.process(ftl.read_ext(extent))
+        self.set_finished()
         env.exit(data)
+
 
     def reader_main(self, env, ftl):
         ext = Extent(0, 3)
@@ -2344,6 +2379,7 @@ class TestSimpyIntegration(unittest.TestCase, RWMixin):
             self.write_proc(env, ftl, ext, self.data_of_extent(ext)))
         ret_data = yield env.process(self.read_proc(env, ftl, ext))
         self.assertListEqual(ret_data, [str(x) for x in ext.lpn_iter()])
+        self.set_finished()
 
     def test_read(self):
         ftl, conf, rec, env = create_nkftl()
@@ -2352,7 +2388,7 @@ class TestSimpyIntegration(unittest.TestCase, RWMixin):
         env.run()
 
 
-class TestRegionSerialization_DifferentRegion(unittest.TestCase, RWMixin):
+class TestRegionSerialization_DifferentRegion(AssertFinishTestCase, RWMixin):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
 
@@ -2369,8 +2405,9 @@ class TestRegionSerialization_DifferentRegion(unittest.TestCase, RWMixin):
 
         self.assertEqual(env.now, conf.page_prog_time())
 
+        self.set_finished()
 
-class TestRegionSerialization_SameRegion(unittest.TestCase, RWMixin):
+class TestRegionSerialization_SameRegion(AssertFinishTestCase, RWMixin):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
 
@@ -2386,7 +2423,9 @@ class TestRegionSerialization_SameRegion(unittest.TestCase, RWMixin):
 
         self.assertEqual(env.now, conf.page_prog_time() * 2)
 
-class TestRegionSerialization_WriteAndRead(unittest.TestCase, RWMixin):
+        self.set_finished()
+
+class TestRegionSerialization_WriteAndRead(AssertFinishTestCase, RWMixin):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
 
@@ -2406,8 +2445,9 @@ class TestRegionSerialization_WriteAndRead(unittest.TestCase, RWMixin):
         self.assertEqual(env.now, conf.page_prog_time() +
                 conf.page_read_time())
 
+        self.set_finished()
 
-class TestRegionSerialization_Discard(unittest.TestCase, RWMixin):
+class TestRegionSerialization_Discard(AssertFinishTestCase, RWMixin):
     def test(self):
         ftl, conf, rec, env = create_nkftl()
 
@@ -2435,6 +2475,8 @@ class TestRegionSerialization_Discard(unittest.TestCase, RWMixin):
         self.assertListEqual(ret_data, [None
             for x in self.data_of_extent(extent)])
 
+        self.set_finished()
+
 class WriteNCheckMixin(object):
     def write_and_check(self, ftl, extents, env):
         data_mirror = {}
@@ -2458,8 +2500,8 @@ class WriteNCheckMixin(object):
         return data
 
 
-class TestConcurrency_DataGroupGC(unittest.TestCase, WriteNCheckMixin):
-    def test_write(self):
+class TestConcurrency_DataGroupGC(AssertFinishTestCase, WriteNCheckMixin):
+    def runTest(self):
         ftl, conf, rec, env = create_nkftl()
 
         env.process(self.main_proc(env, ftl, conf))
@@ -2476,9 +2518,12 @@ class TestConcurrency_DataGroupGC(unittest.TestCase, WriteNCheckMixin):
             extents.append( ext )
         yield env.process(self.write_and_check(ftl, extents, env))
 
+        self.set_finished()
+        print 'end......'
 
-# @unittest.skip("Takes too long")
-class TestConcurrency_RandomWritesBroad(unittest.TestCase, WriteNCheckMixin):
+
+@unittest.skip("Takes too long")
+class TestConcurrency_RandomWritesBroad(AssertFinishTestCase, WriteNCheckMixin):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
 
@@ -2495,11 +2540,12 @@ class TestConcurrency_RandomWritesBroad(unittest.TestCase, WriteNCheckMixin):
             ext = Extent(start, cnt)
             extents.append( ext )
         yield env.process(self.write_and_check(ftl, extents, env))
-        print 'end'
+
+        self.set_finished()
 
 
 # @unittest.skip("")
-class TestConcurrency_FullMerge(unittest.TestCase, UseLogBlocksMixin):
+class TestConcurrency_FullMerge(AssertFinishTestCase, UseLogBlocksMixin):
     def test(self):
         """
         Data of two logical blocks spread in two physical blocks.
@@ -2674,9 +2720,11 @@ class TestConcurrency_FullMerge(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(retrieved_pbn1, block_pool.data_usedblocks)
         self.assertIn(retrieved_pbn2, block_pool.data_usedblocks)
 
+        self.set_finished()
+
 
 # @unittest.skip("")
-class TestConcurrency_cleanlogblock(unittest.TestCase, UseLogBlocksMixin):
+class TestConcurrency_cleanlogblock(AssertFinishTestCase, UseLogBlocksMixin):
     def test(self):
         """
         Data of two logical blocks spread in two physical blocks.
@@ -2853,11 +2901,11 @@ class TestConcurrency_cleanlogblock(unittest.TestCase, UseLogBlocksMixin):
         self.assertIn(retrieved_pbn1, block_pool.data_usedblocks)
         self.assertIn(retrieved_pbn2, block_pool.data_usedblocks)
 
-        print 'end'
+        self.set_finished()
 
 
 # @unittest.skip("")
-class TestConcurrency_WriteNGC(unittest.TestCase, WriteNCheckMixin):
+class TestConcurrency_WriteNGC(AssertFinishTestCase, WriteNCheckMixin):
     """
     Write a logical space.
     Trigger GC and Write the logical space, the write and gc may
@@ -2892,8 +2940,11 @@ class TestConcurrency_WriteNGC(unittest.TestCase, WriteNCheckMixin):
 
         yield simpy.AllOf(env, [p_gc, p_write])
 
+        self.set_finished()
 
-class TestConcurrency_RandomOperations(unittest.TestCase):
+
+@unittest.skip("")
+class TestConcurrency_RandomOperations(AssertFinishTestCase):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
         self.data_mirror = {}
@@ -2907,7 +2958,8 @@ class TestConcurrency_RandomOperations(unittest.TestCase):
             ext = self.random_extent(conf)
             op = self.random_op()
             yield env.process(self.operate(env, ftl, conf, op, ext))
-        print 'end'
+
+        self.set_finished()
 
     def random_extent(self, conf):
         n = int(conf.total_num_pages() * 0.8)
@@ -2934,5 +2986,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
