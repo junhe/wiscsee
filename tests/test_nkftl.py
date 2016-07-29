@@ -120,6 +120,15 @@ def create_gc():
         translator=translator, flashobj=flashobj, simpy_env=simpy_env,
         des_flash=des_flash)
 
+
+def random_data_of_extent(extent):
+    data = []
+    for lpn in extent.lpn_iter():
+        d = str(lpn) + '.' + str(random.randint(0, 100))
+        data.append(d)
+    return data
+
+
 class AssertFinishTestCase(unittest.TestCase):
     def setUp(self):
         self.finished = False
@@ -273,6 +282,22 @@ class TestBlockPool(unittest.TestCase):
         block_pool.free_used_data_block(blocknum)
         self.assertEqual(block_pool.used_ratio(), 0)
         self.assertEqual(block_pool.total_used_blocks(), 0)
+
+    def test_data_blocks_overflow(self):
+        conf = create_config()
+        block_pool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
+
+        n = conf.n_blocks_per_dev
+        for i in range(n):
+            blocknum = block_pool.pop_a_free_block_to_data_blocks()
+            self.assertTrue(isinstance(blocknum, int))
+
+        blocknum = block_pool.pop_a_free_block_to_data_blocks()
+        self.assertEqual(blocknum, None)
 
     def test_free_used_log(self):
         conf = create_config()
@@ -2943,7 +2968,7 @@ class TestConcurrency_WriteNGC(AssertFinishTestCase, WriteNCheckMixin):
         self.set_finished()
 
 
-@unittest.skip("")
+# @unittest.skip("")
 class TestConcurrency_RandomOperations(AssertFinishTestCase):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
@@ -2953,11 +2978,15 @@ class TestConcurrency_RandomOperations(AssertFinishTestCase):
         env.run()
 
     def main_proc(self, env, ftl, conf):
-        for i in range(100):
-            print i
+        for i in range(10000):
+            # print i
+            if i % 1000 == 0:
+                print i
             ext = self.random_extent(conf)
             op = self.random_op()
             yield env.process(self.operate(env, ftl, conf, op, ext))
+
+        yield env.process(self.check_mirror(env, ftl, conf))
 
         self.set_finished()
 
@@ -2972,13 +3001,33 @@ class TestConcurrency_RandomOperations(AssertFinishTestCase):
         return random.choice(['read', 'write', 'discard'])
 
     def operate(self, env, ftl, conf, op, extent):
-        print op, str(extent)
+        # print str(extent)
         if op == 'write':
-            yield env.process(ftl.write_ext(extent))
+            extent_data = random_data_of_extent(extent)
+            self.write_mirror(extent, extent_data)
+            yield env.process(ftl.write_ext(extent, extent_data))
         elif op == 'read':
             yield env.process(ftl.read_ext(extent))
         elif op == 'discard':
+            self.discard_mirror(extent)
             yield env.process(ftl.discard_ext(extent))
+
+    def write_mirror(self, extent, data):
+        for lpn, pagedata in zip(extent.lpn_iter(), data):
+            self.data_mirror[lpn] = pagedata
+
+    def discard_mirror(self, extent):
+        for lpn in extent.lpn_iter():
+            try:
+                del self.data_mirror[lpn]
+            except KeyError:
+                pass
+
+    def check_mirror(self, env, ftl, conf):
+        for lpn, data in self.data_mirror.items():
+            data_read = yield env.process(
+                    ftl.read_ext(Extent(lpn, 1)))
+            self.assertEqual(data, data_read[0])
 
 
 def main():

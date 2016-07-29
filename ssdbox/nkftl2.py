@@ -61,6 +61,8 @@ TAG_FORGROUND       = 'FORGROUND'
 TAG_WRITE_DRIVEN    = 'WRITE.DRIVEN.DIRECT.ERASE'
 TAG_THRESHOLD_GC    = 'THRESHOLD.GC.DIRECT.ERASE'
 
+class OutOfSpaceError(RuntimeError):
+    pass
 
 class Config(config.ConfigNCQFTL):
     def __init__(self, confdic = None):
@@ -244,8 +246,6 @@ class OutOfBandAreas(object):
         return False
 
 
-class OutOfSpaceError(RuntimeError):
-    pass
 
 class MappingBase(object):
     """
@@ -310,13 +310,6 @@ class DataBlockMappingTable(MappingBase):
 TDATA = 'TDATA'
 TLOG = 'TLOG'
 class NKBlockPool(MultiChannelBlockPoolBase):
-    """
-    - able to allocate a block from a specific channel.           OK
-    - able to allocate a block without specifying channels number OK
-    - able to tag a block as log or data                          OK
-    - able to change tag                                          OK
-    - able to see number of free blocks in a channel              OK
-    """
     @property
     def freeblocks(self):
         blocks = self.get_blocks_of_tag(tag=TFREE)
@@ -333,20 +326,14 @@ class NKBlockPool(MultiChannelBlockPoolBase):
         return blocks
 
     def pop_a_free_block_to_log_blocks(self):
-        try:
-            blocknum = self.pick_and_move(src=TFREE, dst=TLOG)
-        except TagOutOfSpaceError:
-            raise OutOfSpaceError
+        blocknum = self.pick_and_move(src=TFREE, dst=TLOG)
         return blocknum
 
     def move_used_log_to_data_block(self, blocknum):
         self.change_tag(blocknum, src=TLOG, dst=TDATA)
 
     def pop_a_free_block_to_data_blocks(self):
-        try:
-            blocknum = self.pick_and_move(src=TFREE, dst=TDATA)
-        except TagOutOfSpaceError:
-            raise OutOfSpaceError
+        blocknum = self.pick_and_move(src=TFREE, dst=TDATA)
         return blocknum
 
     def free_used_data_block(self, blocknum):
