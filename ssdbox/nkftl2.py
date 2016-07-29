@@ -1562,10 +1562,13 @@ class Ftl(ftlbuilder.FtlBuilder):
 
             if n_ppns < loop_ext.lpn_count:
                 # we cannot find vailable pages in log blocks
-                # TODO: we should release the lock before calling gc, which
-                # also needs the lock
+                self.region_locks.release_request(region_id, req)
+
                 yield self.env.process(
                     self.garbage_collector.clean_data_group(data_group_no))
+
+                req = self.region_locks.get_request(region_id)
+                yield req
 
             loop_ext.lpn_start += n_ppns
             loop_ext.lpn_count -= n_ppns
