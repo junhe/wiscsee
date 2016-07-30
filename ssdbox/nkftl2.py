@@ -1324,8 +1324,6 @@ class GarbageCollector(object):
         req = self.region_locks.get_request(logical_block)
         yield req
 
-        print log_pbn, 'in switch_merge'
-
         is_mergable, logical_block_ret = self.is_switch_mergable(log_pbn)
         if is_mergable is False or logical_block_ret != logical_block:
             # we need to double check here since while we wait, things may
