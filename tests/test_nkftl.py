@@ -3052,7 +3052,7 @@ class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
         self.set_finished()
 
     def op_proc(self, env, ftl, conf):
-        for i in range(100):
+        for i in range(20):
             # print i
             ext = self.random_extent(conf)
             op = self.random_op()
@@ -3062,8 +3062,6 @@ class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
                 yield env.process(ftl.clean(forced=False))
 
         # yield env.process(self.check_mirror(env, ftl, conf))
-
-
     def random_extent(self, conf):
         n = int(conf.total_num_pages() * 0.8) # don't use the full logical space
         start = random.randint(0, n-1)
