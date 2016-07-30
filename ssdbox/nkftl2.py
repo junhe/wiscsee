@@ -92,6 +92,10 @@ class Config(config.ConfigNCQFTL):
 
         return n_pages_per_dg
 
+    def n_datagroups_per_dev(self):
+        n_blocks_in_data_group = self['nkftl']['n_blocks_in_data_group']
+        return self.n_blocks_per_dev / n_blocks_in_data_group
+
     def nkftl_data_group_number_of_lpn(self, lpn):
         """
         Given lpn, return its data group number
@@ -326,19 +330,30 @@ class NKBlockPool(MultiChannelBlockPoolBase):
 
     def pop_a_free_block_to_log_blocks(self):
         blocknum = self.pick_and_move(src=TFREE, dst=TLOG)
+
+        if blocknum == 3771:
+            print blocknum, '.......pop_a_free_block_to_log_blocks'
         return blocknum
 
     def move_used_log_to_data_block(self, blocknum):
+        if blocknum == 3771:
+            print blocknum, '.......move_used_log_to_data_block'
         self.change_tag(blocknum, src=TLOG, dst=TDATA)
 
     def pop_a_free_block_to_data_blocks(self):
         blocknum = self.pick_and_move(src=TFREE, dst=TDATA)
+        if blocknum == 3771:
+            print blocknum, '.......pop_a_free_block_to_data_blocks'
         return blocknum
 
     def free_used_data_block(self, blocknum):
+        if blocknum == 3771:
+            print blocknum, '.......free_used_data_block'
         self.change_tag(blocknum, src=TDATA, dst=TFREE)
 
     def free_used_log_block(self, blocknum):
+        if blocknum == 3771:
+            print blocknum, '......free_used_log_block'
         self.change_tag(blocknum, src=TLOG, dst=TFREE)
 
     def total_used_blocks(self):
@@ -791,8 +806,16 @@ class GarbageCollector(object):
         self.env = simpy_env
         self.des_flash = des_flash
         self.region_locks = region_locks
+        self._block_recycle_locks = LockPool(self.env)
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
+
+    def clean_new(self, forced=False):
+        if forced is False and self.decider.should_start() is False:
+            return
+
+        for dgn in range(self.conf.n_datagroups_per_dev()):
+            yield self.env.process(self.clean_data_group(dgn))
 
     def clean(self, forced=False):
         if forced is False and self.decider.should_start() is False:
@@ -833,8 +856,9 @@ class GarbageCollector(object):
         update all the relevant information such as mapping, oob, flash.
         """
         if blk_info.block_type == TYPE_DATA_BLOCK:
-            yield self.env.process(
-                self.recycle_empty_data_block(blk_info.block_num, tag))
+            # yield self.env.process(
+                # self.recycle_empty_data_block(blk_info.block_num, tag))
+            pass
         elif blk_info.block_type == TYPE_LOG_BLOCK:
             yield self.env.process(
                 self.clean_log_block(blk_info.block_num, blk_info.data_group_no,
@@ -1078,6 +1102,10 @@ class GarbageCollector(object):
         """
         ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
 
+        # log_pbn must be a log block
+        if not log_pbn in self.block_pool.log_usedblocks:
+            return False, None, None
+
         # first k pages must be valid
         last_valid_ppn = None
         for ppn in range(ppn_start, ppn_end):
@@ -1241,15 +1269,23 @@ class GarbageCollector(object):
         conditions:
         1. all pages are valid
         2. all LPNs are 'aligned' with block page numbers
+        3. It is still a log block
 
         It also returns the corresponding logical block number if it is
         switch mergable.
+
+        TODO: better check? translate all the lpns to ppns, and see if they
+        are aligned.
 
         Return Mergable?, logical_block
         """
         ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
         lpn_start = None
         logical_block = None
+
+        if not log_pbn in self.block_pool.log_usedblocks:
+            return False, None
+
         for ppn in range(ppn_start, ppn_end):
             if not self.oob.states.is_page_valid(ppn):
                 return False, None
@@ -1284,6 +1320,8 @@ class GarbageCollector(object):
         req = self.region_locks.get_request(logical_block)
         yield req
 
+        print log_pbn, 'in switch_merge'
+
         is_mergable, logical_block_ret = self.is_switch_mergable(log_pbn)
         if is_mergable is False or logical_block_ret != logical_block:
             # we need to double check here since while we wait, things may
@@ -1300,25 +1338,33 @@ class GarbageCollector(object):
             .lbn_to_pbn(logical_block)
         if found:
             # clean up old_physical_block
-            self.recycle_empty_data_block(old_physical_block, tag='Unknown')
+            yield self.env.process(
+                self.recycle_empty_data_block(old_physical_block, tag='Unknown'))
 
         # update data block mapping table
         # This will override the old mapping if there is one
         self.translator.data_block_mapping_table.add_data_block_mapping(
             logical_block, log_pbn)
 
-        # Update log mapping table
+        # Update log mapping table, remove log block
         data_group_no = self.conf.nkftl_data_group_number_of_logical_block(
                 logical_block)
-        self.translator.log_mapping_table.remove_log_block(
-                data_group_no = data_group_no,
-                log_pbn = log_pbn)
+        yield self.env.process(self._remove_log_block(data_group_no, log_pbn,
+            tag='Unknown'))
+
         # Need to mark the log block as used data block now
-        self.block_pool.move_used_log_to_data_block(log_pbn)
+        try:
+            self.block_pool.move_used_log_to_data_block(log_pbn)
+        except ValueError:
+            print 'log_pbn............', log_pbn
+            raise
 
         self.region_locks.release_request(logical_block, req)
 
     def recycle_empty_data_block(self, data_block, tag):
+        req = self._block_recycle_locks.get_request(data_block)
+        yield req
+
         if data_block in self.block_pool.data_usedblocks and \
             not self.oob.is_any_page_valid(data_block):
 
@@ -1332,12 +1378,35 @@ class GarbageCollector(object):
             yield self.env.process(
                 self.des_flash.erase_pbn_extent(data_block, 1, tag=tag))
 
+        self._block_recycle_locks.release_request(data_block, req)
+
+    def _remove_log_block(self, data_group_no, log_pbn, tag):
+        """
+        This is for switch merge to forcely delete log mapping because
+        the log block now has become data block
+        """
+        req = self._block_recycle_locks.get_request(log_pbn)
+        yield req
+
+        is_log_block = log_pbn in self.block_pool.log_usedblocks
+        has_valid_pages = self.oob.is_any_page_valid(log_pbn)
+        is_in_dg = log_pbn in self.log_mapping_table\
+                .log_group_info[data_group_no].log_block_numbers()
+        if all([is_log_block, has_valid_pages, is_in_dg]):
+            self.translator.log_mapping_table.remove_log_block(
+                    data_group_no = data_group_no,
+                    log_pbn = log_pbn)
+
+        self._block_recycle_locks.release_request(log_pbn, req)
 
     def _recycle_empty_log_block(self, data_group_no, log_pbn, tag):
         """
         We will double check to see if the block has any valid page
         Remove the log block in every relevant data structure
         """
+        req = self._block_recycle_locks.get_request(log_pbn)
+        yield req
+
         is_log_block = log_pbn in self.block_pool.log_usedblocks
         no_valid_pages = not self.oob.is_any_page_valid(log_pbn)
         is_in_dg = log_pbn in self.log_mapping_table\
@@ -1358,6 +1427,7 @@ class GarbageCollector(object):
             yield self.env.process(
                 self.des_flash.erase_pbn_extent(log_pbn, 1, tag=tag))
 
+        self._block_recycle_locks.release_request(log_pbn, req)
 
     def assert_mapping(self, lpn):
         # Try log blocks
@@ -1375,6 +1445,7 @@ class GarbageCollector(object):
     def asserts(self):
         # number of log blocks in logblockinfo should be equal to
         # used log blocks in block_pool
+        return
         log_block_cnt = 0
         for dgn, loggroupinfo in self.translator.log_mapping_table\
             .log_group_info.items():

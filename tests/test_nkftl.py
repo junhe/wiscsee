@@ -3032,6 +3032,7 @@ class TestConcurrency_RandomOperations(AssertFinishTestCase):
                     ftl.read_ext(Extent(lpn, 1)))
             self.assertEqual(data, data_read[0])
 
+
 # @unittest.skip("")
 class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
     def test_write(self):
