@@ -810,16 +810,23 @@ class GarbageCollector(object):
         self.region_locks = region_locks
         self._phy_block_locks = LockPool(self.env)
         self._datagroup_gc_locks = LockPool(self.env)
+        self._cleaning_lock = simpy.Resource(self.env, capacity=1)
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
     def clean(self, forced=False):
+        req = self._cleaning_lock.request()
+        yield req
+
         if forced is False and self.decider.should_start() is False:
+            self._cleaning_lock.release(req)
             return
 
         for dgn in range(self.conf.n_datagroups_per_dev()):
             if dgn in self.log_mapping_table.log_group_info.keys():
                 yield self.env.process(self.clean_data_group(dgn))
+
+        self._cleaning_lock.release(req)
 
     def clean_old(self, forced=False):
         if forced is False and self.decider.should_start() is False:
