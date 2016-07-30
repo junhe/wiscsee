@@ -808,7 +808,7 @@ class GarbageCollector(object):
         self.env = simpy_env
         self.des_flash = des_flash
         self.region_locks = region_locks
-        self._block_recycle_locks = LockPool(self.env)
+        self._phy_block_locks = LockPool(self.env)
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
@@ -1364,7 +1364,7 @@ class GarbageCollector(object):
         self.region_locks.release_request(logical_block, req)
 
     def recycle_empty_data_block(self, data_block, tag):
-        req = self._block_recycle_locks.get_request(data_block)
+        req = self._phy_block_locks.get_request(data_block)
         yield req
 
         is_in_dataused = data_block in self.block_pool.data_usedblocks
@@ -1383,14 +1383,14 @@ class GarbageCollector(object):
             yield self.env.process(
                 self.des_flash.erase_pbn_extent(data_block, 1, tag=tag))
 
-        self._block_recycle_locks.release_request(data_block, req)
+        self._phy_block_locks.release_request(data_block, req)
 
     def _remove_log_block(self, data_group_no, log_pbn, tag):
         """
         This is for switch merge to forcely delete log mapping because
         the log block now has become data block
         """
-        req = self._block_recycle_locks.get_request(log_pbn)
+        req = self._phy_block_locks.get_request(log_pbn)
         yield req
 
         is_log_block = log_pbn in self.block_pool.log_usedblocks
@@ -1402,14 +1402,14 @@ class GarbageCollector(object):
                     data_group_no = data_group_no,
                     log_pbn = log_pbn)
 
-        self._block_recycle_locks.release_request(log_pbn, req)
+        self._phy_block_locks.release_request(log_pbn, req)
 
     def _recycle_empty_log_block(self, data_group_no, log_pbn, tag):
         """
         We will double check to see if the block has any valid page
         Remove the log block in every relevant data structure
         """
-        req = self._block_recycle_locks.get_request(log_pbn)
+        req = self._phy_block_locks.get_request(log_pbn)
         yield req
 
         is_log_block = log_pbn in self.block_pool.log_usedblocks
@@ -1432,7 +1432,7 @@ class GarbageCollector(object):
             yield self.env.process(
                 self.des_flash.erase_pbn_extent(log_pbn, 1, tag=tag))
 
-        self._block_recycle_locks.release_request(log_pbn, req)
+        self._phy_block_locks.release_request(log_pbn, req)
 
     def assert_mapping(self, lpn):
         # Try log blocks
