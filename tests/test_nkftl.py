@@ -3058,7 +3058,7 @@ class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
             op = self.random_op()
             yield env.process(self.operate(env, ftl, conf, op, ext))
 
-            if i % 20 == 0:
+            if i % 10 == 0:
                 yield env.process(ftl.clean(forced=False))
 
         # yield env.process(self.check_mirror(env, ftl, conf))
