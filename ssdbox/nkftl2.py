@@ -868,9 +868,9 @@ class GarbageCollector(object):
         update all the relevant information such as mapping, oob, flash.
         """
         if blk_info.block_type == TYPE_DATA_BLOCK:
-            # yield self.env.process(
-                # self.recycle_empty_data_block(blk_info.block_num, tag))
-            pass
+            yield self.env.process(
+                self.recycle_empty_data_block(blk_info.block_num, tag))
+            # pass
         elif blk_info.block_type == TYPE_LOG_BLOCK:
             yield self.env.process(
                 self.clean_log_block(blk_info.block_num, blk_info.data_group_no,
@@ -1068,7 +1068,8 @@ class GarbageCollector(object):
                 # destination page. We have to do this because we can only
                 # program flash sequentially.
                 # self.flash.page_write(dst_ppn, tag, data = -1)
-                self.oob.states.invalidate_page(dst_ppn)
+                # self.oob.states.invalidate_page(dst_ppn)
+                pass
 
         # Now we have all the pages in new block, we make the new block
         # the data block for lbn
@@ -1377,9 +1378,12 @@ class GarbageCollector(object):
         req = self._block_recycle_locks.get_request(data_block)
         yield req
 
-        if data_block in self.block_pool.data_usedblocks and \
-            not self.oob.is_any_page_valid(data_block):
+        is_in_dataused = data_block in self.block_pool.data_usedblocks
+        not_new_block = not self.oob.are_all_pages_erased(data_block)
+        no_valid = not self.oob.is_any_page_valid(data_block)
 
+
+        if  all([is_in_dataused, not_new_block, no_valid]):
             self.oob.erase_block(data_block)
             self.flash.block_erase(data_block, cat = tag)
             # need to remove data block mapping
