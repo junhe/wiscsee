@@ -239,14 +239,26 @@ class OutOfBandAreas(object):
         return lpns
 
     def is_any_page_valid(self, flash_block):
-        """
-        Check if there is any page in the
-        """
         ppn_start, ppn_end = self.conf.block_to_page_range(flash_block)
         for ppn in range(ppn_start, ppn_end):
             if self.states.is_page_valid(ppn):
                 return True
         return False
+
+    def are_all_pages_invalid(self, flash_block):
+        ppn_start, ppn_end = self.conf.block_to_page_range(flash_block)
+        for ppn in range(ppn_start, ppn_end):
+            if not self.states.is_page_invalid(ppn):
+                return False
+        return True
+
+    def are_all_pages_erased(self, flash_block):
+        ppn_start, ppn_end = self.conf.block_to_page_range(flash_block)
+        for ppn in range(ppn_start, ppn_end):
+            if not self.states.is_page_erased(ppn):
+                return False
+        return True
+
 
 
 
