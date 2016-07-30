@@ -812,14 +812,15 @@ class GarbageCollector(object):
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
-    def clean_new(self, forced=False):
+    def clean(self, forced=False):
         if forced is False and self.decider.should_start() is False:
             return
 
         for dgn in range(self.conf.n_datagroups_per_dev()):
-            yield self.env.process(self.clean_data_group(dgn))
+            if dgn in self.log_mapping_table.log_group_info.keys():
+                yield self.env.process(self.clean_data_group(dgn))
 
-    def clean(self, forced=False):
+    def clean_old(self, forced=False):
         if forced is False and self.decider.should_start() is False:
             return
 
