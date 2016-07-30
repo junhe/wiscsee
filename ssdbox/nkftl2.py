@@ -809,6 +809,7 @@ class GarbageCollector(object):
         self.des_flash = des_flash
         self.region_locks = region_locks
         self._phy_block_locks = LockPool(self.env)
+        self._datagroup_gc_locks = LockPool(self.env)
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
@@ -927,6 +928,10 @@ class GarbageCollector(object):
         # because for example the first block may require full merge and the
         # second can be partial merged. Doing the full merge first may change
         # the states of the second log block and makes full merge impossible.
+
+        req = self._datagroup_gc_locks.get_request(data_group_no)
+        yield req
+
         log_block_list = copy.copy(self.log_mapping_table\
                 .log_group_info[data_group_no].log_block_numbers())
         for log_block in log_block_list:
@@ -938,6 +943,8 @@ class GarbageCollector(object):
                         data_group_no=data_group_no,
                         tag=TAG_WRITE_DRIVEN))
             self.asserts()
+
+        self._datagroup_gc_locks.release_request(data_group_no, req)
 
     def full_merge(self, log_pbn):
         """
