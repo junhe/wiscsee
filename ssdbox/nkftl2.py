@@ -343,29 +343,19 @@ class NKBlockPool(MultiChannelBlockPoolBase):
     def pop_a_free_block_to_log_blocks(self):
         blocknum = self.pick_and_move(src=TFREE, dst=TLOG)
 
-        if blocknum == 3771:
-            print blocknum, '.......pop_a_free_block_to_log_blocks'
         return blocknum
 
     def move_used_log_to_data_block(self, blocknum):
-        if blocknum == 3771:
-            print blocknum, '.......move_used_log_to_data_block'
         self.change_tag(blocknum, src=TLOG, dst=TDATA)
 
     def pop_a_free_block_to_data_blocks(self):
         blocknum = self.pick_and_move(src=TFREE, dst=TDATA)
-        if blocknum == 3771:
-            print blocknum, '.......pop_a_free_block_to_data_blocks'
         return blocknum
 
     def free_used_data_block(self, blocknum):
-        if blocknum == 3771:
-            print blocknum, '.......free_used_data_block'
         self.change_tag(blocknum, src=TDATA, dst=TFREE)
 
     def free_used_log_block(self, blocknum):
-        if blocknum == 3771:
-            print blocknum, '......free_used_log_block'
         self.change_tag(blocknum, src=TLOG, dst=TFREE)
 
     def total_used_blocks(self):
