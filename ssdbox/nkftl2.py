@@ -789,7 +789,7 @@ class VictimLogBlocks(VictimBlocksBase):
 class GarbageCollector(object):
     def __init__(self, confobj, block_pool, flashobj, oobobj, recorderobj,
             translatorobj, global_helper_obj, log_mapping, data_block_mapping,
-            simpy_env, des_flash, region_locks):
+            simpy_env, des_flash, logical_block_locks):
         self.conf = confobj
         self.flash = flashobj
         self.oob = oobobj
@@ -800,7 +800,7 @@ class GarbageCollector(object):
         self.data_block_mapping_table = data_block_mapping
         self.env = simpy_env
         self.des_flash = des_flash
-        self.region_locks = region_locks
+        self.logical_block_locks = logical_block_locks
         self._phy_block_locks = LockPool(self.env)
         self._datagroup_gc_locks = LockPool(self.env)
         self._cleaning_lock = simpy.Resource(self.env, capacity=1)
@@ -998,7 +998,7 @@ class GarbageCollector(object):
         """
         # We have to make sure this does not fail, somehow.
 
-        req = self.region_locks.get_request(lbn)
+        req = self.logical_block_locks.get_request(lbn)
         yield req
 
         # We should stop aggregating this logical block if all its
@@ -1012,7 +1012,7 @@ class GarbageCollector(object):
         # someone else is modifying without lock).
         if self._is_any_lpn_in_logmapping(lbn) is False:
             # nothing to merge now
-            self.region_locks.release_request(lbn, req)
+            self.logical_block_locks.release_request(lbn, req)
             return
 
         self.asserts()
@@ -1080,7 +1080,7 @@ class GarbageCollector(object):
         self.translator.data_block_mapping_table.add_data_block_mapping(
             lbn = lbn, pbn = dst_phy_block_num)
 
-        self.region_locks.release_request(lbn, req)
+        self.logical_block_locks.release_request(lbn, req)
 
     def _is_any_lpn_in_logmapping(self, lbn):
         start, end = self.conf.block_to_page_range(lbn)
@@ -1168,7 +1168,7 @@ class GarbageCollector(object):
         """
         # TODO: should we call partial merge by logical block number, in
         # stead of physical block number? Easier to reason about the locks
-        req = self.region_locks.get_request(lbn)
+        req = self.logical_block_locks.get_request(lbn)
         yield req
 
         is_mergable, logical_block_ret, offset_ret = self.is_partial_mergable(
@@ -1179,7 +1179,7 @@ class GarbageCollector(object):
             # have changed. We check logical_block_ret != logical_block
             # because we only lock logical block, it is possible that
             # two switch_merge for the same log block run in parallel.
-            self.region_locks.release_request(lbn, req)
+            self.logical_block_locks.release_request(lbn, req)
             return
 
         self.recorder.count_me("garbage_collection", 'partial_merge')
@@ -1272,7 +1272,7 @@ class GarbageCollector(object):
         # move from log pool to data pool
         self.block_pool.move_used_log_to_data_block(log_pbn)
 
-        self.region_locks.release_request(lbn, req)
+        self.logical_block_locks.release_request(lbn, req)
 
     def is_switch_mergable(self, log_pbn):
         """
@@ -1328,7 +1328,7 @@ class GarbageCollector(object):
              set _cur_log_block to None
         """
 
-        req = self.region_locks.get_request(logical_block)
+        req = self.logical_block_locks.get_request(logical_block)
         yield req
 
         is_mergable, logical_block_ret = self.is_switch_mergable(log_pbn)
@@ -1337,7 +1337,7 @@ class GarbageCollector(object):
             # have changed. We check logical_block_ret != logical_block
             # because we only lock logical block, it is possible that
             # two switch_merge for the same log block run in parallel.
-            self.region_locks.release_request(logical_block, req)
+            self.logical_block_locks.release_request(logical_block, req)
             return
 
         self.recorder.count_me("garbage_collection", 'switch_merge')
@@ -1368,7 +1368,7 @@ class GarbageCollector(object):
             print 'log_pbn............', log_pbn
             raise
 
-        self.region_locks.release_request(logical_block, req)
+        self.logical_block_locks.release_request(logical_block, req)
 
     def recycle_empty_data_block(self, data_block, tag):
         req = self._phy_block_locks.get_request(data_block)
@@ -1508,7 +1508,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.log_mapping_table = LogMappingTable(confobj,
             self.block_pool, recorderobj, self.global_helper)
 
-        self.region_locks = LockPool(self.env)
+        self.logical_block_locks = LockPool(self.env)
 
         ###### the managers ######
         self.translator = Translator(
@@ -1532,7 +1532,7 @@ class Ftl(ftlbuilder.FtlBuilder):
             data_block_mapping = self.data_block_mapping_table,
             simpy_env = self.env,
             des_flash = self.des_flash,
-            region_locks = self.region_locks
+            logical_block_locks = self.logical_block_locks
             )
 
     def lpn_to_ppn(self, lpn):
@@ -1559,7 +1559,7 @@ class Ftl(ftlbuilder.FtlBuilder):
 
     def read_region(self, extent):
         block_id, _ = self.conf.page_to_block_off(extent.lpn_start)
-        req = self.region_locks.get_request(block_id)
+        req = self.logical_block_locks.get_request(block_id)
         yield req
 
         ppns_to_read = []
@@ -1577,7 +1577,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(
             self.des_flash.rw_ppns(ppns_to_read, 'read', tag = "Unknown"))
 
-        self.region_locks.release_request(block_id, req)
+        self.logical_block_locks.release_request(block_id, req)
 
         self.env.exit(contents)
 
@@ -1610,7 +1610,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         a region must in the same data group
         """
         block_id, _ = self.conf.page_to_block_off(extent.lpn_start)
-        req = self.region_locks.get_request(block_id)
+        req = self.logical_block_locks.get_request(block_id)
         yield req
 
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(extent.lpn_start)
@@ -1636,18 +1636,18 @@ class Ftl(ftlbuilder.FtlBuilder):
 
             if n_ppns < loop_ext.lpn_count:
                 # we cannot find vailable pages in log blocks
-                self.region_locks.release_request(block_id, req)
+                self.logical_block_locks.release_request(block_id, req)
 
                 yield self.env.process(
                     self.garbage_collector.clean_data_group(data_group_no))
 
-                req = self.region_locks.get_request(block_id)
+                req = self.logical_block_locks.get_request(block_id)
                 yield req
 
             loop_ext.lpn_start += n_ppns
             loop_ext.lpn_count -= n_ppns
 
-        self.region_locks.release_request(block_id, req)
+        self.logical_block_locks.release_request(block_id, req)
 
         # TODO: maybe this should not be here.
         # yield self.env.process(self.garbage_collector.clean())
@@ -1720,7 +1720,7 @@ class Ftl(ftlbuilder.FtlBuilder):
 
     def _discard_region(self, extent):
         block_id, _ = self.conf.page_to_block_off(extent.lpn_start)
-        req = self.region_locks.get_request(block_id)
+        req = self.logical_block_locks.get_request(block_id)
         yield req
 
         for lpn in extent.lpn_iter():
@@ -1730,7 +1730,7 @@ class Ftl(ftlbuilder.FtlBuilder):
                     self.translator.log_mapping_table.remove_lpn(lpn)
                 self.oob.wipe_ppn(ppn)
 
-        self.region_locks.release_request(block_id, req)
+        self.logical_block_locks.release_request(block_id, req)
 
     def post_processing(self):
         pass
