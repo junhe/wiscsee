@@ -112,9 +112,6 @@ class Config(config.ConfigNCQFTL):
         return self['nkftl']['max_blocks_in_log_group'] * \
             self.n_pages_per_block
 
-    def region_id_of_lpn(self, lpn):
-        return lpn / self.n_pages_per_block
-
     def nkftl_allowed_num_of_data_blocks(self):
         """
         NKFTL has to have certain amount of log and data blocks
@@ -1561,8 +1558,8 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.env.exit(ext_data)
 
     def read_region(self, extent):
-        region_id = self.conf.region_id_of_lpn(extent.lpn_start)
-        req = self.region_locks.get_request(region_id)
+        block_id, _ = self.conf.page_to_block_off(extent.lpn_start)
+        req = self.region_locks.get_request(block_id)
         yield req
 
         ppns_to_read = []
@@ -1580,7 +1577,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(
             self.des_flash.rw_ppns(ppns_to_read, 'read', tag = "Unknown"))
 
-        self.region_locks.release_request(region_id, req)
+        self.region_locks.release_request(block_id, req)
 
         self.env.exit(contents)
 
@@ -1612,8 +1609,8 @@ class Ftl(ftlbuilder.FtlBuilder):
         lpns in extent must be in the same region
         a region must in the same data group
         """
-        region_id = self.conf.region_id_of_lpn(extent.lpn_start)
-        req = self.region_locks.get_request(region_id)
+        block_id, _ = self.conf.page_to_block_off(extent.lpn_start)
+        req = self.region_locks.get_request(block_id)
         yield req
 
         data_group_no = self.conf.nkftl_data_group_number_of_lpn(extent.lpn_start)
@@ -1639,18 +1636,18 @@ class Ftl(ftlbuilder.FtlBuilder):
 
             if n_ppns < loop_ext.lpn_count:
                 # we cannot find vailable pages in log blocks
-                self.region_locks.release_request(region_id, req)
+                self.region_locks.release_request(block_id, req)
 
                 yield self.env.process(
                     self.garbage_collector.clean_data_group(data_group_no))
 
-                req = self.region_locks.get_request(region_id)
+                req = self.region_locks.get_request(block_id)
                 yield req
 
             loop_ext.lpn_start += n_ppns
             loop_ext.lpn_count -= n_ppns
 
-        self.region_locks.release_request(region_id, req)
+        self.region_locks.release_request(block_id, req)
 
         # TODO: maybe this should not be here.
         # yield self.env.process(self.garbage_collector.clean())
@@ -1722,8 +1719,8 @@ class Ftl(ftlbuilder.FtlBuilder):
             yield self.env.process(self._discard_region(region_ext))
 
     def _discard_region(self, extent):
-        region_id = self.conf.region_id_of_lpn(extent.lpn_start)
-        req = self.region_locks.get_request(region_id)
+        block_id, _ = self.conf.page_to_block_off(extent.lpn_start)
+        req = self.region_locks.get_request(block_id)
         yield req
 
         for lpn in extent.lpn_iter():
@@ -1733,7 +1730,7 @@ class Ftl(ftlbuilder.FtlBuilder):
                     self.translator.log_mapping_table.remove_lpn(lpn)
                 self.oob.wipe_ppn(ppn)
 
-        self.region_locks.release_request(region_id, req)
+        self.region_locks.release_request(block_id, req)
 
     def post_processing(self):
         pass
