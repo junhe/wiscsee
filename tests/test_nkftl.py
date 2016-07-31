@@ -3101,6 +3101,7 @@ class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
                     ftl.read_ext(Extent(lpn, 1)))
             self.assertEqual(data, data_read[0])
 
+@unittest.skip("Take a little too long")
 class TestConcurrency_DataIntegrity(AssertFinishTestCase):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
@@ -3110,7 +3111,8 @@ class TestConcurrency_DataIntegrity(AssertFinishTestCase):
         env.run()
 
     def main_proc(self, env, ftl, conf):
-        for i in range(8):
+        # for i in range(8): # use this for longer test
+        for i in range(1):
             yield env.process(self.op_and_check_proc(env, ftl, conf))
 
     def op_and_check_proc(self, env, ftl, conf):
@@ -3141,7 +3143,6 @@ class TestConcurrency_DataIntegrity(AssertFinishTestCase):
         return random.choice(['read', 'write', 'discard'])
 
     def operate(self, env, ftl, conf, op, extent):
-        print str(extent)
         if op == 'write':
             extent_data = random_data_of_extent(extent)
             yield env.process(ftl.write_ext(extent, extent_data))
