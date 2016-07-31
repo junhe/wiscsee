@@ -34,8 +34,6 @@ def create_config():
     conf['nkftl']['GC_threshold_ratio'] = 0.8
     conf['nkftl']['GC_low_threshold_ratio'] = 0.3
 
-    conf['n_pages_per_region'] = conf.n_pages_per_block
-
     utils.set_exp_metadata(conf, save_data = False,
             expname = 'test_expname',
             subexpname = 'test_subexpname')
@@ -2026,8 +2024,6 @@ def create_config_2():
     conf['nkftl']['max_blocks_in_log_group'] = 16
     conf['nkftl']['n_blocks_in_data_group'] = 4
 
-    conf['n_pages_per_region'] = conf.n_pages_per_block
-
     utils.set_exp_metadata(conf, save_data = False,
             expname = 'test_expname',
             subexpname = 'test_subexpname')
@@ -2424,7 +2420,7 @@ class TestRegionSerialization_DifferentRegion(AssertFinishTestCase, RWMixin):
         # write different regions at the same time
         p1 = env.process(ftl.write_ext(Extent(0, 1)))
         p2 = env.process(ftl.write_ext(
-            Extent(conf.n_pages_per_region(), 1)))
+            Extent(conf.n_pages_per_block, 1)))
 
         yield simpy.AllOf(env, [p1, p2])
 

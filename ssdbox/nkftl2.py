@@ -78,12 +78,8 @@ class Config(config.ConfigNCQFTL):
 
                 "provision_ratio": 1.5 # 1.5: 1GB user size, 1.5 flash size behind
             },
-            'n_pages_per_region': self.n_pages_per_block,
         }
         self.update(local_itmes)
-
-    def n_pages_per_region(self):
-        return self['n_pages_per_region']
 
     def n_pages_per_data_group(self):
         n_blocks_in_data_group = self['nkftl']['n_blocks_in_data_group']
@@ -117,7 +113,7 @@ class Config(config.ConfigNCQFTL):
             self.n_pages_per_block
 
     def region_id_of_lpn(self, lpn):
-        return lpn / self['n_pages_per_region']
+        return lpn / self.n_pages_per_block
 
     def nkftl_allowed_num_of_data_blocks(self):
         """
@@ -1556,7 +1552,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.env.exit(content[0])
 
     def read_ext(self, extent):
-        extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
+        extents = split_ext_by_region(self.conf.n_pages_per_block, extent)
         ext_data = []
         for region_ext in extents:
             ret_data = yield self.env.process(self.read_region(region_ext))
@@ -1598,14 +1594,18 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(self.garbage_collector.clean())
 
     def write_ext(self, extent, data=None):
-        extents = split_ext_by_region(self.conf.n_pages_per_region(), extent)
+        extents = split_ext_by_region(self.conf.n_pages_per_block, extent)
+        region_write_procs = []
         for region_ext in extents:
             if data is None:
                 region_data = None
             else:
                 region_data = self._sub_ext_data(data, extent, region_ext)
-            yield self.env.process(
+            p = self.env.process(
                     self.write_region(region_ext, data=region_data))
+            region_write_procs.append(p)
+
+        yield simpy.AllOf(self.env, region_write_procs)
 
     def write_region(self, extent, data=None):
         """
@@ -1717,7 +1717,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(self._discard_region(Extent(lpn, 1)))
 
     def discard_ext(self, extent):
-        extents = split_ext_by_region(self.conf['n_pages_per_region'], extent)
+        extents = split_ext_by_region(self.conf.n_pages_per_block, extent)
         for region_ext in extents:
             yield self.env.process(self._discard_region(region_ext))
 
@@ -1745,7 +1745,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         return self.garbage_collector.decider.should_start()
 
 
-def split_ext_by_region(n_pages_per_region, extent):
+def split_ext_by_region(n_pages_in_zone, extent):
     if extent.lpn_count == 0:
         return None
 
@@ -1753,7 +1753,7 @@ def split_ext_by_region(n_pages_per_region, extent):
     cur_ext = None
     exts = []
     for lpn in extent.lpn_iter():
-        seg_id = lpn / n_pages_per_region
+        seg_id = lpn / n_pages_in_zone
         if seg_id == last_seg_id:
             cur_ext.lpn_count += 1
         else:
