@@ -1549,7 +1549,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.env.exit(content[0])
 
     def read_ext(self, extent):
-        extents = split_ext_by_region(self.conf.n_pages_per_block, extent)
+        extents = split_ext(self.conf.n_pages_per_block, extent)
         ext_data = []
         for region_ext in extents:
             ret_data = yield self.env.process(self.read_region(region_ext))
@@ -1591,7 +1591,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(self.garbage_collector.clean())
 
     def write_ext(self, extent, data=None):
-        extents = split_ext_by_region(self.conf.n_pages_per_block, extent)
+        extents = split_ext(self.conf.n_pages_per_block, extent)
         region_write_procs = []
         for region_ext in extents:
             if data is None:
@@ -1714,7 +1714,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(self._discard_region(Extent(lpn, 1)))
 
     def discard_ext(self, extent):
-        extents = split_ext_by_region(self.conf.n_pages_per_block, extent)
+        extents = split_ext(self.conf.n_pages_per_block, extent)
         for region_ext in extents:
             yield self.env.process(self._discard_region(region_ext))
 
@@ -1742,7 +1742,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         return self.garbage_collector.decider.should_start()
 
 
-def split_ext_by_region(n_pages_in_zone, extent):
+def split_ext(n_pages_in_zone, extent):
     if extent.lpn_count == 0:
         return None
 
