@@ -3101,6 +3101,104 @@ class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
                     ftl.read_ext(Extent(lpn, 1)))
             self.assertEqual(data, data_read[0])
 
+class TestConcurrency_DataIntegrity(AssertFinishTestCase):
+    def test_write(self):
+        ftl, conf, rec, env = create_nkftl()
+        self.data_mirror = {}
+
+        env.process(self.main_proc(env, ftl, conf))
+        env.run()
+
+    def main_proc(self, env, ftl, conf):
+        for i in range(8):
+            yield env.process(self.op_and_check_proc(env, ftl, conf))
+
+    def op_and_check_proc(self, env, ftl, conf):
+        self.init_non_overlap_exts(conf)
+
+        procs = []
+        for i in range(32):
+            p = env.process(self.op_proc(env, ftl, conf))
+            procs.append(p)
+        yield simpy.AllOf(env, procs)
+
+        yield env.process(self.check_mirror(env, ftl, conf))
+
+        self.set_finished()
+
+    def op_proc(self, env, ftl, conf):
+        while True:
+            ext = self.next_ext()
+            if ext == None:
+                break
+            op = self.random_op()
+            yield env.process(self.operate(env, ftl, conf, op, ext))
+
+            if i % 10 == 0:
+                yield env.process(ftl.clean(forced=False))
+
+    def random_op(self):
+        return random.choice(['read', 'write', 'discard'])
+
+    def operate(self, env, ftl, conf, op, extent):
+        print str(extent)
+        if op == 'write':
+            extent_data = random_data_of_extent(extent)
+            yield env.process(ftl.write_ext(extent, extent_data))
+            self.write_mirror(extent, extent_data)
+        elif op == 'read':
+            yield env.process(ftl.read_ext(extent))
+        elif op == 'discard':
+            self.discard_mirror(extent)
+            yield env.process(ftl.discard_ext(extent))
+
+    def write_mirror(self, extent, data):
+        for lpn, pagedata in zip(extent.lpn_iter(), data):
+            self.data_mirror[lpn] = pagedata
+
+    def discard_mirror(self, extent):
+        for lpn in extent.lpn_iter():
+            try:
+                del self.data_mirror[lpn]
+            except KeyError:
+                pass
+
+    def check_mirror(self, env, ftl, conf):
+        for lpn, data in self.data_mirror.items():
+            data_read = yield env.process(
+                    ftl.read_ext(Extent(lpn, 1)))
+            self.assertEqual(data, data_read[0])
+
+    def init_non_overlap_exts(self, conf):
+        self.nonoverlap_exts = self.non_overlap_extents(
+                int(conf.total_num_pages() * 0.6), conf.n_pages_per_block)
+        random.shuffle(self.nonoverlap_exts)
+        self.ext_i = 0
+
+    def next_ext(self):
+        try:
+            ext = self.nonoverlap_exts[self.ext_i]
+        except IndexError:
+            return None
+        else:
+            self.ext_i += 1
+            return ext
+
+    def non_overlap_extents(self, n, n_pages_per_block):
+        extents = []
+        start = 0
+        while start < n:
+            ideal_size = random.randint(1, n_pages_per_block * 8)
+            size = min(ideal_size, n - start)
+
+            ext = Extent(start, size)
+            extents.append(ext)
+
+            start += size
+
+        return extents
+
+
 
 # Add test without lpn overlap
 
