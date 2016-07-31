@@ -104,11 +104,11 @@ def create_gc():
     flashobj = flash.SimpleFlash(recorder=rec, confobj=conf)
     simpy_env = create_env()
     des_flash = create_flash_controller(simpy_env, conf, rec)
-    region_locks = LockPool(simpy_env)
+    logical_block_locks = LockPool(simpy_env)
 
     gc = GarbageCollector(conf, block_pool, flashobj, oob, rec,
             translator, helper, logmaptable, datablocktable, simpy_env,
-            des_flash, region_locks)
+            des_flash, logical_block_locks)
 
     GCPack = namedtuple('GCPack', 'gc, conf, block_pool, rec, oob, helper,' \
         'logmaptable, datablocktable, translator, flashobj, simpy_env, des_flash')
@@ -2417,7 +2417,7 @@ class TestLogicalBlockSerialization_DifferentLogicalBlock(AssertFinishTestCase, 
         env.run()
 
     def main_proc(self, env, ftl, conf):
-        # write different regions at the same time
+        # write different logical_blocks at the same time
         p1 = env.process(ftl.write_ext(Extent(0, 1)))
         p2 = env.process(ftl.write_ext(
             Extent(conf.n_pages_per_block, 1)))
@@ -2436,7 +2436,7 @@ class TestLogicalBlockSerialization_SameLogicalBlock(AssertFinishTestCase, RWMix
         env.run()
 
     def main_proc(self, env, ftl, conf):
-        # write different regions at the same time
+        # write different logical_blocks at the same time
         p1 = env.process(ftl.write_ext(Extent(0, 1)))
         p2 = env.process(ftl.write_ext(Extent(0, 1)))
 
@@ -2454,7 +2454,7 @@ class TestLogicalBlockSerialization_WriteAndRead(AssertFinishTestCase, RWMixin):
         env.run()
 
     def main_proc(self, env, ftl, conf):
-        # write different regions at the same time
+        # write different logical_blocks at the same time
         extent = Extent(0, 1)
         yield env.process(ftl.write_ext(extent,
             self.data_of_extent(extent)))
@@ -2476,7 +2476,7 @@ class TestLogicalBlockSerialization_Discard(AssertFinishTestCase, RWMixin):
         env.run()
 
     def main_proc(self, env, ftl, conf):
-        # write different regions at the same time
+        # write different logical_blocks at the same time
         extent = Extent(0, 1)
         yield env.process(ftl.write_ext(extent,
             self.data_of_extent(extent)))
@@ -2529,7 +2529,7 @@ class TestConcurrency_DataGroupGC(AssertFinishTestCase, WriteNCheckMixin):
         env.run()
 
     def main_proc(self, env, ftl, conf):
-        # write different regions at the same time
+        # write different logical_blocks at the same time
         n = conf.n_pages_per_data_group()
         extents = []
         for i in range(100):
@@ -2552,7 +2552,7 @@ class TestConcurrency_RandomWritesBroad(AssertFinishTestCase, WriteNCheckMixin):
         env.run()
 
     def main_proc(self, env, ftl, conf):
-        # write different regions at the same time
+        # write different logical_blocks at the same time
         n = int(conf.total_num_pages() * 0.8)
         extents = []
         for i in range(10000):
