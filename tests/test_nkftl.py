@@ -2299,15 +2299,15 @@ class TestFTLOperations(AssertFinishTestCase):
 
         self.set_finished()
 
-    def test_write_region(self):
+    def test_write_logical_block(self):
         ftl, conf, rec, env = create_nkftl()
 
-        env.process(self.proc_test_write_region(env, ftl, conf))
+        env.process(self.proc_test_write_logical_block(env, ftl, conf))
         env.run()
 
-    def proc_test_write_region(self, env, ftl, conf):
+    def proc_test_write_logical_block(self, env, ftl, conf):
         ext = Extent(lpn_start=1, lpn_count=3)
-        yield env.process(ftl.write_region(ext))
+        yield env.process(ftl.write_logical_block(ext))
 
         ppns = []
         for lpn in ext.lpn_iter():
@@ -2317,7 +2317,7 @@ class TestFTLOperations(AssertFinishTestCase):
             self.assertEqual(found, True)
             ppns.append(ppn)
 
-        yield env.process(ftl.write_region(ext))
+        yield env.process(ftl.write_logical_block(ext))
 
         ppns2 = []
         for lpn in ext.lpn_iter():
@@ -2330,16 +2330,16 @@ class TestFTLOperations(AssertFinishTestCase):
 
         self.set_finished()
 
-    def test_write_region_overflow(self):
+    def test_write_logical_block_overflow(self):
         ftl, conf, rec, env = create_nkftl()
 
-        env.process(self.proc_test_write_region_overflow(env, ftl, conf))
+        env.process(self.proc_test_write_logical_block_overflow(env, ftl, conf))
         env.run()
 
-    def proc_test_write_region_overflow(self, env, ftl, conf):
+    def proc_test_write_logical_block_overflow(self, env, ftl, conf):
         for i in range(3):
             ext = Extent(lpn_start=0, lpn_count=8)
-            yield env.process(ftl.write_region(ext))
+            yield env.process(ftl.write_logical_block(ext))
 
             ppns = []
             for lpn in ext.lpn_iter():
@@ -2409,7 +2409,7 @@ class TestSimpyIntegration(AssertFinishTestCase, RWMixin):
         env.run()
 
 
-class TestRegionSerialization_DifferentRegion(AssertFinishTestCase, RWMixin):
+class TestLogicalBlockSerialization_DifferentLogicalBlock(AssertFinishTestCase, RWMixin):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
 
@@ -2428,7 +2428,7 @@ class TestRegionSerialization_DifferentRegion(AssertFinishTestCase, RWMixin):
 
         self.set_finished()
 
-class TestRegionSerialization_SameRegion(AssertFinishTestCase, RWMixin):
+class TestLogicalBlockSerialization_SameLogicalBlock(AssertFinishTestCase, RWMixin):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
 
@@ -2446,7 +2446,7 @@ class TestRegionSerialization_SameRegion(AssertFinishTestCase, RWMixin):
 
         self.set_finished()
 
-class TestRegionSerialization_WriteAndRead(AssertFinishTestCase, RWMixin):
+class TestLogicalBlockSerialization_WriteAndRead(AssertFinishTestCase, RWMixin):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
 
@@ -2468,7 +2468,7 @@ class TestRegionSerialization_WriteAndRead(AssertFinishTestCase, RWMixin):
 
         self.set_finished()
 
-class TestRegionSerialization_Discard(AssertFinishTestCase, RWMixin):
+class TestLogicalBlockSerialization_Discard(AssertFinishTestCase, RWMixin):
     def test(self):
         ftl, conf, rec, env = create_nkftl()
 

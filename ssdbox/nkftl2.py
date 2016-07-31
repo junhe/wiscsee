@@ -1551,13 +1551,13 @@ class Ftl(ftlbuilder.FtlBuilder):
     def read_ext(self, extent):
         extents = split_ext(self.conf.n_pages_per_block, extent)
         ext_data = []
-        for region_ext in extents:
-            ret_data = yield self.env.process(self.read_region(region_ext))
+        for logical_block_ext in extents:
+            ret_data = yield self.env.process(self.read_logical_block(logical_block_ext))
             ext_data.extend(ret_data)
 
         self.env.exit(ext_data)
 
-    def read_region(self, extent):
+    def read_logical_block(self, extent):
         block_id, _ = self.conf.page_to_block_off(extent.lpn_start)
         req = self.logical_block_locks.get_request(block_id)
         yield req
@@ -1592,23 +1592,19 @@ class Ftl(ftlbuilder.FtlBuilder):
 
     def write_ext(self, extent, data=None):
         extents = split_ext(self.conf.n_pages_per_block, extent)
-        region_write_procs = []
-        for region_ext in extents:
+        logical_block_procs = []
+        for logical_block_ext in extents:
             if data is None:
-                region_data = None
+                logical_block_data = None
             else:
-                region_data = self._sub_ext_data(data, extent, region_ext)
+                logical_block_data = self._sub_ext_data(data, extent, logical_block_ext)
             p = self.env.process(
-                    self.write_region(region_ext, data=region_data))
-            region_write_procs.append(p)
+                    self.write_logical_block(logical_block_ext, data=logical_block_data))
+            logical_block_procs.append(p)
 
-        yield simpy.AllOf(self.env, region_write_procs)
+        yield simpy.AllOf(self.env, logical_block_procs)
 
-    def write_region(self, extent, data=None):
-        """
-        lpns in extent must be in the same region
-        a region must in the same data group
-        """
+    def write_logical_block(self, extent, data=None):
         block_id, _ = self.conf.page_to_block_off(extent.lpn_start)
         req = self.logical_block_locks.get_request(block_id)
         yield req
@@ -1711,14 +1707,14 @@ class Ftl(ftlbuilder.FtlBuilder):
 
 
     def lba_discard(self, lpn):
-        yield self.env.process(self._discard_region(Extent(lpn, 1)))
+        yield self.env.process(self._discard_logical_block(Extent(lpn, 1)))
 
     def discard_ext(self, extent):
         extents = split_ext(self.conf.n_pages_per_block, extent)
-        for region_ext in extents:
-            yield self.env.process(self._discard_region(region_ext))
+        for logical_block_ext in extents:
+            yield self.env.process(self._discard_logical_block(logical_block_ext))
 
-    def _discard_region(self, extent):
+    def _discard_logical_block(self, extent):
         block_id, _ = self.conf.page_to_block_off(extent.lpn_start)
         req = self.logical_block_locks.get_request(block_id)
         yield req
