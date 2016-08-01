@@ -96,10 +96,11 @@ class Alignment(UtilMixin, BarrierMixin):
 
     def interest_workload(self):
         n_blocks = self.traffic_size / self.block_size
-        chunk_size = self.block_size / 2
         if self.aligned is True:
-            offsets = [0, chunk_size]
+            chunk_size = self.block_size
+            offsets = [0]
         else:
+            chunk_size = self.block_size / 2
             offsets = [chunk_size, 0]
 
         for block_id in range(n_blocks):

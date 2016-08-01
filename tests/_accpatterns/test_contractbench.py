@@ -17,14 +17,14 @@ class TestAlignment(unittest.TestCase):
                 aligned=True, op=OP_WRITE, n_ncq_slots=16)
 
         reqs = [req for req in list(alignbench) if isinstance(req, Request)]
-        self.assertEqual(len(reqs), 6)
+        self.assertEqual(len(reqs), 3)
 
         offs = [req.offset for req in reqs]
-        self.assertListEqual(offs, [0, 2, 4, 6, 8, 10])
+        self.assertListEqual(offs, [0, 4, 8])
 
         for req in reqs:
             self.assertEqual(req.op, OP_WRITE)
-            self.assertEqual(req.size, 2)
+            self.assertEqual(req.size, 4)
 
     def test_unaligned(self):
         alignbench = Alignment(block_size=4, traffic_size=12,
