@@ -3089,7 +3089,7 @@ class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
 
     def main_proc(self, env, ftl, conf):
         procs = []
-        for i in range(64):
+        for i in range(16):
             p = env.process(self.op_proc(env, ftl, conf))
             procs.append(p)
         yield simpy.AllOf(env, procs)
