@@ -807,6 +807,9 @@ class GarbageCollector(object):
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
+        n_cleaners = self.conf.n_channels_per_dev
+        self._cleaner_res = simpy.Resource(self.env, capacity=n_cleaners)
+
     def clean(self, forced=False):
         req = self._cleaning_lock.request()
         yield req
@@ -820,97 +823,6 @@ class GarbageCollector(object):
                 yield self.env.process(self.clean_data_group(dgn))
 
         self._cleaning_lock.release(req)
-
-    def clean_old(self, forced=False):
-        if forced is False and self.decider.should_start() is False:
-            return
-
-        block_iter = self.victim_blocks_iter()
-
-        while self.decider.should_stop() is False:
-            try:
-                blockinfo = block_iter.next()
-            except StopIteration:
-                print 'Out of victim blocks'
-                self.recorder.count_me("GC", "StopIteration")
-                break
-
-            yield self.env.process(
-                    self.clean_block(blockinfo, tag = TAG_THRESHOLD_GC))
-
-    def victim_blocks_iter(self):
-        return itertools.chain.from_iterable(
-                [VictimDataBlocks(conf=self.conf,
-                    block_pool=self.block_pool,
-                    oob=self.oob,
-                    rec=self.recorder,
-                    log_mapping_table=self.log_mapping_table,
-                    data_block_mapping_table=self.data_block_mapping_table),
-                VictimLogBlocks(conf=self.conf,
-                    block_pool=self.block_pool,
-                    oob=self.oob,
-                    rec=self.recorder,
-                    log_mapping_table=self.log_mapping_table,
-                    data_block_mapping_table=self.data_block_mapping_table)
-                ])
-
-    def clean_block(self, blk_info, tag):
-        """
-        Cleans one pariticular block, either data or log block. It will
-        update all the relevant information such as mapping, oob, flash.
-        """
-        if blk_info.block_type == TYPE_DATA_BLOCK:
-            yield self.env.process(
-                self.recycle_empty_data_block(blk_info.block_num, tag))
-            # pass
-        elif blk_info.block_type == TYPE_LOG_BLOCK:
-            yield self.env.process(
-                self.clean_log_block(blk_info.block_num, blk_info.data_group_no,
-                    tag))
-
-    def clean_log_block(self, log_pbn, data_group_no, tag):
-        """
-        0. If not valid page in log_pbn, simply erase and free it
-        1. Try switch merge
-        2. Try copy merge
-        3. Try full merge
-        """
-        if log_pbn not in self.block_pool.log_usedblocks:
-            # it is quite dynamic, this log block may have been
-            # GCed with previous blocks
-            return
-
-        # Check to see if it is really the log block of the speicfed data
-        # group
-        if log_pbn not in self.translator.log_mapping_table\
-                .log_group_info[data_group_no].log_block_numbers():
-            # TODO: maybe you should just return here instead of panic?
-            return
-            raise RuntimeError("{} is not a log block of data group {}"\
-                .format(log_pbn, data_group_no))
-
-        # Just free it?
-        if not self.oob.is_any_page_valid(log_pbn):
-            yield self.env.process(self._recycle_empty_log_block(
-                data_group_no, log_pbn, tag))
-            return
-
-        is_mergable, logical_block = self.is_switch_mergable(log_pbn)
-        if is_mergable == True:
-            yield self.env.process(
-                    self.switch_merge(log_pbn = log_pbn,
-                    logical_block = logical_block))
-            return
-
-        is_mergable, logical_block, offset = self.is_partial_mergable(
-            log_pbn)
-        if is_mergable == True:
-            yield self.env.process(
-                self.partial_merge(log_pbn = log_pbn, lbn = logical_block,
-                first_free_offset = offset))
-            return
-
-        yield self.env.process(self.full_merge(log_pbn))
 
     def clean_data_group(self, data_group_no):
         """
@@ -945,6 +857,58 @@ class GarbageCollector(object):
         yield simpy.AllOf(self.env, procs)
 
         self._datagroup_gc_locks.release_request(data_group_no, req)
+
+    def clean_log_block(self, log_pbn, data_group_no, tag):
+        """
+        0. If not valid page in log_pbn, simply erase and free it
+        1. Try switch merge
+        2. Try copy merge
+        3. Try full merge
+        """
+        req = self._cleaner_res.request()
+        yield req
+
+        if log_pbn not in self.block_pool.log_usedblocks:
+            # it is quite dynamic, this log block may have been
+            # GCed with previous blocks
+            self._cleaner_res.release(req)
+            return
+
+        # Check to see if it is really the log block of the speicfed data
+        # group
+        if log_pbn not in self.translator.log_mapping_table\
+                .log_group_info[data_group_no].log_block_numbers():
+            # TODO: maybe you should just return here instead of panic?
+            self._cleaner_res.release(req)
+            return
+
+        # Just free it?
+        if not self.oob.is_any_page_valid(log_pbn):
+            yield self.env.process(self._recycle_empty_log_block(
+                data_group_no, log_pbn, tag))
+            self._cleaner_res.release(req)
+            return
+
+        is_mergable, logical_block = self.is_switch_mergable(log_pbn)
+        if is_mergable == True:
+            yield self.env.process(
+                    self.switch_merge(log_pbn = log_pbn,
+                    logical_block = logical_block))
+            self._cleaner_res.release(req)
+            return
+
+        is_mergable, logical_block, offset = self.is_partial_mergable(
+            log_pbn)
+        if is_mergable == True:
+            yield self.env.process(
+                self.partial_merge(log_pbn = log_pbn, lbn = logical_block,
+                first_free_offset = offset))
+            self._cleaner_res.release(req)
+            return
+
+        yield self.env.process(self.full_merge(log_pbn))
+
+        self._cleaner_res.release(req)
 
     def full_merge(self, log_pbn):
         """
