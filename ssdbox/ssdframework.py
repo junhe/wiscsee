@@ -205,13 +205,9 @@ class Ssd(SsdBase):
                 hostevent.ControlEvent(OP_END_SSD_PROCESS))
 
     def _cleaner_process(self, forced=False):
-        held_slot_reqs = yield self.env.process(self.ncq.hold_all_slots())
-
         # things may have changed since last time we check, because of locks
         if forced is True or self.ftl.is_cleaning_needed():
             yield self.env.process(self.ftl.clean(forced))
-
-        self.ncq.release_all_slots(held_slot_reqs)
 
     def run(self):
         procs = []
