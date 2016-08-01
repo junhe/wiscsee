@@ -169,7 +169,7 @@ class Ssd(SsdBase):
 
             elif operation == OP_CLEAN:
                 print 'start cleaning'
-                self.env.process(self._cleaner_process(forced=True))
+                yield self.env.process(self._cleaner_process(forced=True))
 
             elif operation == OP_READ:
                 yield self.env.process(
