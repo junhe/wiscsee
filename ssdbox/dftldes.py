@@ -326,7 +326,7 @@ class Ftl(object):
     def is_cleaning_needed(self):
         return self._cleaner.is_cleaning_needed()
 
-    def clean(self):
+    def clean(self, forced=True):
         yield self.env.process(self._cleaner.clean())
 
 

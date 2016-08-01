@@ -211,7 +211,7 @@ class Ssd(SsdBase):
 
         # things may have changed since last time we check, because of locks
         if forced is True or self.ftl.is_cleaning_needed():
-            yield self.env.process(self.ftl.clean())
+            yield self.env.process(self.ftl.clean(forced))
 
         self.ncq.release_all_slots(held_slot_reqs)
 
