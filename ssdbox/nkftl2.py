@@ -896,7 +896,6 @@ class GarbageCollector(object):
             return
 
         is_mergable, logical_block = self.is_switch_mergable(log_pbn)
-        # print 'switch merge  is_mergable:', is_mergable, 'logical_block:', logical_block
         if is_mergable == True:
             yield self.env.process(
                     self.switch_merge(log_pbn = log_pbn,
@@ -905,7 +904,6 @@ class GarbageCollector(object):
 
         is_mergable, logical_block, offset = self.is_partial_mergable(
             log_pbn)
-        # print 'partial merge  is_mergable:', is_mergable, 'logical_block:', logical_block
         if is_mergable == True:
             yield self.env.process(
                 self.partial_merge(log_pbn = log_pbn, lbn = logical_block,
@@ -1609,7 +1607,6 @@ class Ftl(ftlbuilder.FtlBuilder):
         extents = split_ext(self.conf.n_pages_per_block*2, extent)
         logical_block_procs = []
         for logical_block_ext in extents:
-            print '------ start', extent
             if data is None:
                 logical_block_data = None
             else:
@@ -1617,7 +1614,6 @@ class Ftl(ftlbuilder.FtlBuilder):
             yield self.env.process(
                     # self.write_logical_block(logical_block_ext, data=logical_block_data))
                     self.write_data_group(logical_block_ext, data=logical_block_data))
-            print '------ end', extent
             # logical_block_procs.append(p)
             # yield p
 
@@ -1658,11 +1654,9 @@ class Ftl(ftlbuilder.FtlBuilder):
         # lock all logical blocks in this extent
         reqs = []
         block_ids = list(self._block_iter_of_extent(extent))
-        print block_ids
         for block_id in block_ids:
             req = self.logical_block_locks.get_request(block_id)
             yield req
-            print 'got lock of', block_id
             reqs.append(req)
 
         # yield simpy.AllOf(self.env, reqs.values())
@@ -1684,26 +1678,20 @@ class Ftl(ftlbuilder.FtlBuilder):
             yield self.env.process(
                     self._write_log_ppns(mappings, data=loop_data))
 
-            self._check_data_of_lpns(loop_ext.lpn_iter())
 
             if n_ppns < loop_ext.lpn_count:
                 # we cannot find vailable pages in log blocks
                 for block_id, req in reversed(zip(block_ids, reqs)):
                     self.logical_block_locks.release_request(block_id, req)
-                    print 'FOR GC: released lock of', block_id
 
                 yield self.env.process(
                     self.garbage_collector.clean_data_group(data_group_no))
 
                 reqs = []
-                print block_ids
                 for block_id in block_ids:
                     req = self.logical_block_locks.get_request(block_id)
                     yield req
-                    print 'FOR GC: Got lock of', block_id
                     reqs.append(req)
-
-            self._check_data_of_lpns(loop_ext.lpn_iter())
 
             loop_ext.lpn_start += n_ppns
             loop_ext.lpn_count -= n_ppns
@@ -1711,7 +1699,6 @@ class Ftl(ftlbuilder.FtlBuilder):
         # unlock all logical blocks
         for block_id, req in reversed(zip(block_ids, reqs)):
             self.logical_block_locks.release_request(block_id, req)
-            print 'released lock of', block_id
 
     def _check_data_of_lpns(self, lpns):
         for lpn in lpns:
