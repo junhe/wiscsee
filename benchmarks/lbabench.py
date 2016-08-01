@@ -442,19 +442,21 @@ def contract_bench():
     flashbytes = 128*MB
 
     def gen_parameters_contract_alignment():
+        flashbytes = 1*GB
         expname = get_expname()
+        traffic_size = 128*MB
         para_dict = {
                 'expname'        : [expname],
                 'ncq_depth'      : [1],
                 'bench'          : [
                     {'name': 'Alignment',
-                    'conf': {'op': OP_WRITE, 'aligned': True, 'traffic_size': 8*MB }},
+                    'conf': {'op': OP_WRITE, 'aligned': True, 'traffic_size': traffic_size }},
                     {'name': 'Alignment',
-                    'conf': {'op': OP_WRITE, 'aligned': False, 'traffic_size': 8*MB }},
+                    'conf': {'op': OP_WRITE, 'aligned': False, 'traffic_size': traffic_size }},
                     ],
                 'cache_mapped_data_bytes' :[flashbytes],
                 'flashbytes'     : [flashbytes],
-                'stripe_size'    : [32,],
+                'stripe_size'    : [64,],
                 'segment_bytes'  : [flashbytes]
                 }
         parameter_combs = ParameterCombinations(para_dict)
