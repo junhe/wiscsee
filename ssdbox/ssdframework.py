@@ -195,7 +195,7 @@ class Ssd(SsdBase):
                 sys.stdout.flush()
 
             if self.ftl.is_cleaning_needed() is True:
-                self.env.process(self._cleaner_process())
+                yield self.env.process(self._cleaner_process())
 
             self.ncq.slots.release(slot_req)
 
