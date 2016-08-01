@@ -1547,6 +1547,9 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.env.exit(content[0])
 
     def read_ext(self, extent):
+        self.recorder.add_to_general_accumulater('traffic', 'read',
+                extent.lpn_count*self.conf.page_size)
+
         extents = split_ext(self.conf.n_pages_per_block, extent)
         ext_data = []
         for logical_block_ext in extents:
@@ -1589,6 +1592,9 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(self.garbage_collector.clean())
 
     def write_ext(self, extent, data=None):
+        self.recorder.add_to_general_accumulater('traffic', 'write',
+                extent.lpn_count*self.conf.page_size)
+
         extents = split_ext(self.conf.n_pages_per_data_group(), extent)
         data_group_procs = []
         for data_group_ext in extents:
@@ -1776,6 +1782,9 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(self._discard_logical_block(Extent(lpn, 1)))
 
     def discard_ext(self, extent):
+        self.recorder.add_to_general_accumulater('traffic', 'discard',
+                extent.lpn_count*self.conf.page_size)
+
         extents = split_ext(self.conf.n_pages_per_block, extent)
         for logical_block_ext in extents:
             yield self.env.process(self._discard_logical_block(logical_block_ext))
