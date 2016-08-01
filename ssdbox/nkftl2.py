@@ -1602,20 +1602,6 @@ class Ftl(ftlbuilder.FtlBuilder):
 
         yield simpy.AllOf(self.env, data_group_procs)
 
-    def write_ext_old(self, extent, data=None):
-        extents = split_ext(self.conf.n_pages_per_block, extent)
-        logical_block_procs = []
-        for logical_block_ext in extents:
-            if data is None:
-                logical_block_data = None
-            else:
-                logical_block_data = self._sub_ext_data(data, extent, logical_block_ext)
-            p = self.env.process(
-                    self.write_logical_block(logical_block_ext, data=logical_block_data))
-            logical_block_procs.append(p)
-
-        yield simpy.AllOf(self.env, logical_block_procs)
-
     def _block_iter_of_extent(self, extent):
         block_start, _ = self.conf.page_to_block_off(extent.lpn_start)
         block_last, _ = self.conf.page_to_block_off(extent.last_lpn())
