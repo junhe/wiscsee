@@ -2428,7 +2428,7 @@ class TestLogicalBlockSerialization_DifferentLogicalBlock(AssertFinishTestCase, 
 
         self.set_finished()
 
-class TestLogicalBlockSerialization_SameLogicalBlock(AssertFinishTestCase, RWMixin):
+class TestLogicalBlockSerialization_SameLogicalPage(AssertFinishTestCase, RWMixin):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
 
@@ -2445,6 +2445,55 @@ class TestLogicalBlockSerialization_SameLogicalBlock(AssertFinishTestCase, RWMix
         self.assertEqual(env.now, conf.page_prog_time() * 2)
 
         self.set_finished()
+
+
+class TestLogicalBlockSerialization_SameLogicalBlock(AssertFinishTestCase, RWMixin):
+    def test_write(self):
+        ftl, conf, rec, env = create_nkftl()
+
+        env.process(self.main_proc(env, ftl, conf))
+        env.run()
+
+    def main_proc(self, env, ftl, conf):
+        # write different logical_blocks at the same time
+        p1 = env.process(ftl.write_ext(Extent(0, 1)))
+        p2 = env.process(ftl.write_ext(Extent(1, 1)))
+
+        yield simpy.AllOf(env, [p1, p2])
+
+        self.assertEqual(env.now, conf.page_prog_time() * 2)
+
+        self.set_finished()
+
+class TestLogicalBlockSerialization_WriteAndRead2Procs(AssertFinishTestCase, RWMixin):
+    def test_write(self):
+        ftl, conf, rec, env = create_nkftl()
+
+        env.process(self.main_proc(env, ftl, conf))
+        env.run()
+
+    def main_proc(self, env, ftl, conf):
+        # write different logical_blocks at the same time
+        extent1 = Extent(0, 1)
+        p1 = env.process(ftl.write_ext(extent1,
+            self.data_of_extent(extent1)))
+
+        extent2 = Extent(1, 1)
+        p2 = env.process(ftl.write_ext(extent2,
+            self.data_of_extent(extent2)))
+
+        yield simpy.AllOf(env, [p1, p2])
+
+        ret_data = yield env.process(ftl.read_ext(extent1))
+        self.assertListEqual(ret_data, [str(x)
+            for x in self.data_of_extent(extent1)])
+
+        ret_data = yield env.process(ftl.read_ext(extent2))
+        self.assertListEqual(ret_data, [str(x)
+            for x in self.data_of_extent(extent2)])
+
+        self.set_finished()
+
 
 class TestLogicalBlockSerialization_WriteAndRead(AssertFinishTestCase, RWMixin):
     def test_write(self):
@@ -3194,6 +3243,25 @@ class TestConcurrency_DataIntegrity(AssertFinishTestCase):
             start += size
 
         return extents
+
+class TestBlockIter(unittest.TestCase):
+    def test_1(self):
+        ftl, conf, rec, env = create_nkftl()
+
+        n_pages_per_block = conf.n_pages_per_block
+
+        ret = list(ftl._block_iter_of_extent(Extent(0, 1)))
+        self.assertListEqual(ret, [0])
+
+        ret = list(ftl._block_iter_of_extent(Extent(0, n_pages_per_block)))
+        self.assertListEqual(ret, [0])
+
+        ret = list(ftl._block_iter_of_extent(Extent(0, n_pages_per_block + 1)))
+        self.assertListEqual(ret, [0, 1])
+
+        ret = list(ftl._block_iter_of_extent(
+            Extent(n_pages_per_block + 1, 2 * n_pages_per_block)))
+        self.assertListEqual(ret, [1, 2, 3])
 
 
 
