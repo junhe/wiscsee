@@ -1588,7 +1588,7 @@ class Ftl(ftlbuilder.FtlBuilder):
 
         yield self.env.process(self.garbage_collector.clean())
 
-    def write_ext_new(self, extent, data=None):
+    def write_ext(self, extent, data=None):
         extents = split_ext(self.conf.n_pages_per_data_group(), extent)
         data_group_procs = []
         for data_group_ext in extents:
@@ -1599,25 +1599,8 @@ class Ftl(ftlbuilder.FtlBuilder):
             p = self.env.process(
                     self.write_data_group(data_group_ext, data=data_group_data))
             data_group_procs.append(p)
-            yield p
 
-        # yield simpy.AllOf(self.env, data_group_procs)
-
-    def write_ext(self, extent, data=None):
-        extents = split_ext(self.conf.n_pages_per_block*2, extent)
-        logical_block_procs = []
-        for logical_block_ext in extents:
-            if data is None:
-                logical_block_data = None
-            else:
-                logical_block_data = self._sub_ext_data(data, extent, logical_block_ext)
-            yield self.env.process(
-                    # self.write_logical_block(logical_block_ext, data=logical_block_data))
-                    self.write_data_group(logical_block_ext, data=logical_block_data))
-            # logical_block_procs.append(p)
-            # yield p
-
-        # yield simpy.AllOf(self.env, logical_block_procs)
+        yield simpy.AllOf(self.env, data_group_procs)
 
     def write_ext_old(self, extent, data=None):
         extents = split_ext(self.conf.n_pages_per_block, extent)
