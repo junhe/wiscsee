@@ -3,6 +3,15 @@ from .patterns import *
 from ssdbox import hostevent
 
 
+class BarrierMixin(object):
+    def barrier_events(self):
+        for i in range(self.n_ncq_slots):
+            yield hostevent.ControlEvent(operation=OP_NOOP)
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        for i in range(self.n_ncq_slots):
+            yield hostevent.ControlEvent(operation=OP_NOOP)
+
+
 class UtilMixin(object):
     def snapshot_before_interest(self):
         yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
@@ -100,13 +109,41 @@ class Alignment(object):
                 req = Request(self.op, req_off, chunk_size)
                 yield req
 
-class BarrierMixin(object):
-    def barrier_events(self):
-        for i in range(self.n_ncq_slots):
-            yield hostevent.ControlEvent(operation=OP_NOOP)
-        yield hostevent.ControlEvent(operation=OP_BARRIER)
-        for i in range(self.n_ncq_slots):
-            yield hostevent.ControlEvent(operation=OP_NOOP)
+    def __iter__(self):
+        for req in self.snapshot_before_interest():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        # interest workload
+        for req in self.interest_workload():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.snapshot_after_interest():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.snapshot_before_gc():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.clean():
+            yield req
+
+        for req in self.snapshot_after_gc():
+            yield req
 
 
 class RequestScale(BarrierMixin):
