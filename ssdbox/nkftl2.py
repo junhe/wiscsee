@@ -1,6 +1,6 @@
 import bidict
 import copy
-from collections import deque
+from collections import deque, OrderedDict
 import datetime
 import Queue
 import itertools
@@ -1675,7 +1675,7 @@ class Ftl(ftlbuilder.FtlBuilder):
                 strip_unit_size=self.conf['stripe_size'])
 
             n_ppns = len(ppns)
-            mappings = dict(zip(loop_ext.lpn_iter(), ppns))
+            mappings = OrderedDict(zip(loop_ext.lpn_iter(), ppns))
             assert len(mappings) == n_ppns
             if data is None:
                 loop_data = None
@@ -1738,7 +1738,7 @@ class Ftl(ftlbuilder.FtlBuilder):
                 strip_unit_size=self.conf['stripe_size'])
 
             n_ppns = len(ppns)
-            mappings = dict(zip(loop_ext.lpn_iter(), ppns))
+            mappings = OrderedDict(zip(loop_ext.lpn_iter(), ppns))
             assert len(mappings) == n_ppns
             if data is None:
                 loop_data = None
