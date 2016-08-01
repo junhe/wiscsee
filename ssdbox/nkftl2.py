@@ -1590,7 +1590,40 @@ class Ftl(ftlbuilder.FtlBuilder):
 
         yield self.env.process(self.garbage_collector.clean())
 
+    def write_ext_new(self, extent, data=None):
+        extents = split_ext(self.conf.n_pages_per_data_group(), extent)
+        data_group_procs = []
+        for data_group_ext in extents:
+            if data is None:
+                data_group_data = None
+            else:
+                data_group_data = self._sub_ext_data(data, extent, data_group_ext)
+            p = self.env.process(
+                    self.write_data_group(data_group_ext, data=data_group_data))
+            data_group_procs.append(p)
+            yield p
+
+        # yield simpy.AllOf(self.env, data_group_procs)
+
     def write_ext(self, extent, data=None):
+        extents = split_ext(self.conf.n_pages_per_block*2, extent)
+        logical_block_procs = []
+        for logical_block_ext in extents:
+            print '------ start', extent
+            if data is None:
+                logical_block_data = None
+            else:
+                logical_block_data = self._sub_ext_data(data, extent, logical_block_ext)
+            yield self.env.process(
+                    # self.write_logical_block(logical_block_ext, data=logical_block_data))
+                    self.write_data_group(logical_block_ext, data=logical_block_data))
+            print '------ end', extent
+            # logical_block_procs.append(p)
+            # yield p
+
+        # yield simpy.AllOf(self.env, logical_block_procs)
+
+    def write_ext_old(self, extent, data=None):
         extents = split_ext(self.conf.n_pages_per_block, extent)
         logical_block_procs = []
         for logical_block_ext in extents:
@@ -1603,6 +1636,90 @@ class Ftl(ftlbuilder.FtlBuilder):
             logical_block_procs.append(p)
 
         yield simpy.AllOf(self.env, logical_block_procs)
+
+
+    def _block_iter_of_extent(self, extent):
+        block_start, _ = self.conf.page_to_block_off(extent.lpn_start)
+        block_last, _ = self.conf.page_to_block_off(extent.last_lpn())
+
+        return range(block_start, block_last + 1)
+
+    def write_data_group(self, extent, data=None):
+        """
+        extent must not go across data groups
+
+        write_data_group() locks all the logical blocks it about to write
+        then it gets all the ppns, write the data and modify the mapping
+        """
+        data_group_no = self.conf.nkftl_data_group_number_of_lpn(extent.lpn_start)
+        for lpn in extent.lpn_iter():
+            assert self.conf.nkftl_data_group_number_of_lpn(lpn) == data_group_no
+
+        # lock all logical blocks in this extent
+        reqs = []
+        block_ids = list(self._block_iter_of_extent(extent))
+        print block_ids
+        for block_id in block_ids:
+            req = self.logical_block_locks.get_request(block_id)
+            yield req
+            print 'got lock of', block_id
+            reqs.append(req)
+
+        # yield simpy.AllOf(self.env, reqs.values())
+
+        loop_ext = copy.copy(extent)
+        while loop_ext.lpn_count > 0:
+            ppns = self.log_mapping_table.next_ppns_to_program(
+                dgn=data_group_no,
+                n=loop_ext.lpn_count,
+                strip_unit_size=self.conf['stripe_size'])
+
+            n_ppns = len(ppns)
+            mappings = dict(zip(loop_ext.lpn_iter(), ppns))
+            assert len(mappings) == n_ppns
+            if data is None:
+                loop_data = None
+            else:
+                loop_data = self._sub_ext_data(data, extent, loop_ext)
+            yield self.env.process(
+                    self._write_log_ppns(mappings, data=loop_data))
+
+            self._check_data_of_lpns(loop_ext.lpn_iter())
+
+            if n_ppns < loop_ext.lpn_count:
+                # we cannot find vailable pages in log blocks
+                for block_id, req in reversed(zip(block_ids, reqs)):
+                    self.logical_block_locks.release_request(block_id, req)
+                    print 'FOR GC: released lock of', block_id
+
+                yield self.env.process(
+                    self.garbage_collector.clean_data_group(data_group_no))
+
+                reqs = []
+                print block_ids
+                for block_id in block_ids:
+                    req = self.logical_block_locks.get_request(block_id)
+                    yield req
+                    print 'FOR GC: Got lock of', block_id
+                    reqs.append(req)
+
+            self._check_data_of_lpns(loop_ext.lpn_iter())
+
+            loop_ext.lpn_start += n_ppns
+            loop_ext.lpn_count -= n_ppns
+
+        # unlock all logical blocks
+        for block_id, req in reversed(zip(block_ids, reqs)):
+            self.logical_block_locks.release_request(block_id, req)
+            print 'released lock of', block_id
+
+    def _check_data_of_lpns(self, lpns):
+        for lpn in lpns:
+            found, ppn, loc = self.lpn_to_ppn(lpn)
+            if found:
+                data = self.flash.data[ppn]
+                assert data.startswith(str(lpn) + '.'), \
+                        "LPN: {}, DATA: {}, LPNS: {}".format(lpn, data, lpns)
 
     def write_logical_block(self, extent, data=None):
         block_id, _ = self.conf.page_to_block_off(extent.lpn_start)
@@ -1658,6 +1775,9 @@ class Ftl(ftlbuilder.FtlBuilder):
         """
         The ppns in mappings is obtained from loggroup.next_ppns()
         """
+        for ppn in mappings.values():
+            assert self.oob.states.is_page_erased(ppn)
+
         # data block mapping
         pass
 
