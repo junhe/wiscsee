@@ -626,26 +626,26 @@ def contract_bench():
                 'expname'        : [expname],
                 'ncq_depth'      : [1],
                 'bench'          : [
-                    {'name': 'RequestScale',
-                     'conf': {'op': OP_WRITE,
-                              'space_size'     : space_size,
-                              'traffic_size': traffic_size,
-                              'chunk_size': chunk_size_1}},
-                    {'name': 'RequestScale',
-                     'conf': {'op': OP_WRITE,
-                              'space_size'     : space_size,
-                              'traffic_size': traffic_size,
-                              'chunk_size': chunk_size_2}},
                     # {'name': 'RequestScale',
-                     # 'conf': {'op': OP_READ,
+                     # 'conf': {'op': OP_WRITE,
                               # 'space_size'     : space_size,
                               # 'traffic_size': traffic_size,
                               # 'chunk_size': chunk_size_1}},
                     # {'name': 'RequestScale',
-                     # 'conf': {'op': OP_READ,
+                     # 'conf': {'op': OP_WRITE,
                               # 'space_size'     : space_size,
                               # 'traffic_size': traffic_size,
                               # 'chunk_size': chunk_size_2}},
+                    {'name': 'RequestScale',
+                     'conf': {'op': OP_READ,
+                              'space_size'     : space_size,
+                              'traffic_size': traffic_size,
+                              'chunk_size': chunk_size_1}},
+                    {'name': 'RequestScale',
+                     'conf': {'op': OP_READ,
+                              'space_size'     : space_size,
+                              'traffic_size': traffic_size,
+                              'chunk_size': chunk_size_2}},
                      ],
                 'cache_mapped_data_bytes' :[flashbytes],
                 'flashbytes'     : [flashbytes],
@@ -656,19 +656,51 @@ def contract_bench():
         parameter_combs = ParameterCombinations(para_dict)
         return parameter_combs
 
+    def gen_parameters_contract_requestscale_count_tune():
+        expname = get_expname()
+        traffic_size = 1*MB
+        chunk_size = 2*KB
+        flashbytes = 1*GB
+        space_size = 128*MB
+        para_dict = {
+                'expname'        : [expname],
+                'ncq_depth'      : [16],
+                'bench'          : [
+                    {'name': 'RequestScale',
+                     'conf': {'op': OP_WRITE,
+                              'space_size'     : space_size,
+                              'traffic_size': traffic_size,
+                              'chunk_size': chunk_size}},
+                    # {'name': 'RequestScale',
+                     # 'conf': {'op': OP_READ,
+                              # 'space_size'     : space_size,
+                              # 'traffic_size': traffic_size,
+                              # 'chunk_size': chunk_size}},
+                     ],
+                'cache_mapped_data_bytes' :[flashbytes],
+                'flashbytes'     : [flashbytes],
+                'stripe_size'    : [1,],
+                'segment_bytes'  : [flashbytes]
+                }
+
+        parameter_combs = ParameterCombinations(para_dict)
+        return parameter_combs
+
+
 
 
 
     # parameters = gen_parameters_contract_alignment()
     # parameters = gen_parameters_contract_requestscale()
-    # parameters = gen_parameters_contract_requestscale_count()
+    parameters = gen_parameters_contract_requestscale_count()
     # parameters = gen_parameters_contract_requestscale_size()
     # parameters = gen_parameters_contract_locality()
     # parameters = gen_parameters_contract_grouping_in_timeline()
     # parameters = gen_parameters_contract_grouping_in_space()
 
 
-    parameters = gen_parameters_contract_requestscale_size_tune()
+    # parameters = gen_parameters_contract_requestscale_size_tune()
+    # parameters = gen_parameters_contract_requestscale_count_tune()
 
     cnt = 0
     for i, para in enumerate(parameters):
