@@ -1633,7 +1633,6 @@ class Ftl(ftlbuilder.FtlBuilder):
 
         yield simpy.AllOf(self.env, logical_block_procs)
 
-
     def _block_iter_of_extent(self, extent):
         block_start, _ = self.conf.page_to_block_off(extent.lpn_start)
         block_last, _ = self.conf.page_to_block_off(extent.last_lpn())
@@ -1678,7 +1677,6 @@ class Ftl(ftlbuilder.FtlBuilder):
             yield self.env.process(
                     self._write_log_ppns(mappings, data=loop_data))
 
-
             if n_ppns < loop_ext.lpn_count:
                 # we cannot find vailable pages in log blocks
                 for block_id, req in reversed(zip(block_ids, reqs)):
@@ -1699,14 +1697,6 @@ class Ftl(ftlbuilder.FtlBuilder):
         # unlock all logical blocks
         for block_id, req in reversed(zip(block_ids, reqs)):
             self.logical_block_locks.release_request(block_id, req)
-
-    def _check_data_of_lpns(self, lpns):
-        for lpn in lpns:
-            found, ppn, loc = self.lpn_to_ppn(lpn)
-            if found:
-                data = self.flash.data[ppn]
-                assert data.startswith(str(lpn) + '.'), \
-                        "LPN: {}, DATA: {}, LPNS: {}".format(lpn, data, lpns)
 
     def write_logical_block(self, extent, data=None):
         block_id, _ = self.conf.page_to_block_off(extent.lpn_start)
