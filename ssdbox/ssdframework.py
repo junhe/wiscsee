@@ -171,7 +171,6 @@ class Ssd(SsdBase):
                 print 'start cleaning'
                 self.env.process(self._cleaner_process(forced=True))
                 self.ncq.slots.release(slot_req)
-                break
 
             elif operation == OP_READ:
                 yield self.env.process(
