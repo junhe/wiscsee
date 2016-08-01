@@ -170,7 +170,6 @@ class Ssd(SsdBase):
             elif operation == OP_CLEAN:
                 print 'start cleaning'
                 self.env.process(self._cleaner_process(forced=True))
-                self.ncq.slots.release(slot_req)
 
             elif operation == OP_READ:
                 yield self.env.process(
