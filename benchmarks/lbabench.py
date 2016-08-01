@@ -396,6 +396,7 @@ def contract_bench():
 
             if classname == 'Alignment':
                 conf['block_size'] = self.conf.page_size * self.conf.n_pages_per_block
+                conf['n_ncq_slots'] = self.para.ncq_depth
             elif classname == 'RequestScale':
                 conf['n_ncq_slots'] = self.para.ncq_depth
             elif classname == 'Locality':
@@ -444,7 +445,7 @@ def contract_bench():
         expname = get_expname()
         para_dict = {
                 'expname'        : [expname],
-                'ncq_depth'      : [4],
+                'ncq_depth'      : [1],
                 'bench'          : [
                     {'name': 'Alignment',
                     'conf': {'op': OP_WRITE, 'aligned': True, 'traffic_size': 8*MB }},
@@ -453,7 +454,7 @@ def contract_bench():
                     ],
                 'cache_mapped_data_bytes' :[flashbytes],
                 'flashbytes'     : [flashbytes],
-                'stripe_size'    : [1,],
+                'stripe_size'    : [32,],
                 'segment_bytes'  : [flashbytes]
                 }
         parameter_combs = ParameterCombinations(para_dict)
@@ -690,9 +691,9 @@ def contract_bench():
 
 
 
-    # parameters = gen_parameters_contract_alignment()
+    parameters = gen_parameters_contract_alignment()
     # parameters = gen_parameters_contract_requestscale()
-    parameters = gen_parameters_contract_requestscale_count()
+    # parameters = gen_parameters_contract_requestscale_count()
     # parameters = gen_parameters_contract_requestscale_size()
     # parameters = gen_parameters_contract_locality()
     # parameters = gen_parameters_contract_grouping_in_timeline()

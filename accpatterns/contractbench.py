@@ -141,9 +141,15 @@ class Alignment(UtilMixin, BarrierMixin):
         for req in self.clean():
             yield req
 
+        for req in self.barrier_events():
+            yield req
+
         for req in self.snapshot_after_gc():
             yield req
 
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
 
 class RequestScale(BarrierMixin):
     def __init__(self, space_size, chunk_size, traffic_size, op, n_ncq_slots):
