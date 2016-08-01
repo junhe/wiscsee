@@ -415,14 +415,17 @@ def contract_bench():
             self.conf['stripe_size'] = self.para.stripe_size
             self.conf['segment_bytes'] = self.para.segment_bytes
 
+            self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
+            self.conf.set_flash_num_blocks_by_bytes(self.para.flashbytes)
+
+            # this has to be done before setting the number of blocks above
             if self.para.ftl_type == 'nkftl2':
                 print 'set N and K'
                 # TODO: the setting should reflect segment bytes
-                self.conf['nkftl']['n_blocks_in_data_group'] = 128
-                self.conf['nkftl']['max_blocks_in_log_group'] = 256
-
-            self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
-            self.conf.set_flash_num_blocks_by_bytes(self.para.flashbytes)
+                self.conf['nkftl']['n_blocks_in_data_group'] = self.conf.n_blocks_per_dev
+                self.conf['nkftl']['max_blocks_in_log_group'] = self.conf.n_blocks_per_dev
+                print self.conf['nkftl']['n_blocks_in_data_group']
+                print self.conf.n_blocks_per_dev
 
         def my_run(self):
             runtime_update(self.conf)
