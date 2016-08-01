@@ -932,15 +932,17 @@ class GarbageCollector(object):
 
         log_block_list = copy.copy(self.log_mapping_table\
                 .log_group_info[data_group_no].log_block_numbers())
+        procs = []
         for log_block in log_block_list:
             # A log block may not be a log block anymore after the loop starts
             # It may be freed, it may be a data block now,.. Be careful
-            yield self.env.process(
+            p = self.env.process(
                     self.clean_log_block(
                         log_pbn=log_block,
                         data_group_no=data_group_no,
                         tag=TAG_WRITE_DRIVEN))
-            self.asserts()
+            procs.append(p)
+        yield simpy.AllOf(self.env, procs)
 
         self._datagroup_gc_locks.release_request(data_group_no, req)
 
