@@ -343,10 +343,6 @@ class Config(dict):
         return self['flash_page_size']
 
     @property
-    def n_blocks_per_dev(self):
-        return self['flash_num_blocks']
-
-    @property
     def device_type(self):
         if self['device_path'].startswith("/dev/loop"):
             return 'loop'
