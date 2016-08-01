@@ -83,19 +83,18 @@ class UtilMixin(object):
         yield hostevent.ControlEvent(operation=OP_CALC_GC_DURATION)
 
 
-
-
-class Alignment(object):
-    def __init__(self, block_size, traffic_size, aligned, op):
+class Alignment(UtilMixin, BarrierMixin):
+    def __init__(self, block_size, traffic_size, aligned, op, n_ncq_slots):
         self.block_size = block_size
         self.traffic_size = traffic_size
         self.aligned = aligned
         self.op = op
+        self.n_ncq_slots = n_ncq_slots
 
     def _offset_to_global(self, block_id, offset):
         return block_id * self.block_size + offset
 
-    def __iter__(self):
+    def interest_workload(self):
         n_blocks = self.traffic_size / self.block_size
         chunk_size = self.block_size / 2
         if self.aligned is True:

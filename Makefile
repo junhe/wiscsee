@@ -7,6 +7,9 @@ testblockpools:
 testnkftl:
 	./run_testclass.sh tests.test_nkftl
 
+testcontractbench:
+	./run_testclass.sh tests._accpatterns.test_contractbench
+
 patternbench:
 	sudo python -m benchmarks.patternbench -t "pattern_on_fs()"
 

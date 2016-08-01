@@ -8,15 +8,15 @@ from accpatterns.contractbench import *
 class TestAlignment(unittest.TestCase):
     def test_init(self):
         alignbench = Alignment(block_size=128*KB, traffic_size=128*MB,
-                aligned=True, op=OP_WRITE)
+                aligned=True, op=OP_WRITE, n_ncq_slots=16)
         alignbench = Alignment(block_size=128*KB, traffic_size=128*MB,
-                aligned=False, op=OP_READ)
+                aligned=False, op=OP_READ, n_ncq_slots=16)
 
     def test_aligned(self):
         alignbench = Alignment(block_size=4, traffic_size=12,
-                aligned=True, op=OP_WRITE)
+                aligned=True, op=OP_WRITE, n_ncq_slots=16)
 
-        reqs = list(alignbench)
+        reqs = [req for req in list(alignbench) if isinstance(req, Request)]
         self.assertEqual(len(reqs), 6)
 
         offs = [req.offset for req in reqs]
@@ -28,9 +28,9 @@ class TestAlignment(unittest.TestCase):
 
     def test_unaligned(self):
         alignbench = Alignment(block_size=4, traffic_size=12,
-                aligned=False, op=OP_WRITE)
+                aligned=False, op=OP_WRITE, n_ncq_slots=16)
 
-        reqs = list(alignbench)
+        reqs = [req for req in list(alignbench) if isinstance(req, Request)]
         self.assertEqual(len(reqs), 6)
 
         offs = [req.offset for req in reqs]
