@@ -126,6 +126,12 @@ class Ssd(SsdBase):
                 self.recorder.set_result_by_one_key('gc_duration', dur)
                 self.recorder.set_result_by_one_key('gc_duration_sec', dur/SEC)
 
+            elif operation == OP_CALC_NON_MERGE_GC_DURATION:
+                dur = self.recorder.get_result_by_one_key('non_merge_gc_end') - \
+                        self.recorder.get_result_by_one_key('non_merge_gc_start')
+                self.recorder.set_result_by_one_key('non_merge_gc_duration', dur)
+                self.recorder.set_result_by_one_key('non_merge_gc_duration_sec', dur/SEC)
+
             elif operation == OP_FLUSH_TRANS_CACHE:
                 if self.conf['ftl_type'] == 'dftldes':
                     yield self.env.process(self.ftl.flush_trans_cache())
@@ -170,6 +176,10 @@ class Ssd(SsdBase):
             elif operation == OP_CLEAN:
                 print 'start cleaning'
                 yield self.env.process(self._cleaner_process(forced=True))
+
+            elif operation == OP_NON_MERGE_CLEAN:
+                print 'start non merge cleaning'
+                yield self.env.process(self.ftl.clean(forced=True, merge=False))
 
             elif operation == OP_READ:
                 yield self.env.process(

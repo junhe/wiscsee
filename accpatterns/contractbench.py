@@ -59,6 +59,21 @@ class UtilMixin(object):
         yield hostevent.ControlEvent(operation=OP_REC_CACHE_HITMISS,
                 arg1='hitmiss_after_gc')
 
+    def snapshot_before_non_merge_gc(self):
+        yield hostevent.ControlEvent(operation=OP_REC_FLASH_OP_CNT,
+                arg1='flash_ops_before_non_merge_gc')
+
+        yield hostevent.ControlEvent(operation=OP_REC_FOREGROUND_OP_CNT,
+                arg1='logical_ops_before_non_merge_gc')
+
+    def snapshot_after_non_merge_gc(self):
+        yield hostevent.ControlEvent(operation=OP_REC_FLASH_OP_CNT,
+                arg1='flash_ops_after_non_merge_gc')
+
+        yield hostevent.ControlEvent(operation=OP_REC_FOREGROUND_OP_CNT,
+                arg1='logical_ops_after_non_merge_gc')
+
+
     def clean(self):
         # barrier
         for req in self.barrier_events():
@@ -81,6 +96,29 @@ class UtilMixin(object):
             yield req
 
         yield hostevent.ControlEvent(operation=OP_CALC_GC_DURATION)
+
+    def non_merge_clean(self):
+        # barrier
+        for req in self.barrier_events():
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='non_merge_gc_start')
+
+        yield hostevent.ControlEvent(operation=OP_NON_MERGE_CLEAN)
+
+        # barrier
+        for req in self.barrier_events():
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='non_merge_gc_end')
+
+        # barrier
+        for req in self.barrier_events():
+            yield req
+
+        yield hostevent.ControlEvent(operation=OP_CALC_NON_MERGE_GC_DURATION)
 
 
 class Alignment(UtilMixin, BarrierMixin):
@@ -423,5 +461,78 @@ class GroupByInvTimeInSpace(GroupingBase, BarrierMixin, UtilMixin):
 
         for req in reqs1_discard:
             yield req
+
+    def __iter__(self):
+        for req in self.snapshot_before_interest():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        # interest workload
+        for req in self.interest_workload():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.snapshot_after_interest():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.discards():
+            yield req
+
+
+        ############### non merge clean ##############
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.snapshot_before_non_merge_gc():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.non_merge_clean():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.snapshot_after_non_merge_gc():
+            yield req
+
+
+        ############### clean ########################
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.snapshot_before_gc():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.clean():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.snapshot_after_gc():
+            yield req
+
 
 
