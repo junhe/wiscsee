@@ -179,7 +179,8 @@ class Ssd(SsdBase):
 
             elif operation == OP_NON_MERGE_CLEAN:
                 print 'start non merge cleaning'
-                yield self.env.process(self.ftl.clean(forced=True, merge=False))
+                if self.conf['ftl_type'] == 'nkftl2':
+                    yield self.env.process(self.ftl.clean(forced=True, merge=False))
 
             elif operation == OP_READ:
                 yield self.env.process(
