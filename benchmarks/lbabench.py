@@ -438,13 +438,36 @@ def contract_bench():
             self.setup_ftl()
             self.my_run()
 
-    flashbytes = 128*MB
+    parameters = ContractParameterGen()
 
-    def gen_parameters_contract_alignment():
+    cnt = 0
+    for i, para in enumerate(parameters):
+        print 'exp', cnt
+        print para
+        cnt += 1
+        # para['ftl_type'] = 'dftldes'
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        exp = Experiment( Parameters(**para) )
+        exp.main()
+
+
+class ContractParameterGen(object):
+    def __init__(self):
+        self.ftl_type = 'nkftl2'
+
+        # self.paras = self.alignment()
+        self.paras = self.grouping_in_space()
+
+    def __iter__(self):
+        for para in self.paras:
+            yield para
+
+    def alignment(self,):
         flashbytes = 1*GB
         expname = get_expname()
         traffic_size = 128*MB
         para_dict = {
+                'ftl_type'       : [self.ftl_type],
                 'expname'        : [expname],
                 'ncq_depth'      : [1],
                 'bench'          : [
@@ -462,13 +485,14 @@ def contract_bench():
 
         return parameter_combs
 
-    def gen_parameters_contract_requestscale_count():
+    def requestscale_count(self):
         expname = get_expname()
         traffic_size = 128*MB
         chunk_size = 2*KB
         flashbytes = 1*GB
         space_size = 128*MB
         para_dict = {
+                'ftl_type'       : [self.ftl_type],
                 'expname'        : [expname],
                 'ncq_depth'      : [1, 16],
                 'bench'          : [
@@ -492,7 +516,7 @@ def contract_bench():
         parameter_combs = ParameterCombinations(para_dict)
         return parameter_combs
 
-    def gen_parameters_contract_requestscale_size():
+    def requestscale_size(self):
         expname = get_expname()
         traffic_size = 128*MB
         chunk_size_1 = 2*KB
@@ -500,6 +524,7 @@ def contract_bench():
         flashbytes = 1*GB
         space_size = 128*MB
         para_dict = {
+                'ftl_type'       : [self.ftl_type],
                 'expname'        : [expname],
                 'ncq_depth'      : [1],
                 'bench'          : [
@@ -533,13 +558,14 @@ def contract_bench():
         parameter_combs = ParameterCombinations(para_dict)
         return parameter_combs
 
-    def gen_parameters_contract_locality():
+    def locality(self):
         """
         should not trigger GC
         """
         flashbytes = 8*GB
         expname = get_expname()
         para_dict = {
+                'ftl_type'       : [self.ftl_type],
                 'expname'        : [expname],
                 'ncq_depth'      : [16],
                 'bench'          : [],
@@ -560,10 +586,11 @@ def contract_bench():
 
         return parameter_combs
 
-    def gen_parameters_contract_grouping_in_timeline():
+    def grouping_in_timeline(self):
         flashbytes = 1*GB
         expname = get_expname()
         para_dict = {
+                'ftl_type'       : [self.ftl_type],
                 'expname'        : [expname],
                 'ncq_depth'      : [16],
                 'bench'          : [],
@@ -586,10 +613,11 @@ def contract_bench():
 
         return parameter_combs
 
-    def gen_parameters_contract_grouping_in_space():
+    def grouping_in_space(self):
         flashbytes = 1*GB
         expname = get_expname()
         para_dict = {
+                'ftl_type'       : [self.ftl_type],
                 'expname'        : [expname],
                 'ncq_depth'      : [16],
                 'bench'          : [],
@@ -611,110 +639,6 @@ def contract_bench():
         parameter_combs = ParameterCombinations(para_dict)
 
         return parameter_combs
-
-
-
-
-
-
-    def gen_parameters_contract_requestscale_size_tune():
-        expname = get_expname()
-        traffic_size = 128*MB
-        chunk_size_1 = 2*KB
-        chunk_size_2 = 128*KB
-        flashbytes = 1*GB
-        space_size = 128*MB
-        para_dict = {
-                'expname'        : [expname],
-                'ncq_depth'      : [1],
-                'bench'          : [
-                    # {'name': 'RequestScale',
-                     # 'conf': {'op': OP_WRITE,
-                              # 'space_size'     : space_size,
-                              # 'traffic_size': traffic_size,
-                              # 'chunk_size': chunk_size_1}},
-                    # {'name': 'RequestScale',
-                     # 'conf': {'op': OP_WRITE,
-                              # 'space_size'     : space_size,
-                              # 'traffic_size': traffic_size,
-                              # 'chunk_size': chunk_size_2}},
-                    {'name': 'RequestScale',
-                     'conf': {'op': OP_READ,
-                              'space_size'     : space_size,
-                              'traffic_size': traffic_size,
-                              'chunk_size': chunk_size_1}},
-                    {'name': 'RequestScale',
-                     'conf': {'op': OP_READ,
-                              'space_size'     : space_size,
-                              'traffic_size': traffic_size,
-                              'chunk_size': chunk_size_2}},
-                     ],
-                'cache_mapped_data_bytes' :[flashbytes],
-                'flashbytes'     : [flashbytes],
-                'stripe_size'    : [1, 64],
-                'segment_bytes'  : [flashbytes]
-                }
-
-        parameter_combs = ParameterCombinations(para_dict)
-        return parameter_combs
-
-    def gen_parameters_contract_requestscale_count_tune():
-        expname = get_expname()
-        traffic_size = 1*MB
-        chunk_size = 2*KB
-        flashbytes = 1*GB
-        space_size = 128*MB
-        para_dict = {
-                'expname'        : [expname],
-                'ncq_depth'      : [16],
-                'bench'          : [
-                    {'name': 'RequestScale',
-                     'conf': {'op': OP_WRITE,
-                              'space_size'     : space_size,
-                              'traffic_size': traffic_size,
-                              'chunk_size': chunk_size}},
-                    # {'name': 'RequestScale',
-                     # 'conf': {'op': OP_READ,
-                              # 'space_size'     : space_size,
-                              # 'traffic_size': traffic_size,
-                              # 'chunk_size': chunk_size}},
-                     ],
-                'cache_mapped_data_bytes' :[flashbytes],
-                'flashbytes'     : [flashbytes],
-                'stripe_size'    : [1,],
-                'segment_bytes'  : [flashbytes]
-                }
-
-        parameter_combs = ParameterCombinations(para_dict)
-        return parameter_combs
-
-
-
-
-
-    parameters = gen_parameters_contract_alignment()
-    # parameters = gen_parameters_contract_requestscale()
-    # parameters = gen_parameters_contract_requestscale_count()
-    # parameters = gen_parameters_contract_requestscale_size()
-    # parameters = gen_parameters_contract_locality()
-    # parameters = gen_parameters_contract_grouping_in_timeline()
-    # parameters = gen_parameters_contract_grouping_in_space()
-
-
-    # parameters = gen_parameters_contract_requestscale_size_tune()
-    # parameters = gen_parameters_contract_requestscale_count_tune()
-
-    cnt = 0
-    for i, para in enumerate(parameters):
-        print 'exp', cnt
-        print para
-        cnt += 1
-        # para['ftl_type'] = 'dftldes'
-        para['ftl_type'] = 'nkftl2'
-        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-        exp = Experiment( Parameters(**para) )
-        exp.main()
-
 
 
 
