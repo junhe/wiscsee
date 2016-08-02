@@ -1,4 +1,5 @@
 import simpy
+import random
 
 class Extent(object):
     def __init__(self, lpn_start, lpn_count):
@@ -136,5 +137,12 @@ class LockPool(object):
     def release_request(self, addr, request):
         res = self.resources[addr]
         res.release(request)
+
+
+def random_channel_id(conf):
+    return random.randint(0, self.conf.n_channels_per_dev - 1)
+
+
+
 
 
