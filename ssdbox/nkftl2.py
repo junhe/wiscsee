@@ -810,7 +810,7 @@ class GarbageCollector(object):
         n_cleaners = self.conf.n_channels_per_dev
         self._cleaner_res = simpy.Resource(self.env, capacity=n_cleaners)
 
-    def clean(self, forced=False):
+    def clean(self, forced=False, merge=True):
         req = self._cleaning_lock.request()
         yield req
 
@@ -820,11 +820,11 @@ class GarbageCollector(object):
 
         for dgn in range(self.conf.n_datagroups_per_dev()):
             if dgn in self.log_mapping_table.log_group_info.keys():
-                yield self.env.process(self.clean_data_group(dgn))
+                yield self.env.process(self.clean_data_group(dgn, merge=merge))
 
         self._cleaning_lock.release(req)
 
-    def clean_data_group(self, data_group_no):
+    def clean_data_group(self, data_group_no, merge=True):
         """
         This function will merge the contents of all log blocks associated
         with data_group_no into data blocks. After calling this function,
@@ -852,13 +852,15 @@ class GarbageCollector(object):
                     self.clean_log_block(
                         log_pbn=log_block,
                         data_group_no=data_group_no,
-                        tag=TAG_WRITE_DRIVEN))
+                        tag=TAG_WRITE_DRIVEN,
+                        merge=merge
+                        ))
             procs.append(p)
         yield simpy.AllOf(self.env, procs)
 
         self._datagroup_gc_locks.release_request(data_group_no, req)
 
-    def clean_log_block(self, log_pbn, data_group_no, tag):
+    def clean_log_block(self, log_pbn, data_group_no, tag, merge=True):
         """
         0. If not valid page in log_pbn, simply erase and free it
         1. Try switch merge
@@ -886,6 +888,12 @@ class GarbageCollector(object):
         if not self.oob.is_any_page_valid(log_pbn):
             yield self.env.process(self._recycle_empty_log_block(
                 data_group_no, log_pbn, tag))
+            self._cleaner_res.release(req)
+            return
+
+        # To merge?
+        if merge is False:
+            # we want to be quick. We don't merge
             self._cleaner_res.release(req)
             return
 
@@ -1772,8 +1780,8 @@ class Ftl(ftlbuilder.FtlBuilder):
     def post_processing(self):
         pass
 
-    def clean(self, forced=False):
-        yield self.env.process(self.garbage_collector.clean(forced))
+    def clean(self, forced=False, merge=True):
+        yield self.env.process(self.garbage_collector.clean(forced, merge=merge))
 
     def is_cleaning_needed(self):
         return self.garbage_collector.decider.should_start()
