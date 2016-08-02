@@ -214,8 +214,10 @@ class TestBlockPool_stripping(unittest.TestCase):
 
         self.conf['stripe_size'] = 2
         block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        block_pool.pool._next_channel = 0
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
+        block_pool.pool._next_channel = 0
 
         n = 3
         ppns_to_write = block_pool.next_n_data_pages_to_program_striped(
@@ -237,6 +239,7 @@ class TestBlockPool_stripping(unittest.TestCase):
 
         self.conf['stripe_size'] = 1
         block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        block_pool.pool._next_channel = 0
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
 
@@ -255,6 +258,7 @@ class TestBlockPool_stripping(unittest.TestCase):
 
         self.conf['stripe_size'] = float('inf')
         block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        block_pool.pool._next_channel = 0
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
 

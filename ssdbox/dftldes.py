@@ -1407,7 +1407,6 @@ class DataBlockCleaner(object):
                     valid=self.oob.states.is_page_valid(ppn))
         self.gcid += 1
 
-
     def clean(self, blocknum):
         '''
         for each valid page, move it to another block

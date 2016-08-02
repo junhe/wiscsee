@@ -2048,6 +2048,8 @@ def create_loggroup2():
             block_pool=blockpool,
             max_n_log_blocks=conf['nkftl']['max_blocks_in_log_group'])
 
+    loggroup._cur_channel = 0 # override random cur channel
+
     return blockpool, loggroup
 
 

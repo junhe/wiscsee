@@ -311,6 +311,7 @@ class TestMultiChannelBlockPool(unittest.TestCase):
                 n_blocks_per_channel=64,
                 n_pages_per_block=32,
                 tags=[TDATA, TTRANS])
+        pool._next_channel = 0
 
         block0 = pool.pick_and_move(src=TFREE, dst=TDATA)
         block1 = pool.pick_and_move(src=TFREE, dst=TDATA)

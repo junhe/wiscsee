@@ -1,6 +1,7 @@
 from collections import deque
 import sys
 from ssdbox.devblockpool import *
+from ftlsim_commons import random_channel_id
 
 TDATA = 'TDATA'
 TTRANS = 'TTRANS'
@@ -14,7 +15,6 @@ class BlockPool(object):
     def __init__(self, confobj):
         self.conf = confobj
         self.n_channels = self.conf['flash_config']['n_channels_per_dev']
-        self.cur_channel = 0
         self.stripe_size = self.conf['stripe_size']
 
         self.pool = MultiChannelBlockPool(

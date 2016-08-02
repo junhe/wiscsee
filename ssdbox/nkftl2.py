@@ -375,7 +375,7 @@ class LogGroup2(object):
         self.max_n_log_blocks = max_n_log_blocks
         # each channel has a current block or None
         self.log_channels = [[] for i in range(self.n_channels)]
-        self._cur_channel = random_channel_id(self.conf)
+        self._cur_channel = random_channel_id(self.conf.n_channels_per_dev)
 
         self._page_map = bidict.bidict() # lpn->ppn
 

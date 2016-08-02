@@ -139,8 +139,8 @@ class LockPool(object):
         res.release(request)
 
 
-def random_channel_id(conf):
-    return random.randint(0, conf.n_channels_per_dev - 1)
+def random_channel_id(n_channels_per_dev):
+    return random.randint(0, n_channels_per_dev - 1)
 
 
 

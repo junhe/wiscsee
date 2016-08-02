@@ -1,4 +1,5 @@
 from tagblockpool import *
+from ftlsim_commons import random_channel_id
 
 class MultiChannelBlockPoolBase(object):
     def __init__(self, n_channels, n_blocks_per_channel, n_pages_per_block, tags):
@@ -15,7 +16,8 @@ class MultiChannelBlockPoolBase(object):
                 for i in range(n_channels)]
 
         # TODO: each tag has its own _next_channel
-        self._next_channel = 0
+        self._next_channel = random_channel_id(self.n_channels)
+        # self._next_channel = 0
 
     def _incr_next_channel(self):
         self._next_channel = (self._next_channel + 1) % self.n_channels

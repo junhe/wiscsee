@@ -21,12 +21,11 @@ class TestCpuhandler(unittest.TestCase):
 
 class TestRandomChannelID(unittest.TestCase):
     def test(self):
-        conf = ssdbox.dftldes.Config()
-        n = conf.n_channels_per_dev
+        n = 16
 
         channels = set()
         for i in range(10000):
-            channel_id = random_channel_id(conf)
+            channel_id = random_channel_id(n)
             channels.add(channel_id)
             self.assertTrue(channel_id >= 0)
             self.assertTrue(channel_id < n)
