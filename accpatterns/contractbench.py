@@ -371,6 +371,31 @@ class GroupingBase(object):
         for req in self.discards():
             yield req
 
+
+        ############### non merge clean ##############
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.snapshot_before_non_merge_gc():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.non_merge_clean():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
+            yield req
+
+        for req in self.snapshot_after_non_merge_gc():
+            yield req
+
+
+        ############### clean ########################
         # barrier ====================================
         for req in self.barrier_events():
             yield req
@@ -383,6 +408,10 @@ class GroupingBase(object):
             yield req
 
         for req in self.clean():
+            yield req
+
+        # barrier ====================================
+        for req in self.barrier_events():
             yield req
 
         for req in self.snapshot_after_gc():
@@ -460,78 +489,6 @@ class GroupByInvTimeInSpace(GroupingBase, BarrierMixin, UtilMixin):
                     stride_size=2*self.chunk_size)
 
         for req in reqs1_discard:
-            yield req
-
-    def __iter__(self):
-        for req in self.snapshot_before_interest():
-            yield req
-
-        # barrier ====================================
-        for req in self.barrier_events():
-            yield req
-
-        # interest workload
-        for req in self.interest_workload():
-            yield req
-
-        # barrier ====================================
-        for req in self.barrier_events():
-            yield req
-
-        for req in self.snapshot_after_interest():
-            yield req
-
-        # barrier ====================================
-        for req in self.barrier_events():
-            yield req
-
-        for req in self.discards():
-            yield req
-
-
-        ############### non merge clean ##############
-        # barrier ====================================
-        for req in self.barrier_events():
-            yield req
-
-        for req in self.snapshot_before_non_merge_gc():
-            yield req
-
-        # barrier ====================================
-        for req in self.barrier_events():
-            yield req
-
-        for req in self.non_merge_clean():
-            yield req
-
-        # barrier ====================================
-        for req in self.barrier_events():
-            yield req
-
-        for req in self.snapshot_after_non_merge_gc():
-            yield req
-
-
-        ############### clean ########################
-        # barrier ====================================
-        for req in self.barrier_events():
-            yield req
-
-        for req in self.snapshot_before_gc():
-            yield req
-
-        # barrier ====================================
-        for req in self.barrier_events():
-            yield req
-
-        for req in self.clean():
-            yield req
-
-        # barrier ====================================
-        for req in self.barrier_events():
-            yield req
-
-        for req in self.snapshot_after_gc():
             yield req
 
 
