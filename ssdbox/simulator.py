@@ -6,6 +6,7 @@ import simpy
 import sys
 import os
 import csv
+import pprint
 
 import bmftl
 import config
@@ -81,7 +82,7 @@ class SimulatorDESNew(Simulator):
     def record_post_run_stats(self):
         self.recorder.set_result_by_one_key(
                 'simulation_duration', self.env.now)
-        print self.recorder.get_result_summary()
+        pprint.pprint(self.recorder.get_result_summary())
 
         self.recorder.close()
 
