@@ -414,6 +414,10 @@ class ConfigNewFlash(Config):
         return self['flash_config']['page_size']
 
     @property
+    def block_bytes(self):
+        return self.page_size * self.n_pages_per_block
+
+    @property
     def n_secs_per_page(self):
         return self['flash_config']['page_size'] / self['sector_size']
 

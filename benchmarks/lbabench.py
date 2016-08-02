@@ -422,11 +422,10 @@ def contract_bench():
             # this has to be done before setting the number of blocks above
             if self.para.ftl_type == 'nkftl2':
                 print 'set N and K'
-                # TODO: the setting should reflect segment bytes
-                self.conf['nkftl']['n_blocks_in_data_group'] = self.conf.n_blocks_per_dev
-                self.conf['nkftl']['max_blocks_in_log_group'] = self.conf.n_blocks_per_dev
-                print self.conf['nkftl']['n_blocks_in_data_group']
-                print self.conf.n_blocks_per_dev
+                self.conf['nkftl']['n_blocks_in_data_group'] = \
+                    self.para.segment_bytes / self.conf.block_bytes
+                self.conf['nkftl']['max_blocks_in_log_group'] = \
+                    self.conf['nkftl']['n_blocks_in_data_group'] * 2
 
         def my_run(self):
             runtime_update(self.conf)
