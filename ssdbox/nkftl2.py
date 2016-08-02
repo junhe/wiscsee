@@ -807,7 +807,7 @@ class GarbageCollector(object):
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
-        n_cleaners = self.conf.n_channels_per_dev
+        n_cleaners = self.conf.n_channels_per_dev * 8
         self._cleaner_res = simpy.Resource(self.env, capacity=n_cleaners)
 
     def clean(self, forced=False, merge=True):
