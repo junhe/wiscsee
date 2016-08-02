@@ -9,7 +9,7 @@ from utilities import utils
 from config import MountOption as MOpt
 from workflow import run_workflow
 from ssdbox.simulator import GcLog
-from ssdbox.ftlsim_commons import Extent
+from ssdbox.ftlsim_commons import Extent, random_channel_id
 
 class TestCpuhandler(unittest.TestCase):
     def test_cpu(self):
@@ -18,6 +18,20 @@ class TestCpuhandler(unittest.TestCase):
 
         online_cpus = workrunner.cpuhandler.get_online_cpuids()
         self.assertListEqual(possible_cpus, online_cpus)
+
+class TestRandomChannelID(unittest.TestCase):
+    def test(self):
+        conf = ssdbox.dftldes.Config()
+        n = conf.n_channels_per_dev
+
+        channels = set()
+        for i in range(10000):
+            channel_id = random_channel_id(conf)
+            channels.add(channel_id)
+            self.assertTrue(channel_id >= 0)
+            self.assertTrue(channel_id < n)
+
+        self.assertTrue(len(channels) > n/3)
 
 class TestLinuxNCQDepth(unittest.TestCase):
     def test_ncq_depth_setting(self):

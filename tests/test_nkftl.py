@@ -2083,6 +2083,7 @@ class TestLogGroup2(unittest.TestCase):
                 block_pool=blockpool,
                 max_n_log_blocks=conf['nkftl']['max_blocks_in_log_group'])
 
+        loggroup._cur_channel = 0
         self.assertEqual(loggroup._cur_channel, 0)
         ret = loggroup._get_and_incr_cur_channel()
         self.assertEqual(ret, 0)
@@ -2194,6 +2195,8 @@ class TestLogGroup2(unittest.TestCase):
 
     def test_next_ppns_channel_position(self):
         blockpool, loggroup = create_loggroup2()
+
+        loggroup._cur_channel = 0
 
         self.assertEqual(loggroup._cur_channel, 0)
         ppns = loggroup.next_ppns(n=1, strip_unit_size=32)
