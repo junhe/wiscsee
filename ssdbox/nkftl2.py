@@ -818,9 +818,12 @@ class GarbageCollector(object):
             self._cleaning_lock.release(req)
             return
 
+        procs = []
         for dgn in range(self.conf.n_datagroups_per_dev()):
             if dgn in self.log_mapping_table.log_group_info.keys():
-                yield self.env.process(self.clean_data_group(dgn, merge=merge))
+                p = self.env.process(self.clean_data_group(dgn, merge=merge))
+                procs.append(p)
+        yield simpy.AllOf(self.env, procs)
 
         self._cleaning_lock.release(req)
 
