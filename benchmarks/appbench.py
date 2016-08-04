@@ -352,7 +352,7 @@ def leveldbbench():
                 utils.disable_ext4_journal(self.conf)
 
         def setup_flash(self):
-            self.conf['SSDFramework']['ncq_depth'] = 8
+            self.conf['SSDFramework']['ncq_depth'] = 16
 
             self.conf['flash_config']['page_size'] = 2048
             self.conf['flash_config']['n_pages_per_block'] = self.para.n_pages_per_block
@@ -360,15 +360,15 @@ def leveldbbench():
             self.conf['flash_config']['n_planes_per_chip'] = 1
             self.conf['flash_config']['n_chips_per_package'] = 1
             self.conf['flash_config']['n_packages_per_channel'] = 1
-            self.conf['flash_config']['n_channels_per_dev'] = 8
+            self.conf['flash_config']['n_channels_per_dev'] = 16
 
             self.conf['do_not_check_gc_setting'] = True
             self.conf.GC_high_threshold_ratio = 0.90
             self.conf.GC_low_threshold_ratio = 0.0
 
         def setup_ftl(self):
-            self.conf['enable_blktrace'] = True
-            self.conf['enable_simulation'] = False
+            self.conf['enable_blktrace'] = self.para.enable_blktrace
+            self.conf['enable_simulation'] = self.para.enable_simulation
             self.conf['stripe_size'] = self.para.stripe_size
             self.conf['segment_bytes'] = self.para.segment_bytes
 
@@ -376,8 +376,15 @@ def leveldbbench():
                 self.conf['simulator_class'] = 'SimulatorDESNew'
                 self.conf['ftl_type'] = 'dftldes'
             elif self.para.ftl == 'nkftl2':
-                self.conf['simulator_class'] = 'SimulatorNonDESe2eExtent'
+                self.conf['simulator_class'] = 'SimulatorDESNew'
                 self.conf['ftl_type'] = 'nkftl2'
+
+                self.conf['nkftl']['n_blocks_in_data_group'] = \
+                    self.para.segment_bytes / self.conf.block_bytes
+                self.conf['nkftl']['max_blocks_in_log_group'] = \
+                    self.conf['nkftl']['n_blocks_in_data_group'] * 2
+                print 'N:', self.conf['nkftl']['n_blocks_in_data_group']
+                print 'K:', self.conf['nkftl']['max_blocks_in_log_group']
             else:
                 raise NotImplementedError()
 
@@ -391,7 +398,7 @@ def leveldbbench():
                 assert self.conf['simulator_class'] == 'SimulatorDESNew'
             elif self.conf['ftl_type'] == 'nkftl2':
                 assert isinstance(self.conf, ssdbox.nkftl2.Config)
-                assert self.conf['simulator_class'] == 'SimulatorNonDESe2eExtent'
+                assert self.conf['simulator_class'] == 'SimulatorDESNew'
             else:
                 RuntimeError("ftl type may not be supported here")
 
@@ -415,9 +422,9 @@ def leveldbbench():
 
     def run_exp():
         expname = get_expname()
-        lbabytes = 16*GB
+        lbabytes = 1*GB
         para_dict = {
-                'ftl'      : ['dftldes'],
+                'ftl'      : ['nkftl2'],
                 'workload_class'   : [
                     'Leveldb'
                     # 'IterDirs'
@@ -430,23 +437,22 @@ def leveldbbench():
                      {'num': 1000, 'max_key': 1000}],
                     ],
                 'leveldb_threads': [1],
-                'pre_run_kv_num' : [2000000],
+                'pre_run_kv_num' : [None],
                 'device_path'    : ['/dev/sdc1'],
-                'filesystem'     : ['xfs'],
+                'filesystem'     : ['ext4'],
                 'ext4datamode'   : ['ordered'],
                 'ext4hasjournal' : [True],
                 'expname'        : [expname],
                 'dirty_bytes'    : [4*GB],
                 'linux_ncq_depth': [31],
-                'stripe_size'    : [128],
                 'cache_mapped_data_bytes' :[lbabytes],
                 'lbabytes'       : [lbabytes],
-                'n_instances'    : [1],
-                'one_by_one'     : [True],
+                'one_by_one'     : [False],
                 'n_pages_per_block': [64],
-                'nkftl_n'        : [4],
-                'nkftl_k'        : [4],
-                'segment_bytes'  : [128*MB],
+                'stripe_size'    : [64],
+                'segment_bytes'  : [lbabytes],
+                'enable_blktrace': [True],
+                'enable_simulation': [True],
 
                 'f2fs_gc_after_workload': [True],
                 }
