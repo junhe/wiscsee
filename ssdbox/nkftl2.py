@@ -76,6 +76,8 @@ class Config(config.ConfigNCQFTL):
                 "GC_threshold_ratio": 0.8,
                 "GC_low_threshold_ratio": 0.7,
 
+                "max_ratio_of_log_blocks": 0.10,
+
                 "provision_ratio": 1.5 # 1.5: 1GB user size, 1.5 flash size behind
             },
         }
@@ -671,8 +673,14 @@ class GcDecider(object):
 
     def should_start(self):
         n_used_blocks = self.block_pool.total_used_blocks()
+        n_used_log_blocks = len(self.block_pool.log_usedblocks())
+        log_block_high = self.conf.n_blocks_per_dev * \
+                self.conf['nkftl']['max_n_log_blocks_per_dev']
+        print 'log_block_high', log_block_high
+        print 'n_used_log_blocks', n_used_log_blocks
 
-        return n_used_blocks > self.high_watermark
+        return n_used_blocks > self.high_watermark or \
+                n_used_log_blocks > log_block_high
 
     def should_stop(self):
         n_used_blocks = self.block_pool.total_used_blocks()
@@ -844,6 +852,8 @@ class GarbageCollector(object):
 
         req = self._datagroup_gc_locks.get_request(data_group_no)
         yield req
+
+        print 'Cleaning data group', data_group_no
 
         log_block_list = copy.copy(self.log_mapping_table\
                 .log_group_info[data_group_no].log_block_numbers())
