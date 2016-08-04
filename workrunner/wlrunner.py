@@ -16,6 +16,18 @@ import workload
 from commons import *
 
 
+class BarrierGen(object):
+    def __init__(self, n_ncq_slots):
+        self.n_ncq_slots = n_ncq_slots
+
+    def barrier_events(self):
+        for i in range(self.n_ncq_slots):
+            yield hostevent.ControlEvent(operation=OP_NOOP)
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        for i in range(self.n_ncq_slots):
+            yield hostevent.ControlEvent(operation=OP_NOOP)
+
+
 class WorkloadRunner(object):
     def __init__(self, confobj):
         if not isinstance(confobj, config.Config):
@@ -232,6 +244,8 @@ class WorkloadRunner(object):
             self.conf['device_path'], dumppath))
 
     def get_event_iterator(self):
+        barriergen = BarrierGen(self.conf.ssd_ncq_depth())
+
         yield hostevent.ControlEvent(operation=OP_DISABLE_RECORDER)
 
         mkfs_line_iter = hostevent.FileLineIterator(
@@ -243,7 +257,8 @@ class WorkloadRunner(object):
 
         # special event indicates the start of workload
         yield hostevent.ControlEvent(operation=OP_ENABLE_RECORDER)
-        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        for req in barriergen.barrier_events():
+            yield req
         yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
                 arg1='interest_workload_start')
 
@@ -254,7 +269,8 @@ class WorkloadRunner(object):
         for event in event_workload_iter:
             yield event
 
-        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        for req in barriergen.barrier_events():
+            yield req
         yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
                 arg1='gc_start_timestamp')
 

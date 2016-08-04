@@ -597,6 +597,9 @@ class ConfigNCQFTL(ConfigNewFlash):
         self['process_queue_depth'] = 32
         self['simulator_enable_interval'] = False
 
+    def ssd_ncq_depth(self):
+        return self['SSDFramework']['ncq_depth']
+
     def page_read_time(self):
         return self['flash_config']['t_R']
 
