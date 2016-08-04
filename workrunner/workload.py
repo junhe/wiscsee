@@ -326,7 +326,7 @@ class Leveldb(Workload):
             use_existing_db=1):
         utils.prepare_dir(db)
 
-        db_bench_path = "../leveldb-1.18/db_bench"
+        db_bench_path = "../leveldb/db_bench"
         cmd = "{exe} --benchmarks={benchmarks} --num={num} --db={db} "\
                 "--threads={threads} "\
                 "--use_existing_db={use_existing_db} > {out}"\

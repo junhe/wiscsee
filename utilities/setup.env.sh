@@ -26,9 +26,8 @@ sudo make install
 cd $doradir
 
 cd ../..
-wget https://github.com/google/leveldb/archive/v1.18.tar.gz
-tar xf v1.18.tar.gz
-cd leveldb-1.18
+git clone git@github.com:junhe/leveldb.git
+cd leveldb
 make
 make db_bench
 cd $doradir
