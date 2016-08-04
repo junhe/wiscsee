@@ -344,13 +344,10 @@ class Leveldb(Workload):
         data_dir = os.path.join(self.conf['fs_mount_point'], 'leveldb_data')
         outputpath = os.path.join(self.conf['result_dir'], 'leveldb.out')
         benchmarks = self.workload_conf['benchmarks']
-        num = self.workload_conf['num']
+        num_maxkey_pairs = self.workload_conf['num_maxkey_pairs']
         one_by_one = self.workload_conf['one_by_one']
         pre_run_kv_num = self.workload_conf['pre_run_kv_num']
         threads = self.workload_conf['threads']
-        max_key = self.workload_conf['max_key']
-
-        n_instances = self.workload_conf['n_instances']
 
         if one_by_one is True:
             p = self._execute_leveldb(benchmarks='fillrandom',
@@ -361,21 +358,24 @@ class Leveldb(Workload):
                     use_existing_db=0
                     )
             p.wait()
-            for i in range(n_instances):
-                p = self._execute_leveldb(benchmarks=benchmarks, num=num,
+            for pair_dict in num_maxkey_pairs:
+                p = self._execute_leveldb(benchmarks=benchmarks,
                         threads=threads,
-                        max_key=max_key,
+                        num=pair_dict['num'],
+                        max_key=pair_dict['max_key'],
                         db=data_dir, outputpath=outputpath,
                         use_existing_db=1
                         )
                 p.wait()
         else:
             procs = []
-            for i in range(n_instances):
-                p = self._execute_leveldb(benchmarks=benchmarks, num=num,
+            for i, pair_dict in enumerate(num_maxkey_pairs):
+                p = self._execute_leveldb(
+                        benchmarks=benchmarks,
                         db=data_dir + str(i), outputpath=outputpath,
                         threads=threads,
-                        max_key=max_key,
+                        num=pair_dict['num'],
+                        max_key=pair_dict['max_key'],
                         use_existing_db=0
                         )
                 procs.append(p)
