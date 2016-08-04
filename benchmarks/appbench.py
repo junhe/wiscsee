@@ -307,6 +307,7 @@ def leveldbbench():
                     'one_by_one': self.para.one_by_one,
                     'pre_run_kv_num': self.para.pre_run_kv_num,
                     'threads': self.para.leveldb_threads,
+                    'max_key': self.para.max_key
                     }
             self.conf['workload_conf_key'] = 'workload_config'
 
@@ -415,28 +416,19 @@ def leveldbbench():
             self.run()
 
     def run_exp():
-        Parameters = collections.namedtuple("Parameters",
-            "workload_class, filesystem, expname, dirty_bytes, device_path, "\
-            "stripe_size, linux_ncq_depth, "\
-            "cache_mapped_data_bytes, lbabytes, "\
-            "f2fs_gc_after_workload, ext4datamode, ext4hasjournal, "\
-            "benchmarks, num, n_instances, one_by_one, n_pages_per_block, "\
-            "nkftl_n, nkftl_k, pre_run_kv_num, ftl, leveldb_threads, "\
-            "segment_bytes"
-            )
-
         expname = get_expname()
         lbabytes = 16*GB
         para_dict = {
                 'ftl'      : ['dftldes'],
                 'workload_class'   : [
-                    # 'Leveldb'
-                    'IterDirs'
+                    'Leveldb'
+                    # 'IterDirs'
                     ],
                 'benchmarks'     : [
                     'overwrite',
                     ],
                 'num'            : [1000000],
+                'max_key'        : [1000],
                 'leveldb_threads': [1],
                 'pre_run_kv_num' : [2000000],
                 'device_path'    : ['/dev/sdc1'],
@@ -461,6 +453,7 @@ def leveldbbench():
         parameter_combs = ParameterCombinations(para_dict)
 
         for para in parameter_combs:
+            Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = Experimenter( Parameters(**para) )
             obj.main()
 

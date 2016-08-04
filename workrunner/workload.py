@@ -322,17 +322,17 @@ class Leveldb(Workload):
 
 
     def _execute_leveldb(self, benchmarks, num, db, outputpath,
-            threads=0,
-            use_existing_db=1):
+            threads, use_existing_db, max_key):
         utils.prepare_dir(db)
 
         db_bench_path = "../leveldb/db_bench"
         cmd = "{exe} --benchmarks={benchmarks} --num={num} --db={db} "\
-                "--threads={threads} "\
+                "--threads={threads} --dowrite_max_key={max_key} "\
                 "--use_existing_db={use_existing_db} > {out}"\
             .format(exe=db_bench_path, benchmarks=benchmarks,
                 num=num, db=db, out=outputpath,
                 threads=threads,
+                max_key=max_key,
                 use_existing_db=use_existing_db
                 )
         print cmd
@@ -348,6 +348,7 @@ class Leveldb(Workload):
         one_by_one = self.workload_conf['one_by_one']
         pre_run_kv_num = self.workload_conf['pre_run_kv_num']
         threads = self.workload_conf['threads']
+        max_key = self.workload_conf['max_key']
 
         n_instances = self.workload_conf['n_instances']
 
@@ -355,6 +356,7 @@ class Leveldb(Workload):
             p = self._execute_leveldb(benchmarks='fillrandom',
                     num=pre_run_kv_num,
                     threads=threads,
+                    max_key=max_key,
                     db=data_dir, outputpath=outputpath,
                     use_existing_db=0
                     )
@@ -362,6 +364,7 @@ class Leveldb(Workload):
             for i in range(n_instances):
                 p = self._execute_leveldb(benchmarks=benchmarks, num=num,
                         threads=threads,
+                        max_key=max_key,
                         db=data_dir, outputpath=outputpath,
                         use_existing_db=1
                         )
@@ -372,6 +375,7 @@ class Leveldb(Workload):
                 p = self._execute_leveldb(benchmarks=benchmarks, num=num,
                         db=data_dir + str(i), outputpath=outputpath,
                         threads=threads,
+                        max_key=max_key,
                         use_existing_db=0
                         )
                 procs.append(p)
