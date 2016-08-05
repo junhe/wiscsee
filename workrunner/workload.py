@@ -325,14 +325,19 @@ class Leveldb(Workload):
             threads, use_existing_db, max_key):
         utils.prepare_dir(db)
 
+        if max_key is None:
+            max_key_slice = ''
+        else:
+            max_key_slice = '--dowrite_max_key={} '.format(max_key)
+
         db_bench_path = "../leveldb/db_bench"
         cmd = "{exe} --benchmarks={benchmarks} --num={num} --db={db} "\
-                "--threads={threads} --dowrite_max_key={max_key} "\
+                "--threads={threads}  {max_key_slice} "\
                 "--use_existing_db={use_existing_db} > {out}"\
             .format(exe=db_bench_path, benchmarks=benchmarks,
                 num=num, db=db, out=outputpath,
                 threads=threads,
-                max_key=max_key,
+                max_key_slice=max_key_slice,
                 use_existing_db=use_existing_db
                 )
         print cmd
@@ -343,39 +348,31 @@ class Leveldb(Workload):
     def run(self):
         data_dir = os.path.join(self.conf['fs_mount_point'], 'leveldb_data')
         outputpath = os.path.join(self.conf['result_dir'], 'leveldb.out')
-        benchmarks = self.workload_conf['benchmarks']
-        num_maxkey_pairs = self.workload_conf['num_maxkey_pairs']
+        benchconfs = self.workload_conf['benchconfs']
         one_by_one = self.workload_conf['one_by_one']
         pre_run_kv_num = self.workload_conf['pre_run_kv_num']
         threads = self.workload_conf['threads']
 
         if one_by_one is True:
-            p = self._execute_leveldb(benchmarks='fillrandom',
-                    num=pre_run_kv_num,
-                    threads=threads,
-                    max_key=max_key,
-                    db=data_dir, outputpath=outputpath,
-                    use_existing_db=0
-                    )
-            p.wait()
-            for pair_dict in num_maxkey_pairs:
-                p = self._execute_leveldb(benchmarks=benchmarks,
+            for conf_dict in benchconfs:
+                p = self._execute_leveldb(
+                        benchmarks=conf_dict['benchmarks'],
                         threads=threads,
-                        num=pair_dict['num'],
-                        max_key=pair_dict['max_key'],
+                        num=conf_dict['num'],
+                        max_key=conf_dict['max_key'],
                         db=data_dir, outputpath=outputpath,
                         use_existing_db=1
                         )
                 p.wait()
         else:
             procs = []
-            for i, pair_dict in enumerate(num_maxkey_pairs):
+            for i, conf_dict in enumerate(benchconfs):
                 p = self._execute_leveldb(
-                        benchmarks=benchmarks,
+                        benchmarks=conf_dict['benchmarks'],
                         db=data_dir + str(i), outputpath=outputpath,
                         threads=threads,
-                        num=pair_dict['num'],
-                        max_key=pair_dict['max_key'],
+                        num=conf_dict['num'],
+                        max_key=conf_dict['max_key'],
                         use_existing_db=0
                         )
                 procs.append(p)

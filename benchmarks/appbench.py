@@ -301,8 +301,7 @@ def leveldbbench():
         def setup_workload(self):
             self.conf['workload_class'] = self.para.workload_class
             self.conf['workload_config'] = {
-                    'benchmarks': self.para.benchmarks,
-                    'num_maxkey_pairs': self.para.num_maxkey_pairs,
+                    'benchconfs': self.para.benchconfs,
                     'one_by_one': self.para.one_by_one,
                     'pre_run_kv_num': self.para.pre_run_kv_num,
                     'threads': self.para.leveldb_threads,
@@ -429,12 +428,9 @@ def leveldbbench():
                     'Leveldb'
                     # 'IterDirs'
                     ],
-                'benchmarks'     : [
-                    'overwrite',
-                    ],
-                'num_maxkey_pairs': [
-                    [{'num': 1000, 'max_key': 1000},
-                     {'num': 1000, 'max_key': 1000}],
+                'benchconfs': [
+                    [{'benchmarks': 'fillseq',   'num': 10000, 'max_key': None},
+                     {'benchmarks': 'overwrite', 'num': 10000, 'max_key': 1000}],
                     ],
                 'leveldb_threads': [1],
                 'pre_run_kv_num' : [None],
