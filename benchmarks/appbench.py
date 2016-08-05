@@ -303,7 +303,6 @@ def leveldbbench():
             self.conf['workload_config'] = {
                     'benchconfs': self.para.benchconfs,
                     'one_by_one': self.para.one_by_one,
-                    'pre_run_kv_num': self.para.pre_run_kv_num,
                     'threads': self.para.leveldb_threads,
                     }
             self.conf['workload_conf_key'] = 'workload_config'
@@ -433,7 +432,6 @@ def leveldbbench():
                      {'benchmarks': 'overwrite', 'num': 10000, 'max_key': 1000}],
                     ],
                 'leveldb_threads': [1],
-                'pre_run_kv_num' : [None],
                 'device_path'    : ['/dev/sdc1'],
                 'filesystem'     : ['ext4'],
                 'ext4datamode'   : ['ordered'],

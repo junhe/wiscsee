@@ -350,7 +350,6 @@ class Leveldb(Workload):
         outputpath = os.path.join(self.conf['result_dir'], 'leveldb.out')
         benchconfs = self.workload_conf['benchconfs']
         one_by_one = self.workload_conf['one_by_one']
-        pre_run_kv_num = self.workload_conf['pre_run_kv_num']
         threads = self.workload_conf['threads']
 
         if one_by_one is True:
