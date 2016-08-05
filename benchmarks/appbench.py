@@ -351,7 +351,7 @@ def leveldbbench():
                 utils.disable_ext4_journal(self.conf)
 
         def setup_flash(self):
-            self.conf['SSDFramework']['ncq_depth'] = 16
+            self.conf['SSDFramework']['ncq_depth'] = self.para.ssd_ncq_depth
 
             self.conf['flash_config']['page_size'] = 2048
             self.conf['flash_config']['n_pages_per_block'] = self.para.n_pages_per_block
@@ -441,6 +441,7 @@ def leveldbbench():
                 'expname'        : [expname],
                 'dirty_bytes'    : [4*GB],
                 'linux_ncq_depth': [31],
+                'ssd_ncq_depth'  : [1],
                 'cache_mapped_data_bytes' :[lbabytes],
                 'lbabytes'       : [lbabytes],
                 'one_by_one'     : [False],
