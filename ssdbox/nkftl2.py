@@ -675,9 +675,7 @@ class GcDecider(object):
         n_used_blocks = self.block_pool.total_used_blocks()
         n_used_log_blocks = len(self.block_pool.log_usedblocks)
         log_block_high = self.conf.n_blocks_per_dev * \
-                self.conf['nkftl']['max_n_log_blocks_per_dev']
-        print 'log_block_high', log_block_high
-        print 'n_used_log_blocks', n_used_log_blocks
+                self.conf['nkftl']['max_ratio_of_log_blocks']
 
         return n_used_blocks > self.high_watermark or \
                 n_used_log_blocks > log_block_high
