@@ -273,31 +273,149 @@ def bench():
 
     run_exp()
 
+
+class Experimenter(object):
+    def __init__(self, para):
+        if para.ftl == 'nkftl2':
+            self.conf = ssdbox.nkftl2.Config()
+        elif para.ftl == 'dftldes':
+            self.conf = ssdbox.dftldes.Config()
+        else:
+            raise NotImplementedError()
+        self.para = para
+        self.conf['exp_parameters'] = self.para._asdict()
+
+    def setup_environment(self):
+        self.conf['device_path'] = self.para.device_path
+        self.conf['dev_size_mb'] = self.para.lbabytes / MB
+        self.conf['filesystem'] = self.para.filesystem
+        self.conf["n_online_cpus"] = 'all'
+
+        self.conf['linux_ncq_depth'] = self.para.linux_ncq_depth
+
+        set_vm_default()
+        set_vm("dirty_bytes", self.para.dirty_bytes)
+
+        self.conf['do_fstrim'] = False
+
+    def setup_workload(self):
+        raise NotImplementedError()
+
+    def setup_fs(self):
+        self.conf['mnt_opts'].update({
+            "f2fs":   {
+                        # 'discard': MOpt(opt_name = 'discard',
+                                        # value = 'discard',
+                                        # include_name = False),
+                        'background_gc': MOpt(opt_name = 'background_gc',
+                                            value = 'off',
+                                            include_name = True)
+                                        },
+            "ext4":   {
+                        # 'discard': MOpt(opt_name = "discard",
+                                         # value = "discard",
+                                         # include_name = False),
+                        'data': MOpt(opt_name = "data",
+                                        value = self.para.ext4datamode,
+                                        include_name = True) },
+            "btrfs":  {
+                        # "discard": MOpt(opt_name = "discard",
+                                         # value = "discard",
+                                         # include_name = False),
+                                         # "ssd": MOpt(opt_name = 'ssd',
+                                             # value = 'ssd',
+                                     # include_name = False),
+                        "autodefrag": MOpt(opt_name = 'autodefrag',
+                                            value = 'autodefrag',
+                                            include_name = False) },
+            "xfs":    {
+                # 'discard': MOpt(opt_name = 'discard',
+                                        # value = 'discard',
+                                        # include_name = False)
+                },
+            }
+            )
+
+        if self.para.ext4hasjournal is True:
+            utils.enable_ext4_journal(self.conf)
+        else:
+            utils.disable_ext4_journal(self.conf)
+
+        self.conf['f2fs_gc_after_workload'] = self.para.f2fs_gc_after_workload
+
+    def setup_flash(self):
+        self.conf['SSDFramework']['ncq_depth'] = self.para.ssd_ncq_depth
+
+        self.conf['flash_config']['page_size'] = 2048
+        self.conf['flash_config']['n_pages_per_block'] = self.para.n_pages_per_block
+        self.conf['flash_config']['n_blocks_per_plane'] = 2
+        self.conf['flash_config']['n_planes_per_chip'] = 1
+        self.conf['flash_config']['n_chips_per_package'] = 1
+        self.conf['flash_config']['n_packages_per_channel'] = 1
+        self.conf['flash_config']['n_channels_per_dev'] = 16
+
+        self.conf['do_not_check_gc_setting'] = True
+        self.conf.GC_high_threshold_ratio = 0.90
+        self.conf.GC_low_threshold_ratio = 0.0
+
+    def setup_ftl(self):
+        self.conf['enable_blktrace'] = self.para.enable_blktrace
+        self.conf['enable_simulation'] = self.para.enable_simulation
+        self.conf['stripe_size'] = self.para.stripe_size
+        self.conf['segment_bytes'] = self.para.segment_bytes
+
+        if self.para.ftl == 'dftldes':
+            self.conf['simulator_class'] = 'SimulatorDESNew'
+            self.conf['ftl_type'] = 'dftldes'
+        elif self.para.ftl == 'nkftl2':
+            self.conf['simulator_class'] = 'SimulatorDESNew'
+            self.conf['ftl_type'] = 'nkftl2'
+
+            self.conf['nkftl']['n_blocks_in_data_group'] = \
+                self.para.segment_bytes / self.conf.block_bytes
+            self.conf['nkftl']['max_blocks_in_log_group'] = \
+                self.conf['nkftl']['n_blocks_in_data_group'] * 2
+            print 'N:', self.conf['nkftl']['n_blocks_in_data_group']
+            print 'K:', self.conf['nkftl']['max_blocks_in_log_group']
+        else:
+            raise NotImplementedError()
+
+        logicsize_mb = self.conf['dev_size_mb']
+        self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
+        self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
+
+    def check_config(self):
+        if self.conf['ftl_type'] == 'dftldes':
+            assert isinstance(self.conf, ssdbox.dftldes.Config)
+            assert self.conf['simulator_class'] == 'SimulatorDESNew'
+        elif self.conf['ftl_type'] == 'nkftl2':
+            assert isinstance(self.conf, ssdbox.nkftl2.Config)
+            assert self.conf['simulator_class'] == 'SimulatorDESNew'
+        else:
+            RuntimeError("ftl type may not be supported here")
+
+    def run(self):
+        set_exp_metadata(self.conf, save_data = True,
+                expname = self.para.expname,
+                subexpname = chain_items_as_filename(self.para))
+        runtime_update(self.conf)
+
+        self.check_config()
+
+        run_workflow(self.conf)
+
+    def main(self):
+        self.setup_environment()
+        self.setup_fs()
+        self.setup_workload()
+        self.setup_flash()
+        self.setup_ftl()
+        self.run()
+
+
+
 def leveldbbench():
-    class Experimenter(object):
-        def __init__(self, para):
-            if para.ftl == 'nkftl2':
-                self.conf = ssdbox.nkftl2.Config()
-            elif para.ftl == 'dftldes':
-                self.conf = ssdbox.dftldes.Config()
-            else:
-                raise NotImplementedError()
-            self.para = para
-            self.conf['exp_parameters'] = self.para._asdict()
-
-        def setup_environment(self):
-            self.conf['device_path'] = self.para.device_path
-            self.conf['dev_size_mb'] = self.para.lbabytes / MB
-            self.conf['filesystem'] = self.para.filesystem
-            self.conf["n_online_cpus"] = 'all'
-
-            self.conf['linux_ncq_depth'] = self.para.linux_ncq_depth
-
-            set_vm_default()
-            set_vm("dirty_bytes", self.para.dirty_bytes)
-
-            self.conf['do_fstrim'] = False
-
+    class LocalExperimenter(Experimenter):
         def setup_workload(self):
             self.conf['workload_class'] = self.para.workload_class
             self.conf['workload_config'] = {
@@ -307,131 +425,12 @@ def leveldbbench():
                     }
             self.conf['workload_conf_key'] = 'workload_config'
 
-            self.conf['f2fs_gc_after_workload'] = self.para.f2fs_gc_after_workload
-
-        def setup_fs(self):
-            self.conf['mnt_opts'].update({
-                "f2fs":   {
-                            # 'discard': MOpt(opt_name = 'discard',
-                                            # value = 'discard',
-                                            # include_name = False),
-                            'background_gc': MOpt(opt_name = 'background_gc',
-                                                value = 'off',
-                                                include_name = True)
-                                            },
-                "ext4":   {
-                            # 'discard': MOpt(opt_name = "discard",
-                                             # value = "discard",
-                                             # include_name = False),
-                            'data': MOpt(opt_name = "data",
-                                            value = self.para.ext4datamode,
-                                            include_name = True) },
-                "btrfs":  {
-                            # "discard": MOpt(opt_name = "discard",
-                                             # value = "discard",
-                                             # include_name = False),
-                                             # "ssd": MOpt(opt_name = 'ssd',
-                                                 # value = 'ssd',
-                                         # include_name = False),
-                            "autodefrag": MOpt(opt_name = 'autodefrag',
-                                                value = 'autodefrag',
-                                                include_name = False) },
-                "xfs":    {
-                    # 'discard': MOpt(opt_name = 'discard',
-                                            # value = 'discard',
-                                            # include_name = False)
-                    },
-                }
-                )
-
-            if self.para.ext4hasjournal is True:
-                utils.enable_ext4_journal(self.conf)
-            else:
-                utils.disable_ext4_journal(self.conf)
-
-        def setup_flash(self):
-            self.conf['SSDFramework']['ncq_depth'] = self.para.ssd_ncq_depth
-
-            self.conf['flash_config']['page_size'] = 2048
-            self.conf['flash_config']['n_pages_per_block'] = self.para.n_pages_per_block
-            self.conf['flash_config']['n_blocks_per_plane'] = 2
-            self.conf['flash_config']['n_planes_per_chip'] = 1
-            self.conf['flash_config']['n_chips_per_package'] = 1
-            self.conf['flash_config']['n_packages_per_channel'] = 1
-            self.conf['flash_config']['n_channels_per_dev'] = 16
-
-            self.conf['do_not_check_gc_setting'] = True
-            self.conf.GC_high_threshold_ratio = 0.90
-            self.conf.GC_low_threshold_ratio = 0.0
-
-        def setup_ftl(self):
-            self.conf['enable_blktrace'] = self.para.enable_blktrace
-            self.conf['enable_simulation'] = self.para.enable_simulation
-            self.conf['stripe_size'] = self.para.stripe_size
-            self.conf['segment_bytes'] = self.para.segment_bytes
-
-            if self.para.ftl == 'dftldes':
-                self.conf['simulator_class'] = 'SimulatorDESNew'
-                self.conf['ftl_type'] = 'dftldes'
-            elif self.para.ftl == 'nkftl2':
-                self.conf['simulator_class'] = 'SimulatorDESNew'
-                self.conf['ftl_type'] = 'nkftl2'
-
-                self.conf['nkftl']['n_blocks_in_data_group'] = \
-                    self.para.segment_bytes / self.conf.block_bytes
-                self.conf['nkftl']['max_blocks_in_log_group'] = \
-                    self.conf['nkftl']['n_blocks_in_data_group'] * 2
-                print 'N:', self.conf['nkftl']['n_blocks_in_data_group']
-                print 'K:', self.conf['nkftl']['max_blocks_in_log_group']
-            else:
-                raise NotImplementedError()
-
-            logicsize_mb = self.conf['dev_size_mb']
-            self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
-            self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
-
-        def check_config(self):
-            if self.conf['ftl_type'] == 'dftldes':
-                assert isinstance(self.conf, ssdbox.dftldes.Config)
-                assert self.conf['simulator_class'] == 'SimulatorDESNew'
-            elif self.conf['ftl_type'] == 'nkftl2':
-                assert isinstance(self.conf, ssdbox.nkftl2.Config)
-                assert self.conf['simulator_class'] == 'SimulatorDESNew'
-            else:
-                RuntimeError("ftl type may not be supported here")
-
-        def run(self):
-            set_exp_metadata(self.conf, save_data = True,
-                    expname = self.para.expname,
-                    subexpname = chain_items_as_filename(self.para))
-            runtime_update(self.conf)
-
-            self.check_config()
-
-            run_workflow(self.conf)
-
-        def main(self):
-            self.setup_environment()
-            self.setup_fs()
-            self.setup_workload()
-            self.setup_flash()
-            self.setup_ftl()
-            self.run()
 
     def run_exp():
         expname = get_expname()
         lbabytes = 1*GB
         para_dict = {
                 'ftl'      : ['nkftl2'],
-                'workload_class'   : [
-                    'Leveldb'
-                    # 'IterDirs'
-                    ],
-                'benchconfs': [
-                    [{'benchmarks': 'fillseq',   'num': 10000, 'max_key': None},
-                     {'benchmarks': 'overwrite', 'num': 10000, 'max_key': 1000}],
-                    ],
-                'leveldb_threads': [1],
                 'device_path'    : ['/dev/sdc1'],
                 'filesystem'     : ['ext4'],
                 'ext4datamode'   : ['ordered'],
@@ -442,20 +441,29 @@ def leveldbbench():
                 'ssd_ncq_depth'  : [1],
                 'cache_mapped_data_bytes' :[lbabytes],
                 'lbabytes'       : [lbabytes],
-                'one_by_one'     : [False],
                 'n_pages_per_block': [64],
                 'stripe_size'    : [64],
-                'segment_bytes'  : [lbabytes],
                 'enable_blktrace': [True],
                 'enable_simulation': [True],
-
                 'f2fs_gc_after_workload': [False],
+                'segment_bytes'  : [lbabytes],
+
+                'workload_class'   : [
+                    'Leveldb'
+                    # 'IterDirs'
+                    ],
+                'benchconfs': [
+                    [{'benchmarks': 'fillseq',   'num': 10000, 'max_key': None},
+                     {'benchmarks': 'overwrite', 'num': 10000, 'max_key': 1000}],
+                    ],
+                'leveldb_threads': [1],
+                'one_by_one'     : [False],
                 }
         parameter_combs = ParameterCombinations(para_dict)
 
         for para in parameter_combs:
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-            obj = Experimenter( Parameters(**para) )
+            obj = LocalExperimenter( Parameters(**para) )
             obj.main()
 
     run_exp()
