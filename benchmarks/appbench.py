@@ -449,7 +449,7 @@ def leveldbbench():
                 'enable_blktrace': [True],
                 'enable_simulation': [True],
 
-                'f2fs_gc_after_workload': [True],
+                'f2fs_gc_after_workload': [False],
                 }
         parameter_combs = ParameterCombinations(para_dict)
 
