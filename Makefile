@@ -25,6 +25,9 @@ contractbench:
 leveldb:
 	sudo python -m benchmarks.appbench -t 'leveldbbench()'
 
+newsqlbench:
+	sudo python -m benchmarks.appbench -t 'newsqlbench()'
+
 f2fsgc:
 	mkdir -p bin
 	cd ./foreign && gcc -o forcef2fsgc forcef2fsgc.c && mv forcef2fsgc ../bin/

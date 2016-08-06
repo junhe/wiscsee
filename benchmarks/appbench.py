@@ -471,6 +471,58 @@ def leveldbbench():
     main()
 
 
+def newsqlbench():
+    class LocalExperimenter(Experimenter):
+        def setup_workload(self):
+            self.conf['workload_class'] = self.para.workload_class
+            self.conf['workload_config'] = {}
+            self.conf['workload_conf_key'] = 'workload_config'
+            self.conf['sqlbench'] = {'bench_to_run':self.para.bench_to_run}
+
+    class ParaDict(object):
+        def __init__(self):
+            expname = get_expname()
+            lbabytes = 1*GB
+            para_dict = {
+                    'ftl'            : ['nkftl2'],
+                    'device_path'    : ['/dev/sdc1'],
+                    'filesystem'     : ['ext4'],
+                    'ext4datamode'   : ['ordered'],
+                    'ext4hasjournal' : [True],
+                    'expname'        : [expname],
+                    'dirty_bytes'    : [4*GB],
+                    'linux_ncq_depth': [31],
+                    'ssd_ncq_depth'  : [1],
+                    'cache_mapped_data_bytes' :[lbabytes],
+                    'lbabytes'       : [lbabytes],
+                    'n_pages_per_block': [64],
+                    'stripe_size'    : [64],
+                    'enable_blktrace': [True],
+                    'enable_simulation': [True],
+                    'f2fs_gc_after_workload': [False],
+                    'segment_bytes'  : [lbabytes],
+
+                    'workload_class' : [
+                        'Sqlbench'
+                        ],
+                    'bench_to_run': [ 'test-insert' ],
+                    }
+            self.parameter_combs = ParameterCombinations(para_dict)
+
+        def __iter__(self):
+            return iter(self.parameter_combs)
+
+    def main():
+        for para in ParaDict():
+            Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+            obj = LocalExperimenter( Parameters(**para) )
+            obj.main()
+
+    main()
+
+
+
+
 def main(cmd_args):
     if cmd_args.git == True:
         shcmd("sudo -u jun git commit -am 'commit by Makefile: {commitmsg}'"\

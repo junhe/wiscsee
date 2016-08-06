@@ -381,6 +381,11 @@ class Leveldb(Workload):
 
 
 class Sqlbench(Workload):
+    """
+    To use this benchmark, simply do the following in mysql-io-patterns
+    $ ./install-mysql.sh
+    then you can run this.
+    """
     def start_mysql(self):
         utils.shcmd("sudo service mysql start")
 
