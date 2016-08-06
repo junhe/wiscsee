@@ -423,48 +423,52 @@ def leveldbbench():
                     }
             self.conf['workload_conf_key'] = 'workload_config'
 
+    class ParaDict(object):
+        def __init__(self):
+            expname = get_expname()
+            lbabytes = 1*GB
+            para_dict = {
+                    'ftl'            : ['nkftl2'],
+                    'device_path'    : ['/dev/sdc1'],
+                    'filesystem'     : ['ext4'],
+                    'ext4datamode'   : ['ordered'],
+                    'ext4hasjournal' : [True],
+                    'expname'        : [expname],
+                    'dirty_bytes'    : [4*GB],
+                    'linux_ncq_depth': [31],
+                    'ssd_ncq_depth'  : [1],
+                    'cache_mapped_data_bytes' :[lbabytes],
+                    'lbabytes'       : [lbabytes],
+                    'n_pages_per_block': [64],
+                    'stripe_size'    : [64],
+                    'enable_blktrace': [True],
+                    'enable_simulation': [True],
+                    'f2fs_gc_after_workload': [False],
+                    'segment_bytes'  : [lbabytes],
 
-    def run_exp():
-        expname = get_expname()
-        lbabytes = 1*GB
-        para_dict = {
-                'ftl'            : ['nkftl2'],
-                'device_path'    : ['/dev/sdc1'],
-                'filesystem'     : ['ext4'],
-                'ext4datamode'   : ['ordered'],
-                'ext4hasjournal' : [True],
-                'expname'        : [expname],
-                'dirty_bytes'    : [4*GB],
-                'linux_ncq_depth': [31],
-                'ssd_ncq_depth'  : [1],
-                'cache_mapped_data_bytes' :[lbabytes],
-                'lbabytes'       : [lbabytes],
-                'n_pages_per_block': [64],
-                'stripe_size'    : [64],
-                'enable_blktrace': [True],
-                'enable_simulation': [True],
-                'f2fs_gc_after_workload': [False],
-                'segment_bytes'  : [lbabytes],
+                    'workload_class' : [
+                        'Leveldb'
+                        # 'IterDirs'
+                        ],
+                    'benchconfs': [
+                        [{'benchmarks': 'fillseq',   'num': 10000, 'max_key': None},
+                         {'benchmarks': 'overwrite', 'num': 10000, 'max_key': 1000}],
+                        ],
+                    'leveldb_threads': [1],
+                    'one_by_one'     : [False],
+                    }
+            self.parameter_combs = ParameterCombinations(para_dict)
 
-                'workload_class' : [
-                    'Leveldb'
-                    # 'IterDirs'
-                    ],
-                'benchconfs': [
-                    [{'benchmarks': 'fillseq',   'num': 10000, 'max_key': None},
-                     {'benchmarks': 'overwrite', 'num': 10000, 'max_key': 1000}],
-                    ],
-                'leveldb_threads': [1],
-                'one_by_one'     : [False],
-                }
-        parameter_combs = ParameterCombinations(para_dict)
+        def __iter__(self):
+            return iter(self.parameter_combs)
 
-        for para in parameter_combs:
+    def main():
+        for para in ParaDict():
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = LocalExperimenter( Parameters(**para) )
             obj.main()
 
-    run_exp()
+    main()
 
 
 def main(cmd_args):
