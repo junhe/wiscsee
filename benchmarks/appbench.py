@@ -108,6 +108,7 @@ class Experimenter(object):
                 self.conf['nkftl']['n_blocks_in_data_group'] * 2
             print 'N:', self.conf['nkftl']['n_blocks_in_data_group']
             print 'K:', self.conf['nkftl']['max_blocks_in_log_group']
+            self.conf['nkftl']['max_ratio_of_log_blocks'] = self.para.max_log_blocks_ratio
         else:
             raise NotImplementedError()
 
@@ -540,10 +541,10 @@ def reproduce():
             lbabytes = 1*GB
             para_dict = {
                     'ftl'            : ['nkftl2'],
-                    'device_path'    : ['/dev/sdc1'],
-                    'filesystem'     : ['f2fs', 'ext4', 'xfs', 'btrfs'],
-                    'ext4datamode'   : ['ordered'],
-                    'ext4hasjournal' : [True],
+                    'device_path'    : [None],
+                    'filesystem'     : [None],
+                    'ext4datamode'   : [None],
+                    'ext4hasjournal' : [None],
                     'expname'        : [expname],
                     'dirty_bytes'    : [4*GB],
                     'linux_ncq_depth': [31],
