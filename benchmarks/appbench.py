@@ -35,9 +35,9 @@ class Experimenter(object):
     def setup_fs(self):
         self.conf['mnt_opts'].update({
             "f2fs":   {
-                        # 'discard': MOpt(opt_name = 'discard',
-                                        # value = 'discard',
-                                        # include_name = False),
+                        'discard': MOpt(opt_name = 'discard',
+                                        value = 'discard',
+                                        include_name = False),
                         'background_gc': MOpt(opt_name = 'background_gc',
                                             value = 'off',
                                             include_name = True)
