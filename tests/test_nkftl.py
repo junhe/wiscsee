@@ -45,6 +45,27 @@ def create_config():
 
     return conf
 
+def create_config_1_channel():
+    conf = ssdbox.nkftl2.Config()
+
+    conf['flash_config']['n_pages_per_block'] = 32
+    conf['flash_config']['n_blocks_per_plane'] = 64
+    conf['flash_config']['n_planes_per_chip'] = 1
+    conf['flash_config']['n_chips_per_package'] = 1
+    conf['flash_config']['n_packages_per_channel'] = 1
+    conf['flash_config']['n_channels_per_dev'] = 1
+
+    conf['nkftl']['max_blocks_in_log_group'] = 16
+    conf['nkftl']['n_blocks_in_data_group'] = 4
+
+    utils.set_exp_metadata(conf, save_data = False,
+            expname = 'test_expname',
+            subexpname = 'test_subexpname')
+
+    utils.runtime_update(conf)
+
+    return conf
+
 
 def create_recorder(conf):
     rec = ssdbox.recorder.Recorder(output_target = conf['output_target'],
@@ -2052,6 +2073,23 @@ def create_loggroup2():
 
     return blockpool, loggroup
 
+def create_loggroup2_one_channel():
+    conf = create_config_1_channel()
+    blockpool = NKBlockPool(
+            n_channels=conf.n_channels_per_dev,
+            n_blocks_per_channel=conf.n_blocks_per_channel,
+            n_pages_per_block=conf.n_pages_per_block,
+            tags=[TDATA, TLOG])
+    loggroup = LogGroup2(
+            conf = conf,
+            block_pool=blockpool,
+            max_n_log_blocks=conf['nkftl']['max_blocks_in_log_group'])
+
+    loggroup._cur_channel = 0 # override random cur channel
+
+    return blockpool, loggroup
+
+
 
 class TestLogGroup2(unittest.TestCase):
     @unittest.skip("")
@@ -2087,12 +2125,11 @@ class TestLogGroup2(unittest.TestCase):
 
         loggroup._cur_channel = 0
         self.assertEqual(loggroup._cur_channel, 0)
-        ret = loggroup._get_and_incr_cur_channel()
-        self.assertEqual(ret, 0)
+        loggroup._incr_cur_channel()
         self.assertEqual(loggroup._cur_channel, 1)
 
         for i in range(8):
-            ret = loggroup._get_and_incr_cur_channel()
+            ret = loggroup._incr_cur_channel()
 
         self.assertEqual(loggroup._cur_channel, 1)
 
@@ -2156,7 +2193,7 @@ class TestLogGroup2(unittest.TestCase):
         for i in range(8):
             self.assertEqual(loggroup.n_channel_free_pages(i), 0)
 
-    def test_next_ppns_infinit_stip(self):
+    def test_next_ppns_infinit_strip(self):
         blockpool, loggroup = create_loggroup2()
 
         ppns = loggroup.next_ppns(n=33, strip_unit_size='infinity')
@@ -2202,13 +2239,28 @@ class TestLogGroup2(unittest.TestCase):
 
         self.assertEqual(loggroup._cur_channel, 0)
         ppns = loggroup.next_ppns(n=1, strip_unit_size=32)
-        self.assertEqual(loggroup._cur_channel, 1)
+        self.assertEqual(loggroup._cur_channel, 0)
         ppns = loggroup.next_ppns(n=1, strip_unit_size=32)
-        self.assertEqual(loggroup._cur_channel, 2)
+        self.assertEqual(loggroup._cur_channel, 0)
 
         ppns = loggroup.next_ppns(n=64, strip_unit_size=32)
         self.assertEqual(len(ppns), 64)
-        self.assertEqual(loggroup._cur_channel, 4)
+        self.assertEqual(loggroup._cur_channel, 2)
+
+    def test_next_ppns_one_channel(self):
+        blockpool, loggroup = create_loggroup2_one_channel()
+
+        loggroup._cur_channel = 0
+
+        self.assertEqual(loggroup._cur_channel, 0)
+        ppns = loggroup.next_ppns(n=1, strip_unit_size=32)
+        self.assertEqual(loggroup._cur_channel, 0)
+        ppns = loggroup.next_ppns(n=1, strip_unit_size=32)
+        self.assertEqual(loggroup._cur_channel, 0)
+
+        ppns = loggroup.next_ppns(n=64, strip_unit_size=32)
+        self.assertEqual(len(ppns), 64)
+        self.assertEqual(loggroup._cur_channel, 0)
 
     def test_next_ppns_in_channel_with_allocation(self):
         blockpool, loggroup = create_loggroup2()
@@ -2425,7 +2477,7 @@ class TestLogicalBlockSerialization_DifferentLogicalBlock(AssertFinishTestCase, 
         # write different logical_blocks at the same time
         p1 = env.process(ftl.write_ext(Extent(0, 1)))
         p2 = env.process(ftl.write_ext(
-            Extent(conf.n_pages_per_block, 1)))
+            Extent(4 * conf.n_pages_per_block, 1)))
 
         yield simpy.AllOf(env, [p1, p2])
 
