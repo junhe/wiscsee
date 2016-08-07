@@ -28,21 +28,6 @@ structure:
 7. Garbage Collector
 8. Appending points
 
-
-############## TODO: ####################
-1. Test partial merge
-
-############# Refactor NKFTL ############
-- All physical block number varaible names end with _pbn
-- All logical block number varaible names end with _lbn
-- Each class should minimize interaction with other class, it should provide
-interface for higher level class to implement
-For example, mapping classes should not change block pool. Log mapping class
-should not change data block mapping. Be modular!!!
-If you find that you need information from another class, it is probably that
-you are doing things in a level that is too low.
-- Data structure should be easier to maintain. No spread-out data structures
-
 """
 
 ERR_NEED_NEW_BLOCK, ERR_NEED_MERGING = ('ERR_NEED_NEW_BLOCK', 'ERR_NEED_MERGING')
@@ -59,6 +44,7 @@ TAG_FULL_MERGE      = 'FULL.MERGE'
 TAG_FORGROUND       = 'FORGROUND'
 TAG_WRITE_DRIVEN    = 'WRITE.DRIVEN.DIRECT.ERASE'
 TAG_THRESHOLD_GC    = 'THRESHOLD.GC.DIRECT.ERASE'
+TAG_SIMPLE_ERASE    = 'SIMPLE.ERASE'
 
 class OutOfSpaceError(RuntimeError):
     pass
@@ -898,14 +884,13 @@ class GarbageCollector(object):
         # group
         if log_pbn not in self.translator.log_mapping_table\
                 .log_group_info[data_group_no].log_block_numbers():
-            # TODO: maybe you should just return here instead of panic?
             self._cleaner_res.release(req)
             return
 
         # Just free it?
         if not self.oob.is_any_page_valid(log_pbn):
             yield self.env.process(self._recycle_empty_log_block(
-                data_group_no, log_pbn, tag))
+                data_group_no, log_pbn, tag=TAG_SIMPLE_ERASE))
             self._cleaner_res.release(req)
             return
 
@@ -1338,7 +1323,7 @@ class GarbageCollector(object):
         if found:
             # clean up old_physical_block
             yield self.env.process(
-                self.recycle_empty_data_block(old_physical_block, tag='Unknown'))
+                self.recycle_empty_data_block(old_physical_block, tag=TAG_SWITCH_MERGE))
 
         # update data block mapping table
         # This will override the old mapping if there is one
@@ -1349,7 +1334,7 @@ class GarbageCollector(object):
         data_group_no = self.conf.nkftl_data_group_number_of_logical_block(
                 logical_block)
         yield self.env.process(self._remove_log_block(data_group_no, log_pbn,
-            tag='Unknown'))
+            tag=TAG_SWITCH_MERGE))
 
         # Need to mark the log block as used data block now
         try:
@@ -1743,7 +1728,7 @@ class Ftl(ftlbuilder.FtlBuilder):
                 pagedata = None
             else:
                 pagedata = data[i]
-            self.flash.page_write(ppn, cat='', data=pagedata)
+            self.flash.page_write(ppn, cat=TAG_FORGROUND, data=pagedata)
 
         # des flash
         yield self.env.process(
