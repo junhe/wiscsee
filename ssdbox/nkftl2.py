@@ -1043,14 +1043,14 @@ class GarbageCollector(object):
                     if loc == IN_DATA_BLOCK:
                         yield self.env.process(
                                 self.recycle_empty_data_block(data_block=src_pbn,
-                                tag='Unknown'))
+                                tag=TAG_FULL_MERGE))
 
                     elif loc == IN_LOG_BLOCK:
                         yield self.env.process(
                             self._recycle_empty_log_block(
                                 data_group_no=data_group_no,
                                 log_pbn=src_pbn,
-                                tag='Unknown'))
+                                tag=TAG_FULL_MERGE))
 
             else:
                 # This lpn does not exist, so we just invalidate the
@@ -1067,7 +1067,7 @@ class GarbageCollector(object):
         if found == True:
             # old_pbn must not have any valid pages, so we free it
             yield self.env.process(
-                    self.recycle_empty_data_block(old_pbn, tag = tag))
+                    self.recycle_empty_data_block(old_pbn, tag = TAG_FULL_MERGE))
         self.translator.data_block_mapping_table.add_data_block_mapping(
             lbn = lbn, pbn = dst_phy_block_num)
 
