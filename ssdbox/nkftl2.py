@@ -364,6 +364,7 @@ class LogGroup2(object):
         # each channel has a current block or None
         self.log_channels = [[] for i in range(self.n_channels)]
         self._cur_channel = random_channel_id(self.conf.n_channels_per_dev)
+        self._cur_channel_used_pages = 0
 
         self._page_map = bidict.bidict() # lpn->ppn
 
@@ -409,10 +410,11 @@ class LogGroup2(object):
             ret.append(cur_block.blocknum)
         return ret
 
-    def _get_and_incr_cur_channel(self):
-        channel = self._cur_channel
+    def _incr_cur_channel(self):
         self._cur_channel = (self._cur_channel + 1) % self.n_channels
-        return channel
+
+    def _get_cur_channel(self):
+        return self._cur_channel
 
     def remove_log_block(self, log_pbn):
         # remove all page maps
@@ -458,6 +460,74 @@ class LogGroup2(object):
             total += cur_block.num_free_pages()
         return total
 
+    def next_ppns(self, n, strip_unit_size):
+        """
+        It does it by best effort.
+        - if it cannot allocate strip_unit_size pages in a channel, it will
+          try to allocate. If the allocating fails, it will try using the
+          available blocks.
+        - It is possible that it cannot find n pages, it will return the pages
+          that it has found. The caller will need to trigger GC to merge some
+          log blocks and make new ones available.
+        """
+        remaining = n
+        if strip_unit_size == 'infinity':
+            strip_unit_size = float('inf')
+
+        ret_ppns = []
+        dead_channels = set()
+        while remaining > 0 and len(dead_channels) < self.n_channels:
+            # we do not need to check if number of log blocks exceed
+            # max, because it is impossible. We check before we allocate
+            # block.
+            cur_channel_id = self._get_cur_channel()
+            reqsize = min(remaining,
+                          strip_unit_size,
+                          strip_unit_size - self._cur_channel_used_pages)
+            ppns = self._next_ppns_in_channel_with_allocation(
+                    reqsize, cur_channel_id)
+            n_pages_allocated = len(ppns)
+            ret_ppns.extend(ppns)
+
+            remaining -= n_pages_allocated
+            self._cur_channel_used_pages += n_pages_allocated
+
+            if n_pages_allocated < reqsize:
+                # we cannot allocate more blocks in this channel because:
+                # 1. no available blocks, or
+                # 2. # of blocks reached max for this log group
+                dead_channels.add(cur_channel_id)
+
+            # advance channel when 1. current channel is full, or 2. current
+            # usage_pages reaches strip_unit_size
+            assert self._cur_channel_used_pages <= strip_unit_size
+            if n_pages_allocated < reqsize or \
+                    self._cur_channel_used_pages >= strip_unit_size:
+                self._incr_cur_channel()
+                self._cur_channel_used_pages = 0
+
+        return ret_ppns
+
+    def _next_ppns_in_channel_with_allocation(self, reqsize, channel_id):
+        """
+        Try allocate reqsize ppns from this channel, it may allocate more blocks
+
+        Return: ppns
+        """
+        ret_ppns = []
+        remaining = reqsize
+        while remaining > 0:
+            ppns = self._next_ppns_in_channel(remaining, channel_id=channel_id)
+            ret_ppns.extend(ppns)
+            remaining -= len(ppns)
+
+            if remaining > 0:
+                allocated = self._allocate_block_in_channel(channel_id)
+                if allocated is False:
+                    break
+
+        return ret_ppns
+
     def _allocate_block_in_channel(self, channel_id):
         cnt = self.block_pool.count_blocks(tag=TFREE, channels=[channel_id])
         if cnt < 1:
@@ -491,60 +561,6 @@ class LogGroup2(object):
                 remaining -= len(tmp_ppns)
 
         return ppns
-
-    def next_ppns(self, n, strip_unit_size):
-        """
-        It does it by best effort.
-        - if it cannot allocate strip_unit_size pages in a channel, it will
-          try to allocate. If the allocating fails, it will try using the
-          available blocks.
-        - It is possible that it cannot find n pages, it will return the pages
-          that it has found. The caller will need to trigger GC to merge some
-          log blocks and make new ones available.
-        """
-        remaining = n
-        if strip_unit_size == 'infinity':
-            strip_unit_size = float('inf')
-
-        ret_ppns = []
-        dead_channels = set()
-        while remaining > 0 and len(dead_channels) < self.n_channels:
-            # we do not need to check if number of log blocks exceed
-            # max, because it is impossible. We check before we allocate
-            # block.
-            cur_channel_id = self._get_and_incr_cur_channel()
-            reqsize = min(remaining, strip_unit_size)
-            ppns = self._next_ppns_in_channel_with_allocation(
-                    reqsize, cur_channel_id)
-            ret_ppns.extend(ppns)
-            remaining -= len(ppns)
-            if len(ppns) < reqsize:
-                # we cannot allocate more blocks in this channel because:
-                # 1. no available blocks, or
-                # 2. # of blocks reached max for this log group
-                dead_channels.add(cur_channel_id)
-
-        return ret_ppns
-
-    def _next_ppns_in_channel_with_allocation(self, reqsize, channel_id):
-        """
-        Try allocate reqsize ppns from this channel, it may allocate more blocks
-
-        Return: ppns
-        """
-        ret_ppns = []
-        remaining = reqsize
-        while remaining > 0:
-            ppns = self._next_ppns_in_channel(remaining, channel_id=channel_id)
-            ret_ppns.extend(ppns)
-            remaining -= len(ppns)
-
-            if remaining > 0:
-                allocated = self._allocate_block_in_channel(channel_id)
-                if allocated is False:
-                    break
-
-        return ret_ppns
 
 
 class Translator(MappingBase):
