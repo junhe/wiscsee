@@ -19,6 +19,9 @@ fiobench:
 appbench:
 	sudo python -m benchmarks.appbench -t 'bench()'
 
+reproduce:
+	sudo python -m benchmarks.appbench -t 'reproduce()'
+
 contractbench:
 	sudo python -m benchmarks.lbabench -t 'contract_bench()'
 

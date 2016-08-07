@@ -521,6 +521,62 @@ def newsqlbench():
     main()
 
 
+def reproduce():
+    class LocalExperimenter(Experimenter):
+        def setup_workload(self):
+            self.conf["workload_src"] = LBAGENERATOR
+
+            self.conf["lba_workload_class"] = "BlktraceEvents"
+
+            self.conf['lba_workload_configs']['mkfs_event_path'] = \
+                "/tmp/results/f2fssolo/64.False.1.devsdc1.1073741824.max_keyNonenum2000000benchmarksfillseqmax_key2000num2000000benchmarksoverwrite.1.True.False.64.4294967296.Leveldb.31.f2fssolo.f2fs.1073741824.True.ordered.True.nkftl2.131072-f2fs-08-06-15-33-15--7476967349320126954/blkparse-events-for-ftlsim-mkfs.txt"
+            self.conf['lba_workload_configs']['ftlsim_event_path'] = \
+                "/tmp/results/f2fssolo/64.False.1.devsdc1.1073741824.max_keyNonenum2000000benchmarksfillseqmax_key2000num2000000benchmarksoverwrite.1.True.False.64.4294967296.Leveldb.31.f2fssolo.f2fs.1073741824.True.ordered.True.nkftl2.131072-f2fs-08-06-15-33-15--7476967349320126954/blkparse-events-for-ftlsim.txt"
+
+
+    class ParaDict(object):
+        def __init__(self):
+            expname = get_expname()
+            lbabytes = 1*GB
+            para_dict = {
+                    'ftl'            : ['nkftl2'],
+                    'device_path'    : ['/dev/sdc1'],
+                    'filesystem'     : ['f2fs', 'ext4', 'xfs', 'btrfs'],
+                    'ext4datamode'   : ['ordered'],
+                    'ext4hasjournal' : [True],
+                    'expname'        : [expname],
+                    'dirty_bytes'    : [4*GB],
+                    'linux_ncq_depth': [31],
+                    'ssd_ncq_depth'  : [1],
+                    'cache_mapped_data_bytes' :[lbabytes],
+                    'lbabytes'       : [lbabytes],
+                    'n_pages_per_block': [64],
+                    'stripe_size'    : [64],
+                    'enable_blktrace': [True],
+                    'enable_simulation': [True],
+                    'f2fs_gc_after_workload': [False],
+                    'segment_bytes'  : [128*KB, 1*MB, lbabytes],
+
+                    'workload_class' : [
+                        'Sqlbench'
+                        ],
+                    'bench_to_run': [ 'test-insert-rand' ],
+                    }
+            self.parameter_combs = ParameterCombinations(para_dict)
+
+        def __iter__(self):
+            return iter(self.parameter_combs)
+
+    def main():
+        for para in ParaDict():
+            Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+            obj = LocalExperimenter( Parameters(**para) )
+            obj.main()
+
+    main()
+
+
+
 
 
 def main(cmd_args):

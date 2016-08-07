@@ -941,3 +941,67 @@ class ContractBenchAdapter(LBAWorkloadGenerator):
                     offset=req.offset, size=req.size)
 
 
+class BarrierGen(object):
+    def __init__(self, n_ncq_slots):
+        self.n_ncq_slots = n_ncq_slots
+
+    def barrier_events(self):
+        for i in range(self.n_ncq_slots):
+            yield hostevent.ControlEvent(operation=OP_NOOP)
+        yield hostevent.ControlEvent(operation=OP_BARRIER)
+        for i in range(self.n_ncq_slots):
+            yield hostevent.ControlEvent(operation=OP_NOOP)
+
+
+
+class BlktraceEvents(LBAWorkloadGenerator):
+    def __init__(self, confobj):
+        if not isinstance(confobj, config.Config):
+            raise TypeError("confobj is not config.Config. It is {}".
+                format(type(confobj).__name__))
+        self.conf = confobj
+
+        self.mkfs_event_path = self.conf['lba_workload_configs']\
+                ['mkfs_event_path']
+        self.ftlsim_event_path = self.conf['lba_workload_configs']\
+                ['ftlsim_event_path']
+
+    def __iter__(self):
+        barriergen = BarrierGen(self.conf.ssd_ncq_depth())
+
+        yield hostevent.ControlEvent(operation=OP_DISABLE_RECORDER)
+
+        mkfs_line_iter = hostevent.FileLineIterator(self.mkfs_event_path)
+        event_mkfs_iter = hostevent.EventIterator(self.conf, mkfs_line_iter)
+
+        for event in event_mkfs_iter:
+            yield event
+
+        # special event indicates the start of workload
+        yield hostevent.ControlEvent(operation=OP_ENABLE_RECORDER)
+        for req in barriergen.barrier_events():
+            yield req
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='interest_workload_start')
+
+        workload_line_iter = hostevent.FileLineIterator(self.ftlsim_event_path)
+        event_workload_iter = hostevent.EventIterator(self.conf, workload_line_iter)
+
+        for event in event_workload_iter:
+            yield event
+
+        for req in barriergen.barrier_events():
+            yield req
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='gc_start_timestamp')
+
+        yield hostevent.ControlEvent(operation=OP_CLEAN)
+
+
+
+
+
+
+
+
+
