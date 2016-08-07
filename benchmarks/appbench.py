@@ -556,12 +556,8 @@ def reproduce():
                     'enable_blktrace': [True],
                     'enable_simulation': [True],
                     'f2fs_gc_after_workload': [False],
-                    'segment_bytes'  : [128*KB, 1*MB, lbabytes],
-
-                    'workload_class' : [
-                        'Sqlbench'
-                        ],
-                    'bench_to_run': [ 'test-insert-rand' ],
+                    'segment_bytes'  : [128*KB],
+                    'max_log_blocks_ratio' : [2.0],
                     }
             self.parameter_combs = ParameterCombinations(para_dict)
 
