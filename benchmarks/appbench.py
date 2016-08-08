@@ -127,9 +127,11 @@ class Experimenter(object):
             RuntimeError("ftl type may not be supported here")
 
     def run(self):
+        # dict_for_name = {k:v for k,v in self.para._asdict() if k in ('
+        print self.para
         set_exp_metadata(self.conf, save_data = True,
                 expname = self.para.expname,
-                subexpname = chain_items_as_filename(self.para))
+                subexpname = hash(chain_items_as_filename(self.para)))
         runtime_update(self.conf)
 
         self.check_config()
