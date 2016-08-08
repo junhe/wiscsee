@@ -903,6 +903,12 @@ class GarbageCollector(object):
             self._cleaner_res.release(req)
             return
 
+        valid_ratio = self.oob.states.block_valid_ratio(log_pbn)
+        self.recorder.count_me('victim_valid_ratio', round(valid_ratio, 2))
+        erased_ratio = self.oob.states.block_erased_ratio(log_pbn)
+        self.recorder.count_me('victim_erased_ratio', round(erased_ratio, 2))
+
+
         # Just free it?
         if not self.oob.is_any_page_valid(log_pbn):
             yield self.env.process(self._recycle_empty_log_block(

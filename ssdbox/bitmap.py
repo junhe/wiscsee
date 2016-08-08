@@ -73,6 +73,16 @@ class FlashBitmap2(object):
         ret = cnt / float(self.conf.n_pages_per_block)
         return ret
 
+    def block_erased_ratio(self, blocknum):
+        start, end = self.conf.block_to_page_range(blocknum)
+        cnt = 0
+        for pg in range(start, end):
+            if self.is_page_erased(pg):
+                cnt += 1
+
+        ret = cnt / float(self.conf.n_pages_per_block)
+        return ret
+
     def is_page_valid(self, pagenum):
         s, e = self.pagenum_to_slice_range(pagenum)
         return self.bitmap[s:e] == self.VALID
