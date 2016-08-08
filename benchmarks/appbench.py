@@ -1,4 +1,5 @@
 from Makefile import *
+import os
 
 from workflow import run_workflow
 from utilities.utils import get_expname
@@ -126,12 +127,14 @@ class Experimenter(object):
         else:
             RuntimeError("ftl type may not be supported here")
 
+    def before_running(self):
+        pass
+
     def run(self):
         # dict_for_name = {k:v for k,v in self.para._asdict() if k in ('
-        print self.para
         set_exp_metadata(self.conf, save_data = True,
                 expname = self.para.expname,
-                subexpname = hash(chain_items_as_filename(self.para)))
+                subexpname = 'subexp-' + str(hash(chain_items_as_filename(self.para))))
         runtime_update(self.conf)
 
         self.check_config()
@@ -144,6 +147,7 @@ class Experimenter(object):
         self.setup_workload()
         self.setup_flash()
         self.setup_ftl()
+        self.before_running()
         self.run()
 
 
@@ -433,7 +437,7 @@ def leveldbbench():
             para_dict = {
                     'ftl'            : ['nkftl2'],
                     'device_path'    : ['/dev/sdc1'],
-                    'filesystem'     : ['ext4'],
+                    'filesystem'     : ['f2fs', 'ext4', 'btrfs', 'xfs'],
                     'ext4datamode'   : ['ordered'],
                     'ext4hasjournal' : [True],
                     'expname'        : [expname],
@@ -534,14 +538,25 @@ def reproduce():
             self.conf["lba_workload_class"] = "BlktraceEvents"
 
             self.conf['lba_workload_configs']['mkfs_event_path'] = \
-                "/tmp/results/f2fssolo/64.False.1.devsdc1.1073741824.max_keyNonenum2000000benchmarksfillseqmax_key2000num2000000benchmarksoverwrite.1.True.False.64.4294967296.Leveldb.31.f2fssolo.f2fs.1073741824.True.ordered.True.nkftl2.131072-f2fs-08-06-15-33-15--7476967349320126954/blkparse-events-for-ftlsim-mkfs.txt"
+                    self.para.event_file_pair['mkfs_path']
             self.conf['lba_workload_configs']['ftlsim_event_path'] = \
-                "/tmp/results/f2fssolo/64.False.1.devsdc1.1073741824.max_keyNonenum2000000benchmarksfillseqmax_key2000num2000000benchmarksoverwrite.1.True.False.64.4294967296.Leveldb.31.f2fssolo.f2fs.1073741824.True.ordered.True.nkftl2.131072-f2fs-08-06-15-33-15--7476967349320126954/blkparse-events-for-ftlsim.txt"
+                    self.para.event_file_pair['ftlsim_path']
 
+        def before_running(self):
+            original_config = self.para.event_file_pair['original_config']
+            to_update = {k:v for k,v in original_config.items() \
+                    if k in ('filesystem')}
+            self.conf.update(to_update)
+
+            self.conf['exp_parameters']['bench_to_run'] = \
+                    original_config['exp_parameters']['bench_to_run']
 
     class ParaDict(object):
         def __init__(self):
             expname = get_expname()
+
+            pair_list = EventFilePairs('/tmp/results/largerscalesqlbench')
+
             lbabytes = 1*GB
             para_dict = {
                     'ftl'            : ['nkftl2'],
@@ -557,16 +572,62 @@ def reproduce():
                     'lbabytes'       : [lbabytes],
                     'n_pages_per_block': [64],
                     'stripe_size'    : [64],
-                    'enable_blktrace': [True],
+                    'enable_blktrace': [None],
                     'enable_simulation': [True],
                     'f2fs_gc_after_workload': [False],
                     'segment_bytes'  : [128*KB],
                     'max_log_blocks_ratio' : [2.0],
+
+                    'event_file_pair': pair_list.get_pairs(),
                     }
             self.parameter_combs = ParameterCombinations(para_dict)
 
         def __iter__(self):
             return iter(self.parameter_combs)
+
+    class EventFilePairs(object):
+        def __init__(self, dirpath):
+            self.dirpath = dirpath
+
+        def get_pairs(self):
+            """
+            iterate directories and return pairs of mkfs and ftlsim file paths
+            """
+            pairs = []
+            for root, dirs, files in os.walk(self.dirpath, topdown=False):
+                for name in files:
+                    if name == 'blkparse-events-for-ftlsim-mkfs.txt':
+                        mkfs_path = os.path.join(root, 'blkparse-events-for-ftlsim-mkfs.txt')
+                        ftlsim_path = os.path.join(root, 'blkparse-events-for-ftlsim.txt')
+
+                        confjson = self._get_confjson(root)
+                        d = {'mkfs_path': mkfs_path,
+                             'ftlsim_path': ftlsim_path,
+                             'original_config': confjson,
+                             }
+
+                        if self._keep_subexp(confjson) is True:
+                            pairs.append(d)
+
+            return pairs
+
+        def _keep_subexp(self, confjson):
+            """
+            Return; true/false
+            """
+            if all( [ confjson['filesystem'] in ('ext4', 'f2fs', 'xfs', 'btrfs'),
+                      confjson['segment_bytes'] == 128*KB,
+                      confjson['exp_parameters']['bench_to_run'] == 'test-insert-rand' ]):
+                return True
+            else:
+                return False
+
+        def _get_confjson(self, subexp_path):
+            confpath = os.path.join(subexp_path, 'config.json')
+            confjson = load_json(confpath)
+
+            return confjson
+
 
     def main():
         for para in ParaDict():
