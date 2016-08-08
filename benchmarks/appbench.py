@@ -447,7 +447,8 @@ def leveldbbench():
                     'enable_blktrace': [True],
                     'enable_simulation': [True],
                     'f2fs_gc_after_workload': [False],
-                    'segment_bytes'  : [lbabytes],
+                    'segment_bytes'  : [128*KB, 1*MB, 16*MB, lbabytes],
+                    'max_log_blocks_ratio': [2],
 
                     'workload_class' : [
                         'Leveldb'
@@ -502,8 +503,9 @@ def newsqlbench():
                     'stripe_size'    : [64],
                     'enable_blktrace': [True],
                     'enable_simulation': [True],
-                    'f2fs_gc_after_workload': [False],
-                    'segment_bytes'  : [lbabytes],
+                    'f2fs_gc_after_workload': [True],
+                    'segment_bytes'  : [128*KB, 1*MB, 16*MB, lbabytes],
+                    'max_log_blocks_ratio': [2],
 
                     'workload_class' : [
                         'Sqlbench'
