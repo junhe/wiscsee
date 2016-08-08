@@ -38,31 +38,31 @@ class Experimenter(object):
                         'discard': MOpt(opt_name = 'discard',
                                         value = 'discard',
                                         include_name = False),
-                        'background_gc': MOpt(opt_name = 'background_gc',
-                                            value = 'off',
-                                            include_name = True)
+                        # 'background_gc': MOpt(opt_name = 'background_gc',
+                                            # value = 'off',
+                                            # include_name = True)
                                         },
             "ext4":   {
-                        # 'discard': MOpt(opt_name = "discard",
-                                         # value = "discard",
-                                         # include_name = False),
+                        'discard': MOpt(opt_name = "discard",
+                                         value = "discard",
+                                         include_name = False),
                         'data': MOpt(opt_name = "data",
                                         value = self.para.ext4datamode,
                                         include_name = True) },
             "btrfs":  {
-                        # "discard": MOpt(opt_name = "discard",
-                                         # value = "discard",
-                                         # include_name = False),
-                                         # "ssd": MOpt(opt_name = 'ssd',
-                                             # value = 'ssd',
-                                     # include_name = False),
+                        "discard": MOpt(opt_name = "discard",
+                                         value = "discard",
+                                         include_name = False),
+                                         "ssd": MOpt(opt_name = 'ssd',
+                                             value = 'ssd',
+                                     include_name = False),
                         "autodefrag": MOpt(opt_name = 'autodefrag',
                                             value = 'autodefrag',
                                             include_name = False) },
             "xfs":    {
-                # 'discard': MOpt(opt_name = 'discard',
-                                        # value = 'discard',
-                                        # include_name = False)
+                'discard': MOpt(opt_name = 'discard',
+                                        value = 'discard',
+                                        include_name = False)
                 },
             }
             )
