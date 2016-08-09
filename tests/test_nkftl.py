@@ -2662,7 +2662,7 @@ class TestConcurrency_RandomWritesBroad(AssertFinishTestCase, WriteNCheckMixin):
 
     def main_proc(self, env, ftl, conf):
         # write different logical_blocks at the same time
-        n = int(conf.total_num_pages() * 0.8)
+        n = int(conf.total_num_pages() * 0.6)
         extents = []
         for i in range(10000):
             start = random.randint(0, n-1)
@@ -2674,7 +2674,6 @@ class TestConcurrency_RandomWritesBroad(AssertFinishTestCase, WriteNCheckMixin):
         self.set_finished()
 
 
-# @unittest.skip("")
 class TestConcurrency_FullMerge(AssertFinishTestCase, UseLogBlocksMixin):
     def test(self):
         """
@@ -2853,7 +2852,6 @@ class TestConcurrency_FullMerge(AssertFinishTestCase, UseLogBlocksMixin):
         self.set_finished()
 
 
-# @unittest.skip("")
 class TestConcurrency_cleanlogblock(AssertFinishTestCase, UseLogBlocksMixin):
     def test(self):
         """
@@ -3034,7 +3032,6 @@ class TestConcurrency_cleanlogblock(AssertFinishTestCase, UseLogBlocksMixin):
         self.set_finished()
 
 
-# @unittest.skip("")
 class TestConcurrency_WriteNGC(AssertFinishTestCase, WriteNCheckMixin):
     """
     Write a logical space.
@@ -3073,7 +3070,6 @@ class TestConcurrency_WriteNGC(AssertFinishTestCase, WriteNCheckMixin):
         self.set_finished()
 
 
-# @unittest.skip("")
 class TestConcurrency_RandomOperations(AssertFinishTestCase):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
@@ -3138,7 +3134,6 @@ class TestConcurrency_RandomOperations(AssertFinishTestCase):
             self.assertEqual(data, data_read[0])
 
 
-# @unittest.skip("")
 class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
@@ -3206,7 +3201,7 @@ class TestConcurrency_RandomOperationsNCQ(AssertFinishTestCase):
                     ftl.read_ext(Extent(lpn, 1)))
             self.assertEqual(data, data_read[0])
 
-@unittest.skip("Take a little too long")
+# @unittest.skip("Take a little too long")
 class TestConcurrency_DataIntegrity(AssertFinishTestCase):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()
@@ -3216,8 +3211,8 @@ class TestConcurrency_DataIntegrity(AssertFinishTestCase):
         env.run()
 
     def main_proc(self, env, ftl, conf):
-        # for i in range(8): # use this for longer test
-        for i in range(1):
+        for i in range(8): # use this for longer test
+        # for i in range(1):
             yield env.process(self.op_and_check_proc(env, ftl, conf))
 
     def op_and_check_proc(self, env, ftl, conf):
