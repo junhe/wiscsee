@@ -1311,28 +1311,46 @@ class GarbageCollector(object):
         TODO: better check? translate all the lpns to ppns, and see if they
         are aligned.
 
+        Relax the rule:
+        1. if ppn is valid, it has to be aligned
+        2. if ppn is not valid, it cannot be find elsewhere
+
         Return Mergable?, logical_block
         """
         ppn_start, ppn_end = self.conf.block_to_page_range(log_pbn)
         lpn_start = None
-        logical_block = None
 
         if not log_pbn in self.block_pool.log_usedblocks:
             return False, None
 
+        logical_blocks = set()
+        # valid pages should be aligned to the same logical block
         for ppn in range(ppn_start, ppn_end):
-            if not self.oob.states.is_page_valid(ppn):
-                return False, None
-            lpn = self.oob.ppn_to_lpn[ppn]
-            if lpn_start == None:
+            if self.oob.states.is_page_valid(ppn) is True:
+                lpn = self.oob.ppn_to_lpn[ppn]
                 logical_block, logical_off = self.conf.page_to_block_off(lpn)
-                if logical_off != 0:
+                _, physical_off = self.conf.page_to_block_off(ppn)
+
+                if logical_off != physical_off:
                     return False, None
-                lpn_start = lpn
-                # Now we know at least the lpn_start and ppn_start are aligned
-                continue
-            if lpn - lpn_start != ppn - ppn_start:
-                return False, None
+
+                logical_blocks.add(logical_block)
+
+        if len(logical_blocks) != 1:
+            return False, None
+
+        # invalid pages should not be anywhere
+        logical_block = logical_blocks.pop()
+        for ppn in range(ppn_start, ppn_end):
+            if self.oob.states.is_page_valid(ppn) is False:
+                _, physical_off = self.conf.page_to_block_off(ppn)
+                lpn = self.conf.block_off_to_page(logical_block, physical_off)
+                found, _ = self.log_mapping_table.lpn_to_ppn(lpn)
+                if found is True:
+                    return False, None
+                found, _ = self.data_block_mapping_table.lpn_to_ppn(lpn)
+                if found is True:
+                    return False, None
 
         return True, logical_block
 
