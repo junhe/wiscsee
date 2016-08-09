@@ -1045,6 +1045,7 @@ class GarbageCollector(object):
                     gcid=self.gcid,
                     blocknum=src_block,
                     lpn=lpn,
+                    merge_type='full',
                     valid=True)
 
                 # Now you've moved lpn, you need to remove lpn mapping if it is
@@ -1221,6 +1222,7 @@ class GarbageCollector(object):
                     gcid=self.gcid,
                     blocknum=src_block,
                     lpn=lpn,
+                    merge_type='partial-data',
                     valid=True)
 
                 # This branch may never be called because the none of the rest
@@ -1263,6 +1265,7 @@ class GarbageCollector(object):
                     gcid=self.gcid,
                     blocknum=src_block,
                     lpn=lpn,
+                    merge_type='partial-log',
                     valid=True)
 
                 # you need to remove lpn from log mapping here
