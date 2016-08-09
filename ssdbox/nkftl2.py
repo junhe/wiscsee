@@ -1045,6 +1045,7 @@ class GarbageCollector(object):
                     gcid=self.gcid,
                     blocknum=src_block,
                     lpn=lpn,
+                    ppn=src_ppn,
                     merge_type='full',
                     valid=True)
 
@@ -1222,6 +1223,7 @@ class GarbageCollector(object):
                     gcid=self.gcid,
                     blocknum=src_block,
                     lpn=lpn,
+                    ppn=src_ppn,
                     merge_type='partial-data',
                     valid=True)
 
@@ -1265,6 +1267,7 @@ class GarbageCollector(object):
                     gcid=self.gcid,
                     blocknum=src_block,
                     lpn=lpn,
+                    ppn=src_ppn,
                     merge_type='partial-log',
                     valid=True)
 
