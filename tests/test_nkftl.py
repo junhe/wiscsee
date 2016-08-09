@@ -2481,7 +2481,10 @@ class TestLogicalBlockSerialization_DifferentLogicalBlock(AssertFinishTestCase, 
 
         yield simpy.AllOf(env, [p1, p2])
 
-        self.assertEqual(env.now, conf.page_prog_time())
+        self.assertTrue(
+                env.now == conf.page_prog_time() or
+                env.now == 2 * conf.page_prog_time(),
+                )
 
         self.set_finished()
 
