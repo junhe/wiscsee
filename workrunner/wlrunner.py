@@ -4,6 +4,7 @@ import time
 
 import prepare4pyreuse
 from pyreuse.sysutils import blocktrace
+from pyreuse.fsutils.ext4dumpextents import get_extents_of_dir
 import config
 import cpuhandler
 import filesystem
@@ -237,11 +238,19 @@ class WorkloadRunner(object):
 
         if self.conf['filesystem'] == 'ext4':
             self.dumpe2fs()
+            self.dump_extents()
 
     def dumpe2fs(self):
         dumppath = os.path.join(self.conf['result_dir'], 'dumpe2fs.out')
         utils.shcmd("dumpe2fs {} > {}".format(
             self.conf['device_path'], dumppath))
+
+    def dump_extents(self):
+        dumppath = os.path.join(self.conf['result_dir'], 'extents.json')
+        extents_list = get_extents_of_dir(dirpath=self.conf['fs_mount_point'],
+                dev_path=self.conf['device_path'])
+        d = {'extents': extents_list}
+        utils.dump_json(d, dumppath)
 
     def get_event_iterator(self):
         barriergen = BarrierGen(self.conf.ssd_ncq_depth())
