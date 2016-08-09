@@ -1299,19 +1299,7 @@ class GarbageCollector(object):
 
     def is_switch_mergable(self, log_pbn):
         """
-        To be switch mergable, the block has to satisfy the following
-        conditions:
-        1. all pages are valid
-        2. all LPNs are 'aligned' with block page numbers
-        3. It is still a log block
-
-        It also returns the corresponding logical block number if it is
-        switch mergable.
-
-        TODO: better check? translate all the lpns to ppns, and see if they
-        are aligned.
-
-        Relax the rule:
+        new rule:
         1. if ppn is valid, it has to be aligned
         2. if ppn is not valid, it cannot be find elsewhere
 
