@@ -20,7 +20,6 @@ class Experimenter(object):
     def setup_environment(self):
         self.conf['device_path'] = self.para.device_path
         self.conf['dev_size_mb'] = self.para.lbabytes / MB
-        self.conf['filesystem'] = self.para.filesystem
         self.conf["n_online_cpus"] = 'all'
 
         self.conf['linux_ncq_depth'] = self.para.linux_ncq_depth
@@ -29,6 +28,12 @@ class Experimenter(object):
         set_vm("dirty_bytes", self.para.dirty_bytes)
 
         self.conf['do_fstrim'] = False
+
+        # filesystem
+        self.conf['filesystem'] = self.para.filesystem
+
+        if self.para.filesystem == 'ext4-nj':
+            self.conf['filesystem'] = 'ext4'
 
     def setup_workload(self):
         raise NotImplementedError()
@@ -71,6 +76,9 @@ class Experimenter(object):
         if self.para.ext4hasjournal is True:
             utils.enable_ext4_journal(self.conf)
         else:
+            utils.disable_ext4_journal(self.conf)
+
+        if self.para.filesystem == 'ext4-nj':
             utils.disable_ext4_journal(self.conf)
 
         self.conf['f2fs_gc_after_workload'] = self.para.f2fs_gc_after_workload
@@ -494,7 +502,8 @@ def newsqlbench():
             para_dict = {
                     'ftl'            : ['nkftl2'],
                     'device_path'    : ['/dev/sdc1'],
-                    'filesystem'     : ['ext4'],
+                    # 'filesystem'     : ['f2fs', 'xfs', 'ext4', 'btrfs'],
+                    'filesystem'     : ['ext4-nj'],
                     'ext4datamode'   : ['ordered'],
                     'ext4hasjournal' : [True],
                     'expname'        : [expname],
