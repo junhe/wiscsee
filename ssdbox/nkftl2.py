@@ -827,6 +827,8 @@ class GarbageCollector(object):
         n_cleaners = self.conf.n_channels_per_dev * 64
         self._cleaner_res = simpy.Resource(self.env, capacity=n_cleaners)
 
+        self.gcid = 0
+
     def clean(self, forced=False, merge=True):
         req = self._cleaning_lock.request()
         yield req
@@ -861,6 +863,8 @@ class GarbageCollector(object):
 
         req = self._datagroup_gc_locks.get_request(data_group_no)
         yield req
+
+        self.gcid += 1
 
         log_block_list = copy.copy(self.log_mapping_table\
                 .log_group_info[data_group_no].log_block_numbers())
@@ -1036,6 +1040,13 @@ class GarbageCollector(object):
                 self.oob.remap(lpn = lpn, old_ppn = src_ppn,
                     new_ppn = dst_ppn)
 
+                src_block, _ = self.conf.page_to_block_off(src_ppn)
+                self.recorder.write_file('gc.log',
+                    gcid=self.gcid,
+                    blocknum=src_block,
+                    lpn=lpn,
+                    valid=True)
+
                 # Now you've moved lpn, you need to remove lpn mapping if it is
                 # in log blocks
                 if loc == IN_LOG_BLOCK:
@@ -1206,6 +1217,12 @@ class GarbageCollector(object):
                     self.des_flash.rw_ppns([dst_ppn], 'write', tag=TAG_PARTIAL_MERGE))
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
 
+                self.recorder.write_file('gc.log',
+                    gcid=self.gcid,
+                    blocknum=src_block,
+                    lpn=lpn,
+                    valid=True)
+
                 # This branch may never be called because the none of the rest
                 # of the pages is valid, thus you don't have the change
                 # to recyle the old data block
@@ -1241,6 +1258,12 @@ class GarbageCollector(object):
                 yield self.env.process(
                     self.des_flash.rw_ppns([dst_ppn], 'write', tag = TAG_PARTIAL_MERGE))
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
+
+                self.recorder.write_file('gc.log',
+                    gcid=self.gcid,
+                    blocknum=src_block,
+                    lpn=lpn,
+                    valid=True)
 
                 # you need to remove lpn from log mapping here
                 self.translator.log_mapping_table.remove_lpn(lpn=lpn)
