@@ -89,8 +89,9 @@ class SimulatorDESNew(Simulator):
         gclog = GcLog(device_path=self.conf['device_path'],
                 result_dir=self.conf['result_dir'],
                 flash_page_size=self.conf.page_size)
-        if self.conf['filesystem'] == 'ext4' and\
-                os.path.exists(gclog.gclog_path):
+        if self.conf['filesystem'] == 'ext4' and \
+                os.path.exists(gclog.gclog_path) and \
+                os.path.exists(gclog.extents_path):
             gclog.classify_lpn_in_gclog()
 
 
@@ -102,10 +103,17 @@ class GcLog(object):
 
         self.gclog_path = os.path.join(self.result_dir, 'gc.log')
         self.dumpe2fs_out_path = os.path.join(self.result_dir, 'dumpe2fs.out')
+        self.extents_path = os.path.join(self.result_dir, 'extents.json')
+        self.fs_block_size = 4096
 
     def classify_lpn_in_gclog(self):
+        extents = self._get_extents()
+        filepath_classifier = blockclassifiers.Ext4FileClassifier(extents,
+                self.fs_block_size)
+
         range_table = self._get_range_table()
-        classifier = blockclassifiers.Ext4BlockClassifier(range_table, 4096)
+        classifier = blockclassifiers.Ext4BlockClassifier(range_table,
+                self.fs_block_size)
 
         new_table = []
         with open(self.gclog_path , 'rb') as f:
@@ -113,11 +121,21 @@ class GcLog(object):
             for row in reader:
                 newrow = dict(zip(row.keys()[0].split(), row.values()[0].split()))
                 offset = int(newrow['lpn']) * self.flash_page_size
-                newrow['semantics'] = classifier.classify(offset)
+                sem = classifier.classify(offset)
+                if sem == 'UNKNOWN':
+                    sem = filepath_classifier.classify(offset)
+                newrow['semantics'] = sem
                 new_table.append(newrow)
 
         with open(self.gclog_path+'.parsed', 'w') as f:
             f.write(utils.table_to_str(new_table))
+
+    def _get_extents(self):
+        d = utils.load_json(self.extents_path)
+        extents = d['extents']
+
+        print extents
+        return extents
 
     def _get_range_table(self):
         with open(self.dumpe2fs_out_path, 'r') as f:
