@@ -445,7 +445,8 @@ def leveldbbench():
             para_dict = {
                     'ftl'            : ['nkftl2'],
                     'device_path'    : ['/dev/sdc1'],
-                    'filesystem'     : ['f2fs', 'ext4', 'btrfs', 'xfs'],
+                    # 'filesystem'     : ['f2fs', 'ext4', 'ext4-nj', 'btrfs', 'xfs'],
+                    'filesystem'     : ['ext4'],
                     'ext4datamode'   : ['ordered'],
                     'ext4hasjournal' : [True],
                     'expname'        : [expname],
@@ -459,7 +460,7 @@ def leveldbbench():
                     'enable_blktrace': [True],
                     'enable_simulation': [True],
                     'f2fs_gc_after_workload': [False],
-                    'segment_bytes'  : [128*KB, 1*MB, 16*MB, lbabytes],
+                    'segment_bytes'  : [128*KB],
                     'max_log_blocks_ratio': [2],
 
                     'workload_class' : [
@@ -467,8 +468,10 @@ def leveldbbench():
                         # 'IterDirs'
                         ],
                     'benchconfs': [
-                        [{'benchmarks': 'fillseq',   'num': 10000, 'max_key': None},
-                         {'benchmarks': 'overwrite', 'num': 10000, 'max_key': 1000}],
+                        # [{'benchmarks': 'fillseq',   'num': 3*2000000, 'max_key': None},
+                         # {'benchmarks': 'overwrite', 'num': 3*2000000, 'max_key': 4*2000}],
+                        [{'benchmarks': 'fillseq',   'num': 1000000, 'max_key': None},
+                         {'benchmarks': 'overwrite', 'num': 1000000, 'max_key': 1000}],
                         ],
                     'leveldb_threads': [1],
                     'one_by_one'     : [False],
@@ -505,7 +508,7 @@ def newsqlbench():
                     # 'filesystem'     : ['f2fs', 'xfs', 'ext4', 'btrfs'],
                     'filesystem'     : ['ext4-nj'],
                     'ext4datamode'   : ['ordered'],
-                    'ext4hasjournal' : [True],
+                    'ext4hasjournal' : [False],
                     'expname'        : [expname],
                     'dirty_bytes'    : [4*GB],
                     'linux_ncq_depth': [31],
@@ -517,13 +520,13 @@ def newsqlbench():
                     'enable_blktrace': [True],
                     'enable_simulation': [True],
                     'f2fs_gc_after_workload': [True],
-                    'segment_bytes'  : [128*KB, 1*MB, 16*MB, lbabytes],
+                    'segment_bytes'  : [128*KB, 16*MB],
                     'max_log_blocks_ratio': [2],
 
                     'workload_class' : [
                         'Sqlbench'
                         ],
-                    'bench_to_run': [ 'test-insert' ],
+                    'bench_to_run': [ 'test-insert-rand' ],
                     }
             self.parameter_combs = ParameterCombinations(para_dict)
 
@@ -557,14 +560,17 @@ def reproduce():
                     if k in ('filesystem')}
             self.conf.update(to_update)
 
-            self.conf['exp_parameters']['bench_to_run'] = \
+            try:
+                self.conf['exp_parameters']['bench_to_run'] = \
                     original_config['exp_parameters']['bench_to_run']
+            except KeyError:
+                pass
 
     class ParaDict(object):
         def __init__(self):
             expname = get_expname()
 
-            pair_list = EventFilePairs('/tmp/results/largerscalesqlbench')
+            pair_list = EventFilePairs('/tmp/results/mytest')
 
             lbabytes = 1*GB
             para_dict = {
@@ -624,6 +630,7 @@ def reproduce():
             """
             Return; true/false
             """
+            return True
             if all( [ confjson['filesystem'] in ('ext4', 'f2fs', 'xfs', 'btrfs'),
                       confjson['segment_bytes'] == 128*KB,
                       confjson['exp_parameters']['bench_to_run'] == 'test-insert-rand' ]):
