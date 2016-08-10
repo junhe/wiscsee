@@ -247,10 +247,14 @@ class WorkloadRunner(object):
 
     def dump_extents(self):
         dumppath = os.path.join(self.conf['result_dir'], 'extents.json')
+        extent_path = dumppath + '.table'
+
         extents_list = get_extents_of_dir(dirpath=self.conf['fs_mount_point'],
                 dev_path=self.conf['device_path'])
         d = {'extents': extents_list}
         utils.dump_json(d, dumppath)
+
+        utils.table_to_file(extents_list, extent_path, width=0)
 
     def get_event_iterator(self):
         barriergen = BarrierGen(self.conf.ssd_ncq_depth())
