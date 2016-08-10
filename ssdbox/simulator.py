@@ -134,7 +134,6 @@ class GcLog(object):
         d = utils.load_json(self.extents_path)
         extents = d['extents']
 
-        print extents
         return extents
 
     def _get_range_table(self):
