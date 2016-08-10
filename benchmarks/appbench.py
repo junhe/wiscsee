@@ -114,7 +114,7 @@ class Experimenter(object):
             self.conf['nkftl']['n_blocks_in_data_group'] = \
                 self.para.segment_bytes / self.conf.block_bytes
             self.conf['nkftl']['max_blocks_in_log_group'] = \
-                self.conf['nkftl']['n_blocks_in_data_group'] * 2
+                self.conf['nkftl']['n_blocks_in_data_group'] * 100
             print 'N:', self.conf['nkftl']['n_blocks_in_data_group']
             print 'K:', self.conf['nkftl']['max_blocks_in_log_group']
             self.conf['nkftl']['max_ratio_of_log_blocks'] = self.para.max_log_blocks_ratio
