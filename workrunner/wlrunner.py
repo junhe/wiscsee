@@ -68,13 +68,13 @@ class WorkloadRunner(object):
         self.workload = eval(workload_str)
 
     def prepare_device(self):
-
         if self.conf.device_type == 'loop':
             self.loopdev = filesystem.LoopDevice(
                 dev_path = self.conf['device_path'],
                 tmpfs_mount_point = self.conf['tmpfs_mount_point'],
                 size_mb = self.conf['dev_size_mb'])
             self.loopdev.create()
+            self.conf['dev_padding'] = 0
 
         elif self.conf.device_type == 'real':
             # umount file system if it is mounted
@@ -96,7 +96,9 @@ class WorkloadRunner(object):
             part_sizes = [0 for i in range(dev_id)]
             size = self.conf['dev_size_mb'] * 2**20
             part_sizes[dev_id - 1] = size
-            fshelper.partition_disk(base_dev_path, part_sizes)
+            fshelper.partition_disk(base_dev_path, part_sizes,
+                    self.conf['dev_padding']
+                    )
 
     def build_fs(self):
         # create file system object, it is not physically created

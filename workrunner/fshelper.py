@@ -6,6 +6,7 @@ import subprocess
 import time
 
 from utilities import utils
+from commons import *
 
 def umountFS(mountpoint):
     cmd = ["umount", mountpoint]
@@ -182,13 +183,13 @@ def mountTmpfs(mountpoint, size):
 # def prepare_loop():
     # make_loop_device(config["loop_path"], config["tmpfs_mount_point"], 4096, img_file=None)
 
-def partition_disk(dev, part_sizes):
+def partition_disk(dev, part_sizes, padding):
     """
     Example:
     dev = '/dev/sdc'
     part_sizes = [1 * GB, 4 * GB, 8 * GB]
     """
-    create_layout_file(part_sizes)
+    create_layout_file(part_sizes, padding)
 
     n_tries = 3
     success = False
@@ -216,14 +217,14 @@ def partition_disk(dev, part_sizes):
 #/dev/sdb3 : start=        0, size=        0, Id= 0
 #/dev/sdb4 : start=        0, size=        0, Id= 0
 
-def create_layout_file(part_sizes):
+def create_layout_file(part_sizes, padding=8*MB):
     sector_size = 512
 
     lines = ["unit: sectors", '']
     # Id is to specify Linux/FreeBSD/swap...
     line_temp = "/dev/sdb{id} : start=     {start}, size={size}, Id=83"
 
-    cur_sectors = 8 * 2**20 / sector_size # start with 8 sector
+    cur_sectors = padding / sector_size # start with 8 sector
     for i, partsize in enumerate(part_sizes):
         size_in_sector = partsize / sector_size
         line = line_temp.format(id=i, start = cur_sectors,

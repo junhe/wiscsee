@@ -233,6 +233,7 @@ class Config(dict):
 
             # "device_path"           : "/dev/sdc1", # or sth. like /dev/sdc1
             "device_path"           : "/dev/loop0", # or sth. like /dev/sdc1
+            "dev_padding"      : 8*MB,
 
             "enable_blktrace"       : False,
 

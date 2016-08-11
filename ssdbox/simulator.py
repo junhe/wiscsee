@@ -88,7 +88,9 @@ class SimulatorDESNew(Simulator):
 
         gclog = GcLog(device_path=self.conf['device_path'],
                 result_dir=self.conf['result_dir'],
-                flash_page_size=self.conf.page_size)
+                flash_page_size=self.conf.page_size,
+                padding=self.conf['dev_padding']
+                )
         if self.conf['filesystem'] == 'ext4' and \
                 os.path.exists(gclog.gclog_path) and \
                 os.path.exists(gclog.extents_path):
@@ -96,10 +98,11 @@ class SimulatorDESNew(Simulator):
 
 
 class GcLog(object):
-    def __init__(self, device_path, result_dir, flash_page_size):
+    def __init__(self, device_path, result_dir, flash_page_size, padding):
         self.device_path = device_path
         self.result_dir = result_dir
         self.flash_page_size = flash_page_size
+        self.padding = padding
 
         self.gclog_path = os.path.join(self.result_dir, 'gc.log')
         self.dumpe2fs_out_path = os.path.join(self.result_dir, 'dumpe2fs.out')
@@ -108,6 +111,7 @@ class GcLog(object):
 
     def classify_lpn_in_gclog(self):
         extents = self._get_extents()
+        self._add_padding(extents)
         filepath_classifier = blockclassifiers.Ext4FileClassifier(extents,
                 self.fs_block_size)
 
@@ -135,6 +139,13 @@ class GcLog(object):
         extents = d['extents']
 
         return extents
+
+    def _add_padding(self, extents):
+        padding_in_blocks = self.padding / self.fs_block_size
+        for extent in extents:
+            extent['Physical_start'] += padding_in_blocks
+            extent['Physical_end'] += padding_in_blocks
+
 
     def _get_range_table(self):
         with open(self.dumpe2fs_out_path, 'r') as f:
