@@ -215,6 +215,7 @@ class WorkloadRunner(object):
         except Exception:
             raise
         else:
+            utils.shcmd("sync")
             self.blktracer.stop_tracing_and_collecting()
             utils.shcmd("sync")
             self.blktracer.create_event_file_from_blkparse()
@@ -237,6 +238,7 @@ class WorkloadRunner(object):
             utils.invoke_f2fs_gc(self.conf['fs_mount_point'], 1, -1)
 
         if self.conf['filesystem'] == 'ext4':
+            utils.shcmd('sync')
             self.dumpe2fs()
             self.dump_extents()
 
