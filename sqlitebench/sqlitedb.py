@@ -30,10 +30,18 @@ class SqliteDB(object):
         self.conn.close()
         self.conf = None
 
+    def commit(self):
+        self.conn.commit()
+
     def insert(self, key, value):
         self.conn.execute("""
         insert into benchtable (name, description)
         values ('{k}', '{v}')
+        """.format(k=key, v=value))
+
+    def update(self, key, value):
+        self.conn.execute("""
+        update benchtable set description = {v} where name = {k}
         """.format(k=key, v=value))
 
     def select_all(self):

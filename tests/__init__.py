@@ -10,5 +10,6 @@ import recorder_test
 import simulator_test
 import test_dftldes
 import test_bitmap
+from . import test_sqlitebench
 from . import _accpatterns
 from . import _workrunner
