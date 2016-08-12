@@ -42,7 +42,7 @@ def insert_sequentially(db, n_insertions):
     for i in range(n_insertions):
         db.insert(key=encode_key(i), value='v' * VALUE_SIZE)
         if i % COMMIT_PEROID == 0 and i > 0:
-            d.commit()
+            db.commit()
 
 
 def insert_randomly(db, n_insertions):
@@ -51,7 +51,7 @@ def insert_randomly(db, n_insertions):
     for k in keys:
         db.insert(key=encode_key(k), value='v' * VALUE_SIZE)
         if i % COMMIT_PEROID == 0 and i > 0:
-            d.commit()
+            db.commit()
 
 
 def encode_key(key):
