@@ -20,7 +20,7 @@ class Experimenter(object):
     def setup_environment(self):
         self.conf['device_path'] = self.para.device_path
         self.conf['dev_size_mb'] = self.para.lbabytes / MB
-        self.conf["n_online_cpus"] = 'all'
+        self.conf["n_online_cpus"] = self.para.n_online_cpus
 
         self.conf['linux_ncq_depth'] = self.para.linux_ncq_depth
 
@@ -523,6 +523,7 @@ def sqlitebench():
                     'f2fs_gc_after_workload': [False],
                     'segment_bytes'  : [128*KB],
                     'max_log_blocks_ratio': [2],
+                    'n_online_cpus'  : ['all'],
 
                     'workload_class' : [
                         'Sqlite'
