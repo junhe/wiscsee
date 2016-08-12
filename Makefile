@@ -28,6 +28,9 @@ contractbench:
 leveldb:
 	sudo python -m benchmarks.appbench -t 'leveldbbench()'
 
+sqlite:
+	sudo python -m benchmarks.appbench -t 'sqlitebench()'
+
 newsqlbench:
 	sudo python -m benchmarks.appbench -t 'newsqlbench()'
 

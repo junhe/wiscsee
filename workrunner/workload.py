@@ -312,6 +312,33 @@ class Tpcc(Workload):
             self.stop_mysql()
 
 
+class Sqlite(Workload):
+    def _execute_bench(self, n_insertions, pattern, inst_id):
+        bench_path = './sqlitebench/bench.py'
+        db_dir = os.path.join(self.conf['fs_mount_point'], 'sqlite_dir')
+        db_path = os.path.join(db_dir, 'inst-'+str(inst_id), 'data.db')
+
+        utils.prepare_dir_for_path(db_path)
+
+        cmd = 'python {exe} -f {f} -n {n} -p {p}'.format(
+            exe=bench_path, f=db_path, n=n_insertions, p=pattern)
+
+        print cmd
+        p = subprocess.Popen(cmd, shell=True)
+
+        return p
+
+    def run(self):
+        benchconfs = self.workload_conf['benchconfs']
+
+        procs = []
+        for i, conf in enumerate(benchconfs):
+            p = self._execute_bench(conf['n_insertions'], conf['pattern'], i)
+            procs.append(p)
+
+        for p in procs:
+            p.wait()
+
 
 class Leveldb(Workload):
     def parse_output(self, outputpath):
