@@ -341,6 +341,7 @@ class Leveldb(Workload):
                 use_existing_db=use_existing_db
                 )
         print cmd
+        # cmd = "strace -o {}.strace.out -f {}".format(benchmarks, cmd)
         p = subprocess.Popen(cmd, shell=True)
 
         return p

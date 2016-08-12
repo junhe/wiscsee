@@ -1707,6 +1707,14 @@ class Ftl(ftlbuilder.FtlBuilder):
         for block_id, req in reversed(zip(block_ids, reqs)):
             self.logical_block_locks.release_request(block_id, req)
 
+    def print_mappings(self, mappings):
+        block = 1136
+        for lpn, ppn in mappings.items():
+            blk, _ = self.conf.page_to_block_off(lpn)
+            # blk, _ = self.conf.page_to_block_off(ppn)
+            if blk == block:
+                print lpn, '->', ppn
+
     def write_logical_block(self, extent, data=None):
         block_id, _ = self.conf.page_to_block_off(extent.lpn_start)
         req = self.logical_block_locks.get_request(block_id)
