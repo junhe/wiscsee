@@ -531,8 +531,8 @@ def sqlitebench():
                         ],
                     'benchconfs': [
                             [
-                            {'pattern': 'random', 'n_insertions': 1000000},
-                            {'pattern': 'sequential', 'n_insertions': 1000000},
+                            {'pattern': 'random', 'n_insertions': 10000},
+                            {'pattern': 'sequential', 'n_insertions': 10000},
                             ]
                         ],
                     }
