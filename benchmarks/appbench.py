@@ -123,7 +123,8 @@ class Experimenter(object):
 
         logicsize_mb = self.conf['dev_size_mb']
         self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
-        self.conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
+        self.conf.set_flash_num_blocks_by_bytes(
+                int(logicsize_mb * 2**20 * self.para.over_provisioning))
 
     def check_config(self):
         if self.conf['ftl_type'] == 'dftldes':
@@ -635,6 +636,7 @@ def filesnakebench():
                     'segment_bytes'  : [128*KB],
                     'max_log_blocks_ratio': [2],
                     'n_online_cpus'  : ['all'],
+                    'over_provisioning': [4], # 1.28 is a good number
 
                     'workload_class' : [
                         'FileSnake'
