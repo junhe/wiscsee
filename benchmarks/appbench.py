@@ -601,6 +601,64 @@ def newsqlbench():
     main()
 
 
+def filesnakebench():
+    class LocalExperimenter(Experimenter):
+        def setup_workload(self):
+            self.conf['workload_class'] = self.para.workload_class
+            self.conf['workload_config'] = {
+                    'benchconfs': self.para.benchconfs,
+                    }
+            self.conf['workload_conf_key'] = 'workload_config'
+
+    class ParaDict(object):
+        def __init__(self):
+            expname = get_expname()
+            lbabytes = 1*GB
+            para_dict = {
+                    'ftl'            : ['nkftl2'],
+                    'device_path'    : ['/dev/sdc1'],
+                    # 'filesystem'     : ['f2fs', 'ext4', 'ext4-nj', 'btrfs', 'xfs'],
+                    'filesystem'     : ['ext4', 'f2fs'],
+                    'ext4datamode'   : ['ordered'],
+                    'ext4hasjournal' : [True],
+                    'expname'        : [expname],
+                    'dirty_bytes'    : [4*GB],
+                    'linux_ncq_depth': [31],
+                    'ssd_ncq_depth'  : [1],
+                    'cache_mapped_data_bytes' :[lbabytes],
+                    'lbabytes'       : [lbabytes],
+                    'n_pages_per_block': [64],
+                    'stripe_size'    : [64],
+                    'enable_blktrace': [True],
+                    'enable_simulation': [True],
+                    'f2fs_gc_after_workload': [False],
+                    'segment_bytes'  : [128*KB],
+                    'max_log_blocks_ratio': [2],
+                    'n_online_cpus'  : ['all'],
+
+                    'workload_class' : [
+                        'FileSnake'
+                        ],
+                    'benchconfs': [
+                        {'zone_len': 256*MB/(128*KB), 'snake_len': 512, 'file_size': 128*KB},
+                        {'zone_len': 256*MB/(124*KB), 'snake_len': 512, 'file_size': 124*KB}
+                        ],
+                    }
+            self.parameter_combs = ParameterCombinations(para_dict)
+
+        def __iter__(self):
+            return iter(self.parameter_combs)
+
+    def main():
+        for para in ParaDict():
+            Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+            obj = LocalExperimenter( Parameters(**para) )
+            obj.main()
+
+    main()
+
+
+
 def reproduce():
     class LocalExperimenter(Experimenter):
         def setup_workload(self):

@@ -89,6 +89,53 @@ class IterDirs(Workload):
             f.write('h' * int(2.1*MB))
             os.fsync(f)
 
+class FileSnake(Workload):
+    def run(self):
+        conf = self.workload_conf['benchconfs']
+        self.execute(conf['zone_len'], conf['snake_len'],
+                conf['file_size'])
+
+    def execute(self, zone_len, snake_len, filesize):
+        print 'zone_len', zone_len, 'snake_len', snake_len
+
+        utils.prepare_dir(os.path.join(self.conf['fs_mount_point'], 'snake'))
+
+        tasks = self.generate_snake(zone_len, snake_len)
+
+        for i, op in tasks:
+            path = self.get_filepath(i)
+            if op == 'create':
+                self.write_file(path, filesize)
+            elif op == 'delete':
+                self.rm_file(path)
+            else:
+                raise NotImplementedError()
+
+    def get_filepath(self, i):
+        filename = '{}.data'.format(i)
+        path = os.path.join(self.conf['fs_mount_point'], 'snake', filename)
+        return path
+
+    def write_file(self, path, filesize):
+        with open(path, 'w') as f:
+            f.write('h' * int(filesize))
+            os.fdatasync(f)
+
+    def rm_file(self, path):
+        os.remove(path)
+
+    def generate_snake(self, zone_len, snake_len):
+        q = collections.deque()
+        tasks = []
+        for i in range(zone_len):
+            q.append(i)
+            tasks.append( (i, 'create') )
+            if len(q) == snake_len and i != zone_len - 1:
+                j = q.popleft()
+                tasks.append( (j, 'delete') )
+
+        return tasks
+
 
 class FIONEW(Workload):
     def __init__(self, confobj, workload_conf_key = None):
