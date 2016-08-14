@@ -100,7 +100,8 @@ class FileSnake(Workload):
 
         utils.prepare_dir(os.path.join(self.conf['fs_mount_point'], 'snake'))
 
-        tasks = self.generate_snake(zone_len, snake_len)
+        # tasks = self.generate_snake(zone_len, snake_len)
+        tasks = self.generate_fading_snake(zone_len, snake_len)
 
         for i, op in tasks:
             path = self.get_filepath(i)
@@ -132,6 +133,19 @@ class FileSnake(Workload):
             tasks.append( (i, 'create') )
             if len(q) == snake_len and i != zone_len - 1:
                 j = q.popleft()
+                tasks.append( (j, 'delete') )
+
+        return tasks
+
+    def generate_fading_snake(self, zone_len, snake_len):
+        q = []
+        tasks = []
+        for i in range(zone_len):
+            q.append(i)
+            tasks.append( (i, 'create') )
+            if len(q) == snake_len and i != zone_len - 1:
+                j = random.choice(q)
+                q.remove(j)
                 tasks.append( (j, 'delete') )
 
         return tasks

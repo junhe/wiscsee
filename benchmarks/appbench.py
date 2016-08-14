@@ -619,7 +619,7 @@ def filesnakebench():
                     'ftl'            : ['nkftl2'],
                     'device_path'    : ['/dev/sdc1'],
                     # 'filesystem'     : ['f2fs', 'ext4', 'ext4-nj', 'btrfs', 'xfs'],
-                    'filesystem'     : ['ext4', 'f2fs'],
+                    'filesystem'     : ['f2fs', 'ext4'],
                     'ext4datamode'   : ['ordered'],
                     'ext4hasjournal' : [True],
                     'expname'        : [expname],
@@ -642,8 +642,8 @@ def filesnakebench():
                         'FileSnake'
                         ],
                     'benchconfs': [
-                        {'zone_len': 256*MB/(128*KB), 'snake_len': 512, 'file_size': 128*KB},
-                        {'zone_len': 256*MB/(124*KB), 'snake_len': 512, 'file_size': 124*KB}
+                        {'zone_len': int(1.5*GB/(128*KB)), 'snake_len': 2048, 'file_size': 128*KB},
+                        {'zone_len': int(1.5*GB/(124*KB)), 'snake_len': 2048, 'file_size': 124*KB}
                         ],
                     }
             self.parameter_combs = ParameterCombinations(para_dict)
