@@ -370,6 +370,15 @@ class Sqlite(Workload):
         cmd = 'python {exe} -f {f} -n {n} -p {p}'.format(
             exe=bench_path, f=db_path, n=n_insertions, p=pattern)
 
+        # cmd = "strace -o {}.strace.out -f -ttt -s 8 {}".format(inst_id, cmd)
+        strace_prefix = ' '.join(['strace',
+           '-o', str(inst_id) + '.strace.out', '-f', '-ttt',
+           '-e', 'trace=open,openat,accept,close,fsync,sync,read,'\
+                 'write,pread,pwrite,lseek,'\
+                 'dup,dup2,dup3,clone,unlink',
+           '-s', '8'])
+
+        # cmd = strace_prefix + ' ' + cmd
         print cmd
         p = subprocess.Popen(cmd, shell=True)
 
