@@ -93,12 +93,16 @@ class FileSnake(Workload):
     def run(self):
         conf = self.workload_conf['benchconfs']
         self.execute(conf['zone_len'], conf['snake_len'],
-                conf['file_size'])
+                conf['file_size'], conf['write_pre_file'])
 
-    def execute(self, zone_len, snake_len, filesize):
+    def execute(self, zone_len, snake_len, filesize, write_pre_file):
         print 'zone_len', zone_len, 'snake_len', snake_len
+        dirpath = os.path.join(self.conf['fs_mount_point'], 'snake')
+        utils.prepare_dir(dirpath)
 
-        utils.prepare_dir(os.path.join(self.conf['fs_mount_point'], 'snake'))
+        if write_pre_file is True:
+            path = self.get_filepath('prefile')
+            self.write_file(path, 124*KB)
 
         # tasks = self.generate_snake(zone_len, snake_len)
         tasks = self.generate_fading_snake(zone_len, snake_len)
