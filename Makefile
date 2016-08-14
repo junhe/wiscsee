@@ -34,6 +34,9 @@ sqlite:
 newsqlbench:
 	sudo python -m benchmarks.appbench -t 'newsqlbench()'
 
+filesnake:
+	sudo python -m benchmarks.appbench -t 'filesnakebench()'
+
 f2fsgc:
 	mkdir -p bin
 	cd ./foreign && gcc -o forcef2fsgc forcef2fsgc.c && mv forcef2fsgc ../bin/
