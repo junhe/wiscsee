@@ -31,6 +31,9 @@ leveldb:
 sqlite:
 	sudo python -m benchmarks.appbench -t 'sqlitebench()'
 
+varmail:
+	sudo python -m benchmarks.appbench -t 'varmailbench()'
+
 newsqlbench:
 	sudo python -m benchmarks.appbench -t 'newsqlbench()'
 

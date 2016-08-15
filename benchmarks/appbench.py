@@ -556,6 +556,59 @@ def sqlitebench():
     main()
 
 
+def varmailbench():
+    class LocalExperimenter(Experimenter):
+        def setup_workload(self):
+            self.conf['workload_class'] = self.para.workload_class
+            self.conf['workload_config'] = {
+                    }
+            self.conf['workload_conf_key'] = 'workload_config'
+
+    class ParaDict(object):
+        def __init__(self):
+            expname = get_expname()
+            lbabytes = 1*GB
+            para_dict = {
+                    'ftl'            : ['nkftl2'],
+                    'device_path'    : ['/dev/sdc1'],
+                    # 'filesystem'     : ['f2fs', 'ext4', 'ext4-nj', 'btrfs', 'xfs'],
+                    'filesystem'     : ['ext4'],
+                    'ext4datamode'   : ['ordered'],
+                    'ext4hasjournal' : [True],
+                    'expname'        : [expname],
+                    'dirty_bytes'    : [4*GB],
+                    'linux_ncq_depth': [31],
+                    'ssd_ncq_depth'  : [1],
+                    'cache_mapped_data_bytes' :[lbabytes],
+                    'lbabytes'       : [lbabytes],
+                    'n_pages_per_block': [64],
+                    'stripe_size'    : [64],
+                    'enable_blktrace': [True],
+                    'enable_simulation': [True],
+                    'f2fs_gc_after_workload': [False],
+                    'segment_bytes'  : [128*KB],
+                    'max_log_blocks_ratio': [100],
+                    'n_online_cpus'  : ['all'],
+                    'over_provisioning': [8], # 1.28 is a good number
+
+                    'workload_class' : [
+                        'Varmail'
+                        ],
+                    }
+            self.parameter_combs = ParameterCombinations(para_dict)
+
+        def __iter__(self):
+            return iter(self.parameter_combs)
+
+    def main():
+        for para in ParaDict():
+            Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+            obj = LocalExperimenter( Parameters(**para) )
+            obj.main()
+
+    main()
+
+
 def newsqlbench():
     class LocalExperimenter(Experimenter):
         def setup_workload(self):

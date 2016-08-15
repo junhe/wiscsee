@@ -377,6 +377,71 @@ class Tpcc(Workload):
             self.stop_mysql()
 
 
+class Varmail(Workload):
+    def get_conf_text(self, dirpath):
+        part1 = """
+set $dir={dirpath}
+set $nfiles=8000
+set $meandirwidth=1000000
+set $filesize=cvar(type=cvar-gamma,parameters=mean:16384;gamma:1.5)
+set $nthreads=16
+set $iosize=1m
+set $meanappendsize=16k
+"""
+        part2 = """
+define fileset name=bigfileset,path=$dir,size=$filesize,entries=$nfiles,dirwidth=$meandirwidth,prealloc=80
+
+define process name=filereader,instances=1
+{
+  thread name=filereaderthread,memsize=10m,instances=$nthreads
+  {
+    flowop deletefile name=deletefile1,filesetname=bigfileset
+    flowop createfile name=createfile2,filesetname=bigfileset,fd=1
+    flowop appendfilerand name=appendfilerand2,iosize=$meanappendsize,fd=1
+    flowop fsync name=fsyncfile2,fd=1
+    flowop closefile name=closefile2,fd=1
+    flowop openfile name=openfile3,filesetname=bigfileset,fd=1
+    flowop readwholefile name=readfile3,fd=1,iosize=$iosize
+    flowop appendfilerand name=appendfilerand3,iosize=$meanappendsize,fd=1
+    flowop fsync name=fsyncfile3,fd=1
+    flowop closefile name=closefile3,fd=1
+    flowop openfile name=openfile4,filesetname=bigfileset,fd=1
+    flowop readwholefile name=readfile4,fd=1,iosize=$iosize
+    flowop closefile name=closefile4,fd=1
+  }
+}
+
+echo  "Varmail Version 3.0 personality successfully loaded"
+
+run 10
+"""
+        return part1.format(dirpath=dirpath) + part2
+
+    def save_config(self, conf_text, inst_id):
+        with open('/tmp/filebench.config.'+str(inst_id), 'w') as f:
+            f.write(conf_text)
+
+    def get_dirpath(self, inst_id):
+        dirpath = os.path.join(self.conf['fs_mount_point'], 'varmail', str(inst_id))
+        return dirpath
+
+    def run_filebench(self, inst_id):
+        cmd = 'filebench -f /tmp/filebench.config.' + str(inst_id)
+        p = subprocess.Popen(cmd, shell=True)
+        p.wait()
+
+    def run_inst(self, inst_id):
+        dirpath = self.get_dirpath(inst_id)
+        utils.prepare_dir(dirpath)
+        conf_text = self.get_conf_text(dirpath)
+        self.save_config(conf_text, inst_id)
+
+        self.run_filebench(inst_id)
+
+    def run(self):
+        self.run_inst(0)
+
+
 class Sqlite(Workload):
     def _execute_bench(self, n_insertions, pattern, inst_id):
         bench_path = './sqlitebench/bench.py'
@@ -412,6 +477,7 @@ class Sqlite(Workload):
 
         for p in procs:
             p.wait()
+
 
 
 class Leveldb(Workload):
