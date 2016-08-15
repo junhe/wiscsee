@@ -462,7 +462,9 @@ def leveldbbench():
                     'enable_simulation': [True],
                     'f2fs_gc_after_workload': [False],
                     'segment_bytes'  : [128*KB],
-                    'max_log_blocks_ratio': [2],
+                    'max_log_blocks_ratio': [8],
+                    'n_online_cpus'  : ['all'],
+                    'over_provisioning': [8], # 1.28 is a good number
 
                     'workload_class' : [
                         'Leveldb'
