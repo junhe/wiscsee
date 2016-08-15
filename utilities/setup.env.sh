@@ -32,6 +32,12 @@ make
 make db_bench
 cd $doradir
 
+cd ../..
+python reuse/scripts/install-filebench.py .
+cd $doradir
+
+
+
 sudo apt-get install -y python-bitarray
 
 sudo apt-get install -y python-pip
