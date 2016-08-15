@@ -468,13 +468,16 @@ def leveldbbench():
 
                     'workload_class' : [
                         'Leveldb'
-                        # 'IterDirs'
                         ],
                     'benchconfs': [
-                        # [{'benchmarks': 'fillseq',   'num': 3*2000000, 'max_key': None},
-                         # {'benchmarks': 'overwrite', 'num': 3*2000000, 'max_key': 4*2000}],
-                        [{'benchmarks': 'fillseq',   'num': 1000000, 'max_key': None},
-                         {'benchmarks': 'overwrite', 'num': 1000000, 'max_key': 1000}],
+                        # [{'benchmarks': 'overwrite', 'num': 100000, 'max_key': 10000, 'max_log': 15},]
+                        # [{'benchmarks': 'fillseq', 'num': 3*1000000, 'max_key': 100000},]
+                        # [{'benchmarks': 'overwrite', 'num': 6*1000000, 'max_key': 6*1000000, 'max_log': -1},]
+                        [{'benchmarks': 'overwrite', 'num': 3*1000000, 'max_key': 3*1000000, 'max_log': 21},]
+                        # [{'benchmarks': 'fillseq',   'num': 6*1000000, 'max_key': 6*1000000},
+                         # {'benchmarks': 'overwrite', 'num': 6*1000000, 'max_key': 6*1000}],
+                        # [{'benchmarks': 'fillseq',   'num': 1000000, 'max_key': None},
+                         # {'benchmarks': 'overwrite', 'num': 1000000, 'max_key': 1000}],
                         ],
                     'leveldb_threads': [1],
                     'one_by_one'     : [False],

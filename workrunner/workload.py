@@ -423,22 +423,20 @@ class Leveldb(Workload):
 
 
     def _execute_leveldb(self, benchmarks, num, db, outputpath,
-            threads, use_existing_db, max_key):
+            threads, use_existing_db, max_key, max_log):
         utils.prepare_dir(db)
-
-        if max_key is None:
-            max_key_slice = ''
-        else:
-            max_key_slice = '--dowrite_max_key={} '.format(max_key)
 
         db_bench_path = "../leveldb/db_bench"
         cmd = "{exe} --benchmarks={benchmarks} --num={num} --db={db} "\
-                "--threads={threads}  {max_key_slice} "\
+                "--threads={threads}  "\
+                "--dowrite_max_key={max_key} "\
+                "--dowrite_skew_max_log={max_log} "\
                 "--use_existing_db={use_existing_db} > {out}"\
             .format(exe=db_bench_path, benchmarks=benchmarks,
                 num=num, db=db, out=outputpath,
                 threads=threads,
-                max_key_slice=max_key_slice,
+                max_key=max_key,
+                max_log=max_log,
                 use_existing_db=use_existing_db
                 )
         print cmd
@@ -461,6 +459,7 @@ class Leveldb(Workload):
                         threads=threads,
                         num=conf_dict['num'],
                         max_key=conf_dict['max_key'],
+                        max_log=conf_dict['max_log'],
                         db=data_dir, outputpath=outputpath,
                         use_existing_db=1
                         )
@@ -474,6 +473,7 @@ class Leveldb(Workload):
                         threads=threads,
                         num=conf_dict['num'],
                         max_key=conf_dict['max_key'],
+                        max_log=conf_dict['max_log'],
                         use_existing_db=0
                         )
                 procs.append(p)
