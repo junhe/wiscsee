@@ -473,9 +473,9 @@ def leveldbbench():
                         # [{'benchmarks': 'overwrite', 'num': 100000, 'max_key': 10000, 'max_log': 15},]
                         # [{'benchmarks': 'fillseq', 'num': 3*1000000, 'max_key': 100000},]
                         # [{'benchmarks': 'overwrite', 'num': 6*1000000, 'max_key': 6*1000000, 'max_log': -1},]
-                        [{'benchmarks': 'overwrite', 'num': 3*1000000, 'max_key': 3*1000000, 'max_log': 21},]
-                        # [{'benchmarks': 'fillseq',   'num': 6*1000000, 'max_key': 6*1000000},
-                         # {'benchmarks': 'overwrite', 'num': 6*1000000, 'max_key': 6*1000}],
+                        # [{'benchmarks': 'overwrite', 'num': 3*1000000, 'max_key': 3*1000000, 'max_log': 21},]
+                        [{'benchmarks': 'fillseq',   'num': 6*1000000, 'max_key': 6*1000000, 'max_log': -1},
+                            {'benchmarks': 'overwrite', 'num': 6*1000000, 'max_key': 6*1000, 'max_log': -1}],
                         # [{'benchmarks': 'fillseq',   'num': 1000000, 'max_key': None},
                          # {'benchmarks': 'overwrite', 'num': 1000000, 'max_key': 1000}],
                         ],
@@ -528,16 +528,17 @@ def sqlitebench():
                     'enable_simulation': [True],
                     'f2fs_gc_after_workload': [False],
                     'segment_bytes'  : [128*KB],
-                    'max_log_blocks_ratio': [2],
+                    'max_log_blocks_ratio': [100],
                     'n_online_cpus'  : ['all'],
+                    'over_provisioning': [8], # 1.28 is a good number
 
                     'workload_class' : [
                         'Sqlite'
                         ],
                     'benchconfs': [
                             [
-                            {'pattern': 'random', 'n_insertions': 10000},
-                            {'pattern': 'sequential', 'n_insertions': 10000},
+                            # {'pattern': 'random', 'n_insertions': 120000},
+                            {'pattern': 'sequential', 'n_insertions': 120000},
                             ]
                         ],
                     }
