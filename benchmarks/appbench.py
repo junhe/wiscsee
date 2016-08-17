@@ -572,7 +572,7 @@ def varmailbench():
                     'ftl'            : ['nkftl2'],
                     'device_path'    : ['/dev/sdc1'],
                     # 'filesystem'     : ['f2fs', 'ext4', 'ext4-nj', 'btrfs', 'xfs'],
-                    'filesystem'     : ['ext4'],
+                    'filesystem'     : ['ext4', 'f2fs'],
                     'ext4datamode'   : ['ordered'],
                     'ext4hasjournal' : [True],
                     'expname'        : [expname],
