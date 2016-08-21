@@ -1259,7 +1259,7 @@ class VictimBlocks(object):
 
         victim_candidates = []
         for block in used_blocks:
-            if self._conf['victimize_cur_blocks'] is True and block in cur_blocks:
+            if self._conf['victimize_cur_blocks'] is False and block in cur_blocks:
                 # skip current blocks
                 continue
             valid_ratio = self._oob.states.block_valid_ratio(block)
