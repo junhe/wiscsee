@@ -1259,10 +1259,10 @@ class VictimBlocks(object):
 
         victim_candidates = []
         for block in used_blocks:
-            if block not in cur_blocks:
-                valid_ratio = self._oob.states.block_valid_ratio(block)
-                # if valid_ratio < 1:
-                victim_candidates.append( (valid_ratio, block_type, block) )
+            # if block not in cur_blocks:
+            valid_ratio = self._oob.states.block_valid_ratio(block)
+            # if valid_ratio < 1:
+            victim_candidates.append( (valid_ratio, block_type, block) )
 
         return victim_candidates
 
@@ -1402,12 +1402,15 @@ class DataBlockCleaner(object):
 
         ppn_start, ppn_end = self.conf.block_to_page_range(blocknum)
         for ppn in range(ppn_start, ppn_end):
-            lpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
-            self.recorder.write_file('gc.log',
-                    gcid=self.gcid,
-                    blocknum=blocknum,
-                    lpn=lpn,
-                    valid=self.oob.states.is_page_valid(ppn))
+            try:
+                lpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
+                self.recorder.write_file('gc.log',
+                        gcid=self.gcid,
+                        blocknum=blocknum,
+                        lpn=lpn,
+                        valid=self.oob.states.is_page_valid(ppn))
+            except KeyError:
+                pass
         self.gcid += 1
 
     def clean(self, blocknum):
@@ -1416,7 +1419,7 @@ class DataBlockCleaner(object):
         invalidate pages in blocknum and erase block
         '''
         assert blocknum in self.block_pool.used_blocks
-        assert blocknum not in self.block_pool.current_blocks()
+        # assert blocknum not in self.block_pool.current_blocks()
 
         self.log(blocknum)
 
