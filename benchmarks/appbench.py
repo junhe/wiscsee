@@ -590,15 +590,16 @@ def sqlitebench():
                     'segment_bytes'  : [128*KB],
                     'max_log_blocks_ratio': [100],
                     'n_online_cpus'  : ['all'],
-                    'over_provisioning': [8], # 1.28 is a good number
+                    'over_provisioning': [16], # 1.28 is a good number
+                    'victimize_cur_blocks': [True],
 
                     'workload_class' : [
                         'Sqlite'
                         ],
                     'benchconfs': [
                             [
-                            # {'pattern': 'random', 'n_insertions': 120000},
-                            {'pattern': 'sequential', 'n_insertions': 120000},
+                            {'pattern': 'random', 'n_insertions': 120000},
+                            # {'pattern': 'sequential', 'n_insertions': 120000},
                             ]
                         ],
                     }
