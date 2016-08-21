@@ -1636,16 +1636,18 @@ class TestGC(unittest.TestCase):
         conf = objs['conf']
         n = conf.n_pages_per_block
         yield env.process(dftl.write_ext(Extent(0, n)))
-        self.assertEqual(len(list(victims.iterator_verbose())), 0)
+        self.assertEqual(len(list(victims.iterator_verbose())), 1)
 
         yield env.process(dftl.write_ext(Extent(0, 1)))
 
         victim_blocks = list(victims.iterator_verbose())
+        self.assertEqual(len(list(victims.iterator_verbose())), 2)
         valid_ratio, block_type, block_num = victim_blocks[0]
         self.assertEqual(valid_ratio, (n-1.0)/n)
 
         yield env.process(dftl.write_ext(Extent(0, n)))
 
+        self.assertEqual(len(list(victims.iterator_verbose())), 3)
         victim_blocks = list(victims.iterator_verbose())
         valid_ratio, block_type, block_num = victim_blocks[0]
         self.assertEqual(valid_ratio, 0)

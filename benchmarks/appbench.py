@@ -1,4 +1,5 @@
 from Makefile import *
+import csv
 import os
 
 from workflow import run_workflow
@@ -139,6 +140,9 @@ class Experimenter(object):
     def before_running(self):
         pass
 
+    def after_running(self):
+        pass
+
     def run(self):
         # dict_for_name = {k:v for k,v in self.para._asdict() if k in ('
         set_exp_metadata(self.conf, save_data = True,
@@ -158,6 +162,7 @@ class Experimenter(object):
         self.setup_ftl()
         self.before_running()
         self.run()
+        self.after_running()
 
 
 def sqlbench():
@@ -429,7 +434,32 @@ def bench():
 
 
 def leveldbbench():
-    class LocalExperimenter(Experimenter):
+    class StatsMixin(object):
+        def write_stats(self):
+            stats_path = os.path.join(self.conf['result_dir'], 'stats.json')
+            disk_used_bytes = utils.get_dir_size(self.conf['fs_mount_point'])
+
+            written_bytes = self.get_traffic_size()
+
+            d = {'disk_used_bytes': disk_used_bytes,
+                 'written_bytes': written_bytes
+                }
+            utils.dump_json(d, stats_path)
+
+        def get_traffic_size(self):
+            filepath = os.path.join(self.conf['result_dir'], 'blkparse-events-for-ftlsim.txt')
+            with open(filepath, 'rb') as f:
+                reader = csv.reader(f, delimiter=' ')
+                total = 0
+                for row in reader:
+                    op = row[1]
+                    size = int(row[3])
+                    if op == 'write':
+                        total += size
+            return total
+
+
+    class LocalExperimenter(Experimenter, StatsMixin):
         def setup_workload(self):
             self.conf['workload_class'] = self.para.workload_class
             self.conf['workload_config'] = {
@@ -439,12 +469,15 @@ def leveldbbench():
                     }
             self.conf['workload_conf_key'] = 'workload_config'
 
+        def after_running(self):
+            self.write_stats()
+
     class ParaDict(object):
         def __init__(self):
             expname = get_expname()
             lbabytes = 1*GB
             para_dict = {
-                    'ftl'            : ['nkftl2'],
+                    'ftl'            : ['dftldes'],
                     'device_path'    : ['/dev/sdc1'],
                     # 'filesystem'     : ['f2fs', 'ext4', 'ext4-nj', 'btrfs', 'xfs'],
                     'filesystem'     : ['ext4'],
@@ -456,12 +489,12 @@ def leveldbbench():
                     'ssd_ncq_depth'  : [1],
                     'cache_mapped_data_bytes' :[lbabytes],
                     'lbabytes'       : [lbabytes],
-                    'n_pages_per_block': [64],
-                    'stripe_size'    : [64],
+                    'n_pages_per_block': [1*MB/(2*KB)],
+                    'stripe_size'    : [1],
                     'enable_blktrace': [True],
-                    'enable_simulation': [True],
+                    'enable_simulation': [False],
                     'f2fs_gc_after_workload': [False],
-                    'segment_bytes'  : [128*KB],
+                    'segment_bytes'  : [16*MB],
                     'max_log_blocks_ratio': [8],
                     'n_online_cpus'  : ['all'],
                     'over_provisioning': [8], # 1.28 is a good number
@@ -470,25 +503,36 @@ def leveldbbench():
                         'Leveldb'
                         ],
                     'benchconfs': [
-                        # [{'benchmarks': 'overwrite', 'num': 100000, 'max_key': 10000, 'max_log': 15},]
-                        # [{'benchmarks': 'fillseq', 'num': 3*1000000, 'max_key': 100000},]
-                        # [{'benchmarks': 'overwrite', 'num': 6*1000000, 'max_key': 6*1000000, 'max_log': -1},]
-                        # [{'benchmarks': 'overwrite', 'num': 3*1000000, 'max_key': 3*1000000, 'max_log': 21},]
-                        [{'benchmarks': 'fillseq',   'num': 6*1000000, 'max_key': 6*1000000, 'max_log': -1},
-                            {'benchmarks': 'overwrite', 'num': 6*1000000, 'max_key': 6*1000, 'max_log': -1}],
-                        # [{'benchmarks': 'fillseq',   'num': 1000000, 'max_key': None},
-                         # {'benchmarks': 'overwrite', 'num': 1000000, 'max_key': 1000}],
+                            # [{'benchmarks': 'fillseq',   'num': 6*1000000, 'max_key': 6*1000000, 'max_log': -1},
+                            # {'benchmarks': 'overwrite', 'num': 6*1000000, 'max_key': 6*1000, 'max_log': -1}
+                            # ],
+                            # [{'benchmarks': 'overwrite',  'num': 6*1000000, 'max_key': 6*100000, 'max_log': -1}],
+                            [{'benchmarks': 'overwrite',  'num': 6*1000, 'max_key': 6*100000, 'max_log': -1}],
                         ],
                     'leveldb_threads': [1],
                     'one_by_one'     : [False],
                     }
             self.parameter_combs = ParameterCombinations(para_dict)
 
+        # def __iter__(self):
+            # return iter(self.parameter_combs)
+
         def __iter__(self):
-            return iter(self.parameter_combs)
+            para = self.parameter_combs[0]
+            updatedicts = [
+                {'segment_bytes': 16*MB, 'n_pages_per_block': 1*MB/(2*KB)},
+                # {'segment_bytes': 4*MB, 'n_pages_per_block': 256*KB/(2*KB)},
+                {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)}
+                ]
+            for update_dict in updatedicts:
+                tmp_para = copy.deepcopy(para)
+                tmp_para.update(update_dict)
+                yield tmp_para
+
 
     def main():
         for para in ParaDict():
+            print para
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = LocalExperimenter( Parameters(**para) )
             obj.main()
