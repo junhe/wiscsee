@@ -1261,8 +1261,8 @@ class VictimBlocks(object):
         for block in used_blocks:
             if block not in cur_blocks:
                 valid_ratio = self._oob.states.block_valid_ratio(block)
-                if valid_ratio < 1:
-                    victim_candidates.append( (valid_ratio, block_type, block) )
+                # if valid_ratio < 1:
+                victim_candidates.append( (valid_ratio, block_type, block) )
 
         return victim_candidates
 
@@ -1359,8 +1359,11 @@ class Cleaner(object):
                 break
             self.recorder.count_me('victim_valid_ratio',
                     "{0:.2f}".format(valid_ratio))
-            p = self.env.process(self._clean_block(block_type, block_num))
-            procs.append(p)
+            if valid_ratio == 1:
+                continue
+            else:
+                p = self.env.process(self._clean_block(block_type, block_num))
+                procs.append(p)
 
         yield simpy.AllOf(self.env, procs)
 
