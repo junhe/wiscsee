@@ -192,6 +192,61 @@ class StatsMixin(object):
                     total += size
         return total
 
+class ParaDictIterMixin(object):
+    def iterator(self):
+        para = self.parameter_combs[0]
+        updatedicts = [
+            {'segment_bytes': 16*MB, 'n_pages_per_block': 1*MB/(2*KB)},
+            {'segment_bytes': 2*GB, 'n_pages_per_block': 1*MB/(2*KB)},
+
+            {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)},
+            {'segment_bytes': 16*MB, 'n_pages_per_block': 128*KB/(2*KB)},
+            {'segment_bytes': 2*GB, 'n_pages_per_block': 128*KB/(2*KB)}
+            ]
+        new_update_dics = []
+        for d in updatedicts:
+            for fs in ['ext4', 'f2fs']:
+                new_d = copy.copy(d)
+                new_d['filesystem'] = fs
+
+                new_update_dics.append(new_d)
+
+        for update_dict in new_update_dics:
+            tmp_para = copy.deepcopy(para)
+            tmp_para.update(update_dict)
+            yield tmp_para
+
+
+def get_dftldes_shared_para_dict():
+    expname = get_expname()
+    lbabytes = 1*GB
+    para_dict = {
+            'ftl'            : ['dftldes'],
+            'device_path'    : ['/dev/sdc1'],
+            # 'filesystem'     : ['f2fs', 'ext4', 'ext4-nj', 'btrfs', 'xfs'],
+            'filesystem'     : ['ext4'],
+            'ext4datamode'   : ['ordered'],
+            'ext4hasjournal' : [True],
+            'expname'        : [expname],
+            'dirty_bytes'    : [4*GB],
+            'linux_ncq_depth': [31],
+            'ssd_ncq_depth'  : [1],
+            'cache_mapped_data_bytes' :[lbabytes],
+            'lbabytes'       : [lbabytes],
+            'n_pages_per_block': [64],
+            'stripe_size'    : [1],
+            'enable_blktrace': [True],
+            'enable_simulation': [True],
+            'f2fs_gc_after_workload': [False],
+            'segment_bytes'  : [128*KB],
+            'max_log_blocks_ratio': [100],
+            'n_online_cpus'  : ['all'],
+            'over_provisioning': [16], # 1.28 is a good number
+            'victimize_cur_blocks': [True],
+            }
+    return para_dict
+
+
 
 def sqlbench():
     class Experimenter(object):
@@ -475,34 +530,10 @@ def leveldbbench():
         def after_running(self):
             self.write_stats()
 
-    class ParaDict(object):
+    class ParaDict(ParaDictIterMixin):
         def __init__(self):
-            expname = get_expname()
-            lbabytes = 1*GB
-            para_dict = {
-                    'ftl'            : ['dftldes'],
-                    'device_path'    : ['/dev/sdc1'],
-                    # 'filesystem'     : ['f2fs', 'ext4', 'ext4-nj', 'btrfs', 'xfs'],
-                    'filesystem'     : ['ext4'],
-                    'ext4datamode'   : ['ordered'],
-                    'ext4hasjournal' : [True],
-                    'expname'        : [expname],
-                    'dirty_bytes'    : [4*GB],
-                    'linux_ncq_depth': [31],
-                    'ssd_ncq_depth'  : [1],
-                    'cache_mapped_data_bytes' :[lbabytes],
-                    'lbabytes'       : [lbabytes],
-                    'n_pages_per_block': [1*MB/(2*KB)],
-                    'stripe_size'    : [1],
-                    'enable_blktrace': [True],
-                    'enable_simulation': [True],
-                    'f2fs_gc_after_workload': [False],
-                    'segment_bytes'  : [16*MB],
-                    'max_log_blocks_ratio': [8],
-                    'n_online_cpus'  : ['all'],
-                    'over_provisioning': [16], # 1.28 is a good number
-                    'victimize_cur_blocks': [True],
-
+            para_dict = get_dftldes_shared_para_dict()
+            para_dict.update( {
                     'workload_class' : [
                         'Leveldb'
                         ],
@@ -516,35 +547,12 @@ def leveldbbench():
                         ],
                     'leveldb_threads': [1],
                     'one_by_one'     : [False],
-                    }
+                    })
             self.parameter_combs = ParameterCombinations(para_dict)
 
-        # def __iter__(self):
-            # return iter(self.parameter_combs)
-
         def __iter__(self):
-            para = self.parameter_combs[0]
-            updatedicts = [
-                {'segment_bytes': 16*MB, 'n_pages_per_block': 1*MB/(2*KB)},
-                {'segment_bytes': 2*GB, 'n_pages_per_block': 1*MB/(2*KB)},
-
-                {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)},
-                {'segment_bytes': 16*MB, 'n_pages_per_block': 128*KB/(2*KB)},
-                {'segment_bytes': 2*GB, 'n_pages_per_block': 128*KB/(2*KB)}
-                ]
-            new_update_dics = []
-            for d in updatedicts:
-                for fs in ['ext4', 'f2fs']:
-                    new_d = copy.copy(d)
-                    new_d['filesystem'] = fs
-
-                    new_update_dics.append(new_d)
-
-            for update_dict in new_update_dics:
-                tmp_para = copy.deepcopy(para)
-                tmp_para.update(update_dict)
-                yield tmp_para
-
+            # return iter(self.parameter_combs)
+            return iter(self.iterator())
 
     def main():
         for para in ParaDict():
@@ -568,34 +576,10 @@ def sqlitebench():
         def after_running(self):
             self.write_stats()
 
-    class ParaDict(object):
+    class ParaDict(ParaDictIterMixin):
         def __init__(self):
-            expname = get_expname()
-            lbabytes = 1*GB
-            para_dict = {
-                    'ftl'            : ['dftldes'],
-                    'device_path'    : ['/dev/sdc1'],
-                    # 'filesystem'     : ['f2fs', 'ext4', 'ext4-nj', 'btrfs', 'xfs'],
-                    'filesystem'     : ['ext4'],
-                    'ext4datamode'   : ['ordered'],
-                    'ext4hasjournal' : [True],
-                    'expname'        : [expname],
-                    'dirty_bytes'    : [4*GB],
-                    'linux_ncq_depth': [31],
-                    'ssd_ncq_depth'  : [1],
-                    'cache_mapped_data_bytes' :[lbabytes],
-                    'lbabytes'       : [lbabytes],
-                    'n_pages_per_block': [64],
-                    'stripe_size'    : [1],
-                    'enable_blktrace': [True],
-                    'enable_simulation': [True],
-                    'f2fs_gc_after_workload': [False],
-                    'segment_bytes'  : [128*KB],
-                    'max_log_blocks_ratio': [100],
-                    'n_online_cpus'  : ['all'],
-                    'over_provisioning': [16], # 1.28 is a good number
-                    'victimize_cur_blocks': [True],
-
+            para_dict = get_dftldes_shared_para_dict()
+            para_dict.update( {
                     'workload_class' : [
                         'Sqlite'
                         ],
@@ -606,34 +590,12 @@ def sqlitebench():
                             # {'pattern': 'sequential', 'n_insertions': 120000},
                             ]
                         ],
-                    }
+                    })
             self.parameter_combs = ParameterCombinations(para_dict)
 
-        def __disable_iter__(self):
-            return iter(self.parameter_combs)
-
         def __iter__(self):
-            para = self.parameter_combs[0]
-            updatedicts = [
-                {'segment_bytes': 16*MB, 'n_pages_per_block': 1*MB/(2*KB)},
-                {'segment_bytes': 2*GB, 'n_pages_per_block': 1*MB/(2*KB)},
-
-                {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)},
-                {'segment_bytes': 16*MB, 'n_pages_per_block': 128*KB/(2*KB)},
-                {'segment_bytes': 2*GB, 'n_pages_per_block': 128*KB/(2*KB)}
-                ]
-            new_update_dics = []
-            for d in updatedicts:
-                for fs in ['ext4', 'f2fs']:
-                    new_d = copy.copy(d)
-                    new_d['filesystem'] = fs
-
-                    new_update_dics.append(new_d)
-
-            for update_dict in new_update_dics:
-                tmp_para = copy.deepcopy(para)
-                tmp_para.update(update_dict)
-                yield tmp_para
+            # return iter(self.parameter_combs)
+            return iter(self.iterator())
 
     def main():
         for para in ParaDict():
@@ -646,51 +608,34 @@ def sqlitebench():
 
 
 def varmailbench():
-    class LocalExperimenter(Experimenter):
+    class LocalExperimenter(Experimenter, StatsMixin):
         def setup_workload(self):
             self.conf['workload_class'] = self.para.workload_class
             self.conf['workload_config'] = {
                     }
             self.conf['workload_conf_key'] = 'workload_config'
 
-    class ParaDict(object):
-        def __init__(self):
-            expname = get_expname()
-            lbabytes = 1*GB
-            para_dict = {
-                    'ftl'            : ['nkftl2'],
-                    'device_path'    : ['/dev/sdc1'],
-                    # 'filesystem'     : ['f2fs', 'ext4', 'ext4-nj', 'btrfs', 'xfs'],
-                    'filesystem'     : ['ext4', 'f2fs'],
-                    'ext4datamode'   : ['ordered'],
-                    'ext4hasjournal' : [True],
-                    'expname'        : [expname],
-                    'dirty_bytes'    : [4*GB],
-                    'linux_ncq_depth': [31],
-                    'ssd_ncq_depth'  : [1],
-                    'cache_mapped_data_bytes' :[lbabytes],
-                    'lbabytes'       : [lbabytes],
-                    'n_pages_per_block': [64],
-                    'stripe_size'    : [64],
-                    'enable_blktrace': [True],
-                    'enable_simulation': [True],
-                    'f2fs_gc_after_workload': [False],
-                    'segment_bytes'  : [128*KB],
-                    'max_log_blocks_ratio': [100],
-                    'n_online_cpus'  : ['all'],
-                    'over_provisioning': [8], # 1.28 is a good number
+        def after_running(self):
+            self.write_stats()
 
+    class ParaDict(ParaDictIterMixin):
+        def __init__(self):
+            para_dict = get_dftldes_shared_para_dict()
+            para_dict.update( {
                     'workload_class' : [
                         'Varmail'
                         ],
-                    }
+                    })
             self.parameter_combs = ParameterCombinations(para_dict)
 
         def __iter__(self):
-            return iter(self.parameter_combs)
+            # return iter(self.parameter_combs)
+            return iter(self.iterator())
 
     def main():
         for para in ParaDict():
+            print para
+            continue
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = LocalExperimenter( Parameters(**para) )
             obj.main()
