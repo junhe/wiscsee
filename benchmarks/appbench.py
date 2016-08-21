@@ -168,6 +168,31 @@ class Experimenter(object):
         self.after_running()
 
 
+class StatsMixin(object):
+    def write_stats(self):
+        stats_path = os.path.join(self.conf['result_dir'], 'stats.json')
+        disk_used_bytes = utils.get_dir_size(self.conf['fs_mount_point'])
+
+        written_bytes = self.get_traffic_size()
+
+        d = {'disk_used_bytes': disk_used_bytes,
+             'written_bytes': written_bytes
+            }
+        utils.dump_json(d, stats_path)
+
+    def get_traffic_size(self):
+        filepath = os.path.join(self.conf['result_dir'], 'blkparse-events-for-ftlsim.txt')
+        with open(filepath, 'rb') as f:
+            reader = csv.reader(f, delimiter=' ')
+            total = 0
+            for row in reader:
+                op = row[1]
+                size = int(row[3])
+                if op == 'write':
+                    total += size
+        return total
+
+
 def sqlbench():
     class Experimenter(object):
         def __init__(self, para):
@@ -437,31 +462,6 @@ def bench():
 
 
 def leveldbbench():
-    class StatsMixin(object):
-        def write_stats(self):
-            stats_path = os.path.join(self.conf['result_dir'], 'stats.json')
-            disk_used_bytes = utils.get_dir_size(self.conf['fs_mount_point'])
-
-            written_bytes = self.get_traffic_size()
-
-            d = {'disk_used_bytes': disk_used_bytes,
-                 'written_bytes': written_bytes
-                }
-            utils.dump_json(d, stats_path)
-
-        def get_traffic_size(self):
-            filepath = os.path.join(self.conf['result_dir'], 'blkparse-events-for-ftlsim.txt')
-            with open(filepath, 'rb') as f:
-                reader = csv.reader(f, delimiter=' ')
-                total = 0
-                for row in reader:
-                    op = row[1]
-                    size = int(row[3])
-                    if op == 'write':
-                        total += size
-            return total
-
-
     class LocalExperimenter(Experimenter, StatsMixin):
         def setup_workload(self):
             self.conf['workload_class'] = self.para.workload_class
@@ -557,13 +557,16 @@ def leveldbbench():
 
 
 def sqlitebench():
-    class LocalExperimenter(Experimenter):
+    class LocalExperimenter(Experimenter, StatsMixin):
         def setup_workload(self):
             self.conf['workload_class'] = self.para.workload_class
             self.conf['workload_config'] = {
                     'benchconfs': self.para.benchconfs,
                     }
             self.conf['workload_conf_key'] = 'workload_config'
+
+        def after_running(self):
+            self.write_stats()
 
     class ParaDict(object):
         def __init__(self):
@@ -598,8 +601,8 @@ def sqlitebench():
                         ],
                     'benchconfs': [
                             [
-                            {'pattern': 'random', 'n_insertions': 1200},
-                            # {'pattern': 'random', 'n_insertions': 120000},
+                            # {'pattern': 'random', 'n_insertions': 1200},
+                            {'pattern': 'random', 'n_insertions': 120000},
                             # {'pattern': 'sequential', 'n_insertions': 120000},
                             ]
                         ],
