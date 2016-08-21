@@ -492,12 +492,12 @@ def leveldbbench():
                     'n_pages_per_block': [1*MB/(2*KB)],
                     'stripe_size'    : [1],
                     'enable_blktrace': [True],
-                    'enable_simulation': [False],
+                    'enable_simulation': [True],
                     'f2fs_gc_after_workload': [False],
                     'segment_bytes'  : [16*MB],
                     'max_log_blocks_ratio': [8],
                     'n_online_cpus'  : ['all'],
-                    'over_provisioning': [8], # 1.28 is a good number
+                    'over_provisioning': [16], # 1.28 is a good number
 
                     'workload_class' : [
                         'Leveldb'
@@ -507,7 +507,8 @@ def leveldbbench():
                             # {'benchmarks': 'overwrite', 'num': 6*1000000, 'max_key': 6*1000, 'max_log': -1}
                             # ],
                             # [{'benchmarks': 'overwrite',  'num': 6*1000000, 'max_key': 6*100000, 'max_log': -1}],
-                            [{'benchmarks': 'overwrite',  'num': 6*1000, 'max_key': 6*100000, 'max_log': -1}],
+
+                            [{'benchmarks': 'overwrite',  'num': 3*1000000, 'max_key': 3*1000000, 'max_log': -1}],
                         ],
                     'leveldb_threads': [1],
                     'one_by_one'     : [False],
@@ -521,10 +522,21 @@ def leveldbbench():
             para = self.parameter_combs[0]
             updatedicts = [
                 {'segment_bytes': 16*MB, 'n_pages_per_block': 1*MB/(2*KB)},
-                # {'segment_bytes': 4*MB, 'n_pages_per_block': 256*KB/(2*KB)},
-                {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)}
+                {'segment_bytes': 2*GB, 'n_pages_per_block': 1*MB/(2*KB)},
+
+                {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)},
+                {'segment_bytes': 16*MB, 'n_pages_per_block': 128*KB/(2*KB)},
+                {'segment_bytes': 2*GB, 'n_pages_per_block': 128*KB/(2*KB)}
                 ]
-            for update_dict in updatedicts:
+            new_update_dics = []
+            for d in updatedicts:
+                for fs in ['ext4', 'f2fs']:
+                    new_d = copy.copy(d)
+                    new_d['filesystem'] = fs
+
+                    new_update_dics.append(new_d)
+
+            for update_dict in new_update_dics:
                 tmp_para = copy.deepcopy(para)
                 tmp_para.update(update_dict)
                 yield tmp_para
