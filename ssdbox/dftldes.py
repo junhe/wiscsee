@@ -1259,9 +1259,10 @@ class VictimBlocks(object):
 
         victim_candidates = []
         for block in used_blocks:
-            # if block not in cur_blocks:
+            if self._conf['victimize_cur_blocks'] is True and block in cur_blocks:
+                # skip current blocks
+                continue
             valid_ratio = self._oob.states.block_valid_ratio(block)
-            # if valid_ratio < 1:
             victim_candidates.append( (valid_ratio, block_type, block) )
 
         return victim_candidates
@@ -1404,13 +1405,14 @@ class DataBlockCleaner(object):
         for ppn in range(ppn_start, ppn_end):
             try:
                 lpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
-                self.recorder.write_file('gc.log',
-                        gcid=self.gcid,
-                        blocknum=blocknum,
-                        lpn=lpn,
-                        valid=self.oob.states.is_page_valid(ppn))
             except KeyError:
-                pass
+                lpn = 'NA'
+
+            self.recorder.write_file('gc.log',
+                    gcid=self.gcid,
+                    blocknum=blocknum,
+                    lpn=lpn,
+                    valid=self.oob.states.is_page_valid(ppn))
         self.gcid += 1
 
     def clean(self, blocknum):
@@ -1697,6 +1699,7 @@ class Config(config.ConfigNCQFTL):
             "over_provisioning": 1.28,
             "mapping_cache_bytes": None, # cmt: cached mapping table
             "do_not_check_gc_setting": False,
+            "victimize_cur_blocks": False,
             }
         self.update(local_itmes)
         self['segment_bytes'] = 1*TB

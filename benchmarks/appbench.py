@@ -108,6 +108,8 @@ class Experimenter(object):
         if self.para.ftl == 'dftldes':
             self.conf['simulator_class'] = 'SimulatorDESNew'
             self.conf['ftl_type'] = 'dftldes'
+            self.conf['victimize_cur_blocks'] = self.para.victimize_cur_blocks
+
         elif self.para.ftl == 'nkftl2':
             self.conf['simulator_class'] = 'SimulatorDESNew'
             self.conf['ftl_type'] = 'nkftl2'
@@ -119,6 +121,7 @@ class Experimenter(object):
             print 'N:', self.conf['nkftl']['n_blocks_in_data_group']
             print 'K:', self.conf['nkftl']['max_blocks_in_log_group']
             self.conf['nkftl']['max_ratio_of_log_blocks'] = self.para.max_log_blocks_ratio
+
         else:
             raise NotImplementedError()
 
@@ -498,6 +501,7 @@ def leveldbbench():
                     'max_log_blocks_ratio': [8],
                     'n_online_cpus'  : ['all'],
                     'over_provisioning': [16], # 1.28 is a good number
+                    'victimize_cur_blocks': [True],
 
                     'workload_class' : [
                         'Leveldb'

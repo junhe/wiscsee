@@ -124,10 +124,13 @@ class GcLog(object):
             reader = csv.DictReader(f, skipinitialspace=True)
             for row in reader:
                 newrow = dict(zip(row.keys()[0].split(), row.values()[0].split()))
-                offset = int(newrow['lpn']) * self.flash_page_size
-                sem = classifier.classify(offset)
-                if sem == 'UNKNOWN':
-                    sem = filepath_classifier.classify(offset)
+                if newrow['lpn'] != 'NA':
+                    offset = int(newrow['lpn']) * self.flash_page_size
+                    sem = classifier.classify(offset)
+                    if sem == 'UNKNOWN':
+                        sem = filepath_classifier.classify(offset)
+                else:
+                    sem = 'NA'
                 newrow['semantics'] = sem
                 new_table.append(newrow)
 
