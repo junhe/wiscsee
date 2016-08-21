@@ -570,7 +570,7 @@ def sqlitebench():
             expname = get_expname()
             lbabytes = 1*GB
             para_dict = {
-                    'ftl'            : ['nkftl2'],
+                    'ftl'            : ['dftldes'],
                     'device_path'    : ['/dev/sdc1'],
                     # 'filesystem'     : ['f2fs', 'ext4', 'ext4-nj', 'btrfs', 'xfs'],
                     'filesystem'     : ['ext4'],
@@ -583,7 +583,7 @@ def sqlitebench():
                     'cache_mapped_data_bytes' :[lbabytes],
                     'lbabytes'       : [lbabytes],
                     'n_pages_per_block': [64],
-                    'stripe_size'    : [64],
+                    'stripe_size'    : [1],
                     'enable_blktrace': [True],
                     'enable_simulation': [True],
                     'f2fs_gc_after_workload': [False],
@@ -598,18 +598,43 @@ def sqlitebench():
                         ],
                     'benchconfs': [
                             [
-                            {'pattern': 'random', 'n_insertions': 120000},
+                            {'pattern': 'random', 'n_insertions': 1200},
+                            # {'pattern': 'random', 'n_insertions': 120000},
                             # {'pattern': 'sequential', 'n_insertions': 120000},
                             ]
                         ],
                     }
             self.parameter_combs = ParameterCombinations(para_dict)
 
-        def __iter__(self):
+        def __disable_iter__(self):
             return iter(self.parameter_combs)
+
+        def __iter__(self):
+            para = self.parameter_combs[0]
+            updatedicts = [
+                {'segment_bytes': 16*MB, 'n_pages_per_block': 1*MB/(2*KB)},
+                {'segment_bytes': 2*GB, 'n_pages_per_block': 1*MB/(2*KB)},
+
+                {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)},
+                {'segment_bytes': 16*MB, 'n_pages_per_block': 128*KB/(2*KB)},
+                {'segment_bytes': 2*GB, 'n_pages_per_block': 128*KB/(2*KB)}
+                ]
+            new_update_dics = []
+            for d in updatedicts:
+                for fs in ['ext4', 'f2fs']:
+                    new_d = copy.copy(d)
+                    new_d['filesystem'] = fs
+
+                    new_update_dics.append(new_d)
+
+            for update_dict in new_update_dics:
+                tmp_para = copy.deepcopy(para)
+                tmp_para.update(update_dict)
+                yield tmp_para
 
     def main():
         for para in ParaDict():
+            print para
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = LocalExperimenter( Parameters(**para) )
             obj.main()
