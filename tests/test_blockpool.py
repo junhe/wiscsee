@@ -160,7 +160,7 @@ class TestBlockPool_next_gc_data(unittest.TestCase):
                 block_pool.count_blocks(tag=TFREE, channels=[i]),
                 n_blocks_per_channel - nblocks_used)
             self.assertEqual(
-                block_pool.count_blocks(tag=TGCDATA, channels=[i]),
+                block_pool.count_blocks(tag=TDATA, channels=[i]),
                 nblocks_used)
 
     def test_main(self):
