@@ -1366,6 +1366,9 @@ class Cleaner(object):
         if you need cleaning before calling.
         """
         victim_blocks = VictimBlocks(self.conf, self.block_pool, self.oob)
+        self.recorder.append_to_value_list('valid_ratio_snapshot',
+                victim_blocks.get_valid_ratio_counter_of_used_blocks())
+        print 'Just snapshot valid ratio ~~~~~~~~~'
 
         procs = []
         for valid_ratio, block_type, block_num in victim_blocks.iterator_verbose():
