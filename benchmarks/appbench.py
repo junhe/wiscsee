@@ -544,8 +544,8 @@ def leveldbbench():
                             # ],
                             # [{'benchmarks': 'overwrite',  'num': 6*1000000, 'max_key': 6*100000, 'max_log': -1}],
 
-                            # [{'benchmarks': 'overwrite',  'num': 3*1000000, 'max_key': 3*1000000, 'max_log': -1}],
-                            [{'benchmarks': 'overwrite',  'num': 6*1000000, 'max_key': 6*1000000, 'max_log': -1}],
+                            [{'benchmarks': 'overwrite',  'num': 3*1000000, 'max_key': 3*1000000, 'max_log': -1}],
+                            # [{'benchmarks': 'overwrite',  'num': 6*1000000, 'max_key': 6*1000000, 'max_log': -1}],
                         ],
                     'leveldb_threads': [1],
                     'one_by_one'     : [False],
