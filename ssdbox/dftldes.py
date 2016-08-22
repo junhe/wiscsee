@@ -1246,6 +1246,15 @@ class VictimBlocks(object):
                 # Out of victim blocks
                 raise StopIteration
 
+    def get_valid_ratio_counter_of_used_blocks(self):
+        used_blocks = self._block_pool.used_blocks
+        counter = Counter()
+        for block in used_blocks:
+            valid_ratio = self._oob.states.block_valid_ratio(block)
+            ratio_str = "{0:.2f}".format(valid_ratio)
+            counter[ratio_str] += 1
+        return counter
+
     def _candidate_priorityq(self):
         candidate_tuples = self._victim_candidates()
         heapq.heapify(candidate_tuples)
