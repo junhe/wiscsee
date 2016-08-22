@@ -1259,10 +1259,14 @@ class VictimBlocks(object):
 
         victim_candidates = []
         for block in used_blocks:
-            if self._conf['victimize_cur_blocks'] is False and block in cur_blocks:
+            if block in cur_blocks:
                 # skip current blocks
                 continue
+
             valid_ratio = self._oob.states.block_valid_ratio(block)
+            if valid_ratio == 1:
+                # skip all-valid blocks
+                continue
             victim_candidates.append( (valid_ratio, block_type, block) )
 
         return victim_candidates
@@ -1358,13 +1362,9 @@ class Cleaner(object):
         for valid_ratio, block_type, block_num in victim_blocks.iterator_verbose():
             if self.is_stopping_needed():
                 break
-            self.recorder.count_me('victim_valid_ratio',
-                    "{0:.2f}".format(valid_ratio))
-            if valid_ratio == 1:
-                continue
-            else:
-                p = self.env.process(self._clean_block(block_type, block_num))
-                procs.append(p)
+            assert valid_ratio < 1
+            p = self.env.process(self._clean_block(block_type, block_num))
+            procs.append(p)
 
         yield simpy.AllOf(self.env, procs)
 
@@ -1421,7 +1421,7 @@ class DataBlockCleaner(object):
         invalidate pages in blocknum and erase block
         '''
         assert blocknum in self.block_pool.used_blocks
-        # assert blocknum not in self.block_pool.current_blocks()
+        assert blocknum not in self.block_pool.current_blocks()
 
         self.log(blocknum)
 

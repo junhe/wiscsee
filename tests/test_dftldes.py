@@ -1603,6 +1603,39 @@ class TestVictimBlocks(unittest.TestCase):
 
         self.assertListEqual(victims, [block1, block0, block2])
 
+    def test_valid_ratio_stats(self):
+        vbs = create_victimblocks()
+        conf = vbs._conf
+        blockpool = vbs._block_pool
+        oob = vbs._oob
+
+        n = conf.n_pages_per_block
+        ratios = []
+        self.validate_n_pages_in_block(conf, blockpool, oob, 0)
+        self.validate_n_pages_in_block(conf, blockpool, oob, 0)
+        ratios.append( 0 / n )
+        self.validate_n_pages_in_block(conf, blockpool, oob, 2)
+        self.validate_n_pages_in_block(conf, blockpool, oob, 2)
+        ratios.append( 2 / n )
+        self.validate_n_pages_in_block(conf, blockpool, oob, 3)
+        self.validate_n_pages_in_block(conf, blockpool, oob, 3)
+        ratios.append( 3 / n )
+        self.validate_n_pages_in_block(conf, blockpool, oob, n)
+        self.validate_n_pages_in_block(conf, blockpool, oob, n)
+        ratios.append( n / n )
+
+        counter = vbs.get_valid_ratio_counter_of_used_blocks()
+        for valid_ratio in ratios:
+            ratio_str = "{0:.2f}".format(valid_ratio)
+            self.assertEqual(counter[ratio_str], 2)
+
+    def validate_n_pages_in_block(self, conf, block_pool, oob, n):
+        blocknum = block_pool.pop_a_free_block_to_data()
+        for i in range(n):
+            ppn = conf.block_off_to_page(blocknum, i)
+            oob.states.validate_page(ppn)
+
+
 
 class TestGC(unittest.TestCase):
     def test_valid_ratio(self):
@@ -1636,18 +1669,16 @@ class TestGC(unittest.TestCase):
         conf = objs['conf']
         n = conf.n_pages_per_block
         yield env.process(dftl.write_ext(Extent(0, n)))
-        self.assertEqual(len(list(victims.iterator_verbose())), 1)
+        self.assertEqual(len(list(victims.iterator_verbose())), 0)
 
         yield env.process(dftl.write_ext(Extent(0, 1)))
 
         victim_blocks = list(victims.iterator_verbose())
-        self.assertEqual(len(list(victims.iterator_verbose())), 2)
         valid_ratio, block_type, block_num = victim_blocks[0]
         self.assertEqual(valid_ratio, (n-1.0)/n)
 
         yield env.process(dftl.write_ext(Extent(0, n)))
 
-        self.assertEqual(len(list(victims.iterator_verbose())), 3)
         victim_blocks = list(victims.iterator_verbose())
         valid_ratio, block_type, block_num = victim_blocks[0]
         self.assertEqual(valid_ratio, 0)
