@@ -210,6 +210,8 @@ class Config(dict):
             "simulation_processor"  : 'e2e', # regular, extent
             "stripe_size"           : 4,  # unit: page
 
+            'snapshot_valid_ratios' : False,
+            'snapshot_valid_ratios_interval': None,
 
             ############## hybridmap ############
             "high_log_block_ratio"       : 0.4,

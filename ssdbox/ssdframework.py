@@ -52,6 +52,9 @@ class Ssd(SsdBase):
 
         self.ftl = self._create_ftl()
 
+        self._snapshot_valid_ratios = self.conf['snapshot_valid_ratios']
+        self._snapshot_interval = self.conf['snapshot_valid_ratios_interval']
+
     def _create_ftl(self):
         if self.conf['ftl_type'] == 'dftldes':
             return dftldes.Ftl(self.conf, self.recorder, self.flash_controller,
@@ -210,21 +213,31 @@ class Ssd(SsdBase):
 
             self.ncq.slots.release(slot_req)
 
+
     def _end_all_processes(self):
         for i in range(self.n_processes):
             yield self.ncq.queue.put(
                 hostevent.ControlEvent(OP_END_SSD_PROCESS))
+        self._snapshot_valid_ratios = False
 
     def _cleaner_process(self, forced=False):
         # things may have changed since last time we check, because of locks
         if forced is True or self.ftl.is_cleaning_needed():
             yield self.env.process(self.ftl.clean(forced))
 
+    def _valid_ratio_snapshot_process(self):
+        while self._snapshot_valid_ratios is True:
+            self.ftl.snapshot_valid_ratios()
+            yield self.env.timeout(self._snapshot_interval)
+
     def run(self):
         procs = []
         for i in range(self.n_processes):
             p = self.env.process( self._process(i) )
             procs.append(p)
+
+        p = self.env.process( self._valid_ratio_snapshot_process() )
+        procs.append(p)
 
         yield simpy.events.AllOf(self.env, procs)
 

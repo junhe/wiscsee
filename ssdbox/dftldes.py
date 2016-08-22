@@ -329,6 +329,12 @@ class Ftl(object):
     def clean(self, forced=True):
         yield self.env.process(self._cleaner.clean())
 
+    def snapshot_valid_ratios(self):
+        victim_blocks = VictimBlocks(self.conf, self.block_pool, self.oob)
+        ratios = victim_blocks.get_valid_ratio_counter_of_used_blocks()
+        self.recorder.append_to_value_list('ftl_func_valid_ratios',
+                ratios)
+
 
 def remove_invalid_ppns(ppns):
     return [ppn for ppn in ppns if not ppn in (UNINITIATED, MISS)]
@@ -1366,7 +1372,7 @@ class Cleaner(object):
         if you need cleaning before calling.
         """
         victim_blocks = VictimBlocks(self.conf, self.block_pool, self.oob)
-        self.recorder.append_to_value_list('valid_ratio_snapshot',
+        self.recorder.append_to_value_list('clean_func_valid_ratio_snapshot',
                 victim_blocks.get_valid_ratio_counter_of_used_blocks())
         print 'Just snapshot valid ratio ~~~~~~~~~'
 
