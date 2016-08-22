@@ -113,6 +113,14 @@ class Recorder(object):
     def get_result_by_one_key(self, key):
         return self.result_dict[key]
 
+    def append_to_value_list(self, key, addon):
+        """
+        Append addon to key's value
+        {'key': [addon1, addon2]'
+        """
+        valuelist = self.result_dict.setdefault(key, [])
+        valuelist.append(addon)
+
     @switchable
     def count_me(self, counter_name, item):
         """
