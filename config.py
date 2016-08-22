@@ -210,6 +210,8 @@ class Config(dict):
             "simulation_processor"  : 'e2e', # regular, extent
             "stripe_size"           : 4,  # unit: page
 
+            "do_gc_after_workload"  : True,
+
             'snapshot_valid_ratios' : False,
             'snapshot_valid_ratios_interval': None,
 
