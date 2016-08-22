@@ -108,7 +108,6 @@ class Experimenter(object):
         if self.para.ftl == 'dftldes':
             self.conf['simulator_class'] = 'SimulatorDESNew'
             self.conf['ftl_type'] = 'dftldes'
-            self.conf['victimize_cur_blocks'] = self.para.victimize_cur_blocks
 
         elif self.para.ftl == 'nkftl2':
             self.conf['simulator_class'] = 'SimulatorDESNew'
@@ -242,7 +241,6 @@ def get_dftldes_shared_para_dict():
             'max_log_blocks_ratio': [100],
             'n_online_cpus'  : ['all'],
             'over_provisioning': [16], # 1.28 is a good number
-            'victimize_cur_blocks': [True],
             }
     return para_dict
 

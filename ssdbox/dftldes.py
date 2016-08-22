@@ -1711,7 +1711,6 @@ class Config(config.ConfigNCQFTL):
             "over_provisioning": 1.28,
             "mapping_cache_bytes": None, # cmt: cached mapping table
             "do_not_check_gc_setting": False,
-            "victimize_cur_blocks": False,
             }
         self.update(local_itmes)
         self['segment_bytes'] = 1*TB
