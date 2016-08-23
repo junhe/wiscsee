@@ -162,7 +162,7 @@ class Ftl(object):
         self.recorder.add_to_general_accumulater('traffic', 'write', req_size)
         self.written_bytes += req_size
         if self.written_bytes > self.pre_written_bytes + self.display_interval:
-            print 'Writing', self.written_bytes / MB, 'MB'
+            print 'Written (MB)', self.written_bytes / MB, 'writing', req_size / MB
             sys.stdout.flush()
             self.pre_written_bytes = self.written_bytes
 
@@ -272,7 +272,7 @@ class Ftl(object):
         self.recorder.add_to_general_accumulater('traffic', 'read', req_size)
         self.read_bytes += req_size
         if self.read_bytes > self.pre_read_bytes + self.display_interval:
-            print 'Reading', self.read_bytes / MB, 'MB'
+            print 'Read (MB)', self.read_bytes / MB, 'reading', req_size / MB
             sys.stdout.flush()
             self.pre_read_bytes = self.read_bytes
 
@@ -320,7 +320,7 @@ class Ftl(object):
         self.recorder.add_to_general_accumulater('traffic', 'discard', req_size)
         self.discarded_bytes += req_size
         if self.discarded_bytes > self.pre_discarded_bytes + self.display_interval:
-            print 'Discarding', self.discarded_bytes / MB, 'MB'
+            print 'Discarded (MB)', self.discarded_bytes / MB, 'discarding', req_size / MB
             sys.stdout.flush()
             self.pre_discarded_bytes = self.discarded_bytes
 
