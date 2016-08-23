@@ -31,6 +31,9 @@ leveldb:
 sqlite:
 	sudo python -m benchmarks.appbench -t 'sqlitebench()'
 
+sqlite4alignment:
+	sudo python -m benchmarks.appbench -t 'sqlitebench_for_alignment()'
+
 varmail:
 	sudo python -m benchmarks.appbench -t 'varmailbench()'
 
