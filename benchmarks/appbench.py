@@ -110,6 +110,7 @@ class Experimenter(object):
             self.conf['ftl_type'] = 'dftldes'
             self.conf['snapshot_valid_ratios'] = True
             self.conf['snapshot_valid_ratios_interval'] = 0.1*SEC
+            self.conf['do_gc_after_workload'] = False
 
         elif self.para.ftl == 'nkftl2':
             self.conf['simulator_class'] = 'SimulatorDESNew'
@@ -123,6 +124,7 @@ class Experimenter(object):
             print 'K:', self.conf['nkftl']['max_blocks_in_log_group']
             self.conf['nkftl']['max_ratio_of_log_blocks'] = self.para.max_log_blocks_ratio
             self.conf['snapshot_valid_ratios'] = False
+            self.conf['do_gc_after_workload'] = True
 
         else:
             raise NotImplementedError()
