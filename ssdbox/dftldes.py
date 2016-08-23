@@ -116,6 +116,16 @@ class Ftl(object):
 
         self._check_segment_config()
 
+        self.written_bytes = 0
+        self.discarded_bytes = 0
+        self.read_bytes = 0
+        self.pre_written_bytes = 0
+        self.pre_discarded_bytes = 0
+        self.pre_read_bytes = 0
+        self.display_interval = 1 * MB
+
+
+
     def _check_segment_config(self):
         if self.conf['segment_bytes'] % (self.conf.n_pages_per_block \
                 * self.conf.page_size) != 0:
@@ -148,8 +158,13 @@ class Ftl(object):
         self._mappings.drop()
 
     def write_ext(self, extent):
-        self.recorder.add_to_general_accumulater('traffic', 'write',
-                extent.lpn_count*self.conf.page_size)
+        req_size = extent.lpn_count * self.conf.page_size
+        self.recorder.add_to_general_accumulater('traffic', 'write', req_size)
+        self.written_bytes += req_size
+        if self.written_bytes > self.pre_written_bytes + self.display_interval:
+            print 'Writing', self.written_bytes / MB, 'MB'
+            sys.stdout.flush()
+            self.pre_written_bytes = self.written_bytes
 
         op_id = self.recorder.get_unique_num()
         start_time = self.env.now # <----- start
@@ -253,9 +268,13 @@ class Ftl(object):
         #   should be handled when we got new_ppn
 
     def read_ext(self, extent):
-        # print 'read_ext', str(extent)
-        self.recorder.add_to_general_accumulater('traffic', 'read',
-                extent.lpn_count*self.conf.page_size)
+        req_size = extent.lpn_count * self.conf.page_size
+        self.recorder.add_to_general_accumulater('traffic', 'read', req_size)
+        self.read_bytes += req_size
+        if self.read_bytes > self.pre_read_bytes + self.display_interval:
+            print 'Reading', self.read_bytes / MB, 'MB'
+            sys.stdout.flush()
+            self.pre_read_bytes = self.read_bytes
 
         ext_list = split_ext_to_mvpngroups(self.conf, extent)
         # print [str(x) for x in ext_list]
@@ -297,8 +316,13 @@ class Ftl(object):
             start_time = start_time, end_time = self.env.now)
 
     def discard_ext(self, extent):
-        self.recorder.add_to_general_accumulater('traffic', 'discard',
-                extent.lpn_count*self.conf.page_size)
+        req_size = extent.lpn_count * self.conf.page_size
+        self.recorder.add_to_general_accumulater('traffic', 'discard', req_size)
+        self.discarded_bytes += req_size
+        if self.discarded_bytes > self.pre_discarded_bytes + self.display_interval:
+            print 'Discarding', self.discarded_bytes / MB, 'MB'
+            sys.stdout.flush()
+            self.pre_discarded_bytes = self.discarded_bytes
 
         ext_list = split_ext_to_mvpngroups(self.conf, extent)
 
