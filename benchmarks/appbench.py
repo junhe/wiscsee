@@ -200,12 +200,12 @@ class ParaDictIterMixin(object):
     def iterator(self):
         para = self.parameter_combs[0]
         updatedicts = [
-            {'segment_bytes': 16*MB, 'n_pages_per_block': 1*MB/(2*KB)},
-            {'segment_bytes': 2*GB, 'n_pages_per_block': 1*MB/(2*KB)},
-
-            {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)},
+            # {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)},
             {'segment_bytes': 16*MB, 'n_pages_per_block': 128*KB/(2*KB)},
-            {'segment_bytes': 2*GB, 'n_pages_per_block': 128*KB/(2*KB)}
+            # {'segment_bytes': 2*GB, 'n_pages_per_block': 128*KB/(2*KB)}
+
+            {'segment_bytes': 16*MB, 'n_pages_per_block': 1*MB/(2*KB)},
+            # {'segment_bytes': 2*GB, 'n_pages_per_block': 1*MB/(2*KB)},
             ]
         new_update_dics = []
         for d in updatedicts:
@@ -223,7 +223,7 @@ class ParaDictIterMixin(object):
 
 def get_dftldes_shared_para_dict():
     expname = get_expname()
-    lbabytes = 1*GB
+    lbabytes = 8*GB
     para_dict = {
             'ftl'            : ['dftldes'],
             'device_path'    : ['/dev/sdc1'],
@@ -242,7 +242,7 @@ def get_dftldes_shared_para_dict():
             'enable_blktrace': [True],
             'enable_simulation': [True],
             'f2fs_gc_after_workload': [False],
-            'segment_bytes'  : [128*KB],
+            'segment_bytes'  : [2*MB],
             'max_log_blocks_ratio': [100],
             'n_online_cpus'  : ['all'],
             'over_provisioning': [16], # 1.28 is a good number
@@ -546,8 +546,10 @@ def leveldbbench():
                             # ],
                             # [{'benchmarks': 'overwrite',  'num': 6*1000000, 'max_key': 6*100000, 'max_log': -1}],
 
-                            [{'benchmarks': 'overwrite',  'num': 3*1000000, 'max_key': 3*1000000, 'max_log': -1}],
+                            # [{'benchmarks': 'overwrite',  'num': 3*1000000, 'max_key': 3*1000000, 'max_log': -1}],
                             # [{'benchmarks': 'overwrite',  'num': 6*1000000, 'max_key': 6*1000000, 'max_log': -1}],
+
+                            [{'benchmarks': 'overwrite',  'num': 48*1000000, 'max_key': 48*1000000, 'max_log': -1}],
                         ],
                     'leveldb_threads': [1],
                     'one_by_one'     : [False],
