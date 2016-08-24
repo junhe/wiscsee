@@ -126,6 +126,7 @@ class VarmailProc(object):
         utils.prepare_dir(self.dirpath)
 
         cmd = 'filebench -f {}'.format(self.conf_path)
+        print cmd
         self.p = subprocess.Popen(cmd, shell=True)
 
         return self.p

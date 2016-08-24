@@ -13,6 +13,7 @@ import multiwriters
 import perf
 from utilities import utils
 import workloadlist
+from appprocess import *
 
 from accpatterns import patterns
 from .patternonfile import File
@@ -547,6 +548,70 @@ class Leveldb(Workload):
                 p.wait()
 
 
+class AppMix(Workload):
+    def run(self):
+        conf_list = [
+                {'name' : 'LevelDB',
+                 'benchmarks': 'overwrite',
+                 'num': 1*1000000,
+                 'max_key': 1*100000,
+                 'max_log': -1},
+
+                {'name' : 'LevelDB',
+                 'benchmarks': 'overwrite',
+                 'num': 1*1000000,
+                 'max_key': 1*100000,
+                 'max_log': -1},
+
+                # {'name': 'Sqlite',
+                 # 'pattern': 'random',
+                 # 'n_insertions': 12000},
+
+                # {'name': 'Varmail',
+                 # 'seconds': 2},
+                ]
+        print conf_list
+        app_procs = []
+        for seq_id, appconf in enumerate(conf_list):
+            app_proc = self.create_process(appconf, seq_id)
+            app_proc.run()
+            app_procs.append(app_proc)
+
+        for app_proc in app_procs:
+            app_proc.wait()
+
+    def create_process(self, appconf, seq_id):
+        appdir = os.path.join(
+                self.conf['fs_mount_point'], 'appmix',
+                str(seq_id) + '-' + appconf['name'])
+        if appconf['name'] == 'LevelDB':
+            proc = LevelDBProc(
+                benchmarks = appconf['benchmarks'],
+                num = appconf['num'],
+                db=appdir,
+                outputpath='/dev/null',
+                threads=1,
+                use_existing_db=0,
+                max_key=appconf['max_key'],
+                max_log=appconf['max_log']
+                )
+
+        elif appconf['name'] == 'Sqlite':
+            proc = SqliteProc(
+                n_insertions = appconf['n_insertions'],
+                pattern = 'random',
+                db_dir = appdir)
+
+        elif appconf['name'] == 'Varmail':
+            proc = VarmailProc(appdir, appconf['seconds'])
+
+        else:
+            print appconf['name']
+            raise NotImplementedError()
+
+        return proc
+
+
 class Sqlbench(Workload):
     """
     To use this benchmark, simply do the following in mysql-io-patterns
@@ -956,14 +1021,11 @@ def bricks(n_col, n_units):
                 yield unit_id
 
 if __name__ == '__main__':
+    pass
     # tpcc = Tpcc()
     # tpcc.run()
     # tpcc.stop()
 
     # sqlbench = Sqlbench()
     # sqlbench.run()
-
-    for j in range(2):
-        for i in Bricks(2, 4):
-            print i
 
