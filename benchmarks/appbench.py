@@ -767,6 +767,53 @@ def varmailbench_for_alignment():
     main()
 
 
+def appmixbench():
+    class LocalExperimenter(Experimenter, StatsMixin):
+        def setup_workload(self):
+            self.conf['workload_class'] = self.para.workload_class
+            self.conf['workload_config'] = {
+                    'appconfs': self.para.appconfs,
+                    }
+            self.conf['workload_conf_key'] = 'workload_config'
+
+        def after_running(self):
+            self.write_stats()
+
+    class ParaDict(ParaDictIterMixin):
+        def __init__(self):
+            expname = get_expname()
+            lbabytes = 1*GB
+            para_dict = get_shared_para_dict(expname, lbabytes)
+            para_dict.update( {
+                    'workload_class' : [ 'AppMix' ],
+                    'appconfs': [
+                            [ # list of app you want to run
+                             {'name' : 'LevelDB',
+                             'benchmarks': 'overwrite',
+                             'num': 1*10000,
+                             'max_key': 1*10000,
+                             'max_log': -1},
+                            ]
+                        ],
+                    })
+            self.parameter_combs = ParameterCombinations(para_dict)
+
+        def __iter__(self):
+            return iter(self.parameter_combs)
+            # return iter(self.iterator())
+
+    def main():
+        for para in ParaDict():
+            print para
+            Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+            obj = LocalExperimenter( Parameters(**para) )
+            obj.main()
+
+    main()
+
+
+
+
 def newsqlbench():
     class LocalExperimenter(Experimenter):
         def setup_workload(self):

@@ -31,6 +31,9 @@ leveldb:
 sqlite:
 	sudo python -m benchmarks.appbench -t 'sqlitebench()'
 
+appmix:
+	sudo python -m benchmarks.appbench -t 'appmixbench()'
+
 sqlite4alignment:
 	sudo python -m benchmarks.appbench -t 'sqlitebench_for_alignment()'
 

@@ -550,18 +550,12 @@ class Leveldb(Workload):
 
 class AppMix(Workload):
     def run(self):
-        conf_list = [
-                {'name' : 'LevelDB',
-                 'benchmarks': 'overwrite',
-                 'num': 1*1000000,
-                 'max_key': 1*100000,
-                 'max_log': -1},
-
-                {'name' : 'LevelDB',
-                 'benchmarks': 'overwrite',
-                 'num': 1*1000000,
-                 'max_key': 1*100000,
-                 'max_log': -1},
+        # conf_list = [
+                # {'name' : 'LevelDB',
+                 # 'benchmarks': 'overwrite',
+                 # 'num': 1*1000000,
+                 # 'max_key': 1*100000,
+                 # 'max_log': -1},
 
                 # {'name': 'Sqlite',
                  # 'pattern': 'random',
@@ -569,7 +563,8 @@ class AppMix(Workload):
 
                 # {'name': 'Varmail',
                  # 'seconds': 2},
-                ]
+                # ]
+        conf_list = self.workload_conf['appconfs']
         print conf_list
         app_procs = []
         for seq_id, appconf in enumerate(conf_list):
