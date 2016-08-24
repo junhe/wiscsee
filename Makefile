@@ -37,6 +37,9 @@ sqlite4alignment:
 varmail:
 	sudo python -m benchmarks.appbench -t 'varmailbench()'
 
+varmail4alignment:
+	sudo python -m benchmarks.appbench -t 'varmailbench_for_alignment()'
+
 newsqlbench:
 	sudo python -m benchmarks.appbench -t 'newsqlbench()'
 
