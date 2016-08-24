@@ -479,7 +479,6 @@ class Sqlite(Workload):
             p.wait()
 
 
-
 class Leveldb(Workload):
     def parse_output(self, outputpath):
         outputpath_parsed = outputpath + '.parsed'
