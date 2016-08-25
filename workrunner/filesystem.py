@@ -120,7 +120,7 @@ class Ext4(FileSystemBase):
     def make(self, opt_dic=None):
         opt_str = opts_to_str(opt_dic)
 
-        ret = utils.shcmd('mkfs.ext4 {opt_str} {dev}'.format(
+        ret = utils.shcmd('mkfs.ext4 {opt_str} -E nodiscard {dev}'.format(
             opt_str = opt_str, dev = self.dev), ignore_error = True)
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
