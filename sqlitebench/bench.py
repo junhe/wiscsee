@@ -60,6 +60,7 @@ def preload_and_randomly_insert(db, n_insertions):
     for i in range(n_insertions):
         db.insert(key=encode_key(i), value='v' * VALUE_SIZE)
     db.commit()
+    print 'Preloaded', n_insertions, 'keys'
 
     update_randomly(db, n_insertions)
 
