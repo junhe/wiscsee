@@ -540,19 +540,12 @@ def leveldbbench():
             lbabytes = 1*GB
             para_dict = get_shared_para_dict(expname, lbabytes)
             para_dict.update( {
+                    'ftl_type': ['dftldes'],
                     'workload_class' : [
                         'Leveldb'
                         ],
                     'benchconfs': [
-                            # [{'benchmarks': 'fillseq',   'num': 6*1000000, 'max_key': 6*1000000, 'max_log': -1},
-                            # {'benchmarks': 'overwrite', 'num': 6*1000000, 'max_key': 6*1000, 'max_log': -1}
-                            # ],
-                            # [{'benchmarks': 'overwrite',  'num': 6*1000000, 'max_key': 6*100000, 'max_log': -1}],
-
-                            # [{'benchmarks': 'overwrite',  'num': 3*1000000, 'max_key': 3*1000000, 'max_log': -1}],
-                            # [{'benchmarks': 'overwrite',  'num': 6*1000000, 'max_key': 6*1000000, 'max_log': -1}],
-
-                            [{'benchmarks': 'overwrite',  'num': 48*1000000, 'max_key': 48*1000000, 'max_log': -1}],
+                            [{'benchmarks': 'overwrite',  'num': 3*1000000, 'max_key': 3*1000000, 'max_log': -1}],
                         ],
                     'leveldb_threads': [1],
                     'one_by_one'     : [False],
