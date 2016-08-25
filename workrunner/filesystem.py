@@ -162,7 +162,7 @@ class Btrfs(FileSystemBase):
     def make(self, opt_dic=None):
         opt_str = opts_to_str(opt_dic)
 
-        ret = utils.shcmd('mkfs.btrfs -f {opt} {dev}'.format(
+        ret = utils.shcmd('mkfs.btrfs -f {opt} --nodiscard {dev}'.format(
             opt=opt_str, dev = self.dev), ignore_error = True)
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
@@ -175,7 +175,7 @@ class Xfs(FileSystemBase):
             items = [ ' '.join([k,v]) for k,v in opt_dic.items() ]
             opt_str = ' '.join(items)
 
-        ret = utils.shcmd("mkfs.xfs {opt} -f -s size=4096 -b size=4096 {dev}"\
+        ret = utils.shcmd("mkfs.xfs {opt} -K -f -s size=4096 -b size=4096 {dev}"\
             .format(opt = opt_str, dev = self.dev), ignore_error = True)
 
         if ret != 0:
