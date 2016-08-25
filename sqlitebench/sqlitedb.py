@@ -41,7 +41,7 @@ class SqliteDB(object):
 
     def update(self, key, value):
         self.conn.execute("""
-        update benchtable set description = {v} where name = {k}
+        update benchtable set description = '{v}' where name = '{k}'
         """.format(k=key, v=value))
 
     def select_all(self):

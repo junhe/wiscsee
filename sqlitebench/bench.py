@@ -29,9 +29,10 @@ def run(db_path, n_insertions, pattern):
         insert_sequentially(db, n_insertions)
     elif pattern == 'random':
         insert_randomly(db, n_insertions)
+    elif pattern == 'preload_and_random':
+        preload_and_randomly_insert(db, n_insertions)
     else:
         raise NotImplementedError()
-    # print db.select_all()
 
     db.commit()
 
@@ -53,6 +54,23 @@ def insert_randomly(db, n_insertions):
         if i % COMMIT_PEROID == 0 and i > 0:
             db.commit()
 
+
+def preload_and_randomly_insert(db, n_insertions):
+    # preload
+    for i in range(n_insertions):
+        db.insert(key=encode_key(i), value='v' * VALUE_SIZE)
+    db.commit()
+
+    update_randomly(db, n_insertions)
+
+
+def update_randomly(db, n_insertions):
+    keys = range(n_insertions)
+    random.shuffle(keys)
+    for i, k in enumerate(keys):
+        db.update(key=encode_key(k), value='x' * VALUE_SIZE)
+        if i % COMMIT_PEROID == 0 and i > 0:
+            db.commit()
 
 def encode_key(key):
     return str(key).zfill(KEY_SIZE)
