@@ -791,7 +791,7 @@ def appmixbench():
                     'appconfs': [
                             [ # list of app you want to run
 
-                            # TEMPLATE
+                            # ---- TEMPLATE ------
                             # {'name' : 'LevelDB',
                              # 'benchmarks': 'overwrite',
                              # 'num': 1*1000000,
@@ -804,6 +804,7 @@ def appmixbench():
 
                             # {'name': 'Varmail',
                              # 'seconds': 2},
+                             # -------------
 
                              {'name' : 'LevelDB',
                              'benchmarks': 'overwrite',
