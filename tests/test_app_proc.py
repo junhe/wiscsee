@@ -1,4 +1,5 @@
 import unittest
+import time
 import os
 
 from workrunner.appprocess import *
@@ -7,43 +8,39 @@ import ssdbox
 from utilities import utils
 from ssdbox.bitmap import FlashBitmap2
 
-def create_config():
-    conf = ssdbox.dftldes.Config()
-    conf['SSDFramework']['ncq_depth'] = 1
-
-    conf['flash_config']['n_pages_per_block'] = 64
-    conf['flash_config']['n_blocks_per_plane'] = 2
-    conf['flash_config']['n_planes_per_chip'] = 1
-    conf['flash_config']['n_chips_per_package'] = 1
-    conf['flash_config']['n_packages_per_channel'] = 1
-    conf['flash_config']['n_channels_per_dev'] = 4
-
-    utils.set_exp_metadata(conf, save_data = False,
-            expname = 'test_expname',
-            subexpname = 'test_subexpname')
-
-    logicsize_mb = 64
-    conf.n_cache_entries = conf.n_mapping_entries_per_page
-    conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
-
-    utils.runtime_update(conf)
-
-    return conf
-
-
+# @unittest.skip('too long')
 class Test(unittest.TestCase):
     def test_leveldb(self):
         leveldb_proc = LevelDBProc(
             benchmarks='overwrite',
-            num=1000,
+            num=10000,
             db='/tmp/leveldbtest',
-            outputpath='/tmp/tmpleveldbout',
             threads=1,
             use_existing_db=0,
             max_key=200,
             max_log=-1)
         leveldb_proc.run()
         leveldb_proc.wait()
+
+    def test_leveldb_kill(self):
+        leveldb_proc = LevelDBProc(
+            benchmarks='overwrite',
+            num=10000000,
+            db='/tmp/leveldbtest',
+            threads=1,
+            use_existing_db=0,
+            max_key=2000000,
+            max_log=-1)
+        leveldb_proc.run()
+        print 'sleeping...'
+        time.sleep(3)
+        print 'wake up...'
+        leveldb_proc.terminate()
+        # leveldb_proc.p.kill()
+        print 'terminated'
+        while True:
+            time.sleep(1)
+            utils.shcmd('ps -ef|grep db_bench')
 
     def test_sqlite(self):
         sqlite_proc = SqliteProc(
@@ -53,19 +50,37 @@ class Test(unittest.TestCase):
         sqlite_proc.run()
         sqlite_proc.wait()
 
+    def test_sqlite_kill(self):
+        sqlite_proc = SqliteProc(
+                n_insertions = 100000,
+                pattern = 'random',
+                db_dir = '/tmp/sqlite_tmp_xlj23')
+        sqlite_proc.run()
+
+        print 'sleeping'
+        time.sleep(3)
+        utils.shcmd('ps -ef|grep bench.py')
+        sqlite_proc.terminate()
+        print 'after.......'
+
+        while True:
+            time.sleep(1)
+            utils.shcmd('ps -ef|grep bench.py')
+
     def test_varmail(self):
         proc = VarmailProc('/tmp/varmail_tmp_lj23lj', 1)
         proc.run()
         proc.wait()
 
+    def test_varmail_kill(self):
+        proc = VarmailProc('/tmp/varmail_tmp_lj23lj', 191)
+        proc.run()
+        time.sleep(5)
+        proc.terminate()
 
-class TestAppMix(unittest.TestCase):
-    def test(self):
-        conf = create_config()
-        mix = AppMix(conf, workload_conf_key = None)
-        mix.run()
-
-
+        while True:
+            time.sleep(1)
+            utils.shcmd('ps -ef|grep filebench')
 
 def main():
     unittest.main()

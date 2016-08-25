@@ -1,19 +1,30 @@
 import subprocess
+import shlex
 import os
 
 from utilities import utils
 
-class LevelDBProc(object):
-    def __init__(self, benchmarks, num, db, outputpath,
+
+class AppBase(object):
+    def wait(self):
+        self.p.wait()
+
+    def terminate(self):
+        self.p.terminate()
+        del self.p
+
+
+class LevelDBProc(AppBase):
+    def __init__(self, benchmarks, num, db,
             threads, use_existing_db, max_key, max_log):
         self.benchmarks = benchmarks
         self.num = num
         self.db = db
-        self.outputpath = outputpath
         self.threads = threads
         self.use_existing_db = use_existing_db
         self.max_key = max_key
         self.max_log = max_log
+        self.p = None
 
     def run(self):
         utils.prepare_dir(self.db)
@@ -23,28 +34,24 @@ class LevelDBProc(object):
                 "--threads={threads}  "\
                 "--dowrite_max_key={max_key} "\
                 "--dowrite_skew_max_log={max_log} "\
-                "--use_existing_db={use_existing_db} > {out}"\
+                "--use_existing_db={use_existing_db}"\
             .format(
                 exe = db_bench_path,
                 benchmarks = self.benchmarks,
                 num = self.num,
                 db = self.db,
-                out = self.outputpath,
                 threads = self.threads,
                 max_key = self.max_key,
                 max_log = self.max_log,
                 use_existing_db = self.use_existing_db
                 )
         print cmd
-        self.p = subprocess.Popen(cmd, shell=True)
+        cmd = shlex.split(cmd)
+        self.p = subprocess.Popen(cmd)
         return self.p
 
-    def wait(self):
-        self.p.wait()
 
-
-
-class SqliteProc(object):
+class SqliteProc(AppBase):
     def __init__(self, n_insertions, pattern, db_dir):
         self.n_insertions = n_insertions
         self.pattern = pattern
@@ -61,13 +68,17 @@ class SqliteProc(object):
             exe=bench_path, f=self.db_path, n=self.n_insertions, p=self.pattern)
 
         print cmd
-        self.p = subprocess.Popen(cmd, shell=True)
+        cmd = shlex.split(cmd)
+        self.p = subprocess.Popen(cmd)
 
         return self.p
 
     def wait(self):
         self.p.wait()
 
+    def terminate(self):
+        self.p.terminate()
+        del self.p
 
 
 
@@ -110,7 +121,7 @@ echo  "Varmail Version 3.0 personality successfully loaded"
 
 PART3  = "run {}"
 
-class VarmailProc(object):
+class VarmailProc(AppBase):
     def __init__(self, dirpath, seconds):
         self.dirpath = dirpath
         self.seconds = seconds
@@ -134,7 +145,8 @@ class VarmailProc(object):
     def get_conf_text(self):
         return PART1.format(dirpath=self.dirpath) + PART2 + PART3.format(self.seconds)
 
-    def wait(self):
-        self.p.wait()
+    def terminate(self):
+        utils.shcmd('pkill filebench')
+
 
 

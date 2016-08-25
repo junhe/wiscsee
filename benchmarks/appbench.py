@@ -773,6 +773,7 @@ def appmixbench():
             self.conf['workload_class'] = self.para.workload_class
             self.conf['workload_config'] = {
                     'appconfs': self.para.appconfs,
+                    'run_seconds': self.para.run_seconds,
                     }
             self.conf['workload_conf_key'] = 'workload_config'
 
@@ -786,6 +787,7 @@ def appmixbench():
             para_dict = get_shared_para_dict(expname, lbabytes)
             para_dict.update( {
                     'workload_class' : [ 'AppMix' ],
+                    'run_seconds'    : [20],
                     'appconfs': [
                             [ # list of app you want to run
 
@@ -810,7 +812,7 @@ def appmixbench():
                              'max_log': -1},
 
                             {'name': 'Varmail',
-                             'seconds': 60},
+                             'seconds': 600},
                             ]
                         ],
                     })

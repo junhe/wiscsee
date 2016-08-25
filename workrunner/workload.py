@@ -564,16 +564,25 @@ class AppMix(Workload):
                 # {'name': 'Varmail',
                  # 'seconds': 2},
                 # ]
+        run_seconds = self.workload_conf['run_seconds']
         conf_list = self.workload_conf['appconfs']
         print conf_list
+        print run_seconds
         app_procs = []
         for seq_id, appconf in enumerate(conf_list):
             app_proc = self.create_process(appconf, seq_id)
             app_proc.run()
             app_procs.append(app_proc)
 
-        for app_proc in app_procs:
-            app_proc.wait()
+        if run_seconds is None:
+            # not time limit, we just run all apps fully
+            for app_proc in app_procs:
+                app_proc.wait()
+        else:
+            print 'sleeping', run_seconds, '.............'
+            time.sleep(run_seconds)
+            for app_proc in app_procs:
+                app_proc.terminate()
 
     def create_process(self, appconf, seq_id):
         appdir = os.path.join(
@@ -584,7 +593,6 @@ class AppMix(Workload):
                 benchmarks = appconf['benchmarks'],
                 num = appconf['num'],
                 db=appdir,
-                outputpath='/dev/null',
                 threads=1,
                 use_existing_db=0,
                 max_key=appconf['max_key'],
