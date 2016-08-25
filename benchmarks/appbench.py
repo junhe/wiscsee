@@ -788,19 +788,37 @@ def appmixbench():
                     'workload_class' : [ 'AppMix' ],
                     'appconfs': [
                             [ # list of app you want to run
+
+                            # TEMPLATE
+                            # {'name' : 'LevelDB',
+                             # 'benchmarks': 'overwrite',
+                             # 'num': 1*1000000,
+                             # 'max_key': 1*100000,
+                             # 'max_log': -1},
+
+                            # {'name': 'Sqlite',
+                             # 'pattern': 'random',
+                             # 'n_insertions': 12000},
+
+                            # {'name': 'Varmail',
+                             # 'seconds': 2},
+
                              {'name' : 'LevelDB',
                              'benchmarks': 'overwrite',
-                             'num': 1*10000,
-                             'max_key': 1*10000,
+                             'num': 3*1000000,
+                             'max_key': 1*1000000,
                              'max_log': -1},
+
+                            {'name': 'Varmail',
+                             'seconds': 60},
                             ]
                         ],
                     })
             self.parameter_combs = ParameterCombinations(para_dict)
 
         def __iter__(self):
-            return iter(self.parameter_combs)
-            # return iter(self.iterator())
+            # return iter(self.parameter_combs)
+            return iter(self.iterator())
 
     def main():
         for para in ParaDict():
