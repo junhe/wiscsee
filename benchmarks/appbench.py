@@ -200,17 +200,19 @@ class StatsMixin(object):
 class ParaDictIterMixin(object):
     def iterate_blocksize_segsize_fs(self):
         para = self.parameter_combs[0]
+        lbabytes = para['lbabytes']
         updatedicts = [
             # {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)},
-            {'segment_bytes': 16*MB, 'n_pages_per_block': 128*KB/(2*KB)},
-            # {'segment_bytes': 2*GB, 'n_pages_per_block': 128*KB/(2*KB)}
+            {'segment_bytes': 16*MB,        'n_pages_per_block': 128*KB/(2*KB)},
+            {'segment_bytes': lbabytes * 2, 'n_pages_per_block': 128*KB/(2*KB)},
 
-            {'segment_bytes': 16*MB, 'n_pages_per_block': 1*MB/(2*KB)},
-            # {'segment_bytes': 2*GB, 'n_pages_per_block': 1*MB/(2*KB)},
+            {'segment_bytes': 16*MB,        'n_pages_per_block': 1*MB/(2*KB)},
+            {'segment_bytes': lbabytes * 2, 'n_pages_per_block': 1*MB/(2*KB)},
             ]
         new_update_dics = []
         for d in updatedicts:
-            for fs in ['ext4', 'f2fs']:
+            # for fs in ['ext4', 'f2fs']:
+            for fs in ['btrfs', 'xfs']:
                 new_d = copy.copy(d)
                 new_d['filesystem'] = fs
 
