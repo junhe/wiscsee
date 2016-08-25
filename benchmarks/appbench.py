@@ -198,7 +198,7 @@ class StatsMixin(object):
         return total
 
 class ParaDictIterMixin(object):
-    def iterator(self):
+    def iterate_blocksize_segsize_fs(self):
         para = self.parameter_combs[0]
         updatedicts = [
             # {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)},
@@ -559,7 +559,7 @@ def leveldbbench():
 
         def __iter__(self):
             # return iter(self.parameter_combs)
-            return iter(self.iterator())
+            return iter(self.iterate_blocksize_segsize_fs())
 
     def main():
         for para in ParaDict():
@@ -604,7 +604,7 @@ def sqlitebench():
 
         def __iter__(self):
             return iter(self.parameter_combs)
-            # return iter(self.iterator())
+            # return iter(self.iterate_blocksize_segsize_fs())
 
     def main():
         for para in ParaDict():
@@ -702,7 +702,7 @@ def varmailbench():
 
         def __iter__(self):
             # return iter(self.parameter_combs)
-            return iter(self.iterator())
+            return iter(self.iterate_blocksize_segsize_fs())
 
     def main():
         for para in ParaDict():
@@ -820,7 +820,7 @@ def appmixbench():
 
         def __iter__(self):
             # return iter(self.parameter_combs)
-            return iter(self.iterator())
+            return iter(self.iterate_blocksize_segsize_fs())
 
     def main():
         for para in ParaDict():
