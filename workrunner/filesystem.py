@@ -129,7 +129,7 @@ class F2fs(FileSystemBase):
     def make(self, opt_dic=None):
         opt_str = opts_to_str(opt_dic)
 
-        ret = utils.shcmd('mkfs.f2fs {opt} {dev}'.format(
+        ret = utils.shcmd('mkfs.f2fs -t 0 {opt} {dev}'.format(
             opt=opt_str, dev = self.dev), ignore_error = True)
         if ret != 0:
             raise RuntimeError("Failed to make dev:{}".format(self.dev))
