@@ -571,6 +571,10 @@ class AppMix(Workload):
         print run_seconds
         app_procs = []
         for seq_id, appconf in enumerate(conf_list):
+            if appconf['name'] == 'Varmail' and not run_seconds is None:
+                # if it is varmail, we override the varmail time config
+                # with the global one
+                appconf['seconds'] = run_seconds
             app_proc = self.create_process(appconf, seq_id)
             app_proc.run()
             app_procs.append(app_proc)
@@ -583,7 +587,11 @@ class AppMix(Workload):
             print 'sleeping', run_seconds, '.............'
             time.sleep(run_seconds)
             for app_proc in app_procs:
-                app_proc.terminate()
+                if isinstance(app_proc, VarmailProc):
+                    # varmail cannot be killed
+                    app_proc.wait()
+                else:
+                    app_proc.terminate()
 
     def create_process(self, appconf, seq_id):
         appdir = os.path.join(

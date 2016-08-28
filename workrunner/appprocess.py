@@ -149,7 +149,9 @@ class VarmailProc(AppBase):
                 PART2 + PART3.format(self.seconds)
 
     def terminate(self):
-        utils.shcmd('pkill filebench')
+        raise NotImplementedError('this sometimes not work')
+        # utils.shcmd('pkill filebench')
+        # del self.p
 
 
 
