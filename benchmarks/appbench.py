@@ -798,6 +798,7 @@ def appmixbench():
                              # 'n_insertions': 12000},
 
                             # {'name': 'Varmail',
+                            #  'nfiles': 8000
                              # 'seconds': 2},
                              # -------------
 
@@ -808,6 +809,7 @@ def appmixbench():
                              'max_log': -1},
 
                             {'name': 'Varmail',
+                             'nfiles': 80,
                              'seconds': 600},
                             ]
                         ],

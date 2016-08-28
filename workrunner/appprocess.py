@@ -85,13 +85,14 @@ class SqliteProc(AppBase):
 
 PART1 = """
 set $dir={dirpath}
-set $nfiles=8000
+set $nfiles={nfiles}
 set $meandirwidth=1000000
 set $filesize=cvar(type=cvar-gamma,parameters=mean:16384;gamma:1.5)
 set $nthreads=16
 set $iosize=1m
 set $meanappendsize=16k
 """
+
 PART2 = """
 define fileset name=bigfileset,path=$dir,size=$filesize,entries=$nfiles,dirwidth=$meandirwidth,prealloc=80
 
@@ -122,9 +123,10 @@ echo  "Varmail Version 3.0 personality successfully loaded"
 PART3  = "run {}"
 
 class VarmailProc(AppBase):
-    def __init__(self, dirpath, seconds):
+    def __init__(self, dirpath, seconds, nfiles):
         self.dirpath = dirpath
         self.seconds = seconds
+        self.nfiles = nfiles # 8000 was often used
         self.hash_str = str(hash(dirpath))
         self.conf_path = '/tmp/filebench.config.' + self.hash_str
         self.p = None
@@ -143,7 +145,8 @@ class VarmailProc(AppBase):
         return self.p
 
     def get_conf_text(self):
-        return PART1.format(dirpath=self.dirpath) + PART2 + PART3.format(self.seconds)
+        return PART1.format(dirpath=self.dirpath, nfiles=self.nfiles) + \
+                PART2 + PART3.format(self.seconds)
 
     def terminate(self):
         utils.shcmd('pkill filebench')

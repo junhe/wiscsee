@@ -562,7 +562,8 @@ class AppMix(Workload):
                  # 'n_insertions': 12000},
 
                 # {'name': 'Varmail',
-                 # 'seconds': 2},
+                 # 'seconds': 2,
+                 # 'nfiles': 8000},
                 # ]
         run_seconds = self.workload_conf['run_seconds']
         conf_list = self.workload_conf['appconfs']
@@ -606,7 +607,7 @@ class AppMix(Workload):
                 db_dir = appdir)
 
         elif appconf['name'] == 'Varmail':
-            proc = VarmailProc(appdir, appconf['seconds'])
+            proc = VarmailProc(appdir, appconf['seconds'], appconf['nfiles'])
 
         else:
             print appconf['name']
