@@ -44,35 +44,38 @@ class TestSqliteDB(unittest.TestCase):
 
 class TestSqlitebench(unittest.TestCase):
     def test_random(self):
-        shcmd('python sqlitebench/bench.py -f /tmp/tmpdb -n 100 -p random -e 10')
+        shcmd('python sqlitebench/bench.py -f /tmp/tmpdb -n 100 -p random -e 10 -m 20')
 
     def test_sequential(self):
-        shcmd('python sqlitebench/bench.py -f /tmp/tmpdb -n 100 -p sequential -e 10')
+        shcmd('python sqlitebench/bench.py -f /tmp/tmpdb -n 100 -p sequential -e 10 -m 20')
 
     def test_preload_and_random(self):
-        shcmd('python sqlitebench/bench.py -f /tmp/tmpdb -n 100 -p preload_and_random -e 10')
+        shcmd('python sqlitebench/bench.py -f /tmp/tmpdb -n 100 -p preload_and_random -e 10 -m 20')
 
 class TestBenchClass(unittest.TestCase):
     def test_init(self):
         b = Bench(db_path = '/tmp/tmp.db',
               n_insertions = 100,
               pattern = 'random',
-              commit_period = 10
+              commit_period = 10,
+              max_key = 8
                 )
 
     def test_random(self):
         b = Bench(db_path = '/tmp/tmp.db',
-              n_insertions = 10,
+              n_insertions = 100,
               pattern = 'random',
-              commit_period = 2
+              commit_period = 2,
+              max_key = 8
                 )
         b.run()
 
     def test_sequential(self):
         b = Bench(db_path = '/tmp/tmp.db',
-              n_insertions = 10,
+              n_insertions = 20,
               pattern = 'sequential',
-              commit_period = 2
+              commit_period = 2,
+              max_key = 8
                 )
         b.run()
 
@@ -80,7 +83,8 @@ class TestBenchClass(unittest.TestCase):
         b = Bench(db_path = '/tmp/tmp.db',
               n_insertions = 10,
               pattern = 'preload_and_random',
-              commit_period = 2
+              commit_period = 2,
+              max_key = 8
                 )
         b.run()
 
