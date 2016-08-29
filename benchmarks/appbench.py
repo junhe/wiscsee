@@ -720,7 +720,7 @@ def sqlitebench_for_alignment():
                     'benchconfs'        : [
                             [
                             {'pattern': 'random', 'n_insertions': 120000,
-                                'period': 10, 'max_key': 120000},
+                                'commit_period': 10, 'max_key': 120000},
                             ]
                         ],
                     })
