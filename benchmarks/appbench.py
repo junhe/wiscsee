@@ -225,6 +225,22 @@ class ParaDictIterMixin(object):
             tmp_para.update(update_dict)
             yield tmp_para
 
+    def iterate_blocksize_for_alignment(self):
+        local_paras = []
+        for parameters in self.parameter_combs:
+            for block_size in self.block_sizes:
+                para = copy.deepcopy(parameters)
+                para['n_pages_per_block'] = block_size / (2*KB)
+                para['stripe_size'] = para['n_pages_per_block']
+                para['segment_bytes'] = block_size
+
+                local_paras.append(para)
+
+        for para in local_paras:
+            yield para
+
+
+
 
 def get_shared_para_dict(expname, lbabytes):
     para_dict = {
@@ -587,6 +603,8 @@ def leveldbbench_for_alignment():
             expname = get_expname()
             lbabytes = 1*GB
             para_dict = get_shared_para_dict(expname, lbabytes)
+
+            self.block_sizes = [128*KB, 1*MB]
             para_dict.update( {
                     'ftl_type'          : ['nkftl2'],
                     'filesystem'        : ['ext4', 'f2fs', 'btrfs', 'xfs'],
@@ -610,16 +628,8 @@ def leveldbbench_for_alignment():
                     })
             self.parameter_combs = ParameterCombinations(para_dict)
 
-            # map segment to a block
-            block_sizes = [1*MB]
-            for para in self.parameter_combs:
-                for block_size in block_sizes:
-                    para['n_pages_per_block'] = block_size / (2*KB)
-                    para['stripe_size'] = para['n_pages_per_block']
-                    para['segment_bytes'] = block_size
-
         def __iter__(self):
-            return iter(self.parameter_combs)
+            return iter(self.iterate_blocksize_for_alignment())
 
     def main():
         for para in ParaDict():
@@ -693,6 +703,8 @@ def sqlitebench_for_alignment():
             expname = get_expname()
             lbabytes = 1*GB
             para_dict = get_shared_para_dict(expname, lbabytes)
+
+            self.block_sizes = [128*KB, 1*MB]
             para_dict.update( {
                     'ftl'               : ['nkftl2'],
                     'filesystem'        : ['ext4', 'f2fs'],
@@ -707,29 +719,20 @@ def sqlitebench_for_alignment():
                         ],
                     'benchconfs'        : [
                             [
-                            # {'pattern': 'random', 'n_insertions': 12},
-                            {'pattern': 'random', 'n_insertions': 120000},
-                            # {'pattern': 'sequential', 'n_insertions': 120000},
+                            {'pattern': 'random', 'n_insertions': 120000,
+                                'period': 10, 'max_key': 120000},
                             ]
                         ],
                     })
             self.parameter_combs = ParameterCombinations(para_dict)
 
-            # map segment to a block
-            block_sizes = [1*MB]
-            for para in self.parameter_combs:
-                for block_size in block_sizes:
-                    para['n_pages_per_block'] = block_size / (2*KB)
-                    para['stripe_size'] = para['n_pages_per_block']
-                    para['segment_bytes'] = block_size
-                    print para
-
         def __iter__(self):
-            return iter(self.parameter_combs)
+            return iter(self.iterate_blocksize_for_alignment())
 
     def main():
         for para in ParaDict():
-            pprint.pprint(para)
+            print para
+            continue
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = LocalExperimenter( Parameters(**para) )
             obj.main()
@@ -790,6 +793,8 @@ def varmailbench_for_alignment():
             expname = get_expname()
             lbabytes = 1*GB
             para_dict = get_shared_para_dict(expname, lbabytes)
+
+            self.block_sizes = [128*KB, 1*MB]
             para_dict.update( {
                     'ftl'               : ['nkftl2'],
                     'filesystem'        : ['ext4', 'f2fs'],
@@ -805,17 +810,8 @@ def varmailbench_for_alignment():
                     })
             self.parameter_combs = ParameterCombinations(para_dict)
 
-            # map segment to a block
-            block_sizes = [1*MB]
-            for para in self.parameter_combs:
-                for block_size in block_sizes:
-                    para['n_pages_per_block'] = block_size / (2*KB)
-                    para['stripe_size'] = para['n_pages_per_block']
-                    para['segment_bytes'] = block_size
-                    print para
-
         def __iter__(self):
-            return iter(self.parameter_combs)
+            return iter(self.iterate_blocksize_for_alignment())
 
     def main():
         for para in ParaDict():
