@@ -2,6 +2,7 @@ import unittest
 
 from sqlitebench.sqlitedb import *
 from utilities.utils import *
+from sqlitebench.bench import Bench
 
 
 class TestSqliteDB(unittest.TestCase):
@@ -50,6 +51,38 @@ class TestSqlitebench(unittest.TestCase):
 
     def test_preload_and_random(self):
         shcmd('python sqlitebench/bench.py -f /tmp/tmpdb -n 100 -p preload_and_random -e 10')
+
+class TestBenchClass(unittest.TestCase):
+    def test_init(self):
+        b = Bench(db_path = '/tmp/tmp.db',
+              n_insertions = 100,
+              pattern = 'random',
+              commit_period = 10
+                )
+
+    def test_random(self):
+        b = Bench(db_path = '/tmp/tmp.db',
+              n_insertions = 10,
+              pattern = 'random',
+              commit_period = 2
+                )
+        b.run()
+
+    def test_sequential(self):
+        b = Bench(db_path = '/tmp/tmp.db',
+              n_insertions = 10,
+              pattern = 'sequential',
+              commit_period = 2
+                )
+        b.run()
+
+    def test_preload_and_random(self):
+        b = Bench(db_path = '/tmp/tmp.db',
+              n_insertions = 10,
+              pattern = 'preload_and_random',
+              commit_period = 2
+                )
+        b.run()
 
 
 if __name__ == '__main__':
