@@ -28,6 +28,9 @@ contractbench:
 leveldb:
 	sudo python -m benchmarks.appbench -t 'leveldbbench()'
 
+leveldb4alignment:
+	sudo python -m benchmarks.appbench -t 'leveldbbench_for_alignment()'
+
 sqlite:
 	sudo python -m benchmarks.appbench -t 'sqlitebench()'
 

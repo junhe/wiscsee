@@ -566,6 +566,69 @@ def leveldbbench():
     main()
 
 
+def leveldbbench_for_alignment():
+    class LocalExperimenter(Experimenter, StatsMixin):
+        def setup_workload(self):
+            self.conf['workload_class'] = self.para.workload_class
+            self.conf['workload_config'] = {
+                    'benchconfs': self.para.benchconfs,
+                    'one_by_one': self.para.one_by_one,
+                    'threads': self.para.leveldb_threads,
+                    }
+            self.conf['workload_conf_key'] = 'workload_config'
+
+        def after_running(self):
+            self.write_stats()
+
+    class ParaDict(ParaDictIterMixin):
+        def __init__(self):
+            expname = get_expname()
+            lbabytes = 1*GB
+            para_dict = get_shared_para_dict(expname, lbabytes)
+            para_dict.update( {
+                    'ftl_type'          : ['nkftl2'],
+                    'filesystem'        : ['ext4', 'f2fs', 'btrfs', 'xfs'],
+                    'n_pages_per_block' : [None],
+                    'stripe_size'       : [None],
+                    'segment_bytes'     : [None],
+                    'max_log_blocks_ratio': [100],
+                    'over_provisioning' : [16], # 1.28 is a good number
+
+                    'workload_class' : [
+                        'Leveldb'
+                        ],
+                    'benchconfs': [
+                            [{'benchmarks': 'overwrite',
+                                'num': 6*1000000,
+                                'max_key': 6*1000000,
+                                'max_log': -1}],
+                        ],
+                    'leveldb_threads': [1],
+                    'one_by_one'     : [False],
+                    })
+            self.parameter_combs = ParameterCombinations(para_dict)
+
+            # map segment to a block
+            block_sizes = [1*MB]
+            for para in self.parameter_combs:
+                for block_size in block_sizes:
+                    para['n_pages_per_block'] = block_size / (2*KB)
+                    para['stripe_size'] = para['n_pages_per_block']
+                    para['segment_bytes'] = block_size
+
+        def __iter__(self):
+            return iter(self.parameter_combs)
+
+    def main():
+        for para in ParaDict():
+            print para
+            Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+            obj = LocalExperimenter( Parameters(**para) )
+            obj.main()
+
+    main()
+
+
 def sqlitebench():
     class LocalExperimenter(Experimenter, StatsMixin):
         def setup_workload(self):
