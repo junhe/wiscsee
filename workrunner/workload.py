@@ -615,7 +615,7 @@ class AppMix(Workload):
         elif appconf['name'] == 'Sqlite':
             proc = SqliteProc(
                 n_insertions = appconf['n_insertions'],
-                pattern = 'random',
+                pattern = appconf['pattern'],
                 db_dir = appdir,
                 commit_period = appconf['commit_period'],
                 max_key = appconf['max_key']
