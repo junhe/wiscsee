@@ -9,7 +9,7 @@ from utilities import utils
 from ssdbox.bitmap import FlashBitmap2
 
 # @unittest.skip('too long')
-class Test(unittest.TestCase):
+class TestLevelDB(unittest.TestCase):
     def test_leveldb(self):
         leveldb_proc = LevelDBProc(
             benchmarks='overwrite',
@@ -42,11 +42,16 @@ class Test(unittest.TestCase):
             time.sleep(1)
             utils.shcmd('ps -ef|grep db_bench')
 
+
+class TestSqlite(unittest.TestCase):
     def test_sqlite(self):
         sqlite_proc = SqliteProc(
                 n_insertions = 100,
                 pattern = 'random',
-                db_dir = '/tmp/sqlite_tmp_xlj23')
+                db_dir = '/tmp/sqlite_tmp_xlj23',
+                commit_period = 10,
+                max_key = 20
+                )
         sqlite_proc.run()
         sqlite_proc.wait()
 
@@ -54,7 +59,10 @@ class Test(unittest.TestCase):
         sqlite_proc = SqliteProc(
                 n_insertions = 100000,
                 pattern = 'random',
-                db_dir = '/tmp/sqlite_tmp_xlj23')
+                db_dir = '/tmp/sqlite_tmp_xlj23',
+                commit_period = 10,
+                max_key = 20
+                )
         sqlite_proc.run()
 
         print 'sleeping'
@@ -67,6 +75,7 @@ class Test(unittest.TestCase):
             time.sleep(1)
             utils.shcmd('ps -ef|grep bench.py')
 
+class TestVarmail(unittest.TestCase):
     def test_varmail(self):
         proc = VarmailProc('/tmp/varmail_tmp_lj23lj', 1)
         proc.run()

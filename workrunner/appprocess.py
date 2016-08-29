@@ -52,20 +52,23 @@ class LevelDBProc(AppBase):
 
 
 class SqliteProc(AppBase):
-    def __init__(self, n_insertions, pattern, db_dir):
+    def __init__(self, n_insertions, pattern, db_dir, commit_period, max_key):
         self.n_insertions = n_insertions
         self.pattern = pattern
         self.db_dir = db_dir
         self.db_path = os.path.join(self.db_dir, 'data.db')
         self.p = None
+        self.commit_period = commit_period
+        self.max_key = max_key
 
     def run(self):
         bench_path = './sqlitebench/bench.py'
 
         utils.prepare_dir_for_path(self.db_path)
 
-        cmd = 'python {exe} -f {f} -n {n} -p {p}'.format(
-            exe=bench_path, f=self.db_path, n=self.n_insertions, p=self.pattern)
+        cmd = 'python {exe} -f {f} -n {n} -p {p} -e {e} -m {m}'.format(
+            exe=bench_path, f=self.db_path, n=self.n_insertions, p=self.pattern,
+            e=self.commit_period, m=self.max_key)
 
         print cmd
         cmd = shlex.split(cmd)

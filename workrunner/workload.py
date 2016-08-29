@@ -559,7 +559,10 @@ class AppMix(Workload):
 
                 # {'name': 'Sqlite',
                  # 'pattern': 'random',
-                 # 'n_insertions': 12000},
+                 # 'n_insertions': 12000,
+                 # 'commit_period': 10,
+                 # 'max_key': 20
+                 #},
 
                 # {'name': 'Varmail',
                  # 'seconds': 2,
@@ -612,7 +615,10 @@ class AppMix(Workload):
             proc = SqliteProc(
                 n_insertions = appconf['n_insertions'],
                 pattern = 'random',
-                db_dir = appdir)
+                db_dir = appdir,
+                commit_period = appconf['commit_period'],
+                max_key = appconf['max_key']
+                )
 
         elif appconf['name'] == 'Varmail':
             proc = VarmailProc(appdir, appconf['seconds'], appconf['nfiles'])

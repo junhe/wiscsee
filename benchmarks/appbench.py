@@ -795,22 +795,34 @@ def appmixbench():
 
                             # {'name': 'Sqlite',
                              # 'pattern': 'random',
-                             # 'n_insertions': 12000},
+                             # 'n_insertions': 12000,
+                             # 'commit_period': 10,
+                             # 'max_key': 20
+                             #},
 
                             # {'name': 'Varmail',
                             #  'nfiles': 8000
                              # 'seconds': 2},
                              # -------------
 
-                             {'name' : 'LevelDB',
-                             'benchmarks': 'overwrite',
-                             'num': 3*1000000,
-                             'max_key': 1*1000000,
-                             'max_log': -1},
 
-                            {'name': 'Varmail',
-                             'nfiles': 80,
-                             'seconds': 600},
+                            {'name': 'Sqlite',
+                             'pattern': 'random',
+                             'n_insertions': 12000,
+                             'commit_period': 100,
+                             'max_key': 200
+                             },
+
+
+                             # {'name' : 'LevelDB',
+                             # 'benchmarks': 'overwrite',
+                             # 'num': 3*1000000,
+                             # 'max_key': 1*1000000,
+                             # 'max_log': -1},
+
+                            # {'name': 'Varmail',
+                             # 'nfiles': 80,
+                             # 'seconds': 600},
                             ]
                         ],
                     })
