@@ -606,7 +606,7 @@ def leveldbbench_for_alignment():
 
             self.block_sizes = [128*KB, 1*MB]
             para_dict.update( {
-                    'ftl_type'          : ['nkftl2'],
+                    'ftl'          : ['nkftl2'],
                     'filesystem'        : ['ext4', 'f2fs', 'btrfs', 'xfs'],
                     'n_pages_per_block' : [None],
                     'stripe_size'       : [None],
