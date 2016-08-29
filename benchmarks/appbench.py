@@ -184,6 +184,8 @@ class StatsMixin(object):
              'written_bytes': written_bytes
             }
         utils.dump_json(d, stats_path)
+        print 'disk_used_bytes', disk_used_bytes / GB
+        print 'written_bytes', written_bytes / GB
 
     def get_traffic_size(self):
         filepath = os.path.join(self.conf['result_dir'], 'blkparse-events-for-ftlsim.txt')
