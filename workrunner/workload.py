@@ -444,15 +444,16 @@ run 20
 
 
 class Sqlite(Workload):
-    def _execute_bench(self, n_insertions, pattern, inst_id):
+    def _execute_bench(self, n_insertions, pattern, inst_id, commit_period, max_key):
         bench_path = './sqlitebench/bench.py'
         db_dir = os.path.join(self.conf['fs_mount_point'], 'sqlite_dir')
         db_path = os.path.join(db_dir, 'inst-'+str(inst_id), 'data.db')
 
         utils.prepare_dir_for_path(db_path)
 
-        cmd = 'python {exe} -f {f} -n {n} -p {p}'.format(
-            exe=bench_path, f=db_path, n=n_insertions, p=pattern)
+        cmd = 'python {exe} -f {f} -n {n} -p {p} -e {e} -m {m}'.format(
+            exe=bench_path, f=db_path, n=n_insertions, p=pattern,
+            e=commit_period, m=max_key)
 
         # cmd = "strace -o {}.strace.out -f -ttt -s 8 {}".format(inst_id, cmd)
         strace_prefix = ' '.join(['strace',
@@ -474,7 +475,8 @@ class Sqlite(Workload):
 
         procs = []
         for i, conf in enumerate(benchconfs):
-            p = self._execute_bench(conf['n_insertions'], conf['pattern'], i)
+            p = self._execute_bench(conf['n_insertions'], conf['pattern'], i,
+                    conf['commit_period'], conf['max_key'])
             procs.append(p)
 
         for p in procs:
