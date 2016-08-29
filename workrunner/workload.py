@@ -470,7 +470,6 @@ class Sqlite(Workload):
         return p
 
     def run(self):
-        raise NotImplementedError('This sqlite has not integrated with new Sqlitebench')
         benchconfs = self.workload_conf['benchconfs']
 
         procs = []

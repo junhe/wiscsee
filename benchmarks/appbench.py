@@ -732,7 +732,7 @@ def sqlitebench_for_alignment():
     def main():
         for para in ParaDict():
             print para
-            continue
+            # continue
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = LocalExperimenter( Parameters(**para) )
             obj.main()
