@@ -52,6 +52,9 @@ varmail:
 varmail4alignment:
 	sudo python -m benchmarks.appbench -t 'varmailbench_for_alignment()'
 
+varmail4locality:
+	sudo python -m benchmarks.appbench -t 'varmailbench_for_locality()'
+
 newsqlbench:
 	sudo python -m benchmarks.appbench -t 'newsqlbench()'
 
