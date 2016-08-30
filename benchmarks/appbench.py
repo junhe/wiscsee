@@ -205,10 +205,11 @@ class ParaDictIterMixin(object):
         lbabytes = para['lbabytes']
         updatedicts = [
             # {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)},
-            {'segment_bytes': 16*MB,        'n_pages_per_block': 128*KB/(2*KB)},
-            {'segment_bytes': lbabytes * 2, 'n_pages_per_block': 128*KB/(2*KB)},
+            # {'segment_bytes': 16*MB,        'n_pages_per_block': 128*KB/(2*KB)},
+            # {'segment_bytes': lbabytes * 2, 'n_pages_per_block': 128*KB/(2*KB)},
 
-            {'segment_bytes': 16*MB,        'n_pages_per_block': 1*MB/(2*KB)},
+            # {'segment_bytes': 16*MB,        'n_pages_per_block': 1*MB/(2*KB)},
+            {'segment_bytes': 128*MB,        'n_pages_per_block': 1*MB/(2*KB)},
             {'segment_bytes': lbabytes * 2, 'n_pages_per_block': 1*MB/(2*KB)},
             ]
         new_update_dics = []
