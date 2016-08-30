@@ -606,7 +606,7 @@ def leveldbbench():
             lbabytes = 1*GB
             para_dict = get_shared_para_dict(expname, lbabytes)
             para_dict.update( {
-                    'ftl_type': ['dftldes'],
+                    'ftl': ['dftldes'],
                     'workload_class' : [
                         'Leveldb'
                         ],
