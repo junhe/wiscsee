@@ -601,13 +601,14 @@ def leveldbbench_for_alignment():
     class ParaDict(ParaDictIterMixin):
         def __init__(self):
             expname = get_expname()
-            lbabytes = 1*GB
+            lbabytes = 8*GB
             para_dict = get_shared_para_dict(expname, lbabytes)
 
-            self.block_sizes = [128*KB, 1*MB]
+            self.block_sizes = [1*MB, 128*KB]
             para_dict.update( {
                     'ftl'          : ['nkftl2'],
-                    'filesystem'        : ['ext4', 'f2fs', 'btrfs', 'xfs'],
+                    'enable_simulation': [True],
+                    'filesystem'        : ['f2fs'],
                     'n_pages_per_block' : [None],
                     'stripe_size'       : [None],
                     'segment_bytes'     : [None],
@@ -619,8 +620,8 @@ def leveldbbench_for_alignment():
                         ],
                     'benchconfs': [
                             [{'benchmarks': 'overwrite',
-                                'num': 6*1000000,
-                                'max_key': 6*1000000,
+                                'num': 60*1000000,
+                                'max_key': 60*1000000,
                                 'max_log': -1}],
                         ],
                     'leveldb_threads': [1],
