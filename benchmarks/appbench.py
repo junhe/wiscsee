@@ -868,24 +868,17 @@ def appmixbench():
                              # 'seconds': 2},
                              # -------------
 
-
-                            {'name': 'Sqlite',
-                             'pattern': 'random',
-                             'n_insertions': 12000,
-                             'commit_period': 100,
-                             'max_key': 200
-                             },
-
-
-                             # {'name' : 'LevelDB',
-                             # 'benchmarks': 'overwrite',
-                             # 'num': 3*1000000,
-                             # 'max_key': 1*1000000,
-                             # 'max_log': -1},
-
-                            # {'name': 'Varmail',
-                             # 'nfiles': 80,
-                             # 'seconds': 600},
+                            # Varmail for grouping rule
+                            {
+                                "name": "Varmail",
+                                "nfiles": 20000,
+                                "seconds": 600,
+                            },
+                            {
+                                "name": "Varmail",
+                                "nfiles": 500,
+                                "seconds": 600,
+                            }
                             ]
                         ],
                     })
