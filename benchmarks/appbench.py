@@ -613,7 +613,7 @@ def leveldbbench_for_alignment():
                     'stripe_size'       : [None],
                     'segment_bytes'     : [None],
                     'max_log_blocks_ratio': [100],
-                    'over_provisioning' : [16], # 1.28 is a good number
+                    'over_provisioning' : [32], # 1.28 is a good number
 
                     'workload_class' : [
                         'Leveldb'
@@ -635,6 +635,7 @@ def leveldbbench_for_alignment():
     def main():
         for para in ParaDict():
             print para
+            continue
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = LocalExperimenter( Parameters(**para) )
             obj.main()
