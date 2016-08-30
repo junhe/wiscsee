@@ -34,6 +34,9 @@ leveldb4alignment:
 leveldb4locality:
 	sudo python -m benchmarks.appbench -t 'leveldbbench_for_locality()'
 
+sqlite4locality:
+	sudo python -m benchmarks.appbench -t 'sqlitebench_for_locality()'
+
 sqlite:
 	sudo python -m benchmarks.appbench -t 'sqlitebench()'
 
