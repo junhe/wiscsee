@@ -713,9 +713,8 @@ def sqlitebench():
                         ],
                     'benchconfs': [
                             [
-                            # {'pattern': 'random', 'n_insertions': 1200},
-                            {'pattern': 'random', 'n_insertions': 120000},
-                            # {'pattern': 'sequential', 'n_insertions': 120000},
+                            {'pattern': 'random', 'n_insertions': 120000,
+                                'commit_period': 10, 'max_key': 120000},
                             ]
                         ],
                     })
