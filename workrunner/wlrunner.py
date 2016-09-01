@@ -36,13 +36,19 @@ class WorkloadRunner(object):
                 format(type(confobj).__name__()))
         self.conf = confobj
 
+        if self.conf.device_type == 'loop':
+            # we don't pad loop
+            self.conf['dev_padding'] = 0
+
         # blktracer for making file system
         self.blktracer_mkfs = blocktrace.BlockTraceManager(
             dev = self.conf['device_path'],
             event_file_column_names =  self.conf['event_file_column_names'],
             resultpath = self.conf.get_blkparse_result_path_mkfs(),
             to_ftlsim_path = self.conf.get_ftlsim_events_output_path_mkfs(),
-            sector_size = self.conf['sector_size'])
+            sector_size = self.conf['sector_size'],
+            padding_bytes = self.conf['dev_padding']
+            )
 
         # blktracer for running workload
         self.blktracer = blocktrace.BlockTraceManager(
@@ -50,7 +56,9 @@ class WorkloadRunner(object):
             event_file_column_names =  self.conf['event_file_column_names'],
             resultpath = self.conf.get_blkparse_result_path(),
             to_ftlsim_path = self.conf.get_ftlsim_events_output_path(),
-            sector_size = self.conf['sector_size'])
+            sector_size = self.conf['sector_size'],
+            padding_bytes = self.conf['dev_padding']
+            )
 
         self.aging_workload = eval("workload.{wlclass}(confobj = self.conf, " \
             "workload_conf_key = '{wlconf_key}')".format(
