@@ -8,12 +8,11 @@ import ssdbox
 from utilities import utils
 from ssdbox.bitmap import FlashBitmap2
 
-# @unittest.skip('too long')
 class TestLevelDB(unittest.TestCase):
     def test_leveldb(self):
         leveldb_proc = LevelDBProc(
             benchmarks='overwrite',
-            num=10000,
+            num=1000,
             db='/tmp/leveldbtest',
             threads=1,
             use_existing_db=0,
@@ -22,6 +21,7 @@ class TestLevelDB(unittest.TestCase):
         leveldb_proc.run()
         leveldb_proc.wait()
 
+    @unittest.skip('too long')
     def test_leveldb_kill(self):
         leveldb_proc = LevelDBProc(
             benchmarks='overwrite',
@@ -55,6 +55,7 @@ class TestSqlite(unittest.TestCase):
         sqlite_proc.run()
         sqlite_proc.wait()
 
+    @unittest.skip('too long')
     def test_sqlite_kill(self):
         sqlite_proc = SqliteProc(
                 n_insertions = 100000,
@@ -81,6 +82,7 @@ class TestVarmail(unittest.TestCase):
         proc.run()
         proc.wait()
 
+    @unittest.skip('too long')
     def test_varmail_kill(self):
         proc = VarmailProc('/tmp/varmail_tmp_lj23lj', 191)
         proc.run()
