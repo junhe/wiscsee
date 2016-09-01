@@ -3211,15 +3211,16 @@ class TestConcurrency_DataIntegrity(AssertFinishTestCase):
         env.run()
 
     def main_proc(self, env, ftl, conf):
-        for i in range(8): # use this for longer test
-        # for i in range(1):
+        # for i in range(8): # use this for longer test
+        for i in range(1):
             yield env.process(self.op_and_check_proc(env, ftl, conf))
 
     def op_and_check_proc(self, env, ftl, conf):
         self.init_non_overlap_exts(conf)
 
         procs = []
-        for i in range(32):
+        # for i in range(32): # use this for longer test
+        for i in range(4):
             p = env.process(self.op_proc(env, ftl, conf))
             procs.append(p)
         yield simpy.AllOf(env, procs)
