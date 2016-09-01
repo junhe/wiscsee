@@ -755,12 +755,14 @@ def sqlitebench_for_locality():
                     'ftl'            : ['dftldes'],
                     'filesystem'     : ['f2fs', 'xfs', 'ext4', 'btrfs'],
                     'cache_mapped_data_bytes' :[
+                        int(0.1 * lbabytes),
                         int(0.05 * lbabytes),
-                        int(0.1 * lbabytes) ],
+                        int(0.01 * lbabytes),
+                        ],
                     'workload_class' : ['Sqlite'],
                     'benchconfs': [
                             [
-                            {'pattern': 'random', 'n_insertions': 120000,
+                            {'pattern': 'random', 'n_insertions': 240000,
                                 'commit_period': 10, 'max_key': 120000},
                             ]
                         ],
