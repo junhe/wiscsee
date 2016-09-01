@@ -78,13 +78,13 @@ class TestSqlite(unittest.TestCase):
 
 class TestVarmail(unittest.TestCase):
     def test_varmail(self):
-        proc = VarmailProc('/tmp/varmail_tmp_lj23lj', 1)
+        proc = VarmailProc('/tmp/varmail_tmp_lj23lj', 1, 8)
         proc.run()
         proc.wait()
 
     @unittest.skip('too long')
     def test_varmail_kill(self):
-        proc = VarmailProc('/tmp/varmail_tmp_lj23lj', 191)
+        proc = VarmailProc('/tmp/varmail_tmp_lj23lj', 191, 8)
         proc.run()
         time.sleep(5)
         proc.terminate()
