@@ -112,6 +112,7 @@ class Experimenter(object):
             self.conf['snapshot_valid_ratios'] = True
             self.conf['snapshot_valid_ratios_interval'] = 0.1*SEC
             self.conf['do_gc_after_workload'] = False
+            self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
 
         elif self.para.ftl == 'nkftl2':
             self.conf['simulator_class'] = 'SimulatorDESNew'
@@ -131,7 +132,6 @@ class Experimenter(object):
             raise NotImplementedError()
 
         logicsize_mb = self.conf['dev_size_mb']
-        self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
         self.conf.set_flash_num_blocks_by_bytes(
                 int(logicsize_mb * 2**20 * self.para.over_provisioning))
 
