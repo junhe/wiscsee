@@ -773,7 +773,6 @@ def sqlitebench_for_locality():
     def main():
         for para in ParaDict():
             print para
-            continue
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = LocalExperimenter( Parameters(**para) )
             obj.main()
