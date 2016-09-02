@@ -1012,7 +1012,6 @@ def appmixbench():
                              # 'seconds': 2},
                              # -------------
 
-                            # Varmail for grouping rule
                             {
                                 "name": "Varmail",
                                 "nfiles": 200,
