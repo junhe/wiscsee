@@ -616,7 +616,7 @@ def leveldbbench_for_wearleveling():
                     'gc_low_ratio'     : [0.8],
                     'not_check_gc_setting': [False],
                     'filesystem'       : ['ext4'],
-                    'cache_mapped_data_bytes' :[int(0.1*lbabytes) ],
+                    'cache_mapped_data_bytes' :[int(1*lbabytes) ],
                     'workload_class' : ['Leveldb'],
                     'benchconfs': [
                             [{'benchmarks': 'overwrite',  'num': 6*1000000,
