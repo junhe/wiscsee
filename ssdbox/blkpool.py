@@ -43,6 +43,9 @@ class BlockPool(object):
 
         return blocks1 + blocks2
 
+    def get_erasure_count_dist(self):
+        return self.pool.get_erasure_count_dist()
+
     def count_blocks(self, tag, channels=None):
         return self.pool.count_blocks(tag, channels)
 

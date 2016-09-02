@@ -348,6 +348,31 @@ class TestBlockPool_outofspace(unittest.TestCase):
         self.my_run_3()
 
 
+class TestBlockPoolErasureDist(unittest.TestCase):
+    def test_init_state(self):
+        conf = create_config()
+        pool = create_blockpool(conf)
+
+        nblocks = conf.n_blocks_per_dev
+
+        dist = pool.get_erasure_count_dist()
+
+        self.assertEqual(dist[0], nblocks)
+        self.assertEqual(sum(dist.values()), nblocks)
+
+    def test_use_some(self):
+        conf = create_config()
+        pool = create_blockpool(conf)
+
+        nblocks = conf.n_blocks_per_dev
+
+        block = pool.pop_a_free_block_to_trans()
+        pool.move_used_trans_block_to_free(block)
+
+        dist = pool.get_erasure_count_dist()
+        self.assertEqual(dist[0], nblocks-1)
+        self.assertEqual(dist[1], 1)
+        self.assertEqual(sum(dist.values()), nblocks)
 
 
 def main():
