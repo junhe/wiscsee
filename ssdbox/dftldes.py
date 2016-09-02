@@ -361,6 +361,8 @@ class Ftl(object):
 
     def snapshot_erasure_count_dist(self):
         dist = self.block_pool.get_erasure_count_dist()
+        print self.env.now
+        print dist
         self.recorder.append_to_value_list('ftl_func_erasure_count_dist',
                 dist)
 
