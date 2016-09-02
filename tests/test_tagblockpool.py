@@ -110,6 +110,35 @@ class TestTagBlockPool(unittest.TestCase):
 
         self.assertEqual(least_used, 9)
 
+    def test_getting_count_distribution(self):
+        pool = TagBlockPool(5, [TDATA, TTRANS])
+
+        # erase 0,1 three times
+        for blocknum in [0, 1]:
+            for i in range(3):
+                pool.change_tag(blocknum, TFREE, TDATA)
+                pool.change_tag(blocknum, TDATA, TFREE)
+
+        # erase 2,3 twice
+        for blocknum in [2, 3]:
+            for i in range(2):
+                pool.change_tag(blocknum, TFREE, TDATA)
+                pool.change_tag(blocknum, TDATA, TFREE)
+
+        dist = pool.get_erasure_count_dist()
+        # distribution:
+        # key: erasure count
+        # value: number of blocks
+        # dist[3] = 4: 4 blocks have been erased 3 times
+        self.assertEqual(dist[0], 1)
+        self.assertEqual(dist[2], 2)
+        self.assertEqual(dist[3], 2)
+        print dist
+
+
+
+
+
 
 
 class TestBlockPoolWithCurBlocks(unittest.TestCase):

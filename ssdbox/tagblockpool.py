@@ -54,6 +54,9 @@ class TagBlockPool(object):
 
         return None
 
+    def get_erasure_count_dist(self):
+        return Counter(self._erasure_cnt.values())
+
 
 class CurrentBlock(object):
     def __init__(self, n_pages_per_block, blocknum):
