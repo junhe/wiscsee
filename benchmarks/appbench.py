@@ -97,8 +97,8 @@ class Experimenter(object):
         self.conf['flash_config']['n_channels_per_dev'] = 16
 
         self.conf['do_not_check_gc_setting'] = True
-        self.conf.GC_high_threshold_ratio = 0.90
-        self.conf.GC_low_threshold_ratio = 0.0
+        self.conf.GC_high_threshold_ratio = self.para.gc_high_ratio
+        self.conf.GC_low_threshold_ratio = self.para.gc_low_ratio
 
     def setup_ftl(self):
         self.conf['enable_blktrace'] = self.para.enable_blktrace
@@ -268,6 +268,8 @@ def get_shared_para_dict(expname, lbabytes):
             'max_log_blocks_ratio': [100],
             'n_online_cpus'  : ['all'],
             'over_provisioning': [32], # 1.28 is a good number
+            'gc_high_ratio'    : [0.9],
+            'gc_low_ratio'     : [0.0],
             }
     return para_dict
 
@@ -586,6 +588,56 @@ def leveldbbench_for_locality():
             obj.main()
 
     main()
+
+def leveldbbench_for_wearleveling():
+    class LocalExperimenter(Experimenter, StatsMixin):
+        def setup_workload(self):
+            self.conf['workload_class'] = self.para.workload_class
+            self.conf['workload_config'] = {
+                    'benchconfs': self.para.benchconfs,
+                    'one_by_one': self.para.one_by_one,
+                    'threads': self.para.leveldb_threads,
+                    }
+            self.conf['workload_conf_key'] = 'workload_config'
+
+        def after_running(self):
+            self.write_stats()
+
+    class ParaDict(ParaDictIterMixin):
+        def __init__(self):
+            expname = get_expname()
+            lbabytes = 1*GB
+            para_dict = get_shared_para_dict(expname, lbabytes)
+            para_dict.update( {
+                    'ftl'              : ['dftldes'],
+                    'over_provisioning': [1.28], # 1.28 is a good number
+                    'gc_high_ratio'    : [0.9],
+                    'gc_low_ratio'     : [0.8],
+                    'filesystem'       : ['ext4'],
+                    'cache_mapped_data_bytes' :[int(0.1*lbabytes) ],
+                    'workload_class' : ['Leveldb'],
+                    'benchconfs': [
+                            [{'benchmarks': 'overwrite',  'num': 6*1000000,
+                                'max_key': 6*1000000, 'max_log': -1}],
+                        ],
+                    'leveldb_threads': [1],
+                    'one_by_one'     : [False],
+                    })
+            self.parameter_combs = ParameterCombinations(para_dict)
+
+        def __iter__(self):
+            return iter(self.parameter_combs)
+
+    def main():
+        for para in ParaDict():
+            print para
+            Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+            obj = LocalExperimenter( Parameters(**para) )
+            obj.main()
+
+    main()
+
+
 
 
 def leveldbbench():
