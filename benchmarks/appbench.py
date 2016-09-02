@@ -895,7 +895,7 @@ def varmailbench_for_locality():
                     'ftl'            : ['dftldes'],
                     'filesystem'     : ['f2fs', 'xfs', 'ext4', 'btrfs'],
                     'cache_mapped_data_bytes' :[
-                        int(0.1, * lbabytes),
+                        int(0.1 * lbabytes),
                         int(0.5 * lbabytes),
                         int(1 * lbabytes)
                         # int(0.05 * lbabytes),
