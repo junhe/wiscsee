@@ -96,7 +96,7 @@ class Experimenter(object):
         self.conf['flash_config']['n_packages_per_channel'] = 1
         self.conf['flash_config']['n_channels_per_dev'] = 16
 
-        self.conf['do_not_check_gc_setting'] = True
+        self.conf['do_not_check_gc_setting'] = self.para.not_check_gc_setting
         self.conf.GC_high_threshold_ratio = self.para.gc_high_ratio
         self.conf.GC_low_threshold_ratio = self.para.gc_low_ratio
 
@@ -270,6 +270,7 @@ def get_shared_para_dict(expname, lbabytes):
             'over_provisioning': [32], # 1.28 is a good number
             'gc_high_ratio'    : [0.9],
             'gc_low_ratio'     : [0.0],
+            'not_check_gc_setting': [True],
             }
     return para_dict
 
@@ -613,6 +614,7 @@ def leveldbbench_for_wearleveling():
                     'over_provisioning': [1.28], # 1.28 is a good number
                     'gc_high_ratio'    : [0.9],
                     'gc_low_ratio'     : [0.8],
+                    'not_check_gc_setting': [False],
                     'filesystem'       : ['ext4'],
                     'cache_mapped_data_bytes' :[int(0.1*lbabytes) ],
                     'workload_class' : ['Leveldb'],
