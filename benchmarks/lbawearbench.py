@@ -27,7 +27,7 @@ def wearleveling_bench():
     class ParaDict(object):
         def __init__(self):
             expname = utils.get_expname()
-            lbabytes = 1*GB
+            lbabytes = 64*MB
             para_dict = get_shared_para_dict(expname, lbabytes)
             para_dict.update( {
                     'ftl'              : ['dftldes'],
@@ -38,13 +38,12 @@ def wearleveling_bench():
                     'not_check_gc_setting': [False],
                     'cache_mapped_data_bytes' :[int(1*lbabytes)],
 
-                    'access_distribution' : ['zipf'],
-                    'chunk_size'       : [4*KB],
-                    'traffic_size'     : [16*4*KB],
-                    'space_size'       : [16*KB],
+                    'chunk_size'       : [64*KB],
+                    'traffic_size'     : [1024*MB],
+                    'space_size'       : [lbabytes],
 
-                    'skew_factor'      : [1000],
-
+                    'access_distribution' : ['uniform', 'hotcold', 'zipf'],
+                    'skew_factor'      : [10],
                     'zipf_alpha'       : [1],
                     })
             self.parameter_combs = ParameterCombinations(para_dict)

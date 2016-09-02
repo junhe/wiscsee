@@ -1033,15 +1033,11 @@ class AccessesWithDist(LBAWorkloadGenerator):
             chunk_id = zipfgen.next()
             yield self.get_write_event(chunk_id)
 
-
-
     def get_write_event(self, chunk_id):
         offset = chunk_id * self.chunk_size
         size = self.chunk_size
-        print offset/KB, size/KB
         return hostevent.Event(sector_size=self.sector_size,
             pid=0, operation=OP_WRITE, offset=offset, size=size)
-
 
 
 class ContractBenchAdapter(LBAWorkloadGenerator):
