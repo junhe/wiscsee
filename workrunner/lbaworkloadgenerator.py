@@ -9,6 +9,9 @@ from accpatterns import patterns
 from patternsuite import *
 from accpatterns.contractbench import *
 
+import prepare4pyreuse
+from pyreuse.general.zipf import ZipfGenerator
+
 class LBAWorkloadGenerator(object):
     __metaclass__ = abc.ABCMeta
 
@@ -935,14 +938,110 @@ class AccessesWithDist(LBAWorkloadGenerator):
         self.conf = conf
         self.sector_size = self.conf['sector_size']
 
+        self.distribution = self.conf['AccessesWithDist']['lba_access_dist']
+        self.traffic_size = self.conf['AccessesWithDist']['traffic_size']
+        self.chunk_size = self.conf['AccessesWithDist']['chunk_size']
+        self.space_size = self.conf['AccessesWithDist']['space_size']
+        self.skew_factor = self.conf['AccessesWithDist']['skew_factor']
+        self.zipf_alpha = self.conf['AccessesWithDist']['zipf_alpha']
+        self.lbabytes = self.conf['dev_size_mb'] * MB
+
+
     def __iter__(self):
         yield hostevent.Event(sector_size=self.sector_size,
                 pid=0, operation=OP_ENABLE_RECORDER,
                 offset=0, size=0)
 
-        yield hostevent.Event(sector_size=self.sector_size,
-                pid=0, operation=OP_WRITE,
-                offset=0, size=3*MB)
+        # yield hostevent.Event(sector_size=self.sector_size,
+                # pid=0, operation=OP_WRITE,
+                # offset=0, size=3*MB)
+
+        if self.distribution == 'uniform':
+            for req in self.uniform_events():
+                yield req
+
+        elif self.distribution == 'hotcold':
+            for req in self.hot_cold_space_event():
+                yield req
+
+        elif self.distribution == 'zipf':
+            for req in self.zipf_events():
+                yield req
+
+        else:
+            raise NotImplementedError('distribution {} not implemented'.format(
+                self.distribution))
+
+    def uniform_events(self):
+        chunk_size = self.chunk_size
+        traffic_size = self.traffic_size
+
+        n_chunks_in_traffic = traffic_size / chunk_size
+        n_chunks_in_space = self.space_size / chunk_size
+
+        for i in range(n_chunks_in_traffic):
+            chunk_id = random.randint(0, n_chunks_in_space - 1)
+            yield self.get_write_event(chunk_id)
+
+
+    def hot_cold_space_event(self):
+        """
+        first half cold, second half hot
+        """
+        chunk_size = self.chunk_size
+        traffic_size = self.traffic_size
+
+        n_chunks_in_traffic = traffic_size / chunk_size
+        n_chunks_in_space = self.space_size / chunk_size
+        n_chunks_in_half_space = int(n_chunks_in_space / 2)
+
+        n_chunks_written = 0
+
+        finished = False
+        while finished is False:
+            for chunk_id in range(n_chunks_in_half_space):
+                yield self.get_write_event(chunk_id)
+                n_chunks_written += 1
+                if n_chunks_written > n_chunks_in_traffic:
+                    finished = True
+                    break
+
+            if finished is True:
+                break
+
+            # write the second half.
+            for i in range(self.skew_factor):
+                for chunk_id in range(n_chunks_in_half_space, n_chunks_in_space):
+                    yield self.get_write_event(chunk_id)
+                    n_chunks_written += 1
+                    if n_chunks_written > n_chunks_in_traffic:
+                        finished = True
+                        break
+                if finished is True:
+                    break
+
+    def zipf_events(self):
+        chunk_size = self.chunk_size
+        traffic_size = self.traffic_size
+
+        n_chunks_in_traffic = traffic_size / chunk_size
+        n_chunks_in_space = self.space_size / chunk_size
+
+        zipfgen = ZipfGenerator(n_chunks_in_space, self.zipf_alpha)
+
+        for i in range(n_chunks_in_traffic):
+            chunk_id = zipfgen.next()
+            yield self.get_write_event(chunk_id)
+
+
+
+    def get_write_event(self, chunk_id):
+        offset = chunk_id * self.chunk_size
+        size = self.chunk_size
+        print offset/KB, size/KB
+        return hostevent.Event(sector_size=self.sector_size,
+            pid=0, operation=OP_WRITE, offset=offset, size=size)
+
 
 
 class ContractBenchAdapter(LBAWorkloadGenerator):
@@ -981,7 +1080,6 @@ class BarrierGen(object):
         yield hostevent.ControlEvent(operation=OP_BARRIER)
         for i in range(self.n_ncq_slots):
             yield hostevent.ControlEvent(operation=OP_NOOP)
-
 
 
 class BlktraceEvents(LBAWorkloadGenerator):
@@ -1026,11 +1124,6 @@ class BlktraceEvents(LBAWorkloadGenerator):
                 arg1='gc_start_timestamp')
 
         yield hostevent.ControlEvent(operation=OP_CLEAN)
-
-
-
-
-
 
 
 

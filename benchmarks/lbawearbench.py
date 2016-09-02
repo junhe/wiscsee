@@ -15,6 +15,15 @@ def wearleveling_bench():
             self.conf["lba_workload_class"] = "AccessesWithDist"
             self.conf["age_workload_class"] = "NoOp"
 
+            self.conf['AccessesWithDist'] = {
+                    'lba_access_dist' : self.para.access_distribution,
+                    'chunk_size'      : self.para.chunk_size,
+                    'traffic_size'    : self.para.traffic_size,
+                    'space_size'      : self.para.space_size,
+                    'skew_factor'     : self.para.skew_factor,
+                    'zipf_alpha'      : self.para.zipf_alpha,
+                    }
+
     class ParaDict(object):
         def __init__(self):
             expname = utils.get_expname()
@@ -28,6 +37,15 @@ def wearleveling_bench():
                     'gc_low_ratio'     : [0.8],
                     'not_check_gc_setting': [False],
                     'cache_mapped_data_bytes' :[int(1*lbabytes)],
+
+                    'access_distribution' : ['zipf'],
+                    'chunk_size'       : [4*KB],
+                    'traffic_size'     : [16*4*KB],
+                    'space_size'       : [16*KB],
+
+                    'skew_factor'      : [1000],
+
+                    'zipf_alpha'       : [1],
                     })
             self.parameter_combs = ParameterCombinations(para_dict)
 
