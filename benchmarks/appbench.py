@@ -265,7 +265,7 @@ def get_shared_para_dict(expname, lbabytes):
             'segment_bytes'  : [2*MB],
             'max_log_blocks_ratio': [100],
             'n_online_cpus'  : ['all'],
-            'over_provisioning': [16], # 1.28 is a good number
+            'over_provisioning': [32], # 1.28 is a good number
             }
     return para_dict
 
