@@ -1,3 +1,5 @@
+from collections import Counter
+
 TFREE = 'TAGFREE'
 
 
@@ -5,6 +7,7 @@ class TagBlockPool(object):
     def __init__(self, n, tags):
         self._tag_subpool = {tag:[] for tag in tags}
         self._tag_subpool[TFREE] = range(n)
+        self._erasure_cnt = Counter()
 
     def get_blocks_of_tag(self, tag):
         return self._tag_subpool[tag]
@@ -12,6 +15,9 @@ class TagBlockPool(object):
     def change_tag(self, blocknum, src, dst):
         self._tag_subpool[src].remove(blocknum)
         self._tag_subpool[dst].append(blocknum)
+
+        if dst == TFREE:
+            self._erasure_cnt[blocknum] += 1
 
     def count_blocks(self, tag):
         return len(self._tag_subpool[tag])
@@ -32,6 +38,9 @@ class TagBlockPool(object):
         else:
             self.change_tag(block, src, dst)
             return block
+
+    def get_erasure_count(self, blocknum):
+        return self._erasure_cnt[blocknum]
 
 
 class CurrentBlock(object):

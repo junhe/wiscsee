@@ -54,6 +54,30 @@ class TestTagBlockPool(unittest.TestCase):
 
         self.assertEqual(block, None)
 
+    def test_initial_count(self):
+        pool = TagBlockPool(100, [TDATA, TTRANS])
+
+        for i in range(100):
+            cnt = pool.get_erasure_count(blocknum = i)
+            self.assertEqual(cnt, 0)
+
+    def test_count_of_blocks(self):
+        pool = TagBlockPool(100, [TDATA, TTRANS])
+
+        block = pool.pick_and_move(TFREE, TDATA)
+
+        cnt = pool.get_erasure_count(blocknum = block)
+        self.assertEqual(cnt, 0)
+
+        pool.change_tag(block, TDATA, TFREE)
+        cnt = pool.get_erasure_count(blocknum = block)
+        self.assertEqual(cnt, 1)
+
+        pool.change_tag(block, TFREE, TDATA)
+        pool.change_tag(block, TDATA, TFREE)
+        cnt = pool.get_erasure_count(blocknum = block)
+        self.assertEqual(cnt, 2)
+
 
 class TestBlockPoolWithCurBlocks(unittest.TestCase):
     def test_init(self):
