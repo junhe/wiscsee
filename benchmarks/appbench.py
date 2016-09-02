@@ -2,9 +2,7 @@ from Makefile import *
 import csv
 import os
 
-from workflow import run_workflow
 from utilities import utils
-
 from experimenter import *
 
 class StatsMixin(object):

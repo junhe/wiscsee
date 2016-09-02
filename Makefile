@@ -22,6 +22,9 @@ appbench:
 reproduce:
 	sudo python -m benchmarks.appbench -t 'reproduce()'
 
+lbawearbench:
+	sudo python -m benchmarks.lbawearbench -t 'wearleveling_bench()'
+
 contractbench:
 	sudo python -m benchmarks.lbabench -t 'contract_bench()'
 
