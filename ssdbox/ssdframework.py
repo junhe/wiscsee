@@ -56,6 +56,8 @@ class Ssd(SsdBase):
         self._snapshot_erasure_count_dist = self.conf['snapshot_erasure_count_dist']
         self._snapshot_interval = self.conf['snapshot_valid_ratios_interval']
 
+        self.gc_sleep_timer = 0
+
     def _create_ftl(self):
         if self.conf['ftl_type'] == 'dftldes':
             return dftldes.Ftl(self.conf, self.recorder, self.flash_controller,
@@ -209,8 +211,16 @@ class Ssd(SsdBase):
                 print '.',
                 sys.stdout.flush()
 
-            if self.ftl.is_cleaning_needed() is True:
+            if self.gc_sleep_timer > 0:
+                self.gc_sleep_timer -= 1
+
+            if self.gc_sleep_timer == 0 and self.ftl.is_cleaning_needed() is True:
                 yield self.env.process(self._cleaner_process())
+                # if we just did gc, we disable the next X gc checks
+                # so don't try gc for every request.
+                # This also gives it time to generate garbage with low
+                # valid ratio
+                self.gc_sleep_timer = 10
 
             self.ncq.slots.release(slot_req)
 
