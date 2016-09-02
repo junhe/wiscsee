@@ -5,9 +5,12 @@ from utilities.utils import *
 from ssdbox.blkpool import *
 import ssdbox
 
+def create_blockpool(conf):
+    return ssdbox.dftldes.BlockPool(conf)
+
+
 def create_config():
     conf = ssdbox.dftldes.Config()
-    conf['SSDFramework']['ncq_depth'] = 1
 
     conf['flash_config']['n_pages_per_block'] = 64
     conf['flash_config']['n_blocks_per_plane'] = 2
@@ -19,18 +22,10 @@ def create_config():
     set_exp_metadata(conf, save_data = False,
             expname = 'test_expname',
             subexpname = 'test_subexpname')
-
-    logicsize_mb = 64
-    conf.n_cache_entries = conf.n_mapping_entries_per_page
-    conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
-
     runtime_update(conf)
 
     return conf
 
-
-def create_blockpool(conf):
-    return ssdbox.dftldes.BlockPool(conf)
 
 
 class TestBlockPool_data(unittest.TestCase):
@@ -170,23 +165,6 @@ class TestBlockPool_next_gc_data(unittest.TestCase):
         self.setup_ftl()
         self.my_run()
 
-
-def create_config():
-    conf = ssdbox.dftldes.Config()
-
-    conf['flash_config']['n_pages_per_block'] = 64
-    conf['flash_config']['n_blocks_per_plane'] = 2
-    conf['flash_config']['n_planes_per_chip'] = 1
-    conf['flash_config']['n_chips_per_package'] = 1
-    conf['flash_config']['n_packages_per_channel'] = 1
-    conf['flash_config']['n_channels_per_dev'] = 4
-
-    set_exp_metadata(conf, save_data = False,
-            expname = 'test_expname',
-            subexpname = 'test_subexpname')
-    runtime_update(conf)
-
-    return conf
 
 
 class TestBlockPool_stripping(unittest.TestCase):
