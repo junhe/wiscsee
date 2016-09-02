@@ -136,11 +136,6 @@ class TestTagBlockPool(unittest.TestCase):
         print dist
 
 
-
-
-
-
-
 class TestBlockPoolWithCurBlocks(unittest.TestCase):
     def test_init(self):
         tmp = BlockPoolWithCurBlocks(100, [TDATA, TTRANS], NPAGESPERBLOCK)

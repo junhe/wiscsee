@@ -50,6 +50,14 @@ class MultiChannelBlockPoolBase(object):
 
         return ret
 
+    def get_erasure_count_dist(self):
+        aggregated_dist = Counter()
+        for pool in self._channel_pool:
+            dist = pool.get_erasure_count_dist()
+            aggregated_dist += dist
+
+        return aggregated_dist
+
     def pick_and_move(self, src, dst):
         "This function will advance self._next_channel"
         blocknum = self.pick(tag=src)

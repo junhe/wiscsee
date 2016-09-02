@@ -323,6 +323,40 @@ class TestMultiChannelBlockPool(unittest.TestCase):
         self.assertEqual(channel1, 1)
 
 
+class TestGettingDistribution(unittest.TestCase):
+    def test(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        dist = pool.get_erasure_count_dist()
+
+        self.assertEqual(dist[0], 64*8)
+
+    def test_erase_some(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+
+        used_blocks = []
+        for i in range(5):
+            block = pool.pick_and_move(TFREE, TDATA)
+            used_blocks.append(block)
+
+        for block in used_blocks:
+            pool.change_tag(block, TDATA, TFREE)
+
+        dist = pool.get_erasure_count_dist()
+        self.assertEqual(dist[0], 64*8-5)
+        self.assertEqual(dist[1], 5)
+
+
+
 def main():
     unittest.main()
 
