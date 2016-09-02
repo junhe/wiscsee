@@ -78,6 +78,39 @@ class TestTagBlockPool(unittest.TestCase):
         cnt = pool.get_erasure_count(blocknum = block)
         self.assertEqual(cnt, 2)
 
+    def test_least_erased_block(self):
+        pool = TagBlockPool(10, [TDATA, TTRANS])
+
+        # erase 0..8 twice
+        for blocknum in range(9):
+            pool.change_tag(blocknum, TFREE, TDATA)
+            pool.change_tag(blocknum, TDATA, TFREE)
+
+            pool.change_tag(blocknum, TFREE, TDATA)
+            pool.change_tag(blocknum, TDATA, TFREE)
+
+        least = pool.get_least_erased_block(TFREE)
+        self.assertEqual(least, 9)
+
+        least = pool.get_least_erased_block(TDATA)
+        self.assertEqual(least, None)
+
+    def test_greedy_pick(self):
+        pool = TagBlockPool(10, [TDATA, TTRANS])
+
+        # erase 0..8 twice
+        for blocknum in range(9):
+            pool.change_tag(blocknum, TFREE, TDATA)
+            pool.change_tag(blocknum, TDATA, TFREE)
+
+            pool.change_tag(blocknum, TFREE, TDATA)
+            pool.change_tag(blocknum, TDATA, TFREE)
+
+        least_used = pool.pick_and_move(TFREE, TDATA)
+
+        self.assertEqual(least_used, 9)
+
+
 
 class TestBlockPoolWithCurBlocks(unittest.TestCase):
     def test_init(self):

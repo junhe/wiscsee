@@ -7,7 +7,13 @@ class TagBlockPool(object):
     def __init__(self, n, tags):
         self._tag_subpool = {tag:[] for tag in tags}
         self._tag_subpool[TFREE] = range(n)
+
         self._erasure_cnt = Counter()
+        # have to put the block number in the counter
+        # otherwise, if a free block is never used, it won't
+        # appear in the counter.
+        for block in range(n):
+            self._erasure_cnt[block] = 0
 
     def get_blocks_of_tag(self, tag):
         return self._tag_subpool[tag]
@@ -23,12 +29,7 @@ class TagBlockPool(object):
         return len(self._tag_subpool[tag])
 
     def pick(self, tag):
-        try:
-            block = self._tag_subpool[tag][-1]
-        except IndexError:
-            # Out of Space of this tag
-            return None
-        return block
+        return self.get_least_erased_block(tag)
 
     def pick_and_move(self, src, dst):
         block = self.pick(src)
@@ -41,6 +42,17 @@ class TagBlockPool(object):
 
     def get_erasure_count(self, blocknum):
         return self._erasure_cnt[blocknum]
+
+    def get_least_erased_block(self, tag):
+        least_to_most = reversed(self._erasure_cnt.most_common())
+        tag_blocks = self.get_blocks_of_tag(tag)
+
+        # iterate from least used to most used
+        for blocknum, count in least_to_most:
+            if blocknum in tag_blocks:
+                return blocknum
+
+        return None
 
 
 class CurrentBlock(object):
