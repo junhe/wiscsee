@@ -53,6 +53,7 @@ class Ssd(SsdBase):
         self.ftl = self._create_ftl()
 
         self._snapshot_valid_ratios = self.conf['snapshot_valid_ratios']
+        self._snapshot_erasure_count_dist = self.conf['snapshot_erasure_count_dist']
         self._snapshot_interval = self.conf['snapshot_valid_ratios_interval']
 
     def _create_ftl(self):
@@ -219,6 +220,7 @@ class Ssd(SsdBase):
             yield self.ncq.queue.put(
                 hostevent.ControlEvent(OP_END_SSD_PROCESS))
         self._snapshot_valid_ratios = False
+        self._snapshot_erasure_count_dist = False
 
     def _cleaner_process(self, forced=False):
         # things may have changed since last time we check, because of locks
@@ -230,6 +232,11 @@ class Ssd(SsdBase):
             self.ftl.snapshot_valid_ratios()
             yield self.env.timeout(self._snapshot_interval)
 
+    def _erasure_count_dist_snapshot_process(self):
+        while self._snapshot_erasure_count_dist is True:
+            self.ftl.snapshot_erasure_count_dist()
+            yield self.env.timeout(self._snapshot_interval)
+
     def run(self):
         procs = []
         for i in range(self.n_processes):
@@ -238,6 +245,10 @@ class Ssd(SsdBase):
 
         p = self.env.process( self._valid_ratio_snapshot_process() )
         procs.append(p)
+
+        p = self.env.process( self._erasure_count_dist_snapshot_process() )
+        procs.append(p)
+
 
         yield simpy.events.AllOf(self.env, procs)
 

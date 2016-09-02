@@ -213,6 +213,7 @@ class Config(dict):
             "do_gc_after_workload"  : True,
 
             'snapshot_valid_ratios' : False,
+            'snapshot_erasure_count_dist': False,
             'snapshot_valid_ratios_interval': None,
 
             ############## hybridmap ############

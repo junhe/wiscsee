@@ -110,6 +110,7 @@ class Experimenter(object):
             self.conf['simulator_class'] = 'SimulatorDESNew'
             self.conf['ftl_type'] = 'dftldes'
             self.conf['snapshot_valid_ratios'] = True
+            self.conf['snapshot_erasure_count_dist'] = True
             self.conf['snapshot_valid_ratios_interval'] = 0.1*SEC
             self.conf['do_gc_after_workload'] = False
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
@@ -126,6 +127,7 @@ class Experimenter(object):
             print 'K:', self.conf['nkftl']['max_blocks_in_log_group']
             self.conf['nkftl']['max_ratio_of_log_blocks'] = self.para.max_log_blocks_ratio
             self.conf['snapshot_valid_ratios'] = False
+            self.conf['snapshot_erasure_count_dist'] = False
             self.conf['do_gc_after_workload'] = True
 
         else:
@@ -987,7 +989,7 @@ def appmixbench():
             para_dict = get_shared_para_dict(expname, lbabytes)
             para_dict.update( {
                     'workload_class' : [ 'AppMix' ],
-                    'run_seconds'    : [20],
+                    'run_seconds'    : [4],
                     'appconfs': [
                             [ # list of app you want to run
 
@@ -1013,12 +1015,12 @@ def appmixbench():
                             # Varmail for grouping rule
                             {
                                 "name": "Varmail",
-                                "nfiles": 20000,
+                                "nfiles": 200,
                                 "seconds": 600,
                             },
                             {
                                 "name": "Varmail",
-                                "nfiles": 500,
+                                "nfiles": 50,
                                 "seconds": 600,
                             }
                             ]

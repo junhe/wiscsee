@@ -359,6 +359,11 @@ class Ftl(object):
         self.recorder.append_to_value_list('ftl_func_valid_ratios',
                 ratios)
 
+    def snapshot_erasure_count_dist(self):
+        dist = self.block_pool.get_erasure_count_dist()
+        self.recorder.append_to_value_list('ftl_func_erasure_count_dist',
+                dist)
+
 
 def remove_invalid_ppns(ppns):
     return [ppn for ppn in ppns if not ppn in (UNINITIATED, MISS)]
