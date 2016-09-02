@@ -24,6 +24,21 @@ class LBAMultiProcGenerator(object):
         return
 
 
+class SampleWorkload(LBAWorkloadGenerator):
+    def __init__(self, conf):
+        self.conf = conf
+        self.sector_size = self.conf['sector_size']
+
+    def __iter__(self):
+        yield hostevent.Event(sector_size=self.sector_size,
+                pid=0, operation=OP_ENABLE_RECORDER,
+                offset=0, size=0)
+
+        yield hostevent.Event(sector_size=self.sector_size,
+                pid=0, operation=OP_WRITE,
+                offset=0, size=3*MB)
+
+
 class Sequential(LBAWorkloadGenerator):
     def __init__(self, confobj):
         if not isinstance(confobj, config.Config):
@@ -913,6 +928,21 @@ class PatternAdapter(LBAWorkloadGenerator):
                 yield hostevent.Event(sector_size=self.sector_size,
                     pid=0, operation=req.op,
                     offset=req.offset, size=req.size)
+
+
+class AccessesWithDist(LBAWorkloadGenerator):
+    def __init__(self, conf):
+        self.conf = conf
+        self.sector_size = self.conf['sector_size']
+
+    def __iter__(self):
+        yield hostevent.Event(sector_size=self.sector_size,
+                pid=0, operation=OP_ENABLE_RECORDER,
+                offset=0, size=0)
+
+        yield hostevent.Event(sector_size=self.sector_size,
+                pid=0, operation=OP_WRITE,
+                offset=0, size=3*MB)
 
 
 class ContractBenchAdapter(LBAWorkloadGenerator):

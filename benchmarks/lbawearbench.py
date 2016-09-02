@@ -12,17 +12,7 @@ def wearleveling_bench():
             zone_size = flashbytes / 8
 
             self.conf["workload_src"] = LBAGENERATOR
-            self.conf["lba_workload_class"] = "PatternAdapter"
-            self.conf["lba_workload_configs"]["PatternAdapter"] = {}
-            self.conf["lba_workload_configs"]["PatternAdapter"]["class"] = \
-                    'SHotNCold'
-            self.conf["lba_workload_configs"]["PatternAdapter"]["conf"] = {
-                    "zone_size": zone_size,
-                    "chunk_size": zone_size,
-                    "traffic_size": zone_size * 3,
-                    "snake_size": zone_size / 2,
-                    "stride_size": zone_size * 2
-                    }
+            self.conf["lba_workload_class"] = "AccessesWithDist"
             self.conf["age_workload_class"] = "NoOp"
 
     class ParaDict(object):
