@@ -38,6 +38,7 @@ def wearleveling_bench():
                     'not_check_gc_setting': [False],
                     'cache_mapped_data_bytes' :[int(1*lbabytes)],
                     'segment_bytes'    : [lbabytes],
+                    'snapshot_interval': [1*SEC],
 
                     'chunk_size'       : [64*KB],
                     'traffic_size'     : [1024*MB],

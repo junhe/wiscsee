@@ -110,7 +110,7 @@ class Experimenter(object):
             self.conf['ftl_type'] = 'dftldes'
             self.conf['snapshot_valid_ratios'] = True
             self.conf['snapshot_erasure_count_dist'] = True
-            self.conf['snapshot_valid_ratios_interval'] = 0.1*SEC
+            self.conf['snapshot_valid_ratios_interval'] = self.para.snapshot_interval
             self.conf['do_gc_after_workload'] = False
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
 
@@ -200,6 +200,7 @@ def get_shared_para_dict(expname, lbabytes):
             'gc_high_ratio'    : [0.9],
             'gc_low_ratio'     : [0.0],
             'not_check_gc_setting': [True],
+            'snapshot_interval': [0.1*SEC],
             }
     return para_dict
 
