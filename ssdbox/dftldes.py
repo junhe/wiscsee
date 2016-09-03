@@ -1313,7 +1313,7 @@ class VictimBlocks(object):
             if valid_ratio == 1:
                 # skip all-valid blocks
                 continue
-            if valid_ratio > self.conf['max_victim_valid_ratio']:
+            if valid_ratio > self._conf['max_victim_valid_ratio']:
                 # If valid ratio is too big, moving it does not provide
                 # too much benefit.
                 continue
