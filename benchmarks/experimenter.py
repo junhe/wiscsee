@@ -113,6 +113,7 @@ class Experimenter(object):
             self.conf['snapshot_valid_ratios_interval'] = self.para.snapshot_interval
             self.conf['do_gc_after_workload'] = False
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
+            self.conf['write_gc_log'] = self.para.write_gc_log
 
         elif self.para.ftl == 'nkftl2':
             self.conf['simulator_class'] = 'SimulatorDESNew'
@@ -201,6 +202,7 @@ def get_shared_para_dict(expname, lbabytes):
             'gc_low_ratio'     : [0.0],
             'not_check_gc_setting': [True],
             'snapshot_interval': [0.1*SEC],
+            'write_gc_log'     : [True],
             }
     return para_dict
 

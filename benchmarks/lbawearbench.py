@@ -39,6 +39,7 @@ def wearleveling_bench():
                     'cache_mapped_data_bytes' :[int(1*lbabytes)],
                     'segment_bytes'    : [lbabytes],
                     'snapshot_interval': [1*SEC],
+                    'write_gc_log'     : [False],
 
                     'chunk_size'       : [64*KB],
                     'traffic_size'     : [10*1024*MB],
