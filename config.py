@@ -209,6 +209,7 @@ class Config(dict):
             # "enable_e2e_test"       : False,
             "simulation_processor"  : 'e2e', # regular, extent
             "stripe_size"           : 4,  # unit: page
+            "max_victim_valid_ratio": 0.9,
 
             "do_gc_after_workload"  : True,
 
