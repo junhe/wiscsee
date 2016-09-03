@@ -36,13 +36,13 @@ def wearleveling_bench():
                     'gc_high_ratio'    : [0.9],
                     'gc_low_ratio'     : [0.8],
                     'not_check_gc_setting': [False],
-                    'cache_mapped_data_bytes' :[int(1*lbabytes)],
+                    'cache_mapped_data_bytes' :[int(0.1*lbabytes)],
                     'segment_bytes'    : [lbabytes],
                     'snapshot_interval': [1*SEC],
                     'write_gc_log'     : [False],
 
                     'chunk_size'       : [64*KB],
-                    'traffic_size'     : [10*1024*MB],
+                    'traffic_size'     : [1024*MB],
                     'space_size'       : [lbabytes],
 
                     'access_distribution' : ['uniform', 'zipf', 'hotcold'],
