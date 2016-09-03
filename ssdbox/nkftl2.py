@@ -823,7 +823,7 @@ class GarbageCollector(object):
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
-        n_cleaners = self.conf['n_concurrent_log_cleaners']
+        n_cleaners = self.conf['nkftl']['n_concurrent_log_cleaners']
         self._cleaner_res = simpy.Resource(self.env, capacity=n_cleaners)
 
         self.gcid = 0
