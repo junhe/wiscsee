@@ -1464,6 +1464,9 @@ class DataBlockCleaner(object):
         self.gcid = 0
 
     def log(self, blocknum):
+        if self.conf['write_gc_log'] is False:
+            return
+
         valid_ratio = self.oob.states.block_valid_ratio(blocknum)
         if valid_ratio == 0:
             return
@@ -1766,6 +1769,7 @@ class Config(config.ConfigNCQFTL):
             "over_provisioning": 1.28,
             "mapping_cache_bytes": None, # cmt: cached mapping table
             "do_not_check_gc_setting": False,
+            "write_gc_log": True,
             }
         self.update(local_itmes)
         self['segment_bytes'] = 1*TB
