@@ -1,4 +1,5 @@
 import bidict
+import sys
 import copy
 from collections import deque, OrderedDict
 import datetime
@@ -12,6 +13,7 @@ from utilities import utils
 from .bitmap import FlashBitmap2
 from ssdbox.devblockpool import *
 from ftlsim_commons import *
+from commons import *
 
 from . import blkpool
 
@@ -1567,6 +1569,15 @@ class Ftl(ftlbuilder.FtlBuilder):
             logical_block_locks = self.logical_block_locks
             )
 
+        self.written_bytes = 0
+        self.discarded_bytes = 0
+        self.read_bytes = 0
+        self.pre_written_bytes = 0
+        self.pre_discarded_bytes = 0
+        self.pre_read_bytes = 0
+        self.display_interval = 1 * MB
+
+
     def lpn_to_ppn(self, lpn):
         found, ppn, location = self.translator.lpn_to_ppn(lpn)
         if found == True and self.oob.states.is_page_valid(ppn):
@@ -1581,8 +1592,12 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.env.exit(content[0])
 
     def read_ext(self, extent):
-        self.recorder.add_to_general_accumulater('traffic', 'read',
-                extent.lpn_count*self.conf.page_size)
+        req_size = extent.lpn_count * self.conf.page_size
+        self.recorder.add_to_general_accumulater('traffic', 'read', req_size)
+        if self.read_bytes > self.pre_read_bytes + self.display_interval:
+            print 'Read (MB)', self.pre_read_bytes / MB, 'reading', round(float(req_size) / MB, 2)
+            sys.stdout.flush()
+            self.pre_read_bytes = self.read_bytes
 
         extents = split_ext(self.conf.n_pages_per_block, extent)
         ext_data = []
@@ -1626,8 +1641,13 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(self.garbage_collector.clean())
 
     def write_ext(self, extent, data=None):
-        self.recorder.add_to_general_accumulater('traffic', 'write',
-                extent.lpn_count*self.conf.page_size)
+        req_size = extent.lpn_count * self.conf.page_size
+        self.recorder.add_to_general_accumulater('traffic', 'write', req_size)
+        self.written_bytes += req_size
+        if self.written_bytes > self.pre_written_bytes + self.display_interval:
+            print 'Written (MB)', self.pre_written_bytes / MB, 'writing', round(float(req_size) / MB, 2)
+            sys.stdout.flush()
+            self.pre_written_bytes = self.written_bytes
 
         extents = split_ext(self.conf.n_pages_per_data_group(), extent)
         data_group_procs = []
@@ -1824,6 +1844,14 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(self._discard_logical_block(Extent(lpn, 1)))
 
     def discard_ext(self, extent):
+        req_size = extent.lpn_count * self.conf.page_size
+        self.recorder.add_to_general_accumulater('traffic', 'discard', req_size)
+        self.discarded_bytes += req_size
+        if self.discarded_bytes > self.pre_discarded_bytes + self.display_interval:
+            print 'Discarded (MB)', self.pre_discarded_bytes / MB, 'discarding', round(float(req_size) / MB, 2)
+            sys.stdout.flush()
+            self.pre_discarded_bytes = self.discarded_bytes
+
         self.recorder.add_to_general_accumulater('traffic', 'discard',
                 extent.lpn_count*self.conf.page_size)
 
