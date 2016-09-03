@@ -41,13 +41,13 @@ class ParaDictIterMixin(object):
             # {'segment_bytes': lbabytes * 2, 'n_pages_per_block': 128*KB/(2*KB)},
 
             # {'segment_bytes': 16*MB,        'n_pages_per_block': 1*MB/(2*KB)},
-            {'segment_bytes': 128*MB,        'n_pages_per_block': 1*MB/(2*KB)},
+            # {'segment_bytes': 128*MB,        'n_pages_per_block': 1*MB/(2*KB)},
             {'segment_bytes': lbabytes * 2, 'n_pages_per_block': 1*MB/(2*KB)},
             ]
         new_update_dics = []
         for d in updatedicts:
-            # for fs in ['ext4', 'f2fs']:
-            for fs in ['btrfs', 'xfs']:
+            for fs in ['ext4', 'f2fs', 'xfs', 'btrfs']:
+            # for fs in ['btrfs', 'xfs']:
                 new_d = copy.copy(d)
                 new_d['filesystem'] = fs
 
@@ -613,6 +613,86 @@ def appmixbench():
         def __iter__(self):
             # return iter(self.parameter_combs)
             return iter(self.iterate_blocksize_segsize_fs())
+
+    def main():
+        for para in ParaDict():
+            print para
+            Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+            obj = LocalExperimenter( Parameters(**para) )
+            obj.main()
+
+    main()
+
+
+def appmixbench_for_wearleveling():
+    class LocalExperimenter(Experimenter, StatsMixin):
+        def setup_workload(self):
+            self.conf['workload_class'] = self.para.workload_class
+            self.conf['workload_config'] = {
+                    'appconfs': self.para.appconfs,
+                    'run_seconds': self.para.run_seconds,
+                    }
+            self.conf['workload_conf_key'] = 'workload_config'
+
+        def after_running(self):
+            self.write_stats()
+
+    class ParaDict(ParaDictIterMixin):
+        def __init__(self):
+            expname = utils.get_expname()
+            lbabytes = 1*GB
+            para_dict = get_shared_para_dict(expname, lbabytes)
+            para_dict.update( {
+                    'ftl'              : ['dftldes'],
+                    'enable_simulation': [True],
+                    'over_provisioning': [1.5], # 1.28 is a good number
+                    'gc_high_ratio'    : [0.9],
+                    'gc_low_ratio'     : [0.8],
+                    'not_check_gc_setting': [False],
+                    'cache_mapped_data_bytes' :[int(0.1*lbabytes)],
+                    'segment_bytes'    : [lbabytes],
+                    'snapshot_interval': [1*SEC],
+                    'write_gc_log'     : [False],
+
+                    'workload_class' : [ 'AppMix' ],
+                    'run_seconds'    : [None],
+                    'appconfs': [
+                            [ # list of app you want to run
+
+                            # ---- TEMPLATE ------
+                            # {'name' : 'LevelDB',
+                             # 'benchmarks': 'overwrite',
+                             # 'num': 1*1000000,
+                             # 'max_key': 1*100000,
+                             # 'max_log': -1},
+
+                            # {'name': 'Sqlite',
+                             # 'pattern': 'random',
+                             # 'n_insertions': 12000,
+                             # 'commit_period': 10,
+                             # 'max_key': 20
+                             #},
+
+                            # {'name': 'Varmail',
+                            #  'nfiles': 8000
+                             # 'seconds': 2},
+                             # -------------
+
+                            {'name' : 'LevelDB',
+                             'benchmarks': 'overwrite',
+                             'num': 6*1000000,
+                             'max_key': 6*1000000,
+                             'max_log': -1},
+
+                            ]
+                        ],
+                    })
+            self.parameter_combs = ParameterCombinations(para_dict)
+
+        def __iter__(self):
+            # return iter(self.parameter_combs)
+            # return iter(self.iterate_blocksize_segsize_fs())
+            return iter([list(self.iterate_blocksize_segsize_fs())[0]])
 
     def main():
         for para in ParaDict():

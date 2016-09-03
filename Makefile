@@ -49,6 +49,9 @@ sqlite:
 appmix:
 	sudo python -m benchmarks.appbench -t 'appmixbench()'
 
+appmix4wearleveling:
+	sudo python -m benchmarks.appbench -t 'appmixbench_for_wearleveling()'
+
 sqlite4alignment:
 	sudo python -m benchmarks.appbench -t 'sqlitebench_for_alignment()'
 
