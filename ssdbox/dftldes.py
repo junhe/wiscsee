@@ -1374,6 +1374,8 @@ class Cleaner(object):
         self.n_cleaners = self.conf.n_channels_per_dev * 64
         self._cleaner_res = simpy.Resource(self.env, capacity=self.n_cleaners)
 
+        self.n_victim_per_batch = self.conf.n_channels_per_dev * 2
+
     def assert_threshold_sanity(self):
         if self.conf['do_not_check_gc_setting'] is True:
             return
@@ -1410,13 +1412,24 @@ class Cleaner(object):
         victim_blocks = VictimBlocks(self.conf, self.block_pool, self.oob)
         self.recorder.append_to_value_list('clean_func_valid_ratio_snapshot',
                 victim_blocks.get_valid_ratio_counter_of_used_blocks())
-        print 'Just snapshot valid ratio ~~~~~~~~~'
+        # print '---------> used ratio before', self.block_pool.used_ratio()
 
-        procs = []
-        for valid_ratio, block_type, block_num in victim_blocks.iterator_verbose():
+        all_victim_tuples = list(victim_blocks.iterator_verbose())
+        batches = utils.group_to_batches(all_victim_tuples, self.n_victim_per_batch)
+
+        for batch in batches:
             if self.is_stopping_needed():
+                # print 'stopped because of threshold <----------'
                 break
+            yield self.env.process(self._clean_batch(batch))
+
+        # print '---------> used ratio after', self.block_pool.used_ratio()
+
+    def _clean_batch(self, victim_tuples):
+        procs = []
+        for valid_ratio, block_type, block_num in victim_tuples:
             assert valid_ratio < 1
+            print valid_ratio,
             p = self.env.process(self._clean_block(block_type, block_num))
             procs.append(p)
 

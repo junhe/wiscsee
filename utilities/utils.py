@@ -311,3 +311,17 @@ def get_dir_size(start_path = '.'):
             total_size += os.path.getsize(fp)
     return total_size
 
+
+def group_to_batches(mylist, cnt_per_chunk):
+    n = len(mylist)
+    chunks = []
+    for i in range(0, n, cnt_per_chunk):
+        chunk = mylist[i:(i+cnt_per_chunk)]
+        chunks.append(chunk)
+
+    return chunks
+
+
+
+
+

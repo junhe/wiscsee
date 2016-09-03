@@ -149,6 +149,18 @@ class TestExtent(unittest.TestCase):
         self.assertEqual(ext1.lpn_start, 3)
 
 
+class TestGroupToBatches(unittest.TestCase):
+    def test(self):
+        a = [0, 1, 2]
+        batches = utils.group_to_batches(a, 1)
+        self.assertListEqual(batches, [[0], [1], [2]])
+
+    def test_larger(self):
+        a = range(7)
+        batches = utils.group_to_batches(a, 3)
+        self.assertListEqual(batches, [[0, 1, 2],
+                                       [3, 4, 5],
+                                       [6]])
 
 def main():
     unittest.main()
