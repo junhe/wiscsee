@@ -215,7 +215,7 @@ class Config(dict):
 
             'snapshot_valid_ratios' : False,
             'snapshot_erasure_count_dist': False,
-            'snapshot_valid_ratios_interval': None,
+            'snapshot_interval': None,
 
             ############## hybridmap ############
             "high_log_block_ratio"       : 0.4,

@@ -1854,6 +1854,13 @@ class Ftl(ftlbuilder.FtlBuilder):
     def is_cleaning_needed(self):
         return self.garbage_collector.decider.should_start()
 
+    def snapshot_erasure_count_dist(self):
+        dist = self.block_pool.get_erasure_count_dist()
+        print self.env.now
+        print dist
+        self.recorder.append_to_value_list('ftl_func_erasure_count_dist',
+                dist)
+
 
 def split_ext(n_pages_in_zone, extent):
     if extent.lpn_count == 0:

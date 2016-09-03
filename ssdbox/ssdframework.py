@@ -54,7 +54,7 @@ class Ssd(SsdBase):
 
         self._snapshot_valid_ratios = self.conf['snapshot_valid_ratios']
         self._snapshot_erasure_count_dist = self.conf['snapshot_erasure_count_dist']
-        self._snapshot_interval = self.conf['snapshot_valid_ratios_interval']
+        self._snapshot_interval = self.conf['snapshot_interval']
 
         self.gc_sleep_timer = 0
         self.gc_sleep_duration = 10

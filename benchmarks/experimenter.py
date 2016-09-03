@@ -104,13 +104,13 @@ class Experimenter(object):
         self.conf['enable_simulation'] = self.para.enable_simulation
         self.conf['stripe_size'] = self.para.stripe_size
         self.conf['segment_bytes'] = self.para.segment_bytes
+        self.conf['snapshot_interval'] = self.para.snapshot_interval
 
         if self.para.ftl == 'dftldes':
             self.conf['simulator_class'] = 'SimulatorDESNew'
             self.conf['ftl_type'] = 'dftldes'
             self.conf['snapshot_valid_ratios'] = True
             self.conf['snapshot_erasure_count_dist'] = True
-            self.conf['snapshot_valid_ratios_interval'] = self.para.snapshot_interval
             self.conf['do_gc_after_workload'] = False
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
             self.conf['write_gc_log'] = self.para.write_gc_log
@@ -127,7 +127,7 @@ class Experimenter(object):
             print 'K:', self.conf['nkftl']['max_blocks_in_log_group']
             self.conf['nkftl']['max_ratio_of_log_blocks'] = self.para.max_log_blocks_ratio
             self.conf['snapshot_valid_ratios'] = False
-            self.conf['snapshot_erasure_count_dist'] = False
+            self.conf['snapshot_erasure_count_dist'] = True
             self.conf['do_gc_after_workload'] = True
 
         else:
