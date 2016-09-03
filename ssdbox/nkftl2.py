@@ -66,7 +66,7 @@ class Config(config.ConfigNCQFTL):
 
                 "max_ratio_of_log_blocks": 2.0,
 
-                "provision_ratio": 1.5 # 1.5: 1GB user size, 1.5 flash size behind
+                "n_concurrent_log_cleaners": 16,
             },
         }
         self.update(local_itmes)
@@ -669,9 +669,6 @@ class GcDecider(object):
             self.conf.n_blocks_per_dev
         self.low_watermark = self.conf['nkftl']['GC_low_threshold_ratio'] * \
             self.conf.n_blocks_per_dev
-        # self.low_watermark = max( self.conf['nkftl']['GC_low_threshold_ratio'] * \
-            # self.conf.n_blocks_per_dev,
-            # self.conf.n_blocks_per_dev / self.conf['nkftl']['provision_ratio'])
 
         assert self.high_watermark > self.low_watermark
 
@@ -826,7 +823,7 @@ class GarbageCollector(object):
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
 
-        n_cleaners = self.conf.n_channels_per_dev * 64
+        n_cleaners = self.conf['n_concurrent_log_cleaners']
         self._cleaner_res = simpy.Resource(self.env, capacity=n_cleaners)
 
         self.gcid = 0
