@@ -57,6 +57,7 @@ class Ssd(SsdBase):
         self._snapshot_interval = self.conf['snapshot_valid_ratios_interval']
 
         self.gc_sleep_timer = 0
+        self.gc_sleep_duration = 10
 
     def _create_ftl(self):
         if self.conf['ftl_type'] == 'dftldes':
@@ -220,10 +221,9 @@ class Ssd(SsdBase):
                 # so don't try gc for every request.
                 # This also gives it time to generate garbage with low
                 # valid ratio
-                self.gc_sleep_timer = 10
+                self.gc_sleep_timer = self.gc_sleep_duration
 
             self.ncq.slots.release(slot_req)
-
 
     def _end_all_processes(self):
         for i in range(self.n_processes):
