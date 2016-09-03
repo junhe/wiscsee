@@ -41,7 +41,7 @@ def wearleveling_bench():
                     'snapshot_interval': [1*SEC],
                     'write_gc_log'     : [False],
 
-                    'chunk_size'       : [64*KB],
+                    'chunk_size'       : [512*KB],
                     'traffic_size'     : [1024*MB],
                     'space_size'       : [lbabytes],
 
