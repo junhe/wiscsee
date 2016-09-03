@@ -678,12 +678,19 @@ def appmixbench_for_wearleveling():
                              # 'seconds': 2},
                              # -------------
 
-                            {'name' : 'LevelDB',
-                             'benchmarks': 'overwrite',
-                             'num': 6*1000000,
-                             'max_key': 6*1000000,
-                             'max_log': -1},
+                            # for wear-leveling
+                            # {'name' : 'LevelDB',
+                             # 'benchmarks': 'overwrite',
+                             # 'num': 6*1000000,
+                             # 'max_key': 6*1000000,
+                             # 'max_log': -1},
 
+                            {'name': 'Sqlite',
+                             'pattern': 'random',
+                             'n_insertions': 12000,
+                             'commit_period': 10,
+                             'max_key': 12000,
+                            },
                             ]
                         ],
                     })
