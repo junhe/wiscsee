@@ -38,6 +38,8 @@ def create_config():
     conf['flash_config']['n_packages_per_channel'] = 1
     conf['flash_config']['n_channels_per_dev'] = 4
 
+    conf['max_victim_valid_ratio'] = 1
+
     utils.set_exp_metadata(conf, save_data = False,
             expname = 'test_expname',
             subexpname = 'test_subexpname')
