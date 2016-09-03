@@ -27,12 +27,12 @@ def wearleveling_bench():
     class ParaDict(object):
         def __init__(self):
             expname = utils.get_expname()
-            lbabytes = 64*MB
+            lbabytes = 128*MB
             para_dict = get_shared_para_dict(expname, lbabytes)
             para_dict.update( {
                     'ftl'              : ['dftldes'],
                     'enable_simulation': [True],
-                    'over_provisioning': [1.28], # 1.28 is a good number
+                    'over_provisioning': [1.5], # 1.28 is a good number
                     'gc_high_ratio'    : [0.9],
                     'gc_low_ratio'     : [0.8],
                     'not_check_gc_setting': [False],
@@ -41,10 +41,10 @@ def wearleveling_bench():
                     'snapshot_interval': [1*SEC],
 
                     'chunk_size'       : [64*KB],
-                    'traffic_size'     : [1024*MB],
+                    'traffic_size'     : [10*1024*MB],
                     'space_size'       : [lbabytes],
 
-                    'access_distribution' : ['uniform', 'hotcold', 'zipf'],
+                    'access_distribution' : ['uniform', 'zipf', 'hotcold'],
                     'skew_factor'      : [10],
                     'zipf_alpha'       : [1],
                     })
