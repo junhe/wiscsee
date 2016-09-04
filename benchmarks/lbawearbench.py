@@ -30,7 +30,7 @@ def wearleveling_bench():
             lbabytes = 128*MB
             para_dict = get_shared_para_dict(expname, lbabytes)
             para_dict.update( {
-                    'ftl'              : ['dftldes'],
+                    'ftl'              : ['nkftl2'],
                     'enable_simulation': [True],
                     'over_provisioning': [1.5], # 1.28 is a good number
                     'gc_high_ratio'    : [0.9],
@@ -40,6 +40,7 @@ def wearleveling_bench():
                     'segment_bytes'    : [lbabytes],
                     'snapshot_interval': [1*SEC],
                     'write_gc_log'     : [False],
+                    'stripe_size'      : [64],
 
                     'chunk_size'       : [512*KB],
                     'traffic_size'     : [1024*MB],
@@ -49,7 +50,15 @@ def wearleveling_bench():
                     'skew_factor'      : [10],
                     'zipf_alpha'       : [1],
                     })
+            self.check_config(para_dict)
+
             self.parameter_combs = ParameterCombinations(para_dict)
+
+        def check_config(self, para_dict):
+            if 'nkftl2' in para_dict['ftl']:
+                for size in para_dict['stripe_size']:
+                    for n_pages_per_block in para_dict['n_pages_per_block']:
+                        assert size >= n_pages_per_block
 
         def __iter__(self):
             return iter(self.parameter_combs)
