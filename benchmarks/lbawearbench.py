@@ -30,20 +30,20 @@ def wearleveling_bench():
             lbabytes = 128*MB
             para_dict = get_shared_para_dict(expname, lbabytes)
             para_dict.update( {
-                    'ftl'              : ['nkftl2'],
+                    'ftl'              : ['dftldes'],
                     'enable_simulation': [True],
                     'over_provisioning': [1.5], # 1.28 is a good number
                     'gc_high_ratio'    : [0.9],
                     'gc_low_ratio'     : [0.8],
                     'not_check_gc_setting': [False],
-                    'cache_mapped_data_bytes' :[int(0.1*lbabytes)],
+                    'cache_mapped_data_bytes' :[int(0.2*lbabytes)],
                     'segment_bytes'    : [lbabytes],
                     'snapshot_interval': [1*SEC],
                     'write_gc_log'     : [False],
-                    'stripe_size'      : [64],
+                    'stripe_size'      : [1],
 
-                    'chunk_size'       : [512*KB],
-                    'traffic_size'     : [1024*MB],
+                    'chunk_size'       : [64*KB],
+                    'traffic_size'     : [10*1024*MB],
                     'space_size'       : [lbabytes],
 
                     'access_distribution' : ['uniform', 'zipf', 'hotcold'],
