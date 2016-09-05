@@ -29,7 +29,9 @@ def wearleveling_bench():
             expname = utils.get_expname()
             lbabytes = 128*MB
             para_dict = get_shared_para_dict(expname, lbabytes)
-            para_dict.update( {
+
+            # for DFTL
+            dftl_update = {
                     'ftl'              : ['dftldes'],
                     'enable_simulation': [True],
                     'over_provisioning': [1.5], # 1.28 is a good number
@@ -46,10 +48,37 @@ def wearleveling_bench():
                     'traffic_size'     : [10*1024*MB],
                     'space_size'       : [int(lbabytes / 2)],
 
-                    'access_distribution' : ['uniform', 'zipf', 'hotcold'],
+                    'access_distribution' : ['uniform'],
                     'skew_factor'      : [10],
                     'zipf_alpha'       : [1],
-                    })
+                    }
+
+            # for NKFTL2
+            nkftl_update = {
+                    'ftl'              : ['nkftl2'],
+                    'enable_simulation': [True],
+                    'over_provisioning': [1.5], # 1.28 is a good number
+                    'gc_high_ratio'    : [0.9],
+                    'gc_low_ratio'     : [0.8],
+                    'not_check_gc_setting': [False],
+                    'cache_mapped_data_bytes' :[int(0.2*lbabytes)],
+                    'segment_bytes'    : [lbabytes],
+                    'snapshot_interval': [1*SEC],
+                    'write_gc_log'     : [False],
+                    'stripe_size'      : [64],
+
+                    'chunk_size'       : [64*KB],
+                    'traffic_size'     : [10*1024*MB],
+                    'space_size'       : [int(lbabytes / 2)],
+
+                    'access_distribution' : ['uniform'],
+                    'skew_factor'      : [10],
+                    'zipf_alpha'       : [1],
+                    }
+
+            para_dict.update( dftl_update )
+            # para_dict.update( nkftl_update )
+
             self.check_config(para_dict)
 
             self.parameter_combs = ParameterCombinations(para_dict)
