@@ -526,10 +526,14 @@ def varmailbench_for_alignment():
             self.block_sizes = [128*KB, 1*MB]
             para_dict.update( {
                     'ftl'               : ['nkftl2'],
-                    'filesystem'        : ['ext4', 'f2fs'],
+                    'filesystem'        : ['f2fs'],
+                    'f2fs_ipu_policy'   : [F2FS_IPU_FSYNC],
+                    'f2fs_min_fsync_blocks': [0],
+
                     'n_pages_per_block' : [None],
                     'stripe_size'       : [None],
                     'segment_bytes'     : [None],
+
                     'max_log_blocks_ratio': [100],
                     'over_provisioning' : [16], # 1.28 is a good number
 
@@ -544,7 +548,7 @@ def varmailbench_for_alignment():
 
     def main():
         for para in ParaDict():
-            pprint.pprint(para)
+            print para
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = LocalExperimenter( Parameters(**para) )
             obj.main()
