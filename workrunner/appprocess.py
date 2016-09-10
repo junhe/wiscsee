@@ -1,8 +1,13 @@
 import subprocess
 import shlex
 import os
+import time
+import random
 
 from utilities import utils
+
+import prepare4pyreuse
+from pyreuse.sysutils.ftrace import *
 
 
 class AppBase(object):
@@ -155,6 +160,68 @@ class VarmailProc(AppBase):
         raise NotImplementedError('this sometimes not work')
         # utils.shcmd('pkill filebench')
         # del self.p
+
+
+class F2FSTester(AppBase):
+    def __init__(self, dirpath):
+        self.dirpath = dirpath
+
+    def run(self):
+        utils.prepare_dir(self.dirpath)
+
+        time.sleep(2)
+
+        fileids = range(8000)
+
+        for fileid in fileids:
+            self.append_file(fileid, sync=False)
+
+        live_set = set(fileids)
+        dead_set = set()
+        for i in range(1000):
+            # delete one
+            to_del = random.choice(list(live_set))
+            self.delete_file(to_del)
+            live_set.remove(to_del)
+            dead_set.add(to_del)
+
+            # append one
+            to_append = random.choice(list(live_set))
+            self.append_file(to_append)
+
+    def stat_file(self, fileid):
+        filename = 'f'+str(fileid)
+        path = os.path.join(self.dirpath, filename)
+
+        try:
+            os.stat(path)
+        except OSError:
+            pass
+
+    def delete_file(self, fileid):
+        filename = 'f'+str(fileid)
+        path = os.path.join(self.dirpath, filename)
+
+        os.remove(path)
+
+    def append_file(self, fileid, sync=True):
+        filename = 'f'+str(fileid)
+        path = os.path.join(self.dirpath, filename)
+
+        nbytes = random.randint(4096, 4096*8)
+        with open(path, 'a') as f:
+            f.write('a'*nbytes)
+            if sync:
+                os.fsync(f)
+
+    def wait(self):
+        pass
+
+    def terminate(self):
+        pass
+
+
+
 
 
 
