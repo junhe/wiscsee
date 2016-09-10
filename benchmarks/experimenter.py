@@ -83,6 +83,8 @@ class Experimenter(object):
             disable_ext4_journal(self.conf)
 
         self.conf['f2fs_gc_after_workload'] = self.para.f2fs_gc_after_workload
+        self.conf['f2fs']['sysfs']['ipu_policy'] = self.para.f2fs_ipu_policy
+        self.conf['f2fs']['sysfs']['min_fsync_blocks'] = self.para.f2fs_min_fsync_blocks
 
     def setup_flash(self):
         self.conf['SSDFramework']['ncq_depth'] = self.para.ssd_ncq_depth
@@ -203,6 +205,8 @@ def get_shared_para_dict(expname, lbabytes):
             'not_check_gc_setting': [True],
             'snapshot_interval': [0.1*SEC],
             'write_gc_log'     : [True],
+            'f2fs_ipu_policy'  : [F2FS_IPU_FSYNC],
+            'f2fs_min_fsync_blocks':[8],
             }
     return para_dict
 
