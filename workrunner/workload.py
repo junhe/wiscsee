@@ -625,6 +625,9 @@ class AppMix(Workload):
         elif appconf['name'] == 'Varmail':
             proc = VarmailProc(appdir, appconf['seconds'], appconf['nfiles'])
 
+        elif appconf['name'] == 'F2FStest':
+            proc = F2FSTester(appdir)
+
         else:
             print appconf['name']
             raise NotImplementedError()
