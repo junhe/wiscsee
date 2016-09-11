@@ -12,6 +12,8 @@ class Experimenter(object):
             self.conf = ssdbox.nkftl2.Config()
         elif para.ftl == 'dftldes':
             self.conf = ssdbox.dftldes.Config()
+        elif para.ftl == 'dftlext':
+            self.conf = ssdbox.dftlext.Config()
         else:
             print para.ftl
             raise NotImplementedError()
@@ -98,8 +100,10 @@ class Experimenter(object):
         self.conf['flash_config']['n_channels_per_dev'] = 16
 
         self.conf['do_not_check_gc_setting'] = self.para.not_check_gc_setting
-        self.conf.GC_high_threshold_ratio = self.para.gc_high_ratio
-        self.conf.GC_low_threshold_ratio = self.para.gc_low_ratio
+
+        if self.para.ftl != 'dftlext':
+            self.conf.GC_high_threshold_ratio = self.para.gc_high_ratio
+            self.conf.GC_low_threshold_ratio = self.para.gc_low_ratio
 
     def setup_ftl(self):
         self.conf['enable_blktrace'] = self.para.enable_blktrace
@@ -132,6 +136,11 @@ class Experimenter(object):
             self.conf['snapshot_erasure_count_dist'] = True
             self.conf['do_gc_after_workload'] = True
 
+        elif self.para.ftl == 'dftlext':
+            self.conf['simulator_class'] = 'SimulatorNonDESe2e'
+            self.conf['ftl_type'] = 'dftlext'
+            self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
+
         else:
             raise NotImplementedError()
 
@@ -146,6 +155,9 @@ class Experimenter(object):
         elif self.conf['ftl_type'] == 'nkftl2':
             assert isinstance(self.conf, ssdbox.nkftl2.Config)
             assert self.conf['simulator_class'] == 'SimulatorDESNew'
+        elif self.conf['ftl_type'] == 'dftlext':
+            assert isinstance(self.conf, ssdbox.dftlext.Config)
+            assert self.conf['simulator_class'] == 'SimulatorNonDESe2e'
         else:
             RuntimeError("ftl type may not be supported here")
 

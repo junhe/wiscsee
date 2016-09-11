@@ -203,6 +203,7 @@ class Config(config.ConfigNCQFTL):
         local_itmes = {
             # number of bytes per entry in mapping_on_flash
             "translation_page_entry_bytes": 4, # 32 bits
+            "cache_entry_bytes": 8, # 4 bytes for lpn, 4 bytes for ppn
             "GC_threshold_ratio": 0.95,
             "GC_low_threshold_ratio": 0.9,
             "over_provisioning": 1.28,
@@ -222,6 +223,24 @@ class Config(config.ConfigNCQFTL):
     def mapping_cache_bytes(self, value):
         self['mapping_cache_bytes'] = value
 
+    @property
+    def n_cache_entries(self):
+        return self.mapping_cache_bytes / self['cache_entry_bytes']
+
+    @n_cache_entries.setter
+    def n_cache_entries(self, value):
+        self.mapping_cache_bytes = value * self['cache_entry_bytes']
+
+    @property
+    def cache_mapped_data_bytes(self):
+        return self.n_cache_entries * self.page_size
+
+    @cache_mapped_data_bytes.setter
+    def cache_mapped_data_bytes(self, data_bytes):
+        self.n_cache_entries = data_bytes / self.page_size
+        if self.n_cache_entries % self.n_mapping_entries_per_page != 0:
+            print "WARNING: size of mapping cache is not aligned with "\
+                "translation page size."
     @property
     def translation_page_entry_bytes(self):
         return self['translation_page_entry_bytes']
