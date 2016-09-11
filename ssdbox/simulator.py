@@ -239,13 +239,15 @@ class SimulatorNonDES(Simulator):
             self.ftl.disable_recording()
         elif event.operation == OP_WORKLOADSTART:
             self.ftl.pre_workload()
-        elif event.operation in ['finish', OP_BARRIER, OP_REC_TIMESTAMP, OP_CLEAN]:
+        elif event.operation in ['finish', OP_BARRIER, OP_REC_TIMESTAMP, OP_CLEAN,
+                OP_NOOP]:
             # ignore this
             pass
         else:
-            print event
-            raise RuntimeError("operation '{}' is not supported".format(
-                event.operation))
+            pass
+            # print event
+            # raise RuntimeError("operation '{}' is not supported".format(
+                # event.operation))
 
 
 class SimulatorNonDESSpeed(SimulatorNonDES):

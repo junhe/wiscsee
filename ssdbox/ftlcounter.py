@@ -79,6 +79,18 @@ class Config(config.ConfigNCQFTL):
     def GC_low_threshold_ratio(self):
         return self['GC_low_threshold_ratio']
 
+    def sec_ext_to_page_ext(self, sector, count):
+        """
+        The sector extent has to be aligned with page
+        return page_start, page_count
+        """
+        page = sector / self.n_secs_per_page
+        page_end = (sector + count) / self.n_secs_per_page
+        page_count = page_end - page
+        if (sector + count) % self.n_secs_per_page != 0:
+            page_count += 1
+        return page, page_count
+
 
 class Ftl(ftlbuilder.FtlBuilder):
     """
