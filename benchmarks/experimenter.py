@@ -137,7 +137,7 @@ class Experimenter(object):
             self.conf['do_gc_after_workload'] = True
 
         elif self.para.ftl == 'dftlext':
-            self.conf['simulator_class'] = 'SimulatorNonDESe2e'
+            self.conf['simulator_class'] = 'SimulatorNonDESSpeed'
             self.conf['ftl_type'] = 'dftlext'
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
 
@@ -157,7 +157,7 @@ class Experimenter(object):
             assert self.conf['simulator_class'] == 'SimulatorDESNew'
         elif self.conf['ftl_type'] == 'dftlext':
             assert isinstance(self.conf, ssdbox.dftlext.Config)
-            assert self.conf['simulator_class'] == 'SimulatorNonDESe2e'
+            assert self.conf['simulator_class'] == 'SimulatorNonDESSpeed'
         else:
             RuntimeError("ftl type may not be supported here")
 
