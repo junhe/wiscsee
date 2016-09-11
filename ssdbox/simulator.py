@@ -18,6 +18,7 @@ import nkftl2
 import recorder
 import hostevent
 import dftldes
+import ftlcounter
 
 from commons import *
 from ftlsim_commons import *
@@ -202,6 +203,8 @@ class SimulatorNonDES(Simulator):
             ftl_class = dftlext.Dftl
         elif self.conf['ftl_type'] == 'nkftl2':
             ftl_class = nkftl2.Ftl
+        elif self.conf['ftl_type'] == 'ftlcounter':
+            ftl_class = ftlcounter.Ftl
         else:
             raise ValueError("ftl_type {} is not defined"\
                 .format(self.conf['ftl_type']))

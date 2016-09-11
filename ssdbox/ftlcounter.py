@@ -80,13 +80,13 @@ class Config(config.ConfigNCQFTL):
         return self['GC_low_threshold_ratio']
 
 
-class Dftl(ftlbuilder.FtlBuilder):
+class Ftl(ftlbuilder.FtlBuilder):
     """
     The implementation literally follows DFtl paper.
     This class is a coordinator of other coordinators and data structures
     """
     def __init__(self, confobj, recorderobj, flashobj):
-        super(Dftl, self).__init__(confobj, recorderobj, flashobj)
+        super(Ftl, self).__init__(confobj, recorderobj, flashobj)
 
         if not isinstance(confobj, Config):
             raise TypeError("confobj is not Config. it is {}".

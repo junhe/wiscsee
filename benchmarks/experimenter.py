@@ -14,6 +14,8 @@ class Experimenter(object):
             self.conf = ssdbox.dftldes.Config()
         elif para.ftl == 'dftlext':
             self.conf = ssdbox.dftlext.Config()
+        elif para.ftl == 'ftlcounter':
+            self.conf = ssdbox.ftlcounter.Config()
         else:
             print para.ftl
             raise NotImplementedError()
@@ -101,7 +103,7 @@ class Experimenter(object):
 
         self.conf['do_not_check_gc_setting'] = self.para.not_check_gc_setting
 
-        if self.para.ftl != 'dftlext':
+        if self.para.ftl not in ('dftlext', 'ftlcounter'):
             self.conf.GC_high_threshold_ratio = self.para.gc_high_ratio
             self.conf.GC_low_threshold_ratio = self.para.gc_low_ratio
 
@@ -141,6 +143,11 @@ class Experimenter(object):
             self.conf['ftl_type'] = 'dftlext'
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
 
+        elif self.para.ftl == 'ftlcounter':
+            self.conf['simulator_class'] = 'SimulatorNonDESSpeed'
+            self.conf['ftl_type'] = 'ftlcounter'
+            self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
+
         else:
             raise NotImplementedError()
 
@@ -157,6 +164,9 @@ class Experimenter(object):
             assert self.conf['simulator_class'] == 'SimulatorDESNew'
         elif self.conf['ftl_type'] == 'dftlext':
             assert isinstance(self.conf, ssdbox.dftlext.Config)
+            assert self.conf['simulator_class'] == 'SimulatorNonDESSpeed'
+        elif self.conf['ftl_type'] == 'ftlcounter':
+            assert isinstance(self.conf, ssdbox.ftlcounter.Config)
             assert self.conf['simulator_class'] == 'SimulatorNonDESSpeed'
         else:
             RuntimeError("ftl type may not be supported here")
