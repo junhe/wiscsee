@@ -107,14 +107,27 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.n_sec_per_page = self.conf.page_size \
                 / self.conf['sector_size']
 
+        self.read_count = Counter()
+        self.write_count = Counter()
+        self.discard_count = Counter()
+
     def sec_read(self, sector, count):
         lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
+
+        for lpn in range(lpn_start, lpn_start + lpn_count):
+            self.read_count[lpn] += 1
 
     def sec_write(self, sector, count, data = None):
         lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
 
+        for lpn in range(lpn_start, lpn_start + lpn_count):
+            self.write_count[lpn] += 1
+
     def sec_discard(self, sector, count):
         lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
+
+        for lpn in range(lpn_start, lpn_start + lpn_count):
+            self.discard_count[lpn] += 1
 
     def pre_workload(self):
         pass
@@ -123,11 +136,35 @@ class Ftl(ftlbuilder.FtlBuilder):
         """
         This function is called after the simulation.
         """
-        pass
+        # print self.read_count
+        # print self.write_count
+        # print self.discard_count
+        self.dump_counts()
+
+    def dump_counts(self):
+        lpns = list(set(self.read_count.keys()
+            + self.write_count.keys()
+            + self.discard_count.keys()))
+        lpns = sorted(lpns)
+
+        counters = [self.read_count, self.write_count, self.discard_count]
+
+        table = []
+        for lpn in lpns:
+            counts = [counter[lpn] for counter in counters]
+            row = [lpn] + counts
+            row = [str(x) for x in row]
+            row = ' '.join(row)
+            table.append(row)
+
+        count_path = os.path.join(self.conf['result_dir'], 'lpn.count')
+        with open(count_path, 'w') as f:
+            f.write('lpn read write discard\n')
+            for row in table:
+                f.write(row)
+                f.write('\n')
 
     def get_type(self):
-        return "dftlext"
-
-
+        return "ftlcounter"
 
 
