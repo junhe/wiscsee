@@ -650,34 +650,31 @@ def appmixbench_for_lpn_count():
                     'workload_class' : [ 'AppMix' ],
                     'dump_ext4_after_workload': [False],
                     'run_seconds'    : [None],
+                    'filesystem'     : ['ext4', 'f2fs', 'xfs'],
                     'appconfs': [
                             [ # list of app you want to run
-
-                            # ---- TEMPLATE ------
-                            # {'name' : 'LevelDB',
-                             # 'benchmarks': 'overwrite',
-                             # 'num': 1*1000000,
-                             # 'max_key': 1*100000,
-                             # 'max_log': -1},
-
-                            # {'name': 'Sqlite',
-                             # 'pattern': 'random',
-                             # 'n_insertions': 12000,
-                             # 'commit_period': 10,
-                             # 'max_key': 20
-                             #},
-
-                            # {'name': 'Varmail',
-                            #  'nfiles': 8000
-                             # 'seconds': 2},
-                             # -------------
-
-                            {
-                                "name": "Varmail",
-                                "nfiles": 2000,
-                                "seconds": 6,
-                            },
-                            ]
+                                {'name' : 'LevelDB',
+                                 'benchmarks': 'overwrite',
+                                 'num': 60*MILLION,
+                                 'max_key': 6*MILLION,
+                                 'max_log': -1
+                                },
+                            ],
+                            [
+                                {
+                                 "name": "Varmail",
+                                 "nfiles": 8000,
+                                 "seconds": 60,
+                                },
+                            ],
+                            [
+                               {'name': 'Sqlite',
+                                'pattern': 'random',
+                                'n_insertions': 12000,
+                                'max_key': 12000,
+                                'commit_period': 10,
+                               },
+                            ],
                         ],
                     })
             self.parameter_combs = ParameterCombinations(para_dict)
