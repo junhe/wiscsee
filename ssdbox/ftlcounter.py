@@ -164,6 +164,10 @@ class Ftl(ftlbuilder.FtlBuilder):
                 f.write(row)
                 f.write('\n')
 
+        with utils.cd(self.conf['result_dir']):
+            utils.shcmd('rm blkparse*', ignore_error=True)
+
+
     def get_type(self):
         return "ftlcounter"
 
