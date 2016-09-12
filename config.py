@@ -242,6 +242,7 @@ class Config(dict):
             "dev_padding"      : 8*MB,
 
             "enable_blktrace"       : False,
+            "dump_ext4_after_workload"  : True,
 
             "event_file_column_names"    : ['pid', 'operation', 'offset', 'size',
                     'timestamp', 'pre_wait_time', 'sync'],

@@ -247,7 +247,7 @@ class WorkloadRunner(object):
             utils.drop_caches()
             utils.invoke_f2fs_gc(self.conf['fs_mount_point'], 1, -1)
 
-        if self.conf['filesystem'] == 'ext4':
+        if self.conf['filesystem'] == 'ext4' and self.conf['dump_ext4_after_workload'] is True:
             utils.shcmd('sync')
             self.dumpe2fs()
             self.dump_extents()

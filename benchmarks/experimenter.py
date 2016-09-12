@@ -37,6 +37,8 @@ class Experimenter(object):
         # filesystem
         self.conf['filesystem'] = self.para.filesystem
 
+        self.conf['dump_ext4_after_workload'] = self.para.dump_ext4_after_workload
+
         if self.para.filesystem == 'ext4-nj':
             self.conf['filesystem'] = 'ext4'
 
@@ -229,6 +231,7 @@ def get_shared_para_dict(expname, lbabytes):
             'write_gc_log'     : [True],
             'f2fs_ipu_policy'  : [F2FS_IPU_FSYNC],
             'f2fs_min_fsync_blocks':[8],
+            'dump_ext4_after_workload': [True],
             }
     return para_dict
 
