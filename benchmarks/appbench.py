@@ -627,6 +627,76 @@ def appmixbench():
 
     main()
 
+def appmixbench_for_lpn_count():
+    class LocalExperimenter(Experimenter, StatsMixin):
+        def setup_workload(self):
+            self.conf['workload_class'] = self.para.workload_class
+            self.conf['workload_config'] = {
+                    'appconfs': self.para.appconfs,
+                    'run_seconds': self.para.run_seconds,
+                    }
+            self.conf['workload_conf_key'] = 'workload_config'
+
+        def after_running(self):
+            pass
+
+    class ParaDict(ParaDictIterMixin):
+        def __init__(self):
+            expname = utils.get_expname()
+            lbabytes = 1*GB
+            para_dict = get_shared_para_dict(expname, lbabytes)
+            para_dict.update( {
+                    'ftl' : ['ftlcounter'],
+                    'workload_class' : [ 'AppMix' ],
+                    'dump_ext4_after_workload': [False],
+                    'run_seconds'    : [None],
+                    'appconfs': [
+                            [ # list of app you want to run
+
+                            # ---- TEMPLATE ------
+                            # {'name' : 'LevelDB',
+                             # 'benchmarks': 'overwrite',
+                             # 'num': 1*1000000,
+                             # 'max_key': 1*100000,
+                             # 'max_log': -1},
+
+                            # {'name': 'Sqlite',
+                             # 'pattern': 'random',
+                             # 'n_insertions': 12000,
+                             # 'commit_period': 10,
+                             # 'max_key': 20
+                             #},
+
+                            # {'name': 'Varmail',
+                            #  'nfiles': 8000
+                             # 'seconds': 2},
+                             # -------------
+
+                            {
+                                "name": "Varmail",
+                                "nfiles": 2000,
+                                "seconds": 6,
+                            },
+                            ]
+                        ],
+                    })
+            self.parameter_combs = ParameterCombinations(para_dict)
+
+        def __iter__(self):
+            return iter(self.parameter_combs)
+            # return iter(self.iterate_blocksize_segsize_fs())
+
+    def main():
+        for para in ParaDict():
+            print para
+            Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+            obj = LocalExperimenter( Parameters(**para) )
+            obj.main()
+
+    main()
+
+
+
 
 def appmixbench_for_wearleveling():
     class LocalExperimenter(Experimenter, StatsMixin):

@@ -49,6 +49,9 @@ sqlite:
 appmix:
 	sudo python -m benchmarks.appbench -t 'appmixbench()'
 
+appmix4lpncount:
+	sudo python -m benchmarks.appbench -t 'appmixbench_for_lpn_count()'
+
 appmix4wearleveling:
 	sudo python -m benchmarks.appbench -t 'appmixbench_for_wearleveling()'
 
