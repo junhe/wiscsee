@@ -115,6 +115,11 @@ class Experimenter(object):
         self.conf['stripe_size'] = self.para.stripe_size
         self.conf['segment_bytes'] = self.para.segment_bytes
         self.conf['snapshot_interval'] = self.para.snapshot_interval
+        self.conf['do_wear_leveling'] = self.para.do_wear_leveling
+        self.conf['wear_leveling_check_interval'] = \
+                self.para.wear_leveling_check_interval
+        self.conf['wear_leveling_factor'] = self.para.wear_leveling_factor
+        self.conf['wear_leveling_diff'] = self.para.wear_leveling_diff
 
         if self.para.ftl == 'dftldes':
             self.conf['simulator_class'] = 'SimulatorDESNew'
@@ -124,8 +129,6 @@ class Experimenter(object):
             self.conf['do_gc_after_workload'] = False
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
             self.conf['write_gc_log'] = self.para.write_gc_log
-            self.conf['wear_leveling_check_interval'] = \
-                    self.para.wear_leveling_check_interval
 
         elif self.para.ftl == 'nkftl2':
             self.conf['simulator_class'] = 'SimulatorDESNew'
@@ -141,6 +144,9 @@ class Experimenter(object):
             self.conf['snapshot_valid_ratios'] = False
             self.conf['snapshot_erasure_count_dist'] = True
             self.conf['do_gc_after_workload'] = True
+
+            # Force wear leveling off since it is not implemented in nkftl
+            self.conf['do_wear_leveling'] = False
 
         elif self.para.ftl == 'dftlext':
             self.conf['simulator_class'] = 'SimulatorNonDESSpeed'
@@ -236,6 +242,8 @@ def get_shared_para_dict(expname, lbabytes):
             'dump_ext4_after_workload': [True],
             'wear_leveling_check_interval': [10*SEC],
             'do_wear_leveling' : [False],
+            'wear_leveling_factor': [2],
+            'wear_leveling_diff': [10],
             }
     return para_dict
 

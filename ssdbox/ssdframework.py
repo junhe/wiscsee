@@ -242,9 +242,16 @@ class Ssd(SsdBase):
             yield self.env.process(self.ftl.clean(forced))
 
     def _wear_leveling_process(self):
+        print 'wear leveling process start'
         while self._do_wear_leveling is True:
             yield self.env.timeout(self._wear_leveling_check_interval)
-            yield self.env.process(self.ftl.level_wear())
+            if self.ftl.is_wear_leveling_needed() is True:
+                print 'start wear leveling...'
+                yield self.env.process(self.ftl.level_wear())
+            else:
+                print 'skip wear leveling'
+        print 'wear leveling process ends'
+
 
     def _valid_ratio_snapshot_process(self):
         while self._snapshot_valid_ratios is True:

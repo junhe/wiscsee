@@ -43,6 +43,10 @@ def wearleveling_bench():
                     'snapshot_interval': [1*SEC],
                     'write_gc_log'     : [False],
                     'stripe_size'      : [1],
+                    'do_wear_leveling' : [True],
+                    'wear_leveling_check_interval': [1*SEC],
+                    'wear_leveling_factor': [1],
+                    'wear_leveling_diff' : [0.1],
 
                     'chunk_size'       : [64*KB],
                     'traffic_size'     : [200*MB],

@@ -19,7 +19,10 @@ class BlockPool(object):
                 n_channels=self.n_channels,
                 n_blocks_per_channel=self.conf.n_blocks_per_channel,
                 n_pages_per_block=self.conf.n_pages_per_block,
-                tags=[TDATA, TTRANS])
+                tags=[TDATA, TTRANS],
+                leveling_factor = self.conf['wear_leveling_factor'],
+                leveling_diff = self.conf['wear_leveling_diff']
+                )
 
     @property
     def freeblocks(self):
@@ -42,6 +45,9 @@ class BlockPool(object):
         blocks2 = self.pool.get_blocks_of_tag(tag=TTRANS)
 
         return blocks1 + blocks2
+
+    def need_wear_leveling(self):
+        return self.pool.need_wear_leveling()
 
     def get_erasure_count(self):
         return self.pool.get_erasure_count()

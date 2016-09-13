@@ -74,16 +74,21 @@ class MultiChannelBlockPoolBase(object):
 
         top_total, top_count = self.get_top_or_bottom_erasure_total(
                 'top', nblocks)
-        top_average = top_total / top_count
+        top_average = float(top_total) / top_count
+        print 'top_total', top_total
         bottom_total, bottom_count = self.get_top_or_bottom_erasure_total(
                 'bottom', nblocks)
-        bottom_average = bottom_total / bottom_count
+        bottom_average = float(bottom_total) / bottom_count
+        print 'bottom_total', bottom_total
 
         diff = top_average - bottom_average
         if bottom_total == 0:
             factor = float('inf')
         else:
             factor = float(top_total) / bottom_total
+
+        print factor, self.leveling_factor
+        print diff, self.leveling_diff
 
         if factor > self.leveling_factor and  diff > self.leveling_diff:
             return True
