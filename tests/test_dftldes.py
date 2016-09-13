@@ -93,6 +93,15 @@ def create_victimblocks():
 
     return vbs
 
+def create_wearlevelingvictimblocks():
+    conf = create_config()
+    block_pool = create_blockpool(conf)
+    oob = create_oob(conf)
+
+    vbs = ssdbox.dftldes.WearLevelingVictimBlocks(conf, block_pool, oob, 5)
+
+    return vbs
+
 def create_obj_set(conf):
     rec = create_recorder(conf)
     oob = create_oob(conf)
@@ -1520,6 +1529,42 @@ class TestTranslationWithWriteNotAligned(unittest.TestCase):
         self.assertEqual(rec.get_count_me('translation', 'overwrite-in-cache'), 4+1+1)
         self.assertEqual(rec.get_count_me('translation', 'insert-to-free'), 0+0+0)
 
+
+class TestWearLevelingVictimBlocks(unittest.TestCase):
+    def test_entry(self):
+        ssdbox.dftldes.WearLevelingVictimBlocks
+
+    def test_init(self):
+        create_wearlevelingvictimblocks()
+
+    def test_empty(self):
+        vbs = create_wearlevelingvictimblocks()
+        self.assertEqual(len(list(vbs.iterator_verbose())), 0)
+
+    def test_some_used(self):
+        vbs = create_wearlevelingvictimblocks()
+        vbs.n_victims = 2
+        blockpool = vbs._block_pool
+
+        # use 3
+        block1 = blockpool.pop_a_free_block_to_data()
+        block2 = blockpool.pop_a_free_block_to_data()
+        block3 = blockpool.pop_a_free_block_to_data()
+        blockpool.move_used_data_block_to_free(block1)
+        blockpool.move_used_data_block_to_free(block2)
+        blockpool.move_used_data_block_to_free(block3)
+
+        # victim blocks are used
+        block1 = blockpool.pop_a_free_block_to_data()
+        block2 = blockpool.pop_a_free_block_to_data()
+        block3 = blockpool.pop_a_free_block_to_data()
+
+        self.assertEqual(len(list(vbs.iterator_verbose())), 2)
+
+        vbs.n_victims = 3
+        victims = list(vbs.iterator_verbose())
+        vblocks = [ blocknum for _, blocknum, _ in victims ]
+        self.assertListEqual(sorted(vblocks), sorted([block1, block2, block3]))
 
 
 class TestVictimBlocks(unittest.TestCase):

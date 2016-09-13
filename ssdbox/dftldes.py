@@ -1254,6 +1254,46 @@ class GlobalTranslationDirectory(object):
     def __repr__(self):
         return repr(self.mapping)
 
+class WearLevelingVictimBlocks(object):
+    TYPE_DATA = 'TYPE_DATA'
+    TYPE_TRANS = 'TYPE_TRANS'
+    def __init__(self, conf, block_pool, oob, n_victims):
+        self._conf = conf
+        self._block_pool = block_pool
+        self._oob = oob
+        self.n_victims = n_victims
+
+    def iterator_verbose(self):
+        """
+        Pick the 10% least erased USED Blocks
+        """
+        erasure_cnt = self._block_pool.get_erasure_count()
+        least_used_blocks = reversed(erasure_cnt.most_common())
+
+        used_data_blocks = self._block_pool.data_usedblocks
+        used_trans_blocks = self._block_pool.trans_usedblocks
+
+        self._block_pool.remove_full_cur_blocks()
+        cur_blocks = self._block_pool.current_blocks()
+
+        # we need used data or trans block
+        victim_cnt = 0
+        for blocknum, count in least_used_blocks:
+            if blocknum in cur_blocks:
+                # skip current blocks
+                print 'skip'
+                continue
+
+            valid_ratio = None # we don't care
+            if blocknum in used_data_blocks:
+                yield valid_ratio, blocknum, self.TYPE_DATA
+                victim_cnt += 1
+            elif blocknum in used_trans_blocks:
+                yield valid_ratio, blocknum, self.TYPE_TRANS
+                victim_cnt += 1
+
+            if victim_cnt >= self.n_victims:
+                break
 
 
 class VictimBlocks(object):
