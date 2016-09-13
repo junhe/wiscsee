@@ -1,5 +1,8 @@
 import unittest
 from ssdbox.devblockpool import *
+from collections import Counter
+
+from utilities import utils
 
 
 TDATA = 'TDATA'
@@ -354,6 +357,100 @@ class TestGettingDistribution(unittest.TestCase):
         dist = pool.get_erasure_count_dist()
         self.assertEqual(dist[0], 64*8-5)
         self.assertEqual(dist[1], 5)
+
+
+class TestWearLevelingThreshold(unittest.TestCase):
+    def test_calulator(self):
+        c = Counter({1:3, 10: 3, 5: 3})
+        self.assertListEqual(
+            list(utils.top_or_bottom_total(c, 3, 'top')),
+            [30, 3])
+        self.assertListEqual(
+            list(utils.top_or_bottom_total(c, 3, 'bottom')),
+            [3, 3])
+
+    def test_calulator_with_0(self):
+        c = Counter({0:3, 1:3, 5:3, 10:3})
+        self.assertListEqual(
+            list(utils.top_or_bottom_total(c, 3, 'bottom')),
+            [0, 3])
+
+    def test_bottom_10_average_blockpool(self):
+        pool = MultiChannelBlockPool(
+                n_channels=8,
+                n_blocks_per_channel=64,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        pool._channel_pool[1]._erasure_cnt[0] = 8
+        pool._channel_pool[1]._erasure_cnt[1] = 7
+
+        erase_cnt, block_cnt = pool.get_top_or_bottom_erasure_total(choice='top',
+                need_nblocks=2)
+        self.assertEqual(erase_cnt, 15)
+        self.assertEqual(block_cnt, 2)
+
+        erase_cnt, block_cnt = pool.get_top_or_bottom_erasure_total(choice='bottom',
+                need_nblocks=2)
+        self.assertEqual(erase_cnt, 0)
+        self.assertEqual(block_cnt, 2)
+
+    def test_wearleveling_trigger(self):
+        pool = MultiChannelBlockPool(
+                n_channels=1,
+                n_blocks_per_channel=100,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        pool.leveling_factor = 2
+        pool.leveling_diff = 10
+
+        for i in range(10, 20):
+            pool._channel_pool[0]._erasure_cnt[i] = 11
+
+        self.assertEqual(pool.need_wear_leveling(), True)
+
+    def test_wearleveling_trigger2(self):
+        pool = MultiChannelBlockPool(
+                n_channels=1,
+                n_blocks_per_channel=100,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        pool.leveling_factor = 2
+        pool.leveling_diff = 10
+
+        for i in range(0, 100):
+            pool._channel_pool[0]._erasure_cnt[i] = 1
+
+        for i in range(10, 20):
+            pool._channel_pool[0]._erasure_cnt[i] = 20
+
+        self.assertEqual(pool.need_wear_leveling(), True)
+
+    def test_wearleveling_trigger3(self):
+        pool = MultiChannelBlockPool(
+                n_channels=1,
+                n_blocks_per_channel=100,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        pool.leveling_factor = 2
+        pool.leveling_diff = 10
+
+        for i in range(0, 100):
+            pool._channel_pool[0]._erasure_cnt[i] = 18
+
+        for i in range(10, 20):
+            pool._channel_pool[0]._erasure_cnt[i] = 20
+
+        self.assertEqual(pool.need_wear_leveling(), False)
+
+    def test_get_bottom_10_used_blocks(self):
+        pass
+
+    def test_write_to_most_used_blocks(self):
+        pass
 
 
 

@@ -40,8 +40,11 @@ class TagBlockPool(object):
             self.change_tag(block, src, dst)
             return block
 
-    def get_erasure_count(self, blocknum):
-        return self._erasure_cnt[blocknum]
+    def get_erasure_count(self, blocknum=None):
+        if blocknum is None:
+            return self._erasure_cnt
+        else:
+            return self._erasure_cnt[blocknum]
 
     def get_least_erased_block(self, tag):
         least_to_most = reversed(self._erasure_cnt.most_common())

@@ -1,8 +1,10 @@
 from tagblockpool import *
 from ftlsim_commons import random_channel_id
+from utilities import utils
 
 class MultiChannelBlockPoolBase(object):
-    def __init__(self, n_channels, n_blocks_per_channel, n_pages_per_block, tags):
+    def __init__(self, n_channels, n_blocks_per_channel, n_pages_per_block, tags,
+            leveling_factor=2, leveling_diff=10):
         self.n_channels = n_channels
         self.n_blocks_per_channel = n_blocks_per_channel
         self.n_blocks_per_dev = n_blocks_per_channel * n_channels
@@ -18,6 +20,9 @@ class MultiChannelBlockPoolBase(object):
         # TODO: each tag has its own _next_channel
         self._next_channel = random_channel_id(self.n_channels)
         # self._next_channel = 0
+
+        self.leveling_factor = leveling_factor
+        self.leveling_diff = leveling_diff
 
     def _incr_next_channel(self):
         self._next_channel = (self._next_channel + 1) % self.n_channels
@@ -57,6 +62,33 @@ class MultiChannelBlockPoolBase(object):
             aggregated_dist += dist
 
         return aggregated_dist
+
+    def get_top_or_bottom_erasure_total(self, choice, need_nblocks):
+        dist = self.get_erasure_count_dist()
+        erase_cnt, block_cnt = utils.top_or_bottom_total(dist, need_nblocks, choice)
+
+        return erase_cnt, block_cnt
+
+    def need_wear_leveling(self):
+        nblocks = self.total_blocks * 0.1
+
+        top_total, top_count = self.get_top_or_bottom_erasure_total(
+                'top', nblocks)
+        top_average = top_total / top_count
+        bottom_total, bottom_count = self.get_top_or_bottom_erasure_total(
+                'bottom', nblocks)
+        bottom_average = bottom_total / bottom_count
+
+        diff = top_average - bottom_average
+        if bottom_total == 0:
+            factor = float('inf')
+        else:
+            factor = float(top_total) / bottom_total
+
+        if factor > self.leveling_factor and  diff > self.leveling_diff:
+            return True
+        else:
+            return False
 
     def pick_and_move(self, src, dst):
         "This function will advance self._next_channel"

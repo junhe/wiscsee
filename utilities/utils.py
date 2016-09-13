@@ -321,7 +321,42 @@ def group_to_batches(mylist, cnt_per_chunk):
 
     return chunks
 
+def top_or_bottom_total(counter, need_nblocks, choice):
+    """
+    Get the top x percent used blocks's total erase count
+    counter:
+        {'erase count': '# of block that has such erase count'}
+    Example:
+        c = Counter({1:3, 10: 3, 5: 3})
+        self.assertListEqual(
+            list(top_or_bottom_total(c, 3, 'top')),
+            [30, 3])
+        self.assertListEqual(
+            list(top_or_bottom_total(c, 3, 'bottom')),
+            [3, 3])
+    """
+    if choice == 'bottom':
+        sorted_keys = sorted(counter.keys())
+    elif choice == 'top':
+        sorted_keys = sorted(counter.keys(), reverse=True)
 
+    table = []
+    for k in sorted_keys:
+        v = counter[k]
+        table.append( (k, v) )
 
+    total_blocks = 0
+    total_erase = 0
+    for erase_cnt, n_blocks in table:
+        total_blocks += n_blocks
+        total_erase += erase_cnt * n_blocks
+
+        if total_blocks > need_nblocks:
+            diff = total_blocks - need_nblocks
+            total_blocks = total_blocks - diff
+            total_erase = total_erase - erase_cnt * diff
+            break
+
+    return total_erase, total_blocks
 
 
