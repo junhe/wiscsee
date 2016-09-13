@@ -95,6 +95,28 @@ class TestTagBlockPool(unittest.TestCase):
         least = pool.get_least_or_most_erased_block(TDATA)
         self.assertEqual(least, None)
 
+    def test_most_erased_block(self):
+        pool = TagBlockPool(10, [TDATA, TTRANS])
+
+        # erase 0..8 twice
+        for blocknum in range(9):
+            pool.change_tag(blocknum, TFREE, TDATA)
+            pool.change_tag(blocknum, TDATA, TFREE)
+
+            pool.change_tag(blocknum, TFREE, TDATA)
+            pool.change_tag(blocknum, TDATA, TFREE)
+
+        most = pool.get_least_or_most_erased_block(TFREE, choice='most')
+        self.assertIn(most, range(9))
+
+        most = pool.get_least_or_most_erased_blocks(TFREE,
+                choice='most', nblocks=2)
+        self.assertIn(most[0], range(9))
+        self.assertIn(most[1], range(9))
+
+        least = pool.get_least_or_most_erased_block(TDATA)
+        self.assertEqual(least, None)
+
     def test_greedy_pick(self):
         pool = TagBlockPool(10, [TDATA, TTRANS])
 

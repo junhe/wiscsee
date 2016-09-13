@@ -45,7 +45,7 @@ def wearleveling_bench():
                     'stripe_size'      : [1],
 
                     'chunk_size'       : [64*KB],
-                    'traffic_size'     : [10*1024*MB],
+                    'traffic_size'     : [200*MB],
                     'space_size'       : [int(lbabytes / 2)],
 
                     'access_distribution' : ['uniform'],

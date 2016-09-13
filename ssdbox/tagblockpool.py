@@ -47,6 +47,15 @@ class TagBlockPool(object):
             return self._erasure_cnt[blocknum]
 
     def get_least_or_most_erased_block(self, tag, choice='least'):
+        blocks = self.get_least_or_most_erased_blocks(tag, choice, nblocks=1)
+
+        assert len(blocks) <= 1
+        if len(blocks) == 1:
+            return blocks[0]
+        else:
+            return None
+
+    def get_least_or_most_erased_blocks(self, tag, choice, nblocks):
         if choice == 'least':
             blocks_by_cnt = reversed(self._erasure_cnt.most_common())
         elif choice == 'most':
@@ -57,11 +66,14 @@ class TagBlockPool(object):
         tag_blocks = self.get_blocks_of_tag(tag)
 
         # iterate from least used to most used
+        blocks = []
         for blocknum, count in blocks_by_cnt:
             if blocknum in tag_blocks:
-                return blocknum
+                blocks.append(blocknum)
+                if len(blocks) == nblocks:
+                    break
 
-        return None
+        return blocks
 
     def get_erasure_count_dist(self):
         return Counter(self._erasure_cnt.values())
