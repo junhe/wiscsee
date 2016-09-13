@@ -89,10 +89,10 @@ class TestTagBlockPool(unittest.TestCase):
             pool.change_tag(blocknum, TFREE, TDATA)
             pool.change_tag(blocknum, TDATA, TFREE)
 
-        least = pool.get_least_erased_block(TFREE)
+        least = pool.get_least_or_most_erased_block(TFREE)
         self.assertEqual(least, 9)
 
-        least = pool.get_least_erased_block(TDATA)
+        least = pool.get_least_or_most_erased_block(TDATA)
         self.assertEqual(least, None)
 
     def test_greedy_pick(self):

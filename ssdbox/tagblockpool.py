@@ -29,7 +29,7 @@ class TagBlockPool(object):
         return len(self._tag_subpool[tag])
 
     def pick(self, tag):
-        return self.get_least_erased_block(tag)
+        return self.get_least_or_most_erased_block(tag)
 
     def pick_and_move(self, src, dst):
         block = self.pick(src)
@@ -46,12 +46,18 @@ class TagBlockPool(object):
         else:
             return self._erasure_cnt[blocknum]
 
-    def get_least_erased_block(self, tag):
-        least_to_most = reversed(self._erasure_cnt.most_common())
+    def get_least_or_most_erased_block(self, tag, choice='least'):
+        if choice == 'least':
+            blocks_by_cnt = reversed(self._erasure_cnt.most_common())
+        elif choice == 'most':
+            blocks_by_cnt = self._erasure_cnt.most_common()
+        else:
+            raise NotImplementedError
+
         tag_blocks = self.get_blocks_of_tag(tag)
 
         # iterate from least used to most used
-        for blocknum, count in least_to_most:
+        for blocknum, count in blocks_by_cnt:
             if blocknum in tag_blocks:
                 return blocknum
 
