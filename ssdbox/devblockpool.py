@@ -90,6 +90,34 @@ class MultiChannelBlockPoolBase(object):
         else:
             return False
 
+    def get_least_or_most_erased_blocks(self, tag, choice, nblocks):
+        global_counter = Counter()
+        for pool in self._channel_pool:
+            erasure_cnt = pool.get_erasure_count()
+            for blocknum, erase_cnt in erasure_cnt.items():
+                global_blocknum = self._channel_to_global(
+                    pool.channel_id, blocknum)
+                global_counter[global_blocknum] = erasure_cnt[blocknum]
+
+        if choice == 'least':
+            blocks_by_cnt = reversed(global_counter.most_common())
+        elif choice == 'most':
+            blocks_by_cnt = global_counter.most_common()
+        else:
+            raise NotImplementedError
+
+        tag_blocks = self.get_blocks_of_tag(tag)
+
+        # iterate from least used to most used
+        blocks = []
+        for blocknum, count in blocks_by_cnt:
+            if blocknum in tag_blocks:
+                blocks.append(blocknum)
+                if len(blocks) == nblocks:
+                    break
+
+        return blocks
+
     def pick_and_move(self, src, dst):
         "This function will advance self._next_channel"
         blocknum = self.pick(tag=src)

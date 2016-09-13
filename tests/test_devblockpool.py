@@ -359,7 +359,7 @@ class TestGettingDistribution(unittest.TestCase):
         self.assertEqual(dist[1], 5)
 
 
-class TestWearLevelingThreshold(unittest.TestCase):
+class TestWearLeveling(unittest.TestCase):
     def test_calulator(self):
         c = Counter({1:3, 10: 3, 5: 3})
         self.assertListEqual(
@@ -445,6 +445,22 @@ class TestWearLevelingThreshold(unittest.TestCase):
             pool._channel_pool[0]._erasure_cnt[i] = 20
 
         self.assertEqual(pool.need_wear_leveling(), False)
+
+    def test_least_or_most_erased_blocks(self):
+        pool = MultiChannelBlockPool(
+                n_channels=2,
+                n_blocks_per_channel=10,
+                n_pages_per_block=32,
+                tags=[TDATA, TTRANS])
+
+        # block num 0  ... 9  in channel 0
+        # block num 10 ... 19 in channel 1
+        for i in range(0, 3):
+            pool._channel_pool[1]._erasure_cnt[i] = 18
+
+        blocks = pool.get_least_or_most_erased_blocks(tag=TFREE,
+                choice='most', nblocks=3)
+        self.assertEqual(sorted(blocks), [10, 11, 12])
 
     def test_get_bottom_10_used_blocks(self):
         pass
