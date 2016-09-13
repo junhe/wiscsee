@@ -351,6 +351,9 @@ class Ftl(object):
     def clean(self, forced=True):
         yield self.env.process(self._cleaner.clean())
 
+    def level_wear(self):
+        yield self.env.process(self._cleaner.level_wear())
+
     def snapshot_valid_ratios(self):
         victim_blocks = VictimBlocks(self.conf, self.block_pool, self.oob)
         ratios = victim_blocks.get_valid_ratio_counter_of_used_blocks()
@@ -1445,6 +1448,7 @@ class Cleaner(object):
         """
         Move victim to a new location
         """
+        print 'start wear leveling....'
         victim_blocks = WearLevelingVictimBlocks(self.conf,
                 self.block_pool, self.oob, 0.1 * self.conf.n_blocks_per_dev)
 
