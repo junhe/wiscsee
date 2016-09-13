@@ -34,8 +34,8 @@ class TagBlockPool(object):
     def pick(self, tag, choice=LEAST_ERASED):
         return self.get_least_or_most_erased_block(tag, choice)
 
-    def pick_and_move(self, src, dst):
-        block = self.pick(src)
+    def pick_and_move(self, src, dst, choice=LEAST_ERASED):
+        block = self.pick(src, choice=choice)
 
         if block is None:
             return None

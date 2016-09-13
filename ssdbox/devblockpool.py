@@ -199,7 +199,7 @@ class MultiChannelBlockPool(MultiChannelBlockPoolBase):
         for pool in self._channel_pool:
             pool.remove_full_cur_blocks()
 
-    def next_ppns(self, n, tag, block_index, stripe_size):
+    def next_ppns(self, n, tag, block_index, stripe_size, choice=LEAST_ERASED):
         """
         We will try to use all the available pages in the one channels'
         current block before going to the next.
@@ -215,7 +215,8 @@ class MultiChannelBlockPool(MultiChannelBlockPoolBase):
             req = min(remaining, stripe_size)
             ppns = self._next_ppns_in_channel(
                     channel_id=cur_channel_id,
-                    n=req, tag=tag, block_index=block_index)
+                    n=req, tag=tag, block_index=block_index,
+                    choice=choice)
             if len(ppns) == 0:
                 # channel out of space
                 empty_channels.add(cur_channel_id)
@@ -230,7 +231,9 @@ class MultiChannelBlockPool(MultiChannelBlockPoolBase):
             raise TagOutOfSpaceError
 
         return ret_ppns
-    def _next_ppns_in_channel(self, channel_id, n, tag, block_index):
+
+    def _next_ppns_in_channel(self, channel_id, n, tag, block_index,
+            choice=LEAST_ERASED):
         """
         Return ppns we can find. If returning [], it means this channel
         is out of space.
@@ -244,7 +247,8 @@ class MultiChannelBlockPool(MultiChannelBlockPoolBase):
                     tag=tag, block_index=block_index)
 
             if len(ppnlist) == 0:
-                new_block = channel_pool.pick_and_move(src=TFREE, dst=tag)
+                new_block = channel_pool.pick_and_move(src=TFREE, dst=tag,
+                        choice=choice)
                 if new_block == None:
                     # this channel is out of space of this tag
                     break
