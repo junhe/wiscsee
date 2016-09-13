@@ -5,6 +5,7 @@ from commons import *
 import ssdbox
 from workrunner.workload import PatternSuite
 
+@unittest.skip('This does not work with pypy.')
 class TestPatternSuite(unittest.TestCase):
     def test_random(self):
         conf = ssdbox.dftldes.Config()
