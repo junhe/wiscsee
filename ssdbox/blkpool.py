@@ -58,16 +58,18 @@ class BlockPool(object):
     def count_blocks(self, tag, channels=None):
         return self.pool.count_blocks(tag, channels)
 
-    def pop_a_free_block_to_trans(self):
+    def pop_a_free_block_to_trans(self, choice=LEAST_ERASED):
         try:
-            blocknum = self.pool.pick_and_move(src=TFREE, dst=TTRANS)
+            blocknum = self.pool.pick_and_move(src=TFREE, dst=TTRANS,
+                    choice=LEAST_ERASED)
         except TagOutOfSpaceError:
             raise OutOfSpaceError
         return blocknum
 
-    def pop_a_free_block_to_data(self):
+    def pop_a_free_block_to_data(self, choice=LEAST_ERASED):
         try:
-            blocknum = self.pool.pick_and_move(src=TFREE, dst=TDATA)
+            blocknum = self.pool.pick_and_move(src=TFREE, dst=TDATA,
+                    choice=LEAST_ERASED)
         except TagOutOfSpaceError:
             raise OutOfSpaceError
         return blocknum

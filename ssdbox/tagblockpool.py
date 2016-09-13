@@ -31,8 +31,8 @@ class TagBlockPool(object):
     def count_blocks(self, tag):
         return len(self._tag_subpool[tag])
 
-    def pick(self, tag, usage=LEAST_ERASED):
-        return self.get_least_or_most_erased_block(tag)
+    def pick(self, tag, choice=LEAST_ERASED):
+        return self.get_least_or_most_erased_block(tag, choice)
 
     def pick_and_move(self, src, dst):
         block = self.pick(src)

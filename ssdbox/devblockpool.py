@@ -127,9 +127,9 @@ class MultiChannelBlockPoolBase(object):
 
         return global_counter
 
-    def pick_and_move(self, src, dst):
+    def pick_and_move(self, src, dst, choice=LEAST_ERASED):
         "This function will advance self._next_channel"
-        blocknum = self.pick(tag=src)
+        blocknum = self.pick(tag=src, choice=choice)
 
         if blocknum is None:
             return None
@@ -137,14 +137,15 @@ class MultiChannelBlockPoolBase(object):
             self.change_tag(blocknum, src, dst)
             return blocknum
 
-    def pick(self, tag, channel_id=None):
+    def pick(self, tag, channel_id=None, choice=LEAST_ERASED):
         if channel_id is None:
             cur_channel = self._next_channel
             self._incr_next_channel()
         else:
             cur_channel = channel_id
 
-        block_off = self._channel_pool[cur_channel].pick(tag=tag)
+        block_off = self._channel_pool[cur_channel].pick(tag=tag,
+                choice=choice)
 
         if block_off is None:
             return None
