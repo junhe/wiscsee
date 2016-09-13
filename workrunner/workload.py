@@ -16,7 +16,7 @@ import workloadlist
 from appprocess import *
 
 from accpatterns import patterns
-from .patternonfile import File
+# from .patternonfile import File
 import patternsuite
 
 import prepare4pyreuse
