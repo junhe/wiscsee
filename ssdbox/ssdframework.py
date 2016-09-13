@@ -56,7 +56,8 @@ class Ssd(SsdBase):
         self._snapshot_erasure_count_dist = self.conf['snapshot_erasure_count_dist']
         self._snapshot_interval = self.conf['snapshot_interval']
 
-        self._do_wear_leveling = True
+        self._do_wear_leveling = self.conf['do_wear_leveling']
+        self._wear_leveling_check_interval = self.conf['wear_leveling_check_interval']
 
         self.gc_sleep_timer = 0
         self.gc_sleep_duration = 10
@@ -241,9 +242,8 @@ class Ssd(SsdBase):
             yield self.env.process(self.ftl.clean(forced))
 
     def _wear_leveling_process(self):
-        print 'wear leveling process starts............'
         while self._do_wear_leveling is True:
-            yield self.env.timeout(1*SEC)
+            yield self.env.timeout(self._wear_leveling_check_interval)
             yield self.env.process(self.ftl.level_wear())
 
     def _valid_ratio_snapshot_process(self):

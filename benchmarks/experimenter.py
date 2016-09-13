@@ -124,6 +124,8 @@ class Experimenter(object):
             self.conf['do_gc_after_workload'] = False
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
             self.conf['write_gc_log'] = self.para.write_gc_log
+            self.conf['wear_leveling_check_interval'] = \
+                    self.para.wear_leveling_check_interval
 
         elif self.para.ftl == 'nkftl2':
             self.conf['simulator_class'] = 'SimulatorDESNew'
@@ -232,6 +234,8 @@ def get_shared_para_dict(expname, lbabytes):
             'f2fs_ipu_policy'  : [F2FS_IPU_FSYNC],
             'f2fs_min_fsync_blocks':[8],
             'dump_ext4_after_workload': [True],
+            'wear_leveling_check_interval': [10*SEC],
+            'do_wear_leveling' : [False],
             }
     return para_dict
 

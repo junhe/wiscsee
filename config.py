@@ -216,6 +216,8 @@ class Config(dict):
             'snapshot_valid_ratios' : False,
             'snapshot_erasure_count_dist': False,
             'snapshot_interval': None,
+            'wear_leveling_check_interval': 20*SEC,
+            'do_wear_leveling'      : False,
 
             ############## hybridmap ############
             "high_log_block_ratio"       : 0.4,
