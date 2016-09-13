@@ -1563,7 +1563,7 @@ class TestWearLevelingVictimBlocks(unittest.TestCase):
 
         vbs.n_victims = 3
         victims = list(vbs.iterator_verbose())
-        vblocks = [ blocknum for _, blocknum, _ in victims ]
+        vblocks = [ blocknum for _, _, blocknum in victims ]
         self.assertListEqual(sorted(vblocks), sorted([block1, block2, block3]))
 
 
@@ -2016,6 +2016,74 @@ class TestCleaningDataBlocksByCleaner(unittest.TestCase):
 
         # check validation
         self.assertEqual(oob.states.block_valid_ratio(victim_block), 0)
+        ppn_s, ppn_e = conf.block_to_page_range(victim_block)
+        for ppn in range(ppn_s, ppn_e):
+            self.assertEqual(oob.states.is_page_erased(ppn), True)
+
+        # check blockpool
+        self.assertNotIn(victim_block, block_pool.current_blocks())
+        self.assertNotIn(victim_block, block_pool.used_blocks)
+        self.assertIn(victim_block, block_pool.freeblocks)
+
+        # check mapping
+        ppn = yield env.process(mappings.lpn_to_ppn(0))
+        block, _ = conf.page_to_block_off(ppn)
+        self.assertNotEqual(block, victim_block)
+
+
+class TestLevelingWear(unittest.TestCase):
+    def test(self):
+        conf = create_config()
+        conf['flash_config']['n_channels_per_dev'] = 1
+        conf['stripe_size'] = 'infinity'
+        conf.set_flash_num_blocks_by_bytes(128*MB)
+        conf.GC_low_threshold_ratio = 0
+        objs = create_obj_set(conf)
+        env = objs['env']
+
+        dftl = FtlTest(objs['conf'], objs['rec'],
+                objs['flash_controller'], objs['env'])
+
+        env.process(self.proc_test_write(objs, dftl))
+        env.run()
+
+    def proc_test_write(self, objs, dftl):
+        conf = objs['conf']
+        env = objs['env']
+        rec = objs['rec']
+        rec.enable()
+
+        block_pool = dftl.block_pool
+        oob = dftl.oob
+        mappings = dftl.get_mappings()
+        cleaner = dftl.get_cleaner()
+
+        victims = ssdbox.dftldes.WearLevelingVictimBlocks(objs['conf'],
+                block_pool, oob, 1)
+        datablockcleaner = ssdbox.dftldes.DataBlockCleaner(
+            conf = objs['conf'],
+            flash = objs['flash_controller'],
+            oob = oob,
+            block_pool = block_pool,
+            mappings = mappings,
+            rec = objs['rec'],
+            env = objs['env'])
+
+        n = conf.n_pages_per_block
+        yield env.process(dftl.write_ext(Extent(0, n)))
+        old_ppn = yield env.process(mappings.lpn_to_ppn(lpn=0))
+        yield env.process(dftl.write_ext(Extent(0, 1)))
+        new_ppn = yield env.process(mappings.lpn_to_ppn(lpn=0))
+
+        self.assertNotEqual(old_ppn, new_ppn)
+
+        victim_blocks = list(victims.iterator_verbose())
+        self.assertEqual(len(victim_blocks), 1)
+        valid_ratio, block_type, victim_block = victim_blocks[0]
+
+        yield env.process(cleaner.level_wear())
+
+        # check validation
         ppn_s, ppn_e = conf.block_to_page_range(victim_block)
         for ppn in range(ppn_s, ppn_e):
             self.assertEqual(oob.states.is_page_erased(ppn), True)

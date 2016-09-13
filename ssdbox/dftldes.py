@@ -1281,15 +1281,14 @@ class WearLevelingVictimBlocks(object):
         for blocknum, count in least_used_blocks:
             if blocknum in cur_blocks:
                 # skip current blocks
-                print 'skip'
                 continue
 
             valid_ratio = None # we don't care
             if blocknum in used_data_blocks:
-                yield valid_ratio, blocknum, self.TYPE_DATA
+                yield valid_ratio, self.TYPE_DATA, blocknum
                 victim_cnt += 1
             elif blocknum in used_trans_blocks:
-                yield valid_ratio, blocknum, self.TYPE_TRANS
+                yield valid_ratio, self.TYPE_TRANS, blocknum
                 victim_cnt += 1
 
             if victim_cnt >= self.n_victims:
@@ -1442,6 +1441,19 @@ class Cleaner(object):
     def is_stopping_needed(self):
         return self.block_pool.used_ratio() < self.conf.GC_low_threshold_ratio
 
+    def level_wear(self):
+        """
+        Move victim to a new location
+        """
+        victim_blocks = WearLevelingVictimBlocks(self.conf,
+                self.block_pool, self.oob, 0.1 * self.conf.n_blocks_per_dev)
+
+        all_victim_tuples = list(victim_blocks.iterator_verbose())
+        batches = utils.group_to_batches(all_victim_tuples, self.n_victim_per_batch)
+
+        for batch in batches:
+            yield self.env.process(self._clean_batch(batch))
+
     def clean(self):
         """
         cleaning WILL start if you call this function. So make sure you check
@@ -1450,18 +1462,14 @@ class Cleaner(object):
         victim_blocks = VictimBlocks(self.conf, self.block_pool, self.oob)
         self.recorder.append_to_value_list('clean_func_valid_ratio_snapshot',
                 victim_blocks.get_valid_ratio_counter_of_used_blocks())
-        # print '---------> used ratio before', self.block_pool.used_ratio()
 
         all_victim_tuples = list(victim_blocks.iterator_verbose())
         batches = utils.group_to_batches(all_victim_tuples, self.n_victim_per_batch)
 
         for batch in batches:
             if self.is_stopping_needed():
-                # print 'stopped because of threshold <----------'
                 break
             yield self.env.process(self._clean_batch(batch))
-
-        # print '---------> used ratio after', self.block_pool.used_ratio()
 
     def _clean_batch(self, victim_tuples):
         procs = []
