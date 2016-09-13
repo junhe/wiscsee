@@ -110,7 +110,7 @@ class TestTagBlockPool(unittest.TestCase):
         self.assertIn(most, range(9))
 
         most = pool.get_least_or_most_erased_blocks(TFREE,
-                choice='most', nblocks=2)
+                choice=MOST_ERASED, nblocks=2)
         self.assertIn(most[0], range(9))
         self.assertIn(most[1], range(9))
 

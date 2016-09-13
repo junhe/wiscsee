@@ -2,6 +2,9 @@ from collections import Counter
 
 TFREE = 'TAGFREE'
 
+LEAST_ERASED = 'least'
+MOST_ERASED = 'most'
+
 
 class TagBlockPool(object):
     def __init__(self, n, tags):
@@ -28,7 +31,7 @@ class TagBlockPool(object):
     def count_blocks(self, tag):
         return len(self._tag_subpool[tag])
 
-    def pick(self, tag):
+    def pick(self, tag, usage=LEAST_ERASED):
         return self.get_least_or_most_erased_block(tag)
 
     def pick_and_move(self, src, dst):
@@ -46,7 +49,7 @@ class TagBlockPool(object):
         else:
             return self._erasure_cnt[blocknum]
 
-    def get_least_or_most_erased_block(self, tag, choice='least'):
+    def get_least_or_most_erased_block(self, tag, choice=LEAST_ERASED):
         blocks = self.get_least_or_most_erased_blocks(tag, choice, nblocks=1)
 
         assert len(blocks) <= 1
@@ -56,9 +59,9 @@ class TagBlockPool(object):
             return None
 
     def get_least_or_most_erased_blocks(self, tag, choice, nblocks):
-        if choice == 'least':
+        if choice == LEAST_ERASED:
             blocks_by_cnt = reversed(self._erasure_cnt.most_common())
-        elif choice == 'most':
+        elif choice == MOST_ERASED:
             blocks_by_cnt = self._erasure_cnt.most_common()
         else:
             raise NotImplementedError

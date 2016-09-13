@@ -27,7 +27,7 @@ def wearleveling_bench():
     class ParaDict(object):
         def __init__(self):
             expname = utils.get_expname()
-            lbabytes = 128*MB
+            lbabytes = 32*MB
             para_dict = get_shared_para_dict(expname, lbabytes)
 
             # for DFTL
@@ -38,7 +38,7 @@ def wearleveling_bench():
                     'gc_high_ratio'    : [0.9],
                     'gc_low_ratio'     : [0.8],
                     'not_check_gc_setting': [False],
-                    'cache_mapped_data_bytes' :[int(0.2*lbabytes)],
+                    'cache_mapped_data_bytes' :[int(0.5*lbabytes)],
                     'segment_bytes'    : [lbabytes],
                     'snapshot_interval': [1*SEC],
                     'write_gc_log'     : [False],

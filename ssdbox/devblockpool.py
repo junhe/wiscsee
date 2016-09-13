@@ -97,9 +97,9 @@ class MultiChannelBlockPoolBase(object):
 
     def get_least_or_most_erased_blocks(self, tag, choice, nblocks):
         global_counter = self.get_erasure_count()
-        if choice == 'least':
+        if choice == LEAST_ERASED:
             blocks_by_cnt = reversed(global_counter.most_common())
-        elif choice == 'most':
+        elif choice == MOST_ERASED:
             blocks_by_cnt = global_counter.most_common()
         else:
             raise NotImplementedError

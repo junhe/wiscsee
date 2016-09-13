@@ -459,7 +459,7 @@ class TestWearLeveling(unittest.TestCase):
             pool._channel_pool[1]._erasure_cnt[i] = 18
 
         blocks = pool.get_least_or_most_erased_blocks(tag=TFREE,
-                choice='most', nblocks=3)
+                choice=MOST_ERASED, nblocks=3)
         self.assertEqual(sorted(blocks), [10, 11, 12])
 
     def test_get_bottom_10_used_blocks(self):
