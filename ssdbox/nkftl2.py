@@ -881,6 +881,7 @@ class GarbageCollector(object):
         self.logical_block_locks = logical_block_locks
         self._phy_block_locks = LockPool(self.env)
         self._datagroup_gc_locks = LockPool(self.env)
+
         self._cleaning_lock = simpy.Resource(self.env, capacity=1)
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
@@ -1534,6 +1535,49 @@ class GarbageCollector(object):
 
         self._phy_block_locks.release_request(log_pbn, req)
 
+    def level_wear(self):
+        """
+        TODO: need to lock logical blocks
+        TODO: need to lock data group? Not if everything is guarded by
+        _cleaning_lock.
+        """
+        req = self._cleaning_lock.request()
+        yield req
+
+        victim_blocks = WearLevelingVictimBlocks(self.conf,
+                self.block_pool, self.oob, 0.1 * self.conf.n_blocks_per_dev)
+
+        for valid_ratio, block_type, block_num in victim_blocks.iterator_verbose():
+            dst_pbn = self.block_pool.pop_a_free_block_to_data_blocks(
+                    choice=MOST_ERASED)
+
+            if valid_ratio == 0:
+                if block_type == victim_blocks.TYPE_DATA:
+                    yield self.env.process(
+                        self.recycle_empty_data_block(block_num, 'wear-leveling'))
+                elif block_type == victim_blocks.TYPE_LOG:
+                    dgn, loggroup = self.log_mapping_table.find_group_by_pbn(blocknum)
+                    yield self.env.process(
+                        self._recycle_empty_log_block(dgn, blocknum, 'wear'))
+                else:
+                    raise RuntimeError()
+                break
+
+            else:
+                if block_type == victim_blocks.TYPE_DATA:
+                    found, lbn = self.data_block_mapping_table.pbn_to_lbn(block_num)
+                    assert found == True
+                    yield self.env.process(
+                        self._move_data_block(src_pbn = block_num, dst_pbn = dst_pbn))
+                elif block_type == victim_blocks.TYPE_LOG:
+                    yield self.env.process(
+                        self._move_log_block(src_pbn = block_num, dst_pbn = dst_pbn))
+                else:
+                    raise RuntimeError('Block type not recognized: {}'.format(
+                        block_type))
+
+        self._cleaning_lock.release(req)
+
     def _move_log_block(self, src_pbn, dst_pbn):
         """
         Find a dst_pbn to move to, register it with LogMappingTable
@@ -1548,6 +1592,10 @@ class GarbageCollector(object):
         for src_ppn in range(start, end):
             if self.oob.states.is_page_valid(src_ppn):
                 lpn = self.oob.translate_ppn_to_lpn(src_ppn)
+                lbn, _ = self.conf.page_to_block_off(lpn)
+
+                req = self.logical_block_locks.get_request(lbn)
+                yield req
 
                 offset = src_ppn - start
                 dst_ppn = self.conf.block_off_to_page(dst_pbn, offset)
@@ -1556,6 +1604,8 @@ class GarbageCollector(object):
                 # update page-level mapping
                 loggroup.remove_lpn(lpn)
                 loggroup.add_mapping(lpn, dst_ppn)
+
+                self.logical_block_locks.release_request(lbn, req)
 
         yield self.env.process(
             self._recycle_empty_log_block(dgn, src_pbn, 'wear-leveling'))
@@ -1656,7 +1706,10 @@ class Ftl(ftlbuilder.FtlBuilder):
             n_channels=self.conf.n_channels_per_dev,
             n_blocks_per_channel=self.conf.n_blocks_per_channel,
             n_pages_per_block=self.conf.n_pages_per_block,
-            tags=[TDATA, TLOG])
+            tags=[TDATA, TLOG],
+            leveling_factor=self.conf['wear_leveling_factor'],
+            leveling_diff=self.conf['wear_leveling_diff']
+            )
         self.oob = OutOfBandAreas(confobj)
         self.global_helper = GlobalHelper(confobj)
 
@@ -1835,8 +1888,15 @@ class Ftl(ftlbuilder.FtlBuilder):
                 for block_id, req in reversed(zip(block_ids, reqs)):
                     self.logical_block_locks.release_request(block_id, req)
 
+                gc_req = self.garbage_collector._cleaning_lock.request()
+                yield gc_req
+
+                print 'start cleaning for write_ext()'
+
                 yield self.env.process(
                     self.garbage_collector.clean_data_group(data_group_no))
+
+                self.garbage_collector._cleaning_lock.release(gc_req)
 
                 reqs = []
                 for block_id in block_ids:
@@ -2002,6 +2062,12 @@ class Ftl(ftlbuilder.FtlBuilder):
 
     def clean(self, forced=False, merge=True):
         yield self.env.process(self.garbage_collector.clean(forced, merge=merge))
+
+    def is_wear_leveling_needed(self):
+        return self.block_pool.need_wear_leveling()
+
+    def level_wear(self):
+        yield self.env.process(self.garbage_collector.level_wear())
 
     def is_cleaning_needed(self):
         return self.garbage_collector.decider.should_start()
