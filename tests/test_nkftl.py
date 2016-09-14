@@ -916,6 +916,18 @@ class TestMovingDataBlocks(AssertFinishTestCase):
             with self.assertRaises(KeyError):
                 oob.translate_ppn_to_lpn(ppn)
 
+        # new states bitmap should be in 'valid' state,
+        # since we have all pages valid in the src pbn
+        start, end = conf.block_to_page_range(dst_pbn)
+        for ppn in range(start, end):
+            self.assertEqual(oob.states.is_page_valid(ppn), True)
+
+        for ppn in range(start, end):
+            _, ppn_off = conf.page_to_block_off(ppn)
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            _, lpn_off = conf.page_to_block_off(lpn)
+            self.assertEqual(ppn_off, lpn_off)
+
         # pbn should be free block in block_pool
         self.assertIn(pbn, block_pool.freeblocks)
         self.assertNotIn(pbn, block_pool.data_usedblocks)
