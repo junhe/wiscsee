@@ -330,16 +330,18 @@ class NKBlockPool(MultiChannelBlockPoolBase):
         blocks = self.get_blocks_of_tag(tag=TDATA)
         return blocks
 
-    def pop_a_free_block_to_log_blocks(self):
-        blocknum = self.pick_and_move(src=TFREE, dst=TLOG)
+    def pop_a_free_block_to_log_blocks(self, choice=LEAST_ERASED):
+        blocknum = self.pick_and_move(src=TFREE, dst=TLOG,
+            choice=choice)
 
         return blocknum
 
     def move_used_log_to_data_block(self, blocknum):
         self.change_tag(blocknum, src=TLOG, dst=TDATA)
 
-    def pop_a_free_block_to_data_blocks(self):
-        blocknum = self.pick_and_move(src=TFREE, dst=TDATA)
+    def pop_a_free_block_to_data_blocks(self, choice=LEAST_ERASED):
+        blocknum = self.pick_and_move(src=TFREE, dst=TDATA,
+            choice=choice)
         return blocknum
 
     def free_used_data_block(self, blocknum):
