@@ -20,8 +20,9 @@ import recorder
 from utilities import utils
 from commons import *
 from ftlsim_commons import *
-from .blkpool import BlockPool
+from .blkpool import BlockPool, MOST_ERASED, LEAST_ERASED
 from .bitmap import FlashBitmap2
+
 
 
 UNINITIATED, MISS = ('UNINIT', 'MISS')
@@ -1487,19 +1488,22 @@ class Cleaner(object):
         for valid_ratio, block_type, block_num in victim_tuples:
             assert valid_ratio < 1
             print valid_ratio,
-            p = self.env.process(self._clean_block(block_type, block_num))
+            p = self.env.process(
+                    self._clean_block(block_type, block_num, purpose))
             procs.append(p)
 
         yield simpy.AllOf(self.env, procs)
 
-    def _clean_block(self, block_type, block_num):
+    def _clean_block(self, block_type, block_num, purpose):
         req = self._cleaner_res.request()
         yield req
 
         if block_type == VictimBlocks.TYPE_DATA:
-            yield self.env.process(self._datablockcleaner.clean(block_num))
+            yield self.env.process(
+                    self._datablockcleaner.clean(block_num, purpose))
         elif block_type == VictimBlocks.TYPE_TRANS:
-            yield self.env.process(self._transblockcleaner.clean(block_num))
+            yield self.env.process(
+                    self._transblockcleaner.clean(block_num, purpose))
 
         self._cleaner_res.release(req)
 
@@ -1542,7 +1546,7 @@ class DataBlockCleaner(object):
                     valid=self.oob.states.is_page_valid(ppn))
         self.gcid += 1
 
-    def clean(self, blocknum):
+    def clean(self, blocknum, purpose = PURPOSE_GC):
         '''
         for each valid page, move it to another block
         invalidate pages in blocknum and erase block
@@ -1555,7 +1559,7 @@ class DataBlockCleaner(object):
         ppn_start, ppn_end = self.conf.block_to_page_range(blocknum)
         for ppn in range(ppn_start, ppn_end):
             if self.oob.states.is_page_valid(ppn):
-                yield self.env.process(self._clean_page(ppn))
+                yield self.env.process(self._clean_page(ppn, purpose))
 
         yield self.env.process(
             self.flash.erase_pbn_extent(blocknum, 1,
@@ -1565,7 +1569,7 @@ class DataBlockCleaner(object):
         self.oob.erase_block(blocknum)
         self.block_pool.move_used_data_block_to_free(blocknum)
 
-    def _clean_page(self, ppn):
+    def _clean_page(self, ppn, purpose):
         """
         read ppn, write to new ppn, update metadata
         """
@@ -1577,7 +1581,11 @@ class DataBlockCleaner(object):
             self.flash.rw_ppn_extent(ppn, 1, 'read',
                 tag=self.recorder.get_tag('read.data.gc', None)))
 
-        new_ppn = self.block_pool.next_gc_data_page_to_program()
+        if purpose == PURPOSE_GC:
+            choice = LEAST_ERASED
+        elif purpose == PURPOSE_WEAR_LEVEL:
+            choice = MOST_ERASED
+        new_ppn = self.block_pool.next_gc_data_page_to_program(choice)
 
         yield self.env.process(
             self.flash.rw_ppn_extent(new_ppn, 1, 'write',
@@ -1624,14 +1632,14 @@ class TransBlockCleaner(object):
         self.env = env
         self._trans_page_locks = trans_page_locks
 
-    def clean(self, blocknum):
+    def clean(self, blocknum, purpose = PURPOSE_GC):
         assert blocknum in self.block_pool.used_blocks
         assert blocknum not in self.block_pool.current_blocks()
 
         ppn_start, ppn_end = self.conf.block_to_page_range(blocknum)
         for ppn in range(ppn_start, ppn_end):
             if self.oob.states.is_page_valid(ppn):
-                yield self.env.process(self._clean_page(ppn))
+                yield self.env.process(self._clean_page(ppn, purpose))
 
         yield self.env.process(
             self.flash.erase_pbn_extent(blocknum, 1,
@@ -1641,7 +1649,7 @@ class TransBlockCleaner(object):
         self.oob.erase_block(blocknum)
         self.block_pool.move_used_trans_block_to_free(blocknum)
 
-    def _clean_page(self, ppn):
+    def _clean_page(self, ppn, purpose):
         assert self.oob.states.is_page_valid(ppn) is True
 
         self.recorder.count_me("gc", "trans.page.moves")
@@ -1656,7 +1664,11 @@ class TransBlockCleaner(object):
             self.flash.rw_ppn_extent(ppn, 1, 'read',
                 tag=self.recorder.get_tag('read.trans.gc', None)))
 
-        new_ppn = self.block_pool.next_gc_translation_page_to_program()
+        if purpose == PURPOSE_GC:
+            choice = LEAST_ERASED
+        elif purpose == PURPOSE_WEAR_LEVEL:
+            choice = MOST_ERASED
+        new_ppn = self.block_pool.next_gc_translation_page_to_program(choice)
 
         yield self.env.process(
             self.flash.rw_ppn_extent(new_ppn, 1, 'write',

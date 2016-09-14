@@ -101,14 +101,14 @@ class BlockPool(object):
                 stripe_size=1)
         return ppns[0]
 
-    def next_gc_data_page_to_program(self):
+    def next_gc_data_page_to_program(self, choice=LEAST_ERASED):
         ppns = self.pool.next_ppns(n=1, tag=TDATA, block_index=0,
-                stripe_size=1)
+                stripe_size=1, choice=choice)
         return ppns[0]
 
-    def next_gc_translation_page_to_program(self):
+    def next_gc_translation_page_to_program(self, choice=LEAST_ERASED):
         ppns = self.pool.next_ppns(n=1, tag=TTRANS, block_index=0,
-                stripe_size=1)
+                stripe_size=1, choice=choice)
         return ppns[0]
 
     def current_blocks(self):
