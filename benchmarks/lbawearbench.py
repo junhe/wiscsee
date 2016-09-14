@@ -38,12 +38,12 @@ def wearleveling_bench():
                     'gc_high_ratio'    : [0.9],
                     'gc_low_ratio'     : [0.8],
                     'not_check_gc_setting': [False],
-                    'cache_mapped_data_bytes' :[int(0.5*lbabytes)],
+                    'cache_mapped_data_bytes' :[int(1*lbabytes)],
                     'segment_bytes'    : [lbabytes],
                     'snapshot_interval': [1*SEC],
                     'write_gc_log'     : [False],
                     'stripe_size'      : [1],
-                    'do_wear_leveling' : [True],
+                    'do_wear_leveling' : [False, True],
                     'wear_leveling_check_interval': [1*SEC],
                     'wear_leveling_factor': [1],
                     'wear_leveling_diff' : [10],
@@ -51,10 +51,10 @@ def wearleveling_bench():
                     'snapshot_erasure_count_dist': [True],
 
                     'chunk_size'       : [64*KB],
-                    'traffic_size'     : [200*MB],
+                    'traffic_size'     : [32*1000*MB],
                     'space_size'       : [int(lbabytes / 2)],
 
-                    'access_distribution' : ['uniform'],
+                    'access_distribution' : ['uniform', 'zipf'],
                     'skew_factor'      : [10],
                     'zipf_alpha'       : [1],
                     }
