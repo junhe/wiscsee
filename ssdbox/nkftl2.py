@@ -1554,11 +1554,11 @@ class GarbageCollector(object):
             if valid_ratio == 0:
                 if block_type == victim_blocks.TYPE_DATA:
                     yield self.env.process(
-                        self.recycle_empty_data_block(block_num, 'wear-leveling'))
+                        self.recycle_empty_data_block(block_num, 'wearleveling'))
                 elif block_type == victim_blocks.TYPE_LOG:
                     dgn, loggroup = self.log_mapping_table.find_group_by_pbn(blocknum)
                     yield self.env.process(
-                        self._recycle_empty_log_block(dgn, blocknum, 'wear'))
+                        self._recycle_empty_log_block(dgn, blocknum, 'wearleveling'))
                 else:
                     raise RuntimeError()
                 break
@@ -1599,7 +1599,8 @@ class GarbageCollector(object):
 
                 offset = src_ppn - start
                 dst_ppn = self.conf.block_off_to_page(dst_pbn, offset)
-                yield self.env.process(self._move_page(src_ppn, dst_ppn))
+                yield self.env.process(
+                    self._move_page(src_ppn, dst_ppn, tag='wearleveling'))
 
                 # update page-level mapping
                 loggroup.remove_lpn(lpn)
@@ -1608,7 +1609,7 @@ class GarbageCollector(object):
                 self.logical_block_locks.release_request(lbn, req)
 
         yield self.env.process(
-            self._recycle_empty_log_block(dgn, src_pbn, 'wear-leveling'))
+            self._recycle_empty_log_block(dgn, src_pbn, ''))
 
     def _move_data_block(self, src_pbn, dst_pbn):
         """
@@ -1620,7 +1621,8 @@ class GarbageCollector(object):
         assert found == True
 
         # copy valid pages
-        yield self.env.process(self._move_block_data(src_pbn, dst_pbn))
+        yield self.env.process(
+            self._move_block_data(src_pbn, dst_pbn, tag='wearleveling'))
 
         # need to recyle the old data block
         yield self.env.process(self.recycle_empty_data_block(src_pbn, tag=''))
@@ -1628,13 +1630,14 @@ class GarbageCollector(object):
         # add new mapping in data block mapping
         self.data_block_mapping_table.add_data_block_mapping(lbn, dst_pbn)
 
-    def _move_block_data(self, src_pbn, dst_pbn):
+    def _move_block_data(self, src_pbn, dst_pbn, tag):
         start, end = self.conf.block_to_page_range(src_pbn)
         for src_ppn in range(start, end):
             if self.oob.states.is_page_valid(src_ppn):
                 offset = src_ppn - start
                 dst_ppn = self.conf.block_off_to_page(dst_pbn, offset)
-                yield self.env.process(self._move_page(src_ppn, dst_ppn))
+                yield self.env.process(
+                    self._move_page(src_ppn, dst_ppn, tag=tag))
 
     def _move_page(self, src_ppn, dst_ppn, tag=''):
         lpn = self.oob.translate_ppn_to_lpn(src_ppn)
