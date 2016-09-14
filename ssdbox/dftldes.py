@@ -1295,7 +1295,7 @@ class WearLevelingVictimBlocks(object):
                 # continue
                 pass
 
-            valid_ratio = None # we don't care
+            valid_ratio = self._oob.states.block_valid_ratio(blocknum)
             if blocknum in used_data_blocks:
                 yield valid_ratio, self.TYPE_DATA, blocknum
                 victim_cnt += 1
@@ -1592,7 +1592,10 @@ class DataBlockCleaner(object):
         """
         assert self.oob.states.is_page_valid(ppn) is True
 
-        self.recorder.count_me("gc", "user.page.moves")
+        if purpose == PURPOSE_GC:
+            self.recorder.count_me("gc", "user.page.moves")
+        elif purpose == PURPOSE_WEAR_LEVEL:
+            self.recorder.count_me("wearleveling", "user.page.moves")
 
         yield self.env.process(
             self.flash.rw_ppn_extent(ppn, 1, 'read',
@@ -1669,7 +1672,10 @@ class TransBlockCleaner(object):
     def _clean_page(self, ppn, purpose):
         assert self.oob.states.is_page_valid(ppn) is True
 
-        self.recorder.count_me("gc", "trans.page.moves")
+        if purpose == PURPOSE_GC:
+            self.recorder.count_me("gc", "trans.page.moves")
+        elif purpose == PURPOSE_WEAR_LEVEL:
+            self.recorder.count_me("wearleveling", "trans.page.moves")
 
         m_vpn = self.oob.ppn_to_lpn_or_mvpn(ppn)
 
