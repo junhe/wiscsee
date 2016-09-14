@@ -1420,9 +1420,12 @@ class Cleaner(object):
 
         # limit number of cleaner processes
         self.n_cleaners = self.conf.n_channels_per_dev * 64
-        self._cleaner_res = simpy.Resource(self.env, capacity=self.n_cleaners)
+        self._block_cleaner_res = simpy.Resource(self.env, capacity=self.n_cleaners)
 
         self.n_victim_per_batch = self.conf.n_channels_per_dev * 2
+
+        # only allow one cleaner instance at a time
+        self._cleaner_res = simpy.Resource(self.env, capacity=1)
 
     def assert_threshold_sanity(self):
         if self.conf['do_not_check_gc_setting'] is True:
@@ -1456,7 +1459,12 @@ class Cleaner(object):
         """
         Move victim to a new location
         """
+        req = self._cleaner_res.request()
+        yield req
+
         print 'start wear leveling....'
+        print self.block_pool.get_erasure_count_dist()
+
         victim_blocks = WearLevelingVictimBlocks(self.conf,
                 self.block_pool, self.oob, 0.1 * self.conf.n_blocks_per_dev)
 
@@ -1466,11 +1474,18 @@ class Cleaner(object):
         for batch in batches:
             yield self.env.process(self._clean_batch(batch, purpose=PURPOSE_WEAR_LEVEL))
 
+        print 'after wear leveling'
+        print self.block_pool.get_erasure_count_dist()
+        self._cleaner_res.release(req)
+
     def clean(self):
         """
         cleaning WILL start if you call this function. So make sure you check
         if you need cleaning before calling.
         """
+        req = self._cleaner_res.request()
+        yield req
+
         victim_blocks = VictimBlocks(self.conf, self.block_pool, self.oob)
         self.recorder.append_to_value_list('clean_func_valid_ratio_snapshot',
                 victim_blocks.get_valid_ratio_counter_of_used_blocks())
@@ -1483,10 +1498,11 @@ class Cleaner(object):
                 break
             yield self.env.process(self._clean_batch(batch, purpose=PURPOSE_GC))
 
+        self._cleaner_res.release(req)
+
     def _clean_batch(self, victim_tuples, purpose):
         procs = []
         for valid_ratio, block_type, block_num in victim_tuples:
-            assert valid_ratio < 1
             print valid_ratio,
             p = self.env.process(
                     self._clean_block(block_type, block_num, purpose))
@@ -1495,7 +1511,7 @@ class Cleaner(object):
         yield simpy.AllOf(self.env, procs)
 
     def _clean_block(self, block_type, block_num, purpose):
-        req = self._cleaner_res.request()
+        req = self._block_cleaner_res.request()
         yield req
 
         if block_type == VictimBlocks.TYPE_DATA:
@@ -1505,7 +1521,7 @@ class Cleaner(object):
             yield self.env.process(
                     self._transblockcleaner.clean(block_num, purpose))
 
-        self._cleaner_res.release(req)
+        self._block_cleaner_res.release(req)
 
 
 class DataBlockCleaner(object):
