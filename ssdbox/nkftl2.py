@@ -748,6 +748,40 @@ class BlockInfo(object):
         return cmp(self.last_used_time, other.last_used_time)
 
 
+class WearLevelingVictimBlocks(object):
+    TYPE_DATA = 'TYPE_DATA'
+    TYPE_LOG = 'TYPE_LOG'
+    def __init__(self, conf, block_pool, oob, n_victims):
+        self._conf = conf
+        self._block_pool = block_pool
+        self._oob = oob
+        self.n_victims = n_victims
+
+    def iterator_verbose(self):
+        """
+        Pick the 10% least erased USED Blocks
+        """
+        erasure_cnt = self._block_pool.get_erasure_count()
+        least_used_blocks = reversed(erasure_cnt.most_common())
+
+        used_data_blocks = self._block_pool.data_usedblocks
+        used_log_blocks = self._block_pool.log_usedblocks
+
+        # we need used data or trans block
+        victim_cnt = 0
+        for blocknum, count in least_used_blocks:
+            valid_ratio = self._oob.states.block_valid_ratio(blocknum)
+            if blocknum in used_data_blocks:
+                yield valid_ratio, self.TYPE_DATA, blocknum
+                victim_cnt += 1
+            elif blocknum in used_log_blocks:
+                yield valid_ratio, self.TYPE_LOG, blocknum
+                victim_cnt += 1
+
+            if victim_cnt >= self.n_victims:
+                break
+
+
 class VictimBlocksBase(object):
     def __init__(self, conf, block_pool, oob, rec, log_mapping_table,
             data_block_mapping_table):

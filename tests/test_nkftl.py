@@ -733,6 +733,76 @@ class TestVictimBlocks(unittest.TestCase):
             oob.states.invalidate_page(ppn)
 
 
+class TestWearLevelingVictimBlocks(AssertFinishTestCase):
+    def test_data_block(self):
+        conf = create_config()
+        block_pool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
+
+        datablock = self.use_a_data_block(conf, block_pool, oob)
+
+        vblocks = WearLevelingVictimBlocks(conf, block_pool, oob, 2)
+        blocknums = [blk for _, _, blk in vblocks.iterator_verbose()]
+        self.assertListEqual(blocknums, [datablock])
+        self.assertEqual(len(list(vblocks.iterator_verbose())), 1)
+
+        self.set_finished()
+
+    def test_log_block(self):
+        conf = create_config()
+        block_pool = NKBlockPool(
+                n_channels=conf.n_channels_per_dev,
+                n_blocks_per_channel=conf.n_blocks_per_channel,
+                n_pages_per_block=conf.n_pages_per_block,
+                tags=[TDATA, TLOG])
+        rec = create_recorder(conf)
+        oob = OutOfBandAreas(conf)
+        helper = create_global_helper(conf)
+        logmaptable = LogMappingTable(conf, block_pool, rec, helper)
+        datablocktable = DataBlockMappingTable(conf, rec, helper)
+
+        self.use_a_log_block(conf, oob, block_pool, logmaptable,
+                cnt=conf.n_pages_per_block, dgn=1)
+
+        vblocks = WearLevelingVictimBlocks(conf, block_pool, oob, 2)
+        blocknums = [blk for _, _, blk in vblocks.iterator_verbose()]
+        self.assertEqual(len(list(vblocks.iterator_verbose())), 1)
+
+        self.set_finished()
+
+    def use_a_data_block(self, conf, block_pool, oob):
+        blocknum = block_pool.pop_a_free_block_to_data_blocks()
+        start, end = conf.block_to_page_range(blocknum)
+
+        for ppn in range(start, end):
+            oob.states.invalidate_page(ppn)
+
+        return blocknum
+
+    def use_a_log_block(self, conf, oob, block_pool, logmapping, cnt, dgn):
+        states = oob.states
+
+        remaining = cnt
+        while remaining > 0:
+            ppns = logmapping.next_ppns_to_program(dgn=dgn,
+                n=remaining, strip_unit_size='infinity')
+            remaining = remaining - len(ppns)
+
+            # invalidate them (not the same as in production)
+            for ppn in ppns:
+                states.invalidate_page(ppn)
+
+
+
+
 class TestCleaningDataBlocks(AssertFinishTestCase):
     def test_init_gc(self):
         gc, conf, block_pool, rec, oob, helper, \
