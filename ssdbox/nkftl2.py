@@ -537,6 +537,15 @@ class LogGroup2(object):
 
         return ret_ppns
 
+    def register_pbn(self, pbn):
+        channel_id = pbn / self.conf.n_blocks_per_channel
+
+        curblock = CurrentBlock(self.n_pages_per_block, pbn)
+        # set the curblock as fully used so nobody accidentally use it
+        curblock.next_page_offset = self.conf.n_pages_per_block
+
+        self.log_channels[channel_id].append( curblock )
+
     def _allocate_block_in_channel(self, channel_id):
         cnt = self.block_pool.count_blocks(tag=TFREE, channels=[channel_id])
         if cnt < 1:
@@ -627,6 +636,16 @@ class LogMappingTable(MappingBase):
 
         # dgn -> log block info of data group (LogGroup2)
         self.log_group_info = {}
+
+    def find_group_by_pbn(self, pbn):
+        dgn = None
+        loggroup = None
+        for i_dgn, i_loggroup in self.log_group_info.items():
+            if pbn in i_loggroup.log_block_numbers():
+                dgn = i_dgn
+                loggroup = i_loggroup
+
+        return dgn, loggroup
 
     def next_ppns_to_program(self, dgn, n, strip_unit_size):
         loggroup = self.log_group_info.setdefault(dgn,
@@ -1513,6 +1532,32 @@ class GarbageCollector(object):
 
         self._phy_block_locks.release_request(log_pbn, req)
 
+    def _move_log_block(self, src_pbn, dst_pbn):
+        """
+        Find a dst_pbn to move to, register it with LogMappingTable
+        Move the data from src_pbn to dst_pbn
+        Update the page-leveling mapping in logmappingtable
+        """
+        dgn, loggroup = self.log_mapping_table.find_group_by_pbn(src_pbn)
+        loggroup.register_pbn(dst_pbn)
+
+        # move data
+        start, end = self.conf.block_to_page_range(src_pbn)
+        for src_ppn in range(start, end):
+            if self.oob.states.is_page_valid(src_ppn):
+                lpn = self.oob.translate_ppn_to_lpn(src_ppn)
+
+                offset = src_ppn - start
+                dst_ppn = self.conf.block_off_to_page(dst_pbn, offset)
+                yield self.env.process(self._move_page(src_ppn, dst_ppn))
+
+                # update page-level mapping
+                loggroup.remove_lpn(lpn)
+                loggroup.add_mapping(lpn, dst_ppn)
+
+        yield self.env.process(
+            self._recycle_empty_log_block(dgn, src_pbn, 'wear-leveling'))
+
     def _move_data_block(self, src_pbn, dst_pbn):
         """
         dst_pbn must be in used data block pool, and fully erased.
@@ -1522,20 +1567,22 @@ class GarbageCollector(object):
         found, lbn = self.data_block_mapping_table.pbn_to_lbn(src_pbn)
         assert found == True
 
-        # move valid pages
-        start, end = self.conf.block_to_page_range(src_pbn)
-        for src_ppn in range(start, end):
-            if self.oob.states.is_page_valid(src_ppn):
-                offset = src_ppn - start
-                dst_ppn = self.conf.block_off_to_page(dst_pbn, offset)
-
-                yield self.env.process(self._move_page(src_ppn, dst_ppn))
+        # copy valid pages
+        yield self.env.process(self._move_block_data(src_pbn, dst_pbn))
 
         # need to recyle the old data block
         yield self.env.process(self.recycle_empty_data_block(src_pbn, tag=''))
 
         # add new mapping in data block mapping
         self.data_block_mapping_table.add_data_block_mapping(lbn, dst_pbn)
+
+    def _move_block_data(self, src_pbn, dst_pbn):
+        start, end = self.conf.block_to_page_range(src_pbn)
+        for src_ppn in range(start, end):
+            if self.oob.states.is_page_valid(src_ppn):
+                offset = src_ppn - start
+                dst_ppn = self.conf.block_off_to_page(dst_pbn, offset)
+                yield self.env.process(self._move_page(src_ppn, dst_ppn))
 
     def _move_page(self, src_ppn, dst_ppn, tag=''):
         lpn = self.oob.translate_ppn_to_lpn(src_ppn)

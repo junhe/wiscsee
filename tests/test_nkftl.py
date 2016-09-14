@@ -956,13 +956,103 @@ class TestMovingDataBlocks(AssertFinishTestCase):
 
         return blocknum
 
-    def use_a_data_block_no_mapping(self, conf, block_pool, oob, datablocktable):
-        blocknum = block_pool.pop_a_free_block_to_data_blocks()
-        start, end = conf.block_to_page_range(blocknum)
-        for ppn in range(start, end):
-            oob.states.invalidate_page(ppn)
 
-        return blocknum
+class TestMovingLogBlocks(AssertFinishTestCase):
+    def test_init_gc(self):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = create_gc()
+
+        self.set_finished()
+
+    def test_move_data_blocks(self):
+        pk = create_gc()
+
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(
+            self.proc_test_move_data_blocks(pk))
+        simpy_env.run()
+
+    def proc_test_move_data_blocks(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        lpns = range(1, 1 + conf.n_pages_per_block)
+        pbn = self.use_a_log_block(conf, oob, block_pool, logmaptable, lpns)
+
+        # we have programmed a whole block
+        start, end = conf.block_to_page_range(pbn)
+        for ppn in range(start, end):
+            self.assertEqual(oob.states.is_page_valid(ppn), True)
+
+        dst_pbn = block_pool.pop_a_free_block_to_log_blocks()
+        yield simpy_env.process(gc._move_log_block(pbn, dst_pbn))
+
+        # states bitmap should be in 'erased' state
+        start, end = conf.block_to_page_range(pbn)
+        for ppn in range(start, end):
+            self.assertEqual(oob.states.is_page_erased(ppn), True)
+
+        # oob ppn->lpn mapping should hold nothing
+        for ppn in range(start, end):
+            with self.assertRaises(KeyError):
+                oob.translate_ppn_to_lpn(ppn)
+
+        # new states bitmap should be in 'valid' state,
+        # since we have all pages valid in the src pbn
+        start, end = conf.block_to_page_range(dst_pbn)
+        for ppn in range(start, end):
+            self.assertEqual(oob.states.is_page_valid(ppn), True)
+
+        lpns_translated = []
+        for ppn in range(start, end):
+            lpn = oob.translate_ppn_to_lpn(ppn)
+            lpns_translated.append(lpn)
+        self.assertListEqual(lpns_translated, lpns)
+
+        # pbn should be free block in block_pool
+        self.assertIn(pbn, block_pool.freeblocks)
+        self.assertNotIn(pbn, block_pool.log_usedblocks)
+
+        # log block table should hold mapping of dst_pbn
+        for i, lpn in enumerate(lpns):
+            found, ppn = logmaptable.lpn_to_ppn(lpn)
+            block, off = conf.page_to_block_off(ppn)
+            self.assertEqual(block, dst_pbn)
+            self.assertEqual(off, i)
+
+        # the new physical block should be in log used blocks
+        self.assertEqual(len(block_pool.log_usedblocks), 1)
+
+        self.set_finished()
+
+    def use_a_log_block(self, conf, oob, block_pool, logmapping, lpns):
+        states = oob.states
+        dgn = conf.nkftl_data_group_number_of_lpn(lpns[0])
+        for lpn in lpns:
+            lpn_dgn = conf.nkftl_data_group_number_of_lpn(lpn)
+            assert lpn_dgn == dgn
+
+        cnt = len(lpns)
+
+        # next_ppns_to_program() will allocate block
+        ppns = logmapping.next_ppns_to_program(dgn=dgn,
+            n=cnt, strip_unit_size='infinity')
+        assert len(ppns) == cnt
+
+        pbn, _ = conf.page_to_block_off(ppns[0])
+
+        for lpn, ppn in zip(lpns, ppns):
+            oob.remap(lpn, None, ppn)
+            logmapping.add_mapping(lpn, ppn)
+            ppn_pbn, _ = conf.page_to_block_off(ppn)
+            self.assertEqual(ppn_pbn, pbn)
+
+        return pbn
 
 
 class UseLogBlocksMixin(object):
