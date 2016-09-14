@@ -876,6 +876,83 @@ class TestCleaningDataBlocks(AssertFinishTestCase):
         return blocknum
 
 
+class TestMovingDataBlocks(AssertFinishTestCase):
+    def test_init_gc(self):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = create_gc()
+
+        self.set_finished()
+
+    def test_move_data_blocks(self):
+        pk = create_gc()
+
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        simpy_env.process(
+            self.proc_test_move_data_blocks(pk))
+        simpy_env.run()
+
+    def proc_test_move_data_blocks(self, pk):
+        gc, conf, block_pool, rec, oob, helper, \
+        logmaptable, datablocktable, translator, \
+        flashobj, simpy_env, des_flash = pk
+
+        lbn = 8
+        pbn = self.use_a_data_block(conf, block_pool, oob, datablocktable, lbn)
+
+        dst_pbn = block_pool.pop_a_free_block_to_data_blocks()
+        yield simpy_env.process(gc._move_data_block(pbn, dst_pbn))
+
+        # states bitmap should be in 'erased' state
+        start, end = conf.block_to_page_range(pbn)
+        for ppn in range(start, end):
+            self.assertEqual(oob.states.is_page_erased(ppn), True)
+
+        # oob ppn->lpn mapping should hold nothing
+        for ppn in range(start, end):
+            with self.assertRaises(KeyError):
+                oob.translate_ppn_to_lpn(ppn)
+
+        # pbn should be free block in block_pool
+        self.assertIn(pbn, block_pool.freeblocks)
+        self.assertNotIn(pbn, block_pool.data_usedblocks)
+
+        # datablocktable should hold mapping of pbn
+        found, new_pbn = datablocktable.lbn_to_pbn(lbn)
+        self.assertEqual(found, True)
+        self.assertNotEqual(new_pbn, pbn)
+
+        # the new physical block should be in data used blocks
+        self.assertEqual(len(block_pool.data_usedblocks), 1)
+
+        self.set_finished()
+
+    def use_a_data_block(self, conf, block_pool, oob, datablocktable, lbn):
+        blocknum = block_pool.pop_a_free_block_to_data_blocks()
+        datablocktable.add_data_block_mapping(lbn=lbn, pbn=blocknum)
+
+        # set all pages to be valid
+        start, end = conf.block_to_page_range(blocknum)
+        for ppn in range(start, end):
+            offset = ppn - start
+            lpn = conf.block_off_to_page(lbn, offset)
+            oob.states.validate_page(ppn)
+            oob.remap(lpn, None, ppn)
+
+        return blocknum
+
+    def use_a_data_block_no_mapping(self, conf, block_pool, oob, datablocktable):
+        blocknum = block_pool.pop_a_free_block_to_data_blocks()
+        start, end = conf.block_to_page_range(blocknum)
+        for ppn in range(start, end):
+            oob.states.invalidate_page(ppn)
+
+        return blocknum
+
+
 class UseLogBlocksMixin(object):
     def use_log_blocks(self, conf, oob, block_pool,
             logmapping, cnt, lpn_start, translator):

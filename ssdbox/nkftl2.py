@@ -276,6 +276,13 @@ class DataBlockMappingTable(MappingBase):
         else:
             return True, pbn
 
+    def pbn_to_lbn(self, pbn):
+        lbn = self.logical_to_physical_block.inv.get(pbn, None)
+        if lbn == None:
+            return False, None
+        else:
+            return True, lbn
+
     def lpn_to_ppn(self, lpn):
         """
         Finds ppn of a lpn in data blocks>
@@ -1505,6 +1512,43 @@ class GarbageCollector(object):
                 self.des_flash.erase_pbn_extent(log_pbn, 1, tag=tag))
 
         self._phy_block_locks.release_request(log_pbn, req)
+
+    def _move_data_block(self, src_pbn, dst_pbn):
+        """
+        dst_pbn must be in used data block pool, and fully erased.
+        The caller of this function has to calll pop_a_free_block_to_log_blocks()
+        to get the dst_pbn.
+        """
+        found, lbn = self.data_block_mapping_table.pbn_to_lbn(src_pbn)
+        assert found == True
+
+        # move valid pages
+        start, end = self.conf.block_to_page_range(src_pbn)
+        for src_ppn in range(start, end):
+            if self.oob.states.is_page_valid(src_ppn):
+                offset = src_ppn - start
+                dst_ppn = self.conf.block_off_to_page(dst_pbn, offset)
+
+                yield self.env.process(self._move_page(src_ppn, dst_ppn))
+
+        # need to recyle the old data block
+        yield self.env.process(self.recycle_empty_data_block(src_pbn, tag=''))
+
+        # add new mapping in data block mapping
+        self.data_block_mapping_table.add_data_block_mapping(lbn, dst_pbn)
+
+    def _move_page(self, src_ppn, dst_ppn, tag=''):
+        lpn = self.oob.translate_ppn_to_lpn(src_ppn)
+
+        data = self.flash.page_read(src_ppn, cat = tag)
+        yield self.env.process(
+            self.des_flash.rw_ppns([src_ppn], 'read', tag = tag))
+        self.flash.page_write(dst_ppn, cat = tag, data = data)
+        yield self.env.process(
+            self.des_flash.rw_ppns([dst_ppn], 'write', tag = tag))
+
+        self.oob.remap(lpn = lpn, old_ppn = src_ppn,
+            new_ppn = dst_ppn)
 
     def assert_mapping(self, lpn):
         # Try log blocks
