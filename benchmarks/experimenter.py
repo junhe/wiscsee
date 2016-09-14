@@ -124,8 +124,8 @@ class Experimenter(object):
         if self.para.ftl == 'dftldes':
             self.conf['simulator_class'] = 'SimulatorDESNew'
             self.conf['ftl_type'] = 'dftldes'
-            self.conf['snapshot_valid_ratios'] = True
-            self.conf['snapshot_erasure_count_dist'] = True
+            self.conf['snapshot_valid_ratios'] = self.para.snapshot_valid_ratios
+            self.conf['snapshot_erasure_count_dist'] = self.para.snapshot_erasure_count_dist
             self.conf['do_gc_after_workload'] = False
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
             self.conf['write_gc_log'] = self.para.write_gc_log
@@ -142,7 +142,7 @@ class Experimenter(object):
             print 'K:', self.conf['nkftl']['max_blocks_in_log_group']
             self.conf['nkftl']['max_ratio_of_log_blocks'] = self.para.max_log_blocks_ratio
             self.conf['snapshot_valid_ratios'] = False
-            self.conf['snapshot_erasure_count_dist'] = True
+            self.conf['snapshot_erasure_count_dist'] = self.para.snapshot_erasure_count_dist
             self.conf['do_gc_after_workload'] = True
 
             # Force wear leveling off since it is not implemented in nkftl
@@ -244,6 +244,8 @@ def get_shared_para_dict(expname, lbabytes):
             'do_wear_leveling' : [False],
             'wear_leveling_factor': [2],
             'wear_leveling_diff': [10],
+            'snapshot_valid_ratios': [True],
+            'snapshot_erasure_count_dist': [True],
             }
     return para_dict
 
