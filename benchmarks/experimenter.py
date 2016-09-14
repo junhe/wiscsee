@@ -145,18 +145,22 @@ class Experimenter(object):
             self.conf['snapshot_erasure_count_dist'] = self.para.snapshot_erasure_count_dist
             self.conf['do_gc_after_workload'] = True
 
-            # Force wear leveling off since it is not implemented in nkftl
-            self.conf['do_wear_leveling'] = False
 
         elif self.para.ftl == 'dftlext':
             self.conf['simulator_class'] = 'SimulatorNonDESSpeed'
             self.conf['ftl_type'] = 'dftlext'
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
 
+            # Force wear leveling off since it is not implemented in nkftl
+            self.conf['do_wear_leveling'] = False
+
         elif self.para.ftl == 'ftlcounter':
             self.conf['simulator_class'] = 'SimulatorNonDESSpeed'
             self.conf['ftl_type'] = 'ftlcounter'
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
+
+            # Force wear leveling off since it is not implemented in nkftl
+            self.conf['do_wear_leveling'] = False
 
         else:
             raise NotImplementedError()
