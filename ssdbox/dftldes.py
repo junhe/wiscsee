@@ -29,6 +29,10 @@ DATA_BLOCK, TRANS_BLOCK = ('data_block', 'trans_block')
 random.seed(0)
 LOGICAL_READ, LOGICAL_WRITE, LOGICAL_DISCARD = ('LOGICAL_READ', \
         'LOGICAL_WRITE', 'LOGICAL_DISCARD')
+
+PURPOSE_GC = 'PURPOSE_GC'
+PURPOSE_WEAR_LEVEL = 'PURPOSE_WEAR_LEVEL'
+
 #
 # - translation pages
 #   - cache miss read (trans.cache.load)
@@ -1459,7 +1463,7 @@ class Cleaner(object):
         batches = utils.group_to_batches(all_victim_tuples, self.n_victim_per_batch)
 
         for batch in batches:
-            yield self.env.process(self._clean_batch(batch))
+            yield self.env.process(self._clean_batch(batch, purpose=PURPOSE_WEAR_LEVEL))
 
     def clean(self):
         """
@@ -1476,9 +1480,9 @@ class Cleaner(object):
         for batch in batches:
             if self.is_stopping_needed():
                 break
-            yield self.env.process(self._clean_batch(batch))
+            yield self.env.process(self._clean_batch(batch, purpose=PURPOSE_GC))
 
-    def _clean_batch(self, victim_tuples):
+    def _clean_batch(self, victim_tuples, purpose):
         procs = []
         for valid_ratio, block_type, block_num in victim_tuples:
             assert valid_ratio < 1
