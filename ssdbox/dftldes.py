@@ -1292,7 +1292,8 @@ class WearLevelingVictimBlocks(object):
         for blocknum, count in least_used_blocks:
             if blocknum in cur_blocks:
                 # skip current blocks
-                continue
+                # continue
+                pass
 
             valid_ratio = None # we don't care
             if blocknum in used_data_blocks:
@@ -1568,7 +1569,7 @@ class DataBlockCleaner(object):
         invalidate pages in blocknum and erase block
         '''
         assert blocknum in self.block_pool.used_blocks
-        assert blocknum not in self.block_pool.current_blocks()
+        # assert blocknum not in self.block_pool.current_blocks()
 
         self.log(blocknum)
 
@@ -1650,7 +1651,7 @@ class TransBlockCleaner(object):
 
     def clean(self, blocknum, purpose = PURPOSE_GC):
         assert blocknum in self.block_pool.used_blocks
-        assert blocknum not in self.block_pool.current_blocks()
+        # assert blocknum not in self.block_pool.current_blocks()
 
         ppn_start, ppn_end = self.conf.block_to_page_range(blocknum)
         for ppn in range(ppn_start, ppn_end):

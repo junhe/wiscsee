@@ -11,6 +11,7 @@ class TagBlockPool(object):
         self._tag_subpool = {tag:[] for tag in tags}
         self._tag_subpool[TFREE] = range(n)
 
+        # {blocknum: count}
         self._erasure_cnt = Counter()
         # have to put the block number in the counter
         # otherwise, if a free block is never used, it won't
