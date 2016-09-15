@@ -1559,7 +1559,7 @@ class GarbageCollector(object):
                     yield self.env.process(
                         self.recycle_empty_data_block(block_num, 'wearleveling'))
                 elif block_type == victim_blocks.TYPE_LOG:
-                    dgn, loggroup = self.log_mapping_table.find_group_by_pbn(blocknum)
+                    dgn, loggroup = self.log_mapping_table.find_group_by_pbn(block_num)
                     yield self.env.process(
                         self._recycle_empty_log_block(dgn, blocknum, 'wearleveling'))
                 else:
