@@ -1758,7 +1758,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.pre_written_bytes = 0
         self.pre_discarded_bytes = 0
         self.pre_read_bytes = 0
-        self.display_interval = 1 * MB
+        self.display_interval = 4 * MB
 
 
     def lpn_to_ppn(self, lpn):
@@ -2070,6 +2070,10 @@ class Ftl(ftlbuilder.FtlBuilder):
         yield self.env.process(self.garbage_collector.clean(forced, merge=merge))
 
     def is_wear_leveling_needed(self):
+        factor, diff = self.block_pool.get_wear_status()
+        self.recorder.append_to_value_list('wear_diff', diff)
+        print 'ddddddddddddddddddddiiiiiiiiiiifffffffffff', diff
+
         return self.block_pool.need_wear_leveling()
 
     def level_wear(self):
