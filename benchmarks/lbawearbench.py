@@ -63,7 +63,9 @@ def wearleveling_bench():
 
             # for NKFTL2
             nkftl_update = {
-                    'ftl'              : ['nkftl2'],
+                    'ftl'               : ['nkftl2'],
+                    'n_channels_per_dev': [16],
+
                     'enable_simulation': [True],
                     'over_provisioning': [1.5], # 1.28 is a good number
                     'gc_high_ratio'    : [0.9],
@@ -71,28 +73,28 @@ def wearleveling_bench():
                     'not_check_gc_setting': [False],
                     'cache_mapped_data_bytes' :[None],
                     'segment_bytes'    : [lbabytes],
-                    'snapshot_interval': [1*SEC],
+                    'snapshot_interval': [16*SEC],
                     'write_gc_log'     : [False],
                     'stripe_size'      : [64],
 
                     'do_wear_leveling' : [True],
-                    'wear_leveling_check_interval': [1*SEC],
+                    'wear_leveling_check_interval': [16*SEC],
                     'wear_leveling_factor': [1],
-                    'wear_leveling_diff' : [10],
+                    'wear_leveling_diff' : [5],
                     'snapshot_valid_ratios': [False],
                     'snapshot_erasure_count_dist': [True],
 
                     'chunk_size'       : [64*KB],
-                    'traffic_size'     : [300*MB],
+                    'traffic_size'     : [20*1024*MB],
                     'space_size'       : [int(lbabytes / 2)],
 
-                    'access_distribution' : ['uniform'],
+                    'access_distribution' : ['uniform', 'zipf'],
                     'skew_factor'      : [10],
                     'zipf_alpha'       : [1],
                     }
 
-            para_dict.update( dftl_update )
-            # para_dict.update( nkftl_update )
+            # para_dict.update( dftl_update )
+            para_dict.update( nkftl_update )
 
             self.check_config(para_dict)
 
