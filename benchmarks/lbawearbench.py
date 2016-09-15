@@ -33,6 +33,8 @@ def wearleveling_bench():
             # for DFTL
             dftl_update = {
                     'ftl'              : ['dftldes'],
+                    'n_channels_per_dev': [1],
+
                     'enable_simulation': [True],
                     'over_provisioning': [1.5], # 1.28 is a good number
                     'gc_high_ratio'    : [0.9],
