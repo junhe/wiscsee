@@ -86,7 +86,7 @@ class BlockPool(object):
     def move_used_trans_block_to_data(self, blocknum):
         self.pool.change_tag(blocknum, src=TTRANS, dst=TDATA)
 
-    def next_n_data_pages_to_program_striped(self, n, seg_id=0):
+    def next_n_data_pages_to_program_striped(self, n, seg_id=0, choice=LEAST_ERASED):
         try:
             ppns = self.pool.next_ppns(n=n, tag=TDATA, block_index=seg_id,
                     stripe_size=self.conf['stripe_size'])

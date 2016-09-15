@@ -146,7 +146,8 @@ class Ftl(object):
         mapping = {}
         for seg_id, seg_ext in exts_by_seg.items():
             ppns = self.block_pool.next_n_data_pages_to_program_striped(
-                    n=seg_ext.lpn_count, seg_id=seg_id)
+                    n=seg_ext.lpn_count, seg_id=seg_id,
+                    choice=LEAST_ERASED)
             mapping.update( dict(zip(seg_ext.lpn_iter(), ppns)) )
         return mapping
 
