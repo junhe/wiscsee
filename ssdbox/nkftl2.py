@@ -1103,13 +1103,14 @@ class GarbageCollector(object):
                     new_ppn = dst_ppn)
 
                 src_block, _ = self.conf.page_to_block_off(src_ppn)
-                self.recorder.write_file('gc.log',
-                    gcid=self.gcid,
-                    blocknum=src_block,
-                    lpn=lpn,
-                    ppn=src_ppn,
-                    merge_type='full',
-                    valid=True)
+                if self.conf['write_gc_log'] is True:
+                    self.recorder.write_file('gc.log',
+                        gcid=self.gcid,
+                        blocknum=src_block,
+                        lpn=lpn,
+                        ppn=src_ppn,
+                        merge_type='full',
+                        valid=True)
 
                 # Now you've moved lpn, you need to remove lpn mapping if it is
                 # in log blocks
@@ -1281,13 +1282,14 @@ class GarbageCollector(object):
                     self.des_flash.rw_ppns([dst_ppn], 'write', tag=TAG_PARTIAL_MERGE))
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
 
-                self.recorder.write_file('gc.log',
-                    gcid=self.gcid,
-                    blocknum=src_block,
-                    lpn=lpn,
-                    ppn=src_ppn,
-                    merge_type='partial-data',
-                    valid=True)
+                if self.conf['write_gc_log'] is True:
+                    self.recorder.write_file('gc.log',
+                        gcid=self.gcid,
+                        blocknum=src_block,
+                        lpn=lpn,
+                        ppn=src_ppn,
+                        merge_type='partial-data',
+                        valid=True)
 
                 # This branch may never be called because the none of the rest
                 # of the pages is valid, thus you don't have the change
@@ -1325,13 +1327,14 @@ class GarbageCollector(object):
                     self.des_flash.rw_ppns([dst_ppn], 'write', tag = TAG_PARTIAL_MERGE))
                 self.oob.remap(lpn, old_ppn = src_ppn, new_ppn = dst_ppn)
 
-                self.recorder.write_file('gc.log',
-                    gcid=self.gcid,
-                    blocknum=src_block,
-                    lpn=lpn,
-                    ppn=src_ppn,
-                    merge_type='partial-log',
-                    valid=True)
+                if self.conf['write_gc_log'] is True:
+                    self.recorder.write_file('gc.log',
+                        gcid=self.gcid,
+                        blocknum=src_block,
+                        lpn=lpn,
+                        ppn=src_ppn,
+                        merge_type='partial-log',
+                        valid=True)
 
                 # you need to remove lpn from log mapping here
                 self.translator.log_mapping_table.remove_lpn(lpn=lpn)

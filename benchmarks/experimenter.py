@@ -133,6 +133,7 @@ class Experimenter(object):
         elif self.para.ftl == 'nkftl2':
             self.conf['simulator_class'] = 'SimulatorDESNew'
             self.conf['ftl_type'] = 'nkftl2'
+            self.conf['write_gc_log'] = self.para.write_gc_log
 
             self.conf['nkftl']['n_blocks_in_data_group'] = \
                 self.para.segment_bytes / self.conf.block_bytes
