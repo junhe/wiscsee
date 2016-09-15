@@ -276,6 +276,13 @@ class DataBlockMappingTable(MappingBase):
         else:
             return True, pbn
 
+    def pbn_to_lbn(self, pbn):
+        lbn = self.logical_to_physical_block.inv.get(pbn, None)
+        if lbn == None:
+            return False, None
+        else:
+            return True, lbn
+
     def lpn_to_ppn(self, lpn):
         """
         Finds ppn of a lpn in data blocks>
@@ -323,16 +330,18 @@ class NKBlockPool(MultiChannelBlockPoolBase):
         blocks = self.get_blocks_of_tag(tag=TDATA)
         return blocks
 
-    def pop_a_free_block_to_log_blocks(self):
-        blocknum = self.pick_and_move(src=TFREE, dst=TLOG)
+    def pop_a_free_block_to_log_blocks(self, choice=LEAST_ERASED):
+        blocknum = self.pick_and_move(src=TFREE, dst=TLOG,
+            choice=choice)
 
         return blocknum
 
     def move_used_log_to_data_block(self, blocknum):
         self.change_tag(blocknum, src=TLOG, dst=TDATA)
 
-    def pop_a_free_block_to_data_blocks(self):
-        blocknum = self.pick_and_move(src=TFREE, dst=TDATA)
+    def pop_a_free_block_to_data_blocks(self, choice=LEAST_ERASED):
+        blocknum = self.pick_and_move(src=TFREE, dst=TDATA,
+            choice=choice)
         return blocknum
 
     def free_used_data_block(self, blocknum):
@@ -530,6 +539,15 @@ class LogGroup2(object):
 
         return ret_ppns
 
+    def register_pbn(self, pbn):
+        channel_id = pbn / self.conf.n_blocks_per_channel
+
+        curblock = CurrentBlock(self.n_pages_per_block, pbn)
+        # set the curblock as fully used so nobody accidentally use it
+        curblock.next_page_offset = self.conf.n_pages_per_block
+
+        self.log_channels[channel_id].append( curblock )
+
     def _allocate_block_in_channel(self, channel_id):
         cnt = self.block_pool.count_blocks(tag=TFREE, channels=[channel_id])
         if cnt < 1:
@@ -620,6 +638,16 @@ class LogMappingTable(MappingBase):
 
         # dgn -> log block info of data group (LogGroup2)
         self.log_group_info = {}
+
+    def find_group_by_pbn(self, pbn):
+        dgn = None
+        loggroup = None
+        for i_dgn, i_loggroup in self.log_group_info.items():
+            if pbn in i_loggroup.log_block_numbers():
+                dgn = i_dgn
+                loggroup = i_loggroup
+
+        return dgn, loggroup
 
     def next_ppns_to_program(self, dgn, n, strip_unit_size):
         loggroup = self.log_group_info.setdefault(dgn,
@@ -748,6 +776,40 @@ class BlockInfo(object):
         return cmp(self.last_used_time, other.last_used_time)
 
 
+class WearLevelingVictimBlocks(object):
+    TYPE_DATA = 'TYPE_DATA'
+    TYPE_LOG = 'TYPE_LOG'
+    def __init__(self, conf, block_pool, oob, n_victims):
+        self._conf = conf
+        self._block_pool = block_pool
+        self._oob = oob
+        self.n_victims = n_victims
+
+    def iterator_verbose(self):
+        """
+        Pick the 10% least erased USED Blocks
+        """
+        erasure_cnt = self._block_pool.get_erasure_count()
+        least_used_blocks = reversed(erasure_cnt.most_common())
+
+        used_data_blocks = self._block_pool.data_usedblocks
+        used_log_blocks = self._block_pool.log_usedblocks
+
+        # we need used data or trans block
+        victim_cnt = 0
+        for blocknum, count in least_used_blocks:
+            valid_ratio = self._oob.states.block_valid_ratio(blocknum)
+            if blocknum in used_data_blocks:
+                yield valid_ratio, self.TYPE_DATA, blocknum
+                victim_cnt += 1
+            elif blocknum in used_log_blocks:
+                yield valid_ratio, self.TYPE_LOG, blocknum
+                victim_cnt += 1
+
+            if victim_cnt >= self.n_victims:
+                break
+
+
 class VictimBlocksBase(object):
     def __init__(self, conf, block_pool, oob, rec, log_mapping_table,
             data_block_mapping_table):
@@ -819,6 +881,7 @@ class GarbageCollector(object):
         self.logical_block_locks = logical_block_locks
         self._phy_block_locks = LockPool(self.env)
         self._datagroup_gc_locks = LockPool(self.env)
+
         self._cleaning_lock = simpy.Resource(self.env, capacity=1)
 
         self.decider = GcDecider(self.conf, self.block_pool, self.recorder)
@@ -1472,6 +1535,123 @@ class GarbageCollector(object):
 
         self._phy_block_locks.release_request(log_pbn, req)
 
+    def level_wear(self):
+        """
+        TODO: need to lock logical blocks
+        TODO: need to lock data group? Not if everything is guarded by
+        _cleaning_lock.
+        """
+        req = self._cleaning_lock.request()
+        yield req
+
+        victim_blocks = WearLevelingVictimBlocks(self.conf,
+                self.block_pool, self.oob, 0.1 * self.conf.n_blocks_per_dev)
+
+        for valid_ratio, block_type, block_num in victim_blocks.iterator_verbose():
+            dst_pbn = self.block_pool.pop_a_free_block_to_data_blocks(
+                    choice=MOST_ERASED)
+
+            if valid_ratio == 0:
+                if block_type == victim_blocks.TYPE_DATA:
+                    yield self.env.process(
+                        self.recycle_empty_data_block(block_num, 'wearleveling'))
+                elif block_type == victim_blocks.TYPE_LOG:
+                    dgn, loggroup = self.log_mapping_table.find_group_by_pbn(blocknum)
+                    yield self.env.process(
+                        self._recycle_empty_log_block(dgn, blocknum, 'wearleveling'))
+                else:
+                    raise RuntimeError()
+                break
+
+            else:
+                if block_type == victim_blocks.TYPE_DATA:
+                    found, lbn = self.data_block_mapping_table.pbn_to_lbn(block_num)
+                    assert found == True
+                    yield self.env.process(
+                        self._move_data_block(src_pbn = block_num, dst_pbn = dst_pbn))
+                elif block_type == victim_blocks.TYPE_LOG:
+                    yield self.env.process(
+                        self._move_log_block(src_pbn = block_num, dst_pbn = dst_pbn))
+                else:
+                    raise RuntimeError('Block type not recognized: {}'.format(
+                        block_type))
+
+        self._cleaning_lock.release(req)
+
+    def _move_log_block(self, src_pbn, dst_pbn):
+        """
+        Find a dst_pbn to move to, register it with LogMappingTable
+        Move the data from src_pbn to dst_pbn
+        Update the page-leveling mapping in logmappingtable
+        """
+        dgn, loggroup = self.log_mapping_table.find_group_by_pbn(src_pbn)
+        loggroup.register_pbn(dst_pbn)
+
+        # move data
+        start, end = self.conf.block_to_page_range(src_pbn)
+        for src_ppn in range(start, end):
+            if self.oob.states.is_page_valid(src_ppn):
+                lpn = self.oob.translate_ppn_to_lpn(src_ppn)
+                lbn, _ = self.conf.page_to_block_off(lpn)
+
+                req = self.logical_block_locks.get_request(lbn)
+                yield req
+
+                offset = src_ppn - start
+                dst_ppn = self.conf.block_off_to_page(dst_pbn, offset)
+                yield self.env.process(
+                    self._move_page(src_ppn, dst_ppn, tag='wearleveling'))
+
+                # update page-level mapping
+                loggroup.remove_lpn(lpn)
+                loggroup.add_mapping(lpn, dst_ppn)
+
+                self.logical_block_locks.release_request(lbn, req)
+
+        yield self.env.process(
+            self._recycle_empty_log_block(dgn, src_pbn, ''))
+
+    def _move_data_block(self, src_pbn, dst_pbn):
+        """
+        dst_pbn must be in used data block pool, and fully erased.
+        The caller of this function has to calll pop_a_free_block_to_log_blocks()
+        to get the dst_pbn.
+        """
+        found, lbn = self.data_block_mapping_table.pbn_to_lbn(src_pbn)
+        assert found == True
+
+        # copy valid pages
+        yield self.env.process(
+            self._move_block_data(src_pbn, dst_pbn, tag='wearleveling'))
+
+        # need to recyle the old data block
+        yield self.env.process(self.recycle_empty_data_block(src_pbn, tag=''))
+
+        # add new mapping in data block mapping
+        self.data_block_mapping_table.add_data_block_mapping(lbn, dst_pbn)
+
+    def _move_block_data(self, src_pbn, dst_pbn, tag):
+        start, end = self.conf.block_to_page_range(src_pbn)
+        for src_ppn in range(start, end):
+            if self.oob.states.is_page_valid(src_ppn):
+                offset = src_ppn - start
+                dst_ppn = self.conf.block_off_to_page(dst_pbn, offset)
+                yield self.env.process(
+                    self._move_page(src_ppn, dst_ppn, tag=tag))
+
+    def _move_page(self, src_ppn, dst_ppn, tag=''):
+        lpn = self.oob.translate_ppn_to_lpn(src_ppn)
+
+        data = self.flash.page_read(src_ppn, cat = tag)
+        yield self.env.process(
+            self.des_flash.rw_ppns([src_ppn], 'read', tag = tag))
+        self.flash.page_write(dst_ppn, cat = tag, data = data)
+        yield self.env.process(
+            self.des_flash.rw_ppns([dst_ppn], 'write', tag = tag))
+
+        self.oob.remap(lpn = lpn, old_ppn = src_ppn,
+            new_ppn = dst_ppn)
+
     def assert_mapping(self, lpn):
         # Try log blocks
         log_found, log_ppn = self.translator.log_mapping_table.lpn_to_ppn(lpn)
@@ -1529,7 +1709,10 @@ class Ftl(ftlbuilder.FtlBuilder):
             n_channels=self.conf.n_channels_per_dev,
             n_blocks_per_channel=self.conf.n_blocks_per_channel,
             n_pages_per_block=self.conf.n_pages_per_block,
-            tags=[TDATA, TLOG])
+            tags=[TDATA, TLOG],
+            leveling_factor=self.conf['wear_leveling_factor'],
+            leveling_diff=self.conf['wear_leveling_diff']
+            )
         self.oob = OutOfBandAreas(confobj)
         self.global_helper = GlobalHelper(confobj)
 
@@ -1708,8 +1891,15 @@ class Ftl(ftlbuilder.FtlBuilder):
                 for block_id, req in reversed(zip(block_ids, reqs)):
                     self.logical_block_locks.release_request(block_id, req)
 
+                gc_req = self.garbage_collector._cleaning_lock.request()
+                yield gc_req
+
+                print 'start cleaning for write_ext()'
+
                 yield self.env.process(
                     self.garbage_collector.clean_data_group(data_group_no))
+
+                self.garbage_collector._cleaning_lock.release(gc_req)
 
                 reqs = []
                 for block_id in block_ids:
@@ -1875,6 +2065,12 @@ class Ftl(ftlbuilder.FtlBuilder):
 
     def clean(self, forced=False, merge=True):
         yield self.env.process(self.garbage_collector.clean(forced, merge=merge))
+
+    def is_wear_leveling_needed(self):
+        return self.block_pool.need_wear_leveling()
+
+    def level_wear(self):
+        yield self.env.process(self.garbage_collector.level_wear())
 
     def is_cleaning_needed(self):
         return self.garbage_collector.decider.should_start()
