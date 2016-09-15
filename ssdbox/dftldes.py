@@ -1505,7 +1505,6 @@ class Cleaner(object):
     def _clean_batch(self, victim_tuples, purpose):
         procs = []
         for valid_ratio, block_type, block_num in victim_tuples:
-            print valid_ratio,
             p = self.env.process(
                     self._clean_block(block_type, block_num, purpose))
             procs.append(p)
