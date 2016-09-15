@@ -101,7 +101,7 @@ class Experimenter(object):
         self.conf['flash_config']['n_planes_per_chip'] = 1
         self.conf['flash_config']['n_chips_per_package'] = 1
         self.conf['flash_config']['n_packages_per_channel'] = 1
-        self.conf['flash_config']['n_channels_per_dev'] = 16
+        self.conf['flash_config']['n_channels_per_dev'] = self.para.n_channels_per_dev
 
         self.conf['do_not_check_gc_setting'] = self.para.not_check_gc_setting
 
@@ -246,6 +246,7 @@ def get_shared_para_dict(expname, lbabytes):
             'wear_leveling_diff': [10],
             'snapshot_valid_ratios': [True],
             'snapshot_erasure_count_dist': [True],
+            'n_channels_per_dev'  : [16],
             }
     return para_dict
 
