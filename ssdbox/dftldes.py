@@ -127,7 +127,7 @@ class Ftl(object):
         self.pre_written_bytes = 0
         self.pre_discarded_bytes = 0
         self.pre_read_bytes = 0
-        self.display_interval = 1 * MB
+        self.display_interval = 4 * MB
 
     def _check_segment_config(self):
         if self.conf['segment_bytes'] % (self.conf.n_pages_per_block \
