@@ -355,6 +355,10 @@ class Ftl(object):
         return self._cleaner.is_cleaning_needed()
 
     def is_wear_leveling_needed(self):
+        factor, diff = self.block_pool.get_wear_status()
+        self.recorder.append_to_value_list('wear_diff', diff)
+        print 'ddddddddddddddddddddiiiiiiiiiiifffffffffff', diff
+
         return self.block_pool.need_wear_leveling()
 
     def clean(self, forced=True):
