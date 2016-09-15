@@ -45,18 +45,18 @@ def wearleveling_bench():
                     'snapshot_interval': [1*SEC],
                     'write_gc_log'     : [False],
                     'stripe_size'      : [1],
-                    'do_wear_leveling' : [False, True],
+                    'do_wear_leveling' : [True],
                     'wear_leveling_check_interval': [1*SEC],
                     'wear_leveling_factor': [1],
-                    'wear_leveling_diff' : [10],
+                    'wear_leveling_diff' : [1000],
                     'snapshot_valid_ratios': [False],
                     'snapshot_erasure_count_dist': [True],
 
                     'chunk_size'       : [64*KB],
-                    'traffic_size'     : [32*1000*MB],
+                    'traffic_size'     : [10*1024*MB],
                     'space_size'       : [int(lbabytes / 2)],
 
-                    'access_distribution' : ['uniform', 'zipf'],
+                    'access_distribution' : ['uniform'],
                     'skew_factor'      : [10],
                     'zipf_alpha'       : [1],
                     }
@@ -91,8 +91,8 @@ def wearleveling_bench():
                     'zipf_alpha'       : [1],
                     }
 
-            # para_dict.update( dftl_update )
-            para_dict.update( nkftl_update )
+            para_dict.update( dftl_update )
+            # para_dict.update( nkftl_update )
 
             self.check_config(para_dict)
 
