@@ -33,7 +33,7 @@ def wearleveling_bench():
             # for DFTL
             dftl_update = {
                     'ftl'              : ['dftldes'],
-                    'n_channels_per_dev': [1],
+                    'n_channels_per_dev': [16],
 
                     'enable_simulation': [True],
                     'over_provisioning': [1.5], # 1.28 is a good number
@@ -48,15 +48,15 @@ def wearleveling_bench():
                     'do_wear_leveling' : [True],
                     'wear_leveling_check_interval': [1*SEC],
                     'wear_leveling_factor': [1],
-                    'wear_leveling_diff' : [1000],
+                    'wear_leveling_diff' : [5],
                     'snapshot_valid_ratios': [False],
                     'snapshot_erasure_count_dist': [True],
 
                     'chunk_size'       : [64*KB],
-                    'traffic_size'     : [10*1024*MB],
+                    'traffic_size'     : [20*1024*MB],
                     'space_size'       : [int(lbabytes / 2)],
 
-                    'access_distribution' : ['uniform'],
+                    'access_distribution' : ['uniform', 'zipf'],
                     'skew_factor'      : [10],
                     'zipf_alpha'       : [1],
                     }
