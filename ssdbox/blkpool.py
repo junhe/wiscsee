@@ -46,6 +46,9 @@ class BlockPool(object):
 
         return blocks1 + blocks2
 
+    def get_wear_status(self):
+        return self.pool.get_wear_status()
+
     def need_wear_leveling(self):
         return self.pool.need_wear_leveling()
 
