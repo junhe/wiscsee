@@ -69,23 +69,29 @@ class MultiChannelBlockPoolBase(object):
 
         return erase_cnt, block_cnt
 
-    def need_wear_leveling(self):
+    def get_wear_status(self):
+        """
+        Return wear factor and diff
+        """
         nblocks = self.total_blocks * 0.1
 
         top_total, top_count = self.get_top_or_bottom_erasure_total(
                 'top', nblocks)
         top_average = float(top_total) / top_count
-        print 'top_total', top_total
         bottom_total, bottom_count = self.get_top_or_bottom_erasure_total(
                 'bottom', nblocks)
         bottom_average = float(bottom_total) / bottom_count
-        print 'bottom_total', bottom_total
 
         diff = top_average - bottom_average
         if bottom_total == 0:
             factor = float('inf')
         else:
             factor = float(top_total) / bottom_total
+
+        return factor, diff
+
+    def need_wear_leveling(self):
+        factor, diff = self.get_wear_status()
 
         print factor, self.leveling_factor
         print diff, self.leveling_diff
