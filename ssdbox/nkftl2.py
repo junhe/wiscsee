@@ -1564,7 +1564,6 @@ class GarbageCollector(object):
                         self._recycle_empty_log_block(dgn, block_num, 'wearleveling'))
                 else:
                     raise RuntimeError()
-                break
 
             else:
                 if block_type == victim_blocks.TYPE_DATA:
