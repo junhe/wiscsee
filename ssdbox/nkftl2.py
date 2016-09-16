@@ -1561,9 +1561,6 @@ class GarbageCollector(object):
                 )
 
         for valid_ratio, block_type, block_num in victim_blocks.iterator_verbose():
-            dst_pbn = self.block_pool.pop_a_free_block_to_data_blocks(
-                    choice=MOST_ERASED)
-
             if valid_ratio == 0:
                 if block_type == victim_blocks.TYPE_DATA:
                     yield self.env.process(
@@ -1576,6 +1573,12 @@ class GarbageCollector(object):
                     raise RuntimeError()
 
             else:
+                dst_pbn = self.block_pool.pop_a_free_block_to_data_blocks(
+                        choice=MOST_ERASED)
+                if dst_pbn is None:
+                    # out of space, let's skip
+                    continue
+
                 if block_type == victim_blocks.TYPE_DATA:
                     found, lbn = self.data_block_mapping_table.pbn_to_lbn(block_num)
                     assert found == True
