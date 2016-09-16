@@ -664,14 +664,14 @@ def appmixbench_for_lpn_count():
                                 {
                                  "name": "Varmail",
                                  "nfiles": 8000,
-                                 "seconds": 60,
+                                 "seconds": 600,
                                 },
                             ],
                             [
                                {'name': 'Sqlite',
                                 'pattern': 'random',
-                                'n_insertions': 12000,
-                                'max_key': 12000,
+                                'n_insertions': 1200000,
+                                'max_key': 120000,
                                 'commit_period': 10,
                                },
                             ],
