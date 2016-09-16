@@ -779,11 +779,14 @@ class BlockInfo(object):
 class WearLevelingVictimBlocks(object):
     TYPE_DATA = 'TYPE_DATA'
     TYPE_LOG = 'TYPE_LOG'
-    def __init__(self, conf, block_pool, oob, n_victims):
+    def __init__(self, conf, block_pool, oob, n_victims,
+            log_mapping_table, data_block_mapping_table):
         self._conf = conf
         self._block_pool = block_pool
         self._oob = oob
         self.n_victims = n_victims
+        self.log_mapping_table = log_mapping_table
+        self.data_block_mapping_table = data_block_mapping_table
 
     def iterator_verbose(self):
         """
@@ -800,11 +803,15 @@ class WearLevelingVictimBlocks(object):
         for blocknum, count in least_used_blocks:
             valid_ratio = self._oob.states.block_valid_ratio(blocknum)
             if blocknum in used_data_blocks:
-                yield valid_ratio, self.TYPE_DATA, blocknum
-                victim_cnt += 1
+                found, _ = self.data_block_mapping_table.pbn_to_lbn(blocknum)
+                if found is True:
+                    yield valid_ratio, self.TYPE_DATA, blocknum
+                    victim_cnt += 1
             elif blocknum in used_log_blocks:
-                yield valid_ratio, self.TYPE_LOG, blocknum
-                victim_cnt += 1
+                dgn, _ = self.log_mapping_table.find_group_by_pbn(blocknum)
+                if dgn is not None:
+                    yield valid_ratio, self.TYPE_LOG, blocknum
+                    victim_cnt += 1
 
             if victim_cnt >= self.n_victims:
                 break
@@ -1548,7 +1555,10 @@ class GarbageCollector(object):
         yield req
 
         victim_blocks = WearLevelingVictimBlocks(self.conf,
-                self.block_pool, self.oob, 0.1 * self.conf.n_blocks_per_dev)
+                self.block_pool, self.oob, 0.1 * self.conf.n_blocks_per_dev,
+                data_block_mapping_table = self.data_block_mapping_table,
+                log_mapping_table = self.log_mapping_table
+                )
 
         for valid_ratio, block_type, block_num in victim_blocks.iterator_verbose():
             dst_pbn = self.block_pool.pop_a_free_block_to_data_blocks(
