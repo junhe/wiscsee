@@ -1561,7 +1561,7 @@ class GarbageCollector(object):
                 elif block_type == victim_blocks.TYPE_LOG:
                     dgn, loggroup = self.log_mapping_table.find_group_by_pbn(block_num)
                     yield self.env.process(
-                        self._recycle_empty_log_block(dgn, blocknum, 'wearleveling'))
+                        self._recycle_empty_log_block(dgn, block_num, 'wearleveling'))
                 else:
                     raise RuntimeError()
                 break
