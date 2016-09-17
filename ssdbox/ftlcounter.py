@@ -174,7 +174,7 @@ class Ftl(ftlbuilder.FtlBuilder):
                 f.write(row)
                 f.write('\n')
 
-        self.clean_up()
+        # self.clean_up()
 
     def dump_lpn_sem(self, lpns):
         if self.conf['filesystem'] == 'ext4':

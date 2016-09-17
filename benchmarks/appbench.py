@@ -648,7 +648,7 @@ def appmixbench_for_lpn_count():
             para_dict.update( {
                     'ftl' : ['ftlcounter'],
                     'workload_class' : [ 'AppMix' ],
-                    'dump_ext4_after_workload': [False],
+                    'dump_ext4_after_workload': [True],
                     'run_seconds'    : [None],
                     'filesystem'     : ['ext4', 'f2fs', 'xfs'],
                     'appconfs': [
