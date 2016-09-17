@@ -17,10 +17,13 @@ import recorder
 from utilities import utils
 from .blkpool import BlockPool
 from .bitmap import FlashBitmap2
+from commons import *
 
 import prepare4pyreuse
 from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
 from pyreuse.fsutils import ext4dumpextents
+
+
 
 
 
@@ -174,6 +177,18 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.clean_up()
 
     def dump_lpn_sem(self, lpns):
+        if self.conf['filesystem'] == 'ext4':
+            self.dump_lpn_sem_ext4(lpns)
+
+        elif self.conf['filesystem'] == 'f2fs':
+            self.dump_lpn_sem_f2fs(lpns)
+
+        else:
+            raise RuntimeError('{} is not supported'.format(
+                self.conf['filesystem']))
+
+
+    def dump_lpn_sem_ext4(self, lpns):
         classifier = LpnClassification(
                 lpns = lpns,
                 device_path = self.conf['device_path'],
@@ -185,6 +200,17 @@ class Ftl(ftlbuilder.FtlBuilder):
         with open(lpn_sem_path, 'w') as f:
             f.write(utils.table_to_str(table, width=0))
 
+    def dump_lpn_sem_f2fs(self, lpns):
+        classifier = F2FSLpnClassification(
+                lpns = lpns,
+                device_path = self.conf['device_path'],
+                result_dir = self.conf['result_dir'],
+                flash_page_size = 2048)
+        table = classifier.classify()
+
+        lpn_sem_path = os.path.join(self.conf['result_dir'], 'lpn_sem.out')
+        with open(lpn_sem_path, 'w') as f:
+            f.write(utils.table_to_str(table, width=0))
 
     def get_lpns(self):
         lpns = list(set(self.read_count.keys()
@@ -267,5 +293,46 @@ class LpnClassification(object):
                 '<{}>'.format(journal_inum))
         table = ext4dumpextents.parse_dump_extents_output(ext_text)
         return table[0]['Physical_start'], table[0]['Physical_end']
+
+
+class F2FSLpnClassification(object):
+    def __init__(self, lpns, device_path, result_dir, flash_page_size):
+        self.device_path = device_path
+        self.result_dir = result_dir
+        self.flash_page_size = flash_page_size
+        self.lpns = lpns
+
+        self.fs_block_size = 4096
+
+    def classify(self):
+        classifier = self._get_classifier()
+
+        table = []
+        for lpn in self.lpns:
+            offset  = lpn * self.flash_page_size
+            sem = classifier.classify(offset)
+            row = {'lpn': lpn,
+                   'sem':sem}
+            table.append(row)
+
+        return table
+
+    def _get_classifier(self):
+        """
+        =====[ partition info(sdc1). #0 ]=====
+        [SB: 1] [CP: 2] [SIT: 2] [NAT: 4] [SSA: 1] [MAIN: 502(OverProv:70 Resv:48)]
+        """
+        range_table = [
+                {'Superblock': (0, 1*MB)},
+                {'Checkpoint': (1*MB, 3*MB)},
+                {'SegInfoTab': (3*MB, 5*MB)},
+                {'NodeAddrTab': (5*MB, 9*MB)},
+                {'SegSummArea': (9*MB, 10*MB)},
+                {'MainArea': (10*MB, 1024*MB)},
+                ]
+
+        classifier = blockclassifiers.OffsetClassifier(range_table)
+
+        return classifier
 
 
