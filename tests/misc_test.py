@@ -10,6 +10,7 @@ from config import MountOption as MOpt
 from workflow import run_workflow
 from ssdbox.simulator import GcLog
 from ssdbox.ftlsim_commons import Extent, random_channel_id
+from ssdbox.ftlcounter import LpnClassification
 
 class TestCpuhandler(unittest.TestCase):
     def test_cpu(self):
@@ -161,6 +162,22 @@ class TestGroupToBatches(unittest.TestCase):
         self.assertListEqual(batches, [[0, 1, 2],
                                        [3, 4, 5],
                                        [6]])
+
+@unittest.skip('need real device')
+class TestLpnClassification(unittest.TestCase):
+    def test(self):
+        classifier = LpnClassification(
+                lpns = [1, 8],
+                device_path = '/dev/sdc1',
+                result_dir = '/tmp/results/test002/subexp--6155052293192590053-ext4-09-16-09-32-22-1439596482389025085',
+                flash_page_size = 2048)
+        classifier.classify()
+
+
+
+
+
+
 
 def main():
     unittest.main()
