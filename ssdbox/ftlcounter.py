@@ -320,15 +320,16 @@ class F2FSLpnClassification(object):
     def _get_classifier(self):
         """
         =====[ partition info(sdc1). #0 ]=====
+                |<-- aligned to segment
         [SB: 1] [CP: 2] [SIT: 2] [NAT: 4] [SSA: 1] [MAIN: 502(OverProv:70 Resv:48)]
         """
         range_table = [
-                {'Superblock': (0, 1*MB)},
-                {'Checkpoint': (1*MB, 3*MB)},
-                {'SegInfoTab': (3*MB, 5*MB)},
-                {'NodeAddrTab': (5*MB, 9*MB)},
-                {'SegSummArea': (9*MB, 10*MB)},
-                {'MainArea': (10*MB, 1024*MB)},
+                {'Superblock': (0, 2*MB)},
+                {'Checkpoint': (2*MB, 4*MB)},
+                {'SegInfoTab': (4*MB, 6*MB)},
+                {'NodeAddrTab': (6*MB, 10*MB)},
+                {'SegSummArea': (10*MB, 11*MB)},
+                {'MainArea': (20*MB, 1024*MB)},
                 ]
 
         classifier = blockclassifiers.OffsetClassifier(range_table)
