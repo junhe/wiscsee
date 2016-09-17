@@ -656,7 +656,7 @@ def appmixbench_for_lpn_count():
                                 {'name' : 'LevelDB',
                                  'benchmarks': 'overwrite',
                                  'num': 60*MILLION,
-                                 'max_key': 6*MILLION,
+                                 'max_key': 5*MILLION,
                                  'max_log': -1
                                 },
                             ],
