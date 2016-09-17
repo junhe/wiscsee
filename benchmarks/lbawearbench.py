@@ -84,7 +84,7 @@ def wearleveling_bench():
                     'snapshot_valid_ratios': [False],
                     'snapshot_erasure_count_dist': [True],
 
-                    'chunk_size'       : [64*KB],
+                    'chunk_size'       : [128*KB],
                     'traffic_size'     : [20*1024*MB],
                     'space_size'       : [int(lbabytes / 2)],
 
