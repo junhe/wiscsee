@@ -1618,7 +1618,11 @@ class GarbageCollector(object):
                     self._move_page(src_ppn, dst_ppn, tag='wearleveling'))
 
                 # update page-level mapping
-                loggroup.remove_lpn(lpn)
+                try:
+                    loggroup.remove_lpn(lpn)
+                except KeyError:
+                    # TODO: make sure this is right
+                    pass
                 loggroup.add_mapping(lpn, dst_ppn)
 
                 self.logical_block_locks.release_request(lbn, req)
