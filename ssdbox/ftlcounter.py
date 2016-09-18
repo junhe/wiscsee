@@ -183,6 +183,9 @@ class Ftl(ftlbuilder.FtlBuilder):
         elif self.conf['filesystem'] == 'f2fs':
             self.dump_lpn_sem_f2fs(lpns)
 
+        elif self.conf['filesystem'] == 'xfs':
+            self.dump_lpn_sem_xfs(lpns)
+
         else:
             raise RuntimeError('{} is not supported'.format(
                 self.conf['filesystem']))
@@ -211,6 +214,19 @@ class Ftl(ftlbuilder.FtlBuilder):
         lpn_sem_path = os.path.join(self.conf['result_dir'], 'lpn_sem.out')
         with open(lpn_sem_path, 'w') as f:
             f.write(utils.table_to_str(table, width=0))
+
+    def dump_lpn_sem_xfs(self, lpns):
+        classifier = XFSLpnClassification(
+                lpns = lpns,
+                device_path = self.conf['device_path'],
+                result_dir = self.conf['result_dir'],
+                flash_page_size = 2048)
+        table = classifier.classify()
+
+        lpn_sem_path = os.path.join(self.conf['result_dir'], 'lpn_sem.out')
+        with open(lpn_sem_path, 'w') as f:
+            f.write(utils.table_to_str(table, width=0))
+
 
     def get_lpns(self):
         lpns = list(set(self.read_count.keys()
@@ -331,6 +347,48 @@ class F2FSLpnClassification(object):
                 {'SegSummArea': (10*MB, 11*MB)},
                 {'MainArea': (20*MB, 1024*MB)},
                 ]
+
+        classifier = blockclassifiers.OffsetClassifier(range_table)
+
+        return classifier
+
+class XFSLpnClassification(object):
+    def __init__(self, lpns, device_path, result_dir, flash_page_size):
+        self.device_path = device_path
+        self.result_dir = result_dir
+        self.flash_page_size = flash_page_size
+        self.lpns = lpns
+
+        self.fs_block_size = 4096
+
+    def classify(self):
+        classifier = self._get_classifier()
+
+        table = []
+        for lpn in self.lpns:
+            offset  = lpn * self.flash_page_size
+            sem = classifier.classify(offset)
+            row = {'lpn': lpn,
+                   'sem':sem}
+            table.append(row)
+
+        return table
+
+    def _get_classifier(self):
+        range_table = [ ]
+
+        BLOCKSIZE = 4*KB
+        for i in range(8):
+            ag_start = i * 128*MB
+            range_table.extend(
+                [
+                    {'Superblock': (ag_start, ag_start + 1 * BLOCKSIZE)},
+                    {'Header': (ag_start + 1 * BLOCKSIZE, ag_start + 4 * BLOCKSIZE)},
+                    {'FreeSpBlkNoTreeRoot': (ag_start + 4 * BLOCKSIZE, ag_start + 5 * BLOCKSIZE)},
+                    {'FreeSpCntNoTreeRoot': (ag_start + 5 * BLOCKSIZE, ag_start + 6 * BLOCKSIZE)},
+                    {'InodeTreeRoot': (ag_start + 6 * BLOCKSIZE, ag_start + 7 * BLOCKSIZE)},
+                ])
+
 
         classifier = blockclassifiers.OffsetClassifier(range_table)
 
