@@ -375,6 +375,19 @@ class XFSLpnClassification(object):
         return table
 
     def _get_classifier(self):
+        """
+        block 32768 (1/0) type sb
+        block 32769 (1/1) type agf
+        block 32770 (1/2) type agi
+        block 32771 (1/3) type agfl
+        block 32772 (1/4) type btbno
+        block 32773 (1/5) type btcnt
+        block 32774 (1/6) type btino
+        block 32775 (1/7) type freelist
+        block 32776 (1/8) type freelist
+        block 32777 (1/9) type freelist
+        block 32778 (1/10) type freelist
+        """
         range_table = [
                 {'Journal': (131079*4*KB, 131079*4*KB + 10*MB)}
                 ]
@@ -384,11 +397,14 @@ class XFSLpnClassification(object):
             ag_start = i * 128*MB
             range_table.extend(
                 [
-                    {'Superblock': (ag_start, ag_start + 1 * BLOCKSIZE)},
-                    {'Header': (ag_start + 1 * BLOCKSIZE, ag_start + 4 * BLOCKSIZE)},
-                    {'FreeSpBlkNoTreeRoot': (ag_start + 4 * BLOCKSIZE, ag_start + 5 * BLOCKSIZE)},
-                    {'FreeSpCntNoTreeRoot': (ag_start + 5 * BLOCKSIZE, ag_start + 6 * BLOCKSIZE)},
-                    {'InodeTreeRoot': (ag_start + 6 * BLOCKSIZE, ag_start + 7 * BLOCKSIZE)},
+                    {'Superblock'          : (ag_start + 0 * BLOCKSIZE, ag_start + 1 * BLOCKSIZE)},
+                    {'FreeBlockInfo'       : (ag_start + 1 * BLOCKSIZE, ag_start + 2 * BLOCKSIZE)},
+                    {'InodeInfo'           : (ag_start + 2 * BLOCKSIZE, ag_start + 3 * BLOCKSIZE)},
+                    {'FreeListInfo'        : (ag_start + 3 * BLOCKSIZE, ag_start + 4 * BLOCKSIZE)},
+                    {'FreeSpTree1Root'     : (ag_start + 4 * BLOCKSIZE, ag_start + 5 * BLOCKSIZE)},
+                    {'FreeSpTree2Root'     : (ag_start + 5 * BLOCKSIZE, ag_start + 6 * BLOCKSIZE)},
+                    {'InodeTreeRoot'       : (ag_start + 6 * BLOCKSIZE, ag_start + 7 * BLOCKSIZE)},
+                    {'FreeList'            : (ag_start + 7 * BLOCKSIZE, ag_start + 11 * BLOCKSIZE)},
                 ])
 
 
