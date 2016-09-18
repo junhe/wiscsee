@@ -375,7 +375,9 @@ class XFSLpnClassification(object):
         return table
 
     def _get_classifier(self):
-        range_table = [ ]
+        range_table = [
+                {'Journal': (131079*4*KB, 131079*4*KB + 10*MB)}
+                ]
 
         BLOCKSIZE = 4*KB
         for i in range(8):
