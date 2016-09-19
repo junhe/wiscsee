@@ -22,6 +22,7 @@ from commons import *
 import prepare4pyreuse
 from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
 from pyreuse.fsutils import ext4dumpextents
+from pyreuse.sysutils.filefragparser import filefrag, get_file_range_table
 
 
 
@@ -216,11 +217,15 @@ class Ftl(ftlbuilder.FtlBuilder):
             f.write(utils.table_to_str(table, width=0))
 
     def dump_lpn_sem_xfs(self, lpns):
+        file_ranges = get_range_table(self.conf['fs_mount_point'])
+
         classifier = XFSLpnClassification(
                 lpns = lpns,
                 device_path = self.conf['device_path'],
                 result_dir = self.conf['result_dir'],
-                flash_page_size = 2048)
+                flash_page_size = 2048,
+                external_ranges = file_ranges
+                )
         table = classifier.classify()
 
         lpn_sem_path = os.path.join(self.conf['result_dir'], 'lpn_sem.out')
@@ -353,11 +358,12 @@ class F2FSLpnClassification(object):
         return classifier
 
 class XFSLpnClassification(object):
-    def __init__(self, lpns, device_path, result_dir, flash_page_size):
+    def __init__(self, lpns, device_path, result_dir, flash_page_size, external_ranges=None):
         self.device_path = device_path
         self.result_dir = result_dir
         self.flash_page_size = flash_page_size
         self.lpns = lpns
+        self.external_ranges = external_ranges
 
         self.fs_block_size = 4096
 
@@ -407,9 +413,27 @@ class XFSLpnClassification(object):
                     {'FreeList'            : (ag_start + 7 * BLOCKSIZE, ag_start + 11 * BLOCKSIZE)},
                 ])
 
+        if not self.external_ranges is None:
+            range_table.extend(self.external_ranges)
+
+        print range_table
 
         classifier = blockclassifiers.OffsetClassifier(range_table)
 
         return classifier
+
+
+def get_range_table(dirpath):
+    byte_ranges = get_file_range_table(dirpath)
+
+    ret_table = []
+    for row in byte_ranges:
+        sem = os.path.basename(row['path'])
+        start = row['start_byte']
+        end = start + row['size']
+        new_row = {sem: (start, end)}
+        ret_table.append(new_row)
+
+    return ret_table
 
 

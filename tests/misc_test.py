@@ -10,7 +10,7 @@ from config import MountOption as MOpt
 from workflow import run_workflow
 from ssdbox.simulator import GcLog
 from ssdbox.ftlsim_commons import Extent, random_channel_id
-from ssdbox.ftlcounter import LpnClassification
+from ssdbox.ftlcounter import LpnClassification, get_file_range_table
 
 class TestCpuhandler(unittest.TestCase):
     def test_cpu(self):
