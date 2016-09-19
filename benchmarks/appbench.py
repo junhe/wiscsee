@@ -664,7 +664,8 @@ def appmixbench_for_lpn_count():
                                 {
                                  "name": "Varmail",
                                  "nfiles": 8000,
-                                 "seconds": 600,
+                                 "seconds": 3600,
+                                 "num_ops": 6*MILLION,
                                 },
                             ],
                             [
