@@ -623,7 +623,8 @@ class AppMix(Workload):
                 )
 
         elif appconf['name'] == 'Varmail':
-            proc = VarmailProc(appdir, appconf['seconds'], appconf['nfiles'])
+            proc = VarmailProc(appdir, appconf['seconds'], appconf['nfiles'],
+                    appconf['num_ops'])
 
         elif appconf['name'] == 'F2FStest':
             proc = F2FSTester(appdir)

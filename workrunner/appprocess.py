@@ -123,6 +123,11 @@ define process name=filereader,instances=1
     flowop openfile name=openfile4,filesetname=bigfileset,fd=1
     flowop readwholefile name=readfile4,fd=1,iosize=$iosize
     flowop closefile name=closefile4,fd=1
+"""
+
+PART3 = "flowop finishoncount name=finish,value={}"
+
+PART4 = """
   }
 }
 
@@ -130,13 +135,16 @@ echo  "Varmail Version 3.0 personality successfully loaded"
 
 """
 
-PART3  = "run {}"
+
+PART5  = "run {}"
 
 class VarmailProc(AppBase):
-    def __init__(self, dirpath, seconds, nfiles):
+    def __init__(self, dirpath, seconds, nfiles, num_ops):
         self.dirpath = dirpath
         self.seconds = seconds
         self.nfiles = nfiles # 8000 was often used
+        self.num_ops = num_ops
+
         self.hash_str = str(hash(dirpath))
         self.conf_path = '/tmp/filebench.config.' + self.hash_str
         self.p = None
@@ -156,7 +164,11 @@ class VarmailProc(AppBase):
 
     def get_conf_text(self):
         return PART1.format(dirpath=self.dirpath, nfiles=self.nfiles) + \
-                PART2 + PART3.format(self.seconds)
+                PART2 + \
+                PART3.format(self.num_ops) + \
+                PART4 + \
+                PART5.format(self.seconds)
+
 
     def terminate(self):
         raise NotImplementedError('this sometimes not work')
