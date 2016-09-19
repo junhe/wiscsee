@@ -416,8 +416,6 @@ class XFSLpnClassification(object):
         if not self.external_ranges is None:
             range_table.extend(self.external_ranges)
 
-        print range_table
-
         classifier = blockclassifiers.OffsetClassifier(range_table)
 
         return classifier
