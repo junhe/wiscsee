@@ -655,7 +655,7 @@ def appmixbench_for_lpn_count():
                             [ # list of app you want to run
                                 {'name' : 'LevelDB',
                                  'benchmarks': 'overwrite',
-                                 'num': 60*MILLION,
+                                 'num': 120*MILLION,
                                  'max_key': 5*MILLION,
                                  'max_log': -1
                                 },
@@ -664,14 +664,14 @@ def appmixbench_for_lpn_count():
                                 {
                                  "name": "Varmail",
                                  "nfiles": 8000,
-                                 "seconds": 3600,
-                                 "num_ops": 6*MILLION,
+                                 "seconds": 360000,
+                                 "num_ops": 60*MILLION,
                                 },
                             ],
                             [
                                {'name': 'Sqlite',
                                 'pattern': 'random',
-                                'n_insertions': 1200000,
+                                'n_insertions': 12000000,
                                 'max_key': 120000,
                                 'commit_period': 10,
                                },

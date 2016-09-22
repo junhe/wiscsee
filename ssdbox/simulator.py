@@ -210,7 +210,7 @@ class SimulatorNonDES(Simulator):
         for event in self.event_iter:
             self.process_event(event)
             cnt += 1
-            if cnt % 100 == 0:
+            if cnt % 5000 == 0:
                 print '|',
                 sys.stdout.flush()
 
