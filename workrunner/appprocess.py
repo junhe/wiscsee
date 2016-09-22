@@ -12,6 +12,14 @@ from pyreuse.sysutils.ftrace import *
 from commons import *
 
 
+strace_prefix = ' '.join(['strace',
+   '-o', '{}.strace.out', '-f', '-ttt',
+   '-e', 'trace=open,openat,accept,close,fsync,sync,read,'\
+         'write,pread,pwrite,lseek,'\
+         'dup,dup2,dup3,clone,unlink',
+   '-s', '8']) + ' '
+
+
 class AppBase(object):
     def wait(self):
         self.p.wait()
@@ -33,6 +41,9 @@ class LevelDBProc(AppBase):
         self.max_log = max_log
         self.p = None
 
+        self.do_strace = True
+        self.inst_id = 3
+
     def run(self):
         utils.prepare_dir(self.db)
 
@@ -52,10 +63,17 @@ class LevelDBProc(AppBase):
                 max_log = self.max_log,
                 use_existing_db = self.use_existing_db
                 )
+
+        if self.do_strace is True:
+            cmd = strace_prefix.format(self.inst_id) + cmd
+
         print cmd
         cmd = shlex.split(cmd)
+        print cmd
         self.p = subprocess.Popen(cmd)
+
         return self.p
+
 
 
 class SqliteProc(AppBase):
@@ -68,6 +86,9 @@ class SqliteProc(AppBase):
         self.commit_period = commit_period
         self.max_key = max_key
 
+        self.do_strace = True
+        self.inst_id = 3
+
     def run(self):
         bench_path = './sqlitebench/bench.py'
 
@@ -76,6 +97,9 @@ class SqliteProc(AppBase):
         cmd = 'python {exe} -f {f} -n {n} -p {p} -e {e} -m {m}'.format(
             exe=bench_path, f=self.db_path, n=self.n_insertions, p=self.pattern,
             e=self.commit_period, m=self.max_key)
+
+        if self.do_strace is True:
+            cmd = strace_prefix.format(self.inst_id) + cmd
 
         print cmd
         cmd = shlex.split(cmd)
@@ -149,12 +173,18 @@ class VarmailProc(AppBase):
         self.conf_path = '/tmp/filebench.config.' + self.hash_str
         self.p = None
 
+        self.do_strace = True
+        self.inst_id = 3
+
     def run(self):
         conf_text = self.get_conf_text()
         with open(self.conf_path, 'w') as f:
             f.write(conf_text)
 
         utils.prepare_dir(self.dirpath)
+
+        if self.do_strace is True:
+            cmd = strace_prefix.format(self.inst_id) + cmd
 
         cmd = 'filebench -f {}'.format(self.conf_path)
         print cmd

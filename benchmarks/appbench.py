@@ -650,32 +650,32 @@ def appmixbench_for_lpn_count():
                     'workload_class' : [ 'AppMix' ],
                     'dump_ext4_after_workload': [True],
                     'run_seconds'    : [None],
-                    'filesystem'     : ['ext4', 'f2fs', 'xfs'],
+                    'filesystem'     : ['ext4'],
                     'appconfs': [
                             [ # list of app you want to run
                                 {'name' : 'LevelDB',
                                  'benchmarks': 'overwrite',
-                                 'num': 120*MILLION,
+                                 'num': 100000,
                                  'max_key': 5*MILLION,
                                  'max_log': -1
                                 },
                             ],
-                            [
-                                {
-                                 "name": "Varmail",
-                                 "nfiles": 8000,
-                                 "seconds": 360000,
-                                 "num_ops": 60*MILLION,
-                                },
-                            ],
-                            [
-                               {'name': 'Sqlite',
-                                'pattern': 'random',
-                                'n_insertions': 12000000,
-                                'max_key': 120000,
-                                'commit_period': 10,
-                               },
-                            ],
+                            # [
+                                # {
+                                 # "name": "Varmail",
+                                 # "nfiles": 8000,
+                                 # "seconds": 360000,
+                                 # "num_ops": 60*MILLION,
+                                # },
+                            # ],
+                            # [
+                               # {'name': 'Sqlite',
+                                # 'pattern': 'random',
+                                # 'n_insertions': 12000000,
+                                # 'max_key': 120000,
+                                # 'commit_period': 10,
+                               # },
+                            # ],
                         ],
                     })
             self.parameter_combs = ParameterCombinations(para_dict)
