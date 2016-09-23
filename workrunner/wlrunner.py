@@ -1,6 +1,7 @@
 import re
 import os
 import time
+import datetime
 
 import prepare4pyreuse
 from pyreuse.sysutils import blocktrace
@@ -224,7 +225,15 @@ class WorkloadRunner(object):
 
             print 'Running workload ..................'
             self._pre_target_workload()
+
+            start_time = datetime.datetime.now()
             self.workload.run()
+            end_time = datetime.datetime.now()
+
+            app_duration = end_time - start_time
+            print 'Application duration >>>>>>>>>', app_duration.total_seconds()
+            self.write_app_duration(app_duration.total_seconds())
+
             self._post_target_workload()
             time.sleep(1) # has to sleep here so the blktrace gets all the data
 
@@ -239,6 +248,11 @@ class WorkloadRunner(object):
         finally:
             # always try to clean up the blktrace processes
             self.blktracer.stop_tracing_and_collecting()
+
+    def write_app_duration(self, secs):
+        path = os.path.join(self.conf['result_dir'], 'app_duration.txt')
+        with open(path, 'w') as f:
+            f.write(str(secs))
 
     def _pre_target_workload(self):
         pass
