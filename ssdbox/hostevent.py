@@ -66,11 +66,12 @@ class Event(HostEventBase):
     def __str__(self):
         return "Event pid:{pid}, operation:{operation}, offset:{offset}, "\
                 "size:{size}, sector:{sector}, sector_count:{sector_count}, "\
-                "sync:{sync}, timestamp:{timestamp}"\
+                "sync:{sync}, timestamp:{timestamp}, action:{action}"\
                 .format(pid = self.pid, operation = self.operation,
                         offset = self.offset, size = self.size,
                         sector = self.sector, sector_count = self.sector_count,
-                        sync = self.sync, timestamp = self.timestamp)
+                        sync = self.sync, timestamp = self.timestamp,
+                        action = self.action)
 
 
 class FileLineIterator(object):

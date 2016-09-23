@@ -18,6 +18,7 @@ from utilities import utils
 from .blkpool import BlockPool
 from .bitmap import FlashBitmap2
 from commons import *
+from ssdbox import hostevent
 
 import prepare4pyreuse
 from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
@@ -150,6 +151,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         # print self.write_count
         # print self.discard_count
         self.do_stats()
+        self.gen_ncq_depth_table_from_event()
 
     def do_stats(self):
         lpns = self.get_lpns()
@@ -247,6 +249,19 @@ class Ftl(ftlbuilder.FtlBuilder):
 
     def get_type(self):
         return "ftlcounter"
+
+    def gen_ncq_depth_table_from_event(self):
+        event_file_path = self.conf.get_ftlsim_events_output_path()
+        workload_line_iter = hostevent.FileLineIterator(event_file_path)
+        event_workload_iter = hostevent.EventIterator(self.conf, workload_line_iter)
+
+        parser = EventNCQParser(event_workload_iter)
+        table = parser.parse()
+
+        ncq_depth_table_path = os.path.join(self.conf['result_dir'],
+                'ncq_depth_timeline.txt')
+        with open(ncq_depth_table_path, 'w') as f:
+            f.write(utils.table_to_str(table, width=0))
 
 
 class LpnClassification(object):
@@ -433,5 +448,48 @@ def get_range_table(dirpath):
         ret_table.append(new_row)
 
     return ret_table
+
+
+
+class EventNCQParser(object):
+    def __init__(self, event_iter):
+        self.event_iter = event_iter
+
+    def parse(self):
+        table = []
+        depth = 0
+        for event in self.event_iter:
+            action = event.action.strip()
+
+            pre_depth = depth
+            if action == 'D':
+                depth += 1
+            elif action == 'C':
+                depth -= 1
+            else:
+                raise RuntimeError('action has to be D or C')
+            post_depth = depth
+
+            row = {'action': action,
+                   'operation': event.operation,
+                   'timestamp': event.timestamp,
+                   'offset': event.offset,
+                   'size': event.size,
+                   'pid': event.pid,
+                   'pre_depth': pre_depth,
+                   'post_depth': post_depth}
+            table.append(row)
+
+        return table
+
+
+
+
+
+
+
+
+
+
 
 

@@ -7,10 +7,12 @@ import workrunner
 import ssdbox
 from utilities import utils
 from config import MountOption as MOpt
+from config import ConfigNCQFTL
 from workflow import run_workflow
 from ssdbox.simulator import GcLog
 from ssdbox.ftlsim_commons import Extent, random_channel_id
-from ssdbox.ftlcounter import LpnClassification, get_file_range_table
+from ssdbox.ftlcounter import LpnClassification, get_file_range_table, EventNCQParser
+from ssdbox import hostevent
 
 class TestCpuhandler(unittest.TestCase):
     def test_cpu(self):
@@ -173,6 +175,27 @@ class TestLpnClassification(unittest.TestCase):
                 flash_page_size = 2048)
         classifier.classify()
 
+
+class TestNCQParser(unittest.TestCase):
+    def test(self):
+        # blkparse-events-for-ftlsim.txt
+        conf = ConfigNCQFTL()
+
+        workload_line_iter = hostevent.FileLineIterator(
+            "tests/testdata/blkparse-events-for-ftlsim.txt")
+        event_workload_iter = hostevent.EventIterator(conf, workload_line_iter)
+
+        # for event in event_workload_iter:
+            # print str(event)
+
+        parser = EventNCQParser(event_workload_iter)
+        table = parser.parse()
+
+        self.assertEqual(table[0]['pre_depth'], 0)
+        self.assertEqual(table[0]['post_depth'], 1)
+
+        self.assertEqual(table[1]['pre_depth'], 1)
+        self.assertEqual(table[1]['post_depth'], 0)
 
 
 

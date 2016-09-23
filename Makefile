@@ -80,3 +80,6 @@ f2fsgc:
 	mkdir -p bin
 	cd ./foreign && gcc -o forcef2fsgc forcef2fsgc.c && mv forcef2fsgc ../bin/
 
+testncqparser:
+	./run_testclass.sh tests.misc_test.TestNCQParser
+
