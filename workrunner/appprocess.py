@@ -30,7 +30,8 @@ class AppBase(object):
 
 class LevelDBProc(AppBase):
     def __init__(self, benchmarks, num, db,
-            threads, use_existing_db, max_key, max_log):
+            threads, use_existing_db, max_key, max_log,
+            inst_id):
         self.benchmarks = benchmarks
         self.num = num
         self.db = db
@@ -41,7 +42,7 @@ class LevelDBProc(AppBase):
         self.p = None
 
         self.do_strace = True
-        self.inst_id = 3
+        self.inst_id = inst_id
 
     def run(self):
         utils.prepare_dir(self.db)
@@ -76,7 +77,8 @@ class LevelDBProc(AppBase):
 
 
 class SqliteProc(AppBase):
-    def __init__(self, n_insertions, pattern, db_dir, commit_period, max_key):
+    def __init__(self, n_insertions, pattern, db_dir, commit_period, max_key,
+            inst_id):
         self.n_insertions = n_insertions
         self.pattern = pattern
         self.db_dir = db_dir
@@ -86,7 +88,7 @@ class SqliteProc(AppBase):
         self.max_key = max_key
 
         self.do_strace = True
-        self.inst_id = 3
+        self.inst_id = inst_id
 
     def run(self):
         bench_path = './sqlitebench/bench.py'
@@ -162,7 +164,7 @@ echo  "Varmail Version 3.0 personality successfully loaded"
 PART5  = "run {}"
 
 class VarmailProc(AppBase):
-    def __init__(self, dirpath, seconds, nfiles, num_ops):
+    def __init__(self, dirpath, seconds, nfiles, num_ops, inst_id):
         self.dirpath = dirpath
         self.seconds = seconds
         self.nfiles = nfiles # 8000 was often used
@@ -173,7 +175,7 @@ class VarmailProc(AppBase):
         self.p = None
 
         self.do_strace = True
-        self.inst_id = 3
+        self.inst_id = inst_id
 
     def run(self):
         conf_text = self.get_conf_text()

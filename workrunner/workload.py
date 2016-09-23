@@ -610,7 +610,8 @@ class AppMix(Workload):
                 threads=1,
                 use_existing_db=0,
                 max_key=appconf['max_key'],
-                max_log=appconf['max_log']
+                max_log=appconf['max_log'],
+                inst_id = seq_id
                 )
 
         elif appconf['name'] == 'Sqlite':
@@ -619,12 +620,15 @@ class AppMix(Workload):
                 pattern = appconf['pattern'],
                 db_dir = appdir,
                 commit_period = appconf['commit_period'],
-                max_key = appconf['max_key']
+                max_key = appconf['max_key'],
+                inst_id = seq_id
                 )
 
         elif appconf['name'] == 'Varmail':
             proc = VarmailProc(appdir, appconf['seconds'], appconf['nfiles'],
-                    appconf['num_ops'])
+                    appconf['num_ops'],
+                    inst_id = seq_id
+                    )
 
         elif appconf['name'] == 'F2FStest':
             proc = F2FSTester(appdir)
