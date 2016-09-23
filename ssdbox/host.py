@@ -18,7 +18,8 @@ class Host(object):
 
     def _process(self):
         for event in self.event_iter:
-            yield self._ncq.queue.put(event)
+            if event.action == 'D':
+                yield self._ncq.queue.put(event)
 
     def run(self):
         yield self.env.process(self._process())

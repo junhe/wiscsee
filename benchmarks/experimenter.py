@@ -34,6 +34,8 @@ class Experimenter(object):
 
         self.conf['do_fstrim'] = False
 
+        self.conf['do_ncq_depth_time_line'] = self.para.do_ncq_depth_time_line
+
         # filesystem
         self.conf['filesystem'] = self.para.filesystem
 
@@ -252,6 +254,7 @@ def get_shared_para_dict(expname, lbabytes):
             'snapshot_valid_ratios': [True],
             'snapshot_erasure_count_dist': [True],
             'n_channels_per_dev'  : [16],
+            'do_ncq_depth_time_line': [False],
             }
     return para_dict
 

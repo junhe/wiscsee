@@ -669,6 +669,7 @@ def appmixbench_for_scaling():
                     'dump_ext4_after_workload': [True],
                     'run_seconds'    : [None],
                     'filesystem'     : ['ext4'],
+                    'do_ncq_depth_time_line': [True],
                     'appconfs': [
                             [ # list of app you want to run
                                 {'name' : 'LevelDB',

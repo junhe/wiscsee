@@ -210,7 +210,13 @@ class WorkloadRunner(object):
             time.sleep(1)
             self.blktracer_mkfs.create_event_file_from_blkparse()
 
-            self.blktracer.start_tracing_and_collecting()
+            if self.conf['do_ncq_depth_time_line'] is True:
+                trace_filter=['issue', 'complete']
+            else:
+                trace_filter=['issue']
+
+            self.blktracer.start_tracing_and_collecting(trace_filter=trace_filter)
+
             time.sleep(2)
             while self.blktracer.proc == None:
                 print 'Waiting for blktrace to start.....'

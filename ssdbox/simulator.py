@@ -217,6 +217,9 @@ class SimulatorNonDES(Simulator):
         self.ftl.post_processing()
 
     def process_event(self, event):
+        if event.action != 'D':
+            return
+
         if event.operation == OP_READ:
             self.read(event)
         elif event.operation == OP_WRITE:

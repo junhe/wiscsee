@@ -249,7 +249,7 @@ class Config(dict):
             "enable_blktrace"       : False,
             "dump_ext4_after_workload"  : True,
 
-            "event_file_column_names"    : ['pid', 'operation', 'offset', 'size',
+            "event_file_column_names"    : ['pid', 'action', 'operation', 'offset', 'size',
                     'timestamp', 'pre_wait_time', 'sync'],
 
             "fs_mount_point"        : "/mnt/fsonloop",
