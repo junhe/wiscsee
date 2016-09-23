@@ -1,9 +1,13 @@
 from Makefile import *
 import csv
 import os
+import glob
 
 from utilities import utils
 from experimenter import *
+
+import prepare4pyreuse
+from pyreuse.sysutils.straceParser import parse_and_write_dirty_table
 
 class StatsMixin(object):
     def write_stats(self):
@@ -627,7 +631,7 @@ def appmixbench():
 
     main()
 
-def appmixbench_for_lpn_count():
+def appmixbench_for_scaling():
     class LocalExperimenter(Experimenter, StatsMixin):
         def setup_workload(self):
             self.conf['workload_class'] = self.para.workload_class
@@ -637,8 +641,22 @@ def appmixbench_for_lpn_count():
                     }
             self.conf['workload_conf_key'] = 'workload_config'
 
+            strace_files = glob.glob('/tmp/*strace.out')
+            for filepath in strace_files:
+                os.remove(filepath)
+
         def after_running(self):
-            pass
+            result_dir = self.conf['result_dir']
+            strace_files = glob.glob('/tmp/*strace.out')
+            print 'strace files', strace_files
+            for filepath in strace_files:
+                print 'parsing', filepath
+                filename = os.path.basename(filepath)
+                dirty_table_path = os.path.join(result_dir,
+                        filename + '.dirty_table')
+
+                parse_and_write_dirty_table(filepath, dirty_table_path)
+                os.remove(filepath)
 
     class ParaDict(ParaDictIterMixin):
         def __init__(self):
@@ -655,8 +673,8 @@ def appmixbench_for_lpn_count():
                             [ # list of app you want to run
                                 {'name' : 'LevelDB',
                                  'benchmarks': 'overwrite',
-                                 'num': 100000,
-                                 'max_key': 5*MILLION,
+                                 'num': 1*MILLION,
+                                 'max_key': 1*MILLION,
                                  'max_log': -1
                                 },
                             ],

@@ -13,7 +13,7 @@ from commons import *
 
 
 strace_prefix = ' '.join(['strace',
-   '-o', '{}.strace.out', '-f', '-ff', '-ttt',
+   '-o', '/tmp/{}.strace.out', '-f', '-ttt',
    '-e', 'trace=open,close,fsync,fdatasync,sync,read,'\
          'write,pread,pwrite,lseek',
    '-s', '8']) + ' '
