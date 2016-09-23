@@ -122,8 +122,14 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.write_count = Counter()
         self.discard_count = Counter()
 
+        self.total_write_bytes = 0
+        self.total_read_bytes = 0
+        self.total_discard_bytes = 0
+
     def sec_read(self, sector, count):
         lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
+
+        self.total_read_bytes += lpn_count * self.conf.page_size
 
         for lpn in range(lpn_start, lpn_start + lpn_count):
             self.read_count[lpn] += 1
@@ -131,11 +137,15 @@ class Ftl(ftlbuilder.FtlBuilder):
     def sec_write(self, sector, count, data = None):
         lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
 
+        self.total_write_bytes += lpn_count * self.conf.page_size
+
         for lpn in range(lpn_start, lpn_start + lpn_count):
             self.write_count[lpn] += 1
 
     def sec_discard(self, sector, count):
         lpn_start, lpn_count = self.conf.sec_ext_to_page_ext(sector, count)
+
+        self.total_discard_bytes += lpn_count * self.conf.page_size
 
         for lpn in range(lpn_start, lpn_start + lpn_count):
             self.discard_count[lpn] += 1
@@ -158,6 +168,15 @@ class Ftl(ftlbuilder.FtlBuilder):
 
         self.dump_counts(lpns)
         self.dump_lpn_sem(lpns)
+
+        self.recorder.add_to_general_accumulater(
+                'traffic_size', 'write', self.total_write_bytes)
+
+        self.recorder.add_to_general_accumulater(
+                'traffic_size', 'read', self.total_read_bytes)
+
+        self.recorder.add_to_general_accumulater(
+                'traffic_size', 'discard', self.total_discard_bytes)
 
     def dump_counts(self, lpns):
         counters = [self.read_count, self.write_count, self.discard_count]

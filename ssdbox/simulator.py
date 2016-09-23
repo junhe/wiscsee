@@ -216,6 +216,8 @@ class SimulatorNonDES(Simulator):
 
         self.ftl.post_processing()
 
+        self.recorder.close()
+
     def process_event(self, event):
         if event.action != 'D':
             return
