@@ -676,7 +676,8 @@ def appmixbench_for_scaling():
                                  'benchmarks': 'overwrite',
                                  'num': 1*MILLION,
                                  'max_key': 1*MILLION,
-                                 'max_log': -1
+                                 'max_log': -1,
+                                 'do_strace': True
                                 },
                             ],
                             # [
