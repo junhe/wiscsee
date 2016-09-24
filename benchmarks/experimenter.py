@@ -128,6 +128,7 @@ class Experimenter(object):
                 self.para.wear_leveling_check_interval
         self.conf['wear_leveling_factor'] = self.para.wear_leveling_factor
         self.conf['wear_leveling_diff'] = self.para.wear_leveling_diff
+        self.conf['only_get_traffic'] = self.para.only_get_traffic
 
         if self.para.ftl == 'dftldes':
             self.conf['simulator_class'] = 'SimulatorDESNew'
@@ -262,6 +263,7 @@ def get_shared_para_dict(expname, lbabytes):
             'n_channels_per_dev'  : [16],
             'do_ncq_depth_time_line': [False],
             'fs_discard': [True],
+            'only_get_traffic': [True],
             }
     return para_dict
 

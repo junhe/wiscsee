@@ -159,6 +159,9 @@ class Ftl(ftlbuilder.FtlBuilder):
         """
         self.record_traffic()
 
+        if self.conf['only_get_traffic'] == True:
+            return
+
         self.do_stats()
         self.gen_ncq_depth_table_from_event()
 

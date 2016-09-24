@@ -679,19 +679,50 @@ def appmixbench_for_scaling():
                             'commit_period': 10,
                             'do_strace': False,
                            }
+            varmail_inst = {
+                             "name": "Varmail",
+                             "nfiles": 8000,
+                             "seconds": 360000,
+                             "num_ops": 1*MILLION,
+                             'do_strace': False,
+                            }
+
 
             para_dict.update( {
                     'ftl' : ['ftlcounter'],
                     'workload_class' : [ 'AppMix' ],
-                    'dump_ext4_after_workload': [True],
+                    'dump_ext4_after_workload': [False],
+                    'only_get_traffic': [True],
                     'run_seconds'    : [None],
-                    'filesystem'     : ['f2fs'],
+                    'filesystem'     : ['ext4', 'f2fs', 'xfs'],
+
                     'do_ncq_depth_time_line': [True],
-                    'fs_discard': [True, False],
+                    'fs_discard': [True],
                     'appconfs': [
-                            # [ leveldb_inst ] * 1,
+                            [ leveldb_inst ] * 1,
+                            [ leveldb_inst ] * 2,
+                            [ leveldb_inst ] * 4,
+                            [ leveldb_inst ] * 8,
+                            [ leveldb_inst ] * 16,
+                            [ leveldb_inst ] * 32,
+                            [ leveldb_inst ] * 64,
+
                             [ sqlite_inst ] * 1,
+                            [ sqlite_inst ] * 2,
                             [ sqlite_inst ] * 4,
+                            [ sqlite_inst ] * 8,
+                            [ sqlite_inst ] * 16,
+                            [ sqlite_inst ] * 32,
+                            [ sqlite_inst ] * 64,
+
+                            [varmail_inst] * 1,
+                            [varmail_inst] * 2,
+                            [varmail_inst] * 4,
+                            [varmail_inst] * 8,
+                            [varmail_inst] * 16,
+                            [varmail_inst] * 32,
+                            [varmail_inst] * 64,
+
                             # [
                                 # {
                                  # "name": "F2FStest",
