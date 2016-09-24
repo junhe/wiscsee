@@ -157,9 +157,8 @@ class Ftl(ftlbuilder.FtlBuilder):
         """
         This function is called after the simulation.
         """
-        # print self.read_count
-        # print self.write_count
-        # print self.discard_count
+        self.record_traffic()
+
         self.do_stats()
         self.gen_ncq_depth_table_from_event()
 
@@ -169,6 +168,7 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.dump_counts(lpns)
         self.dump_lpn_sem(lpns)
 
+    def record_traffic(self):
         self.recorder.add_to_general_accumulater(
                 'traffic_size', 'write', self.total_write_bytes)
 
