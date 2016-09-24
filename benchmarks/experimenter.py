@@ -48,7 +48,7 @@ class Experimenter(object):
         raise NotImplementedError()
 
     def setup_fs(self):
-        self.conf['mnt_opts'].update({
+        updates = {
             "f2fs":   {
                         'discard': MOpt(opt_name = 'discard',
                                         value = 'discard',
@@ -80,7 +80,13 @@ class Experimenter(object):
                                         include_name = False)
                 },
             }
-            )
+
+        if self.para.fs_discard is False:
+            for fs, dic in updates.items():
+                del dic['discard']
+
+
+        self.conf['mnt_opts'].update(updates)
 
         if self.para.ext4hasjournal is True:
             enable_ext4_journal(self.conf)
@@ -255,6 +261,7 @@ def get_shared_para_dict(expname, lbabytes):
             'snapshot_erasure_count_dist': [True],
             'n_channels_per_dev'  : [16],
             'do_ncq_depth_time_line': [False],
+            'fs_discard': [True],
             }
     return para_dict
 

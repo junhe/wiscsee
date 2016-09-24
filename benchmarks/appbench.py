@@ -672,15 +672,26 @@ def appmixbench_for_scaling():
                              'do_strace': False
                             }
 
+            sqlite_inst = {'name': 'Sqlite',
+                            'pattern': 'random',
+                            'n_insertions': 120000,
+                            'max_key': 120000,
+                            'commit_period': 10,
+                            'do_strace': False,
+                           }
+
             para_dict.update( {
                     'ftl' : ['ftlcounter'],
                     'workload_class' : [ 'AppMix' ],
                     'dump_ext4_after_workload': [True],
                     'run_seconds'    : [None],
-                    'filesystem'     : ['xfs'],
+                    'filesystem'     : ['f2fs'],
                     'do_ncq_depth_time_line': [True],
+                    'fs_discard': [True, False],
                     'appconfs': [
-                            [ leveldb_inst ] * 32,
+                            # [ leveldb_inst ] * 1,
+                            [ sqlite_inst ] * 1,
+                            [ sqlite_inst ] * 4,
                             # [
                                 # {
                                  # "name": "F2FStest",
