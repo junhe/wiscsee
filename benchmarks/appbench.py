@@ -661,25 +661,32 @@ def appmixbench_for_scaling():
     class ParaDict(ParaDictIterMixin):
         def __init__(self):
             expname = utils.get_expname()
-            lbabytes = 1*GB
+            lbabytes = 16*GB
             para_dict = get_shared_para_dict(expname, lbabytes)
+
+            leveldb_inst = { 'name' : 'LevelDB',
+                             'benchmarks': 'overwrite',
+                             'num': 10*MILLION,
+                             'max_key': 1*MILLION,
+                             'max_log': -1,
+                             'do_strace': False
+                            }
+
             para_dict.update( {
                     'ftl' : ['ftlcounter'],
                     'workload_class' : [ 'AppMix' ],
                     'dump_ext4_after_workload': [True],
                     'run_seconds'    : [None],
-                    'filesystem'     : ['ext4'],
+                    'filesystem'     : ['xfs'],
                     'do_ncq_depth_time_line': [True],
                     'appconfs': [
-                            [ # list of app you want to run
-                                {'name' : 'LevelDB',
-                                 'benchmarks': 'overwrite',
-                                 'num': 1*MILLION,
-                                 'max_key': 1*MILLION,
-                                 'max_log': -1,
-                                 'do_strace': True
-                                },
-                            ],
+                            [ leveldb_inst ] * 32,
+                            # [
+                                # {
+                                 # "name": "F2FStest",
+                                # },
+                            # ],
+
                             # [
                                 # {
                                  # "name": "Varmail",

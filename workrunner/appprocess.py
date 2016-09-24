@@ -248,7 +248,8 @@ class F2FSTester(AppBase):
         filename = 'f'+str(fileid)
         path = os.path.join(self.dirpath, filename)
 
-        nbytes = random.randint(4*MB, 5*MB)
+        # nbytes = random.randint(2*MB, 5*MB)
+        nbytes = 2*MB
         with open(path, 'a') as f:
             f.write('a'*nbytes)
             if sync:
