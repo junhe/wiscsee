@@ -694,6 +694,10 @@ def appmixbench_for_scaling():
                     'dump_ext4_after_workload': [False],
                     'only_get_traffic': [True],
                     'run_seconds'    : [None],
+
+                    'enable_blktrace': [False],
+                    'enable_simulation': [False],
+
                     'filesystem'     : ['ext4', 'f2fs', 'xfs'],
 
                     'do_ncq_depth_time_line': [True],
