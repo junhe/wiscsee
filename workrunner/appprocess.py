@@ -212,6 +212,10 @@ class F2FSTester(AppBase):
     def __init__(self, dirpath):
         self.dirpath = dirpath
 
+        # nbytes = random.randint(2*MB, 5*MB)
+        nbytes = 128*MB
+        self.data_buf = 'a' * nbytes
+
     def run(self):
         utils.prepare_dir(self.dirpath)
 
@@ -248,10 +252,8 @@ class F2FSTester(AppBase):
         filename = 'f'+str(fileid)
         path = os.path.join(self.dirpath, filename)
 
-        # nbytes = random.randint(2*MB, 5*MB)
-        nbytes = 2*MB
-        with open(path, 'a') as f:
-            f.write('a'*nbytes)
+        with open(path, 'w') as f:
+            f.write(self.data_buf)
             if sync:
                 os.fdatasync(f)
 
