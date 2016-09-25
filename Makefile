@@ -55,6 +55,9 @@ appmix4lpncount:
 appmix4wearleveling:
 	sudo python -m benchmarks.appbench -t 'appmixbench_for_wearleveling()'
 
+appmix4bw:
+	sudo python -m benchmarks.appbench -t 'appmixbench_for_bw()'
+
 sqlite4alignment:
 	sudo python -m benchmarks.appbench -t 'sqlitebench_for_alignment()'
 

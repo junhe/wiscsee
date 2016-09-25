@@ -294,6 +294,11 @@ class WorkloadRunner(object):
         for event in event_workload_iter:
             yield event
 
+        for req in barriergen.barrier_events():
+            yield req
+        yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                arg1='interest_workload_end')
+
         if self.conf['do_gc_after_workload'] is True:
             for req in barriergen.barrier_events():
                 yield req
