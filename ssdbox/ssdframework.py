@@ -200,6 +200,8 @@ class Ssd(SsdBase):
                 write_bw = float(write_traffic)/(float(dur) / SEC)
                 self.recorder.set_result_by_one_key('write_bandwidth', write_bw)
                 print '>>>>>>>>>> Bandwidth (MB/s) <<<<<<<<<<<', write_bw
+                print '>>>>>>>>>> Traffic (MB)     <<<<<<<<<<<', write_traffic
+                print '>>>>>>>>>> Duration (sec)     <<<<<<<<<<<', float(dur) / SEC
 
             elif operation == OP_NON_MERGE_CLEAN:
                 print 'start non merge cleaning'
