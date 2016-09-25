@@ -307,4 +307,8 @@ class WorkloadRunner(object):
 
             yield hostevent.ControlEvent(operation=OP_CLEAN)
 
+        for req in barriergen.barrier_events():
+            yield req
+        yield hostevent.ControlEvent(operation=OP_REC_BW)
+
 

@@ -187,6 +187,20 @@ class Ssd(SsdBase):
                 print 'start cleaning'
                 yield self.env.process(self._cleaner_process(forced=True))
 
+            elif operation == OP_REC_BW:
+                dur = self.recorder.get_result_by_one_key('interest_workload_end') - \
+                        self.recorder.get_result_by_one_key('interest_workload_start')
+                self.recorder.set_result_by_one_key('workload_duration_nsec', dur)
+                self.recorder.set_result_by_one_key('workload_duration_sec', float(dur)/SEC)
+
+                write_traffic = self.recorder.get_general_accumulater_cnt(
+                        'traffic', 'write') / MB
+
+                self.recorder.set_result_by_one_key('workload_duration_nsec', dur)
+                write_bw = float(write_traffic)/(float(dur) / SEC)
+                self.recorder.set_result_by_one_key('write_bandwidth', write_bw)
+                print '>>>>>>>>>> Bandwidth (MB/s) <<<<<<<<<<<', write_bw
+
             elif operation == OP_NON_MERGE_CLEAN:
                 print 'start non merge cleaning'
                 if self.conf['ftl_type'] == 'nkftl2':
