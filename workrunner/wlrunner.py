@@ -179,10 +179,39 @@ class WorkloadRunner(object):
         utils.drop_caches()
 
         self._pre_target_workload()
+
+        self.save_block_stat('start')
+        start_time = datetime.datetime.now()
         self.workload.run()
+        end_time = datetime.datetime.now()
+        self.save_block_stat('end')
+
+        app_duration = end_time - start_time
+        print 'Application duration >>>>>>>>>', app_duration.total_seconds()
+        self.write_app_duration(app_duration.total_seconds())
+
         self._post_target_workload()
 
         return None
+
+    def save_block_stat(self, start_or_end):
+        path = '/sys/block/sdc/stat'
+        to_path = os.path.join(self.conf['result_dir'], start_or_end + '-time.txt')
+
+        with open(path, 'r') as f:
+            line = f.readline()
+
+        header = ['read_ios', 'read_merges',
+                'read_sectors', 'read_ticks',
+                'write_ios', 'write_merges',
+                'write_sectors', 'write_ticks',
+                'in_flight', 'io_ticks', 'time_in_queue']
+        items = line.split()
+        row_dict = dict(zip(header, items))
+        row_dict['start_or_end'] = start_or_end
+
+        with open(to_path, 'w') as f:
+            f.write( utils.table_to_str([row_dict]) )
 
     def run_with_blktrace(self):
         try:
