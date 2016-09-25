@@ -126,7 +126,7 @@ class Experimenter(object):
             self.conf['ftl_type'] = 'dftldes'
             self.conf['snapshot_valid_ratios'] = self.para.snapshot_valid_ratios
             self.conf['snapshot_erasure_count_dist'] = self.para.snapshot_erasure_count_dist
-            self.conf['do_gc_after_workload'] = False
+            self.conf['do_gc_after_workload'] = self.para.do_gc_after_workload
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
             self.conf['write_gc_log'] = self.para.write_gc_log
 
@@ -144,7 +144,7 @@ class Experimenter(object):
             self.conf['nkftl']['max_ratio_of_log_blocks'] = self.para.max_log_blocks_ratio
             self.conf['snapshot_valid_ratios'] = False
             self.conf['snapshot_erasure_count_dist'] = self.para.snapshot_erasure_count_dist
-            self.conf['do_gc_after_workload'] = True
+            self.conf['do_gc_after_workload'] = self.para.do_gc_after_workload
 
 
         elif self.para.ftl == 'dftlext':
@@ -252,6 +252,7 @@ def get_shared_para_dict(expname, lbabytes):
             'snapshot_valid_ratios': [True],
             'snapshot_erasure_count_dist': [True],
             'n_channels_per_dev'  : [16],
+            'do_gc_after_workload': [False],
             }
     return para_dict
 
