@@ -648,7 +648,7 @@ def appmixbench_for_lpn_count():
             para_dict.update( {
                     'ftl' : ['ftlcounter'],
                     'workload_class' : [ 'AppMix' ],
-                    'dump_ext4_after_workload': [True],
+                    'dump_ext4_after_workload': [False],
                     'run_seconds'    : [None],
                     'filesystem'     : ['ext4', 'f2fs', 'xfs'],
                     'appconfs': [
@@ -846,7 +846,7 @@ def appmixbench_for_bw():
                 ]
 
             para_dict.update( {
-                    'ftl'              : ['nkftl2'],
+                    'ftl'              : ['dftldes', 'nkftl2'],
                     'enable_simulation': [True],
                     'over_provisioning': [1.5], # 1.28 is a good number
                     'gc_high_ratio'    : [0.9],
@@ -865,7 +865,7 @@ def appmixbench_for_bw():
                     'appconfs': [
                             leveldb_insts,
                             sqlite_insts,
-                            # varmail_insts,
+                            varmail_insts,
                             ]
                     })
             self.parameter_combs = ParameterCombinations(para_dict)
