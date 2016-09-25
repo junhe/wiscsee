@@ -211,7 +211,7 @@ class WorkloadRunner(object):
         row_dict['start_or_end'] = start_or_end
 
         with open(to_path, 'w') as f:
-            f.write( table_to_str([row_dict]) )
+            f.write( utils.table_to_str([row_dict]) )
 
     def run_with_blktrace(self):
         try:
