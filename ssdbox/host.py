@@ -18,6 +18,10 @@ class Host(object):
 
     def _process(self):
         for event in self.event_iter:
+            if isinstance(event, hostevent.Event) and event.offset < 0:
+                # due to padding, accesing disk head will be negative.
+                continue
+
             yield self._ncq.queue.put(event)
 
     def run(self):
