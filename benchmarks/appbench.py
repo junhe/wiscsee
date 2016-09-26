@@ -815,6 +815,25 @@ def appmixbench_for_bw():
                      'max_log': -1}
                 ]
 
+            leveldb_insts_long = [
+                {
+                    "max_key": 2000000,
+                    "benchmarks": "fillseq",
+                    "num": 1500000,
+                    "name": "LevelDB",
+                    "max_log": -1,
+                    "do_strace": False,
+                },
+                {
+                    "max_key": 300000,
+                    "benchmarks": "overwrite",
+                    "num": 4500000,
+                    "name": "LevelDB",
+                    "max_log": -1,
+                    "do_strace": False,
+                } ]
+
+
             sqlite_insts = [
                     {'name': 'Sqlite',
                      'pattern': 'random',
@@ -829,6 +848,26 @@ def appmixbench_for_bw():
                      'max_key': 120000,
                     }
                 ]
+
+            sqlite_insts_long = [
+                    {
+                        "commit_period": 50,
+                        "pattern": "sequential",
+                        "n_insertions": 250000,
+                        "name": "Sqlite",
+                        "max_key": 120000,
+                        "do_strace": False,
+                    },
+                    {
+                        "commit_period": 50,
+                        "pattern": "random",
+                        "n_insertions": 250000,
+                        "name": "Sqlite",
+                        "max_key": 120000,
+                        "do_strace": False,
+                    }]
+
+
 
             varmail_insts = [
                     {
@@ -845,14 +884,32 @@ def appmixbench_for_bw():
                     },
                 ]
 
+            varmail_insts_long = [
+                    {
+                        "seconds": 600,
+                        "nfiles": 20000,
+                        "name": "Varmail",
+                        "num_ops": 350000,
+                        "do_strace": False,
+
+                    },
+                    {
+                        "seconds": 600,
+                        "nfiles": 500,
+                        "name": "Varmail",
+                        "num_ops": 350000,
+                        "do_strace": False,
+                    } ]
+
             para_dict.update( {
                     'ftl'              : ['dftldes', 'nkftl2'],
                     'enable_simulation': [True],
+                    'dump_ext4_after_workload': [False],
                     'over_provisioning': [1.5], # 1.28 is a good number
                     'gc_high_ratio'    : [0.9],
-                    'gc_low_ratio'     : [0.8],
+                    'gc_low_ratio'     : [0.7],
                     'not_check_gc_setting': [False],
-                    'cache_mapped_data_bytes' :[int(0.05*lbabytes)],
+                    'cache_mapped_data_bytes' :[int(1*lbabytes)],
                     'segment_bytes'    : [128*MB],
                     'snapshot_interval': [1*SEC],
                     'write_gc_log'     : [False],
@@ -863,9 +920,9 @@ def appmixbench_for_bw():
                     'filesystem'     : ['ext4', 'f2fs', 'xfs'],
 
                     'appconfs': [
-                            leveldb_insts,
-                            sqlite_insts,
-                            varmail_insts,
+                            # leveldb_insts_long,
+                            # sqlite_insts_long,
+                            varmail_insts_long,
                             ]
                     })
             self.parameter_combs = ParameterCombinations(para_dict)
