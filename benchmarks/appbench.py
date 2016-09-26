@@ -902,7 +902,9 @@ def appmixbench_for_bw():
                     } ]
 
             para_dict.update( {
-                    'ftl'              : ['dftldes', 'nkftl2'],
+                    # 'ftl'              : ['dftldes', 'nkftl2'], <----
+                    'ftl'              : ['nkftl2'],
+                    'stripe_size'      : [64],
                     'enable_simulation': [True],
                     'dump_ext4_after_workload': [False],
                     'over_provisioning': [1.5], # 1.28 is a good number
