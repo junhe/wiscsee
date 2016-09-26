@@ -921,8 +921,8 @@ def appmixbench_for_bw():
                     'filesystem'     : ['ext4', 'f2fs', 'xfs'],
 
                     'appconfs': [
-                            # leveldb_insts_long,
-                            # sqlite_insts_long,
+                            leveldb_insts_long,
+                            sqlite_insts_long,
                             varmail_insts_long,
                             ]
                     })
