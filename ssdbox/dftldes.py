@@ -1438,6 +1438,8 @@ class Cleaner(object):
         # only allow one cleaner instance at a time
         self._cleaner_res = simpy.Resource(self.env, capacity=1)
 
+        self.gc_time_recorded = False
+
     def assert_threshold_sanity(self):
         if self.conf['do_not_check_gc_setting'] is True:
             return
@@ -1500,6 +1502,12 @@ class Cleaner(object):
         victim_blocks = VictimBlocks(self.conf, self.block_pool, self.oob)
         self.recorder.append_to_value_list('clean_func_valid_ratio_snapshot',
                 victim_blocks.get_valid_ratio_counter_of_used_blocks())
+
+        if self.gc_time_recorded == False:
+            self.recorder.set_result_by_one_key('gc_trigger_timestamp',
+                    self.env.now / float(SEC))
+            self.gc_time_recorded = True
+            print 'GC time recorded!........!'
 
         all_victim_tuples = list(victim_blocks.iterator_verbose())
         batches = utils.group_to_batches(all_victim_tuples, self.n_victim_per_batch)

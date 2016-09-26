@@ -713,7 +713,7 @@ class GcDecider(object):
 
         if n_used_log_blocks > log_block_high:
             self.recorder.count_me('should_start', 'log_block_high')
-            print 'log_block_high'
+            # print 'log_block_high'
             return True
 
         return False
@@ -897,6 +897,7 @@ class GarbageCollector(object):
         self._cleaner_res = simpy.Resource(self.env, capacity=n_cleaners)
 
         self.gcid = 0
+        self.gc_time_recorded = False
 
     def clean(self, forced=False, merge=True):
         req = self._cleaning_lock.request()
@@ -934,6 +935,12 @@ class GarbageCollector(object):
         yield req
 
         self.gcid += 1
+
+        if self.gc_time_recorded == False:
+            self.recorder.set_result_by_one_key('gc_trigger_timestamp',
+                    self.env.now / float(SEC))
+            self.gc_time_recorded = True
+            print 'GC time recorded!........!'
 
         log_block_list = copy.copy(self.log_mapping_table\
                 .log_group_info[data_group_no].log_block_numbers())
