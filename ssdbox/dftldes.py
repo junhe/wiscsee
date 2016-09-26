@@ -1807,7 +1807,10 @@ class OutOfBandAreas(object):
             except KeyError:
                 pass
 
-        del self.last_inv_time_of_block[flash_block]
+        try:
+            del self.last_inv_time_of_block[flash_block]
+        except KeyError:
+            pass
 
     def relocate_data_page(self, lpn, old_ppn, new_ppn, update_time=True):
         self._relocate_page(virtual_pn=lpn, old_ppn=old_ppn, new_ppn=new_ppn,
