@@ -55,6 +55,7 @@ class Ssd(SsdBase):
         self._snapshot_valid_ratios = self.conf['snapshot_valid_ratios']
         self._snapshot_erasure_count_dist = self.conf['snapshot_erasure_count_dist']
         self._snapshot_interval = self.conf['snapshot_interval']
+        self._snapshot_user_traffic = True
 
         self._do_wear_leveling = self.conf['do_wear_leveling']
         self._wear_leveling_check_interval = self.conf['wear_leveling_check_interval']
@@ -251,6 +252,7 @@ class Ssd(SsdBase):
         self._snapshot_valid_ratios = False
         self._snapshot_erasure_count_dist = False
         self._do_wear_leveling = False
+        self._snapshot_user_traffic = False
 
     def _cleaner_process(self, forced=False):
         # things may have changed since last time we check, because of locks
@@ -274,6 +276,11 @@ class Ssd(SsdBase):
             self.ftl.snapshot_valid_ratios()
             yield self.env.timeout(self._snapshot_interval)
 
+    def _user_traffic_size_snapshot_process(self):
+        while self._snapshot_user_traffic is True:
+            self.ftl.snapshot_user_traffic()
+            yield self.env.timeout(0.1*SEC)
+
     def _erasure_count_dist_snapshot_process(self):
         while self._snapshot_erasure_count_dist is True:
             self.ftl.snapshot_erasure_count_dist()
@@ -292,6 +299,9 @@ class Ssd(SsdBase):
         procs.append(p)
 
         p = self.env.process( self._wear_leveling_process() )
+        procs.append(p)
+
+        p = self.env.process( self._user_traffic_size_snapshot_process() )
         procs.append(p)
 
         yield simpy.events.AllOf(self.env, procs)

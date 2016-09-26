@@ -2105,6 +2105,10 @@ class Ftl(ftlbuilder.FtlBuilder):
         self.recorder.append_to_value_list('ftl_func_erasure_count_dist',
                 dist)
 
+    def snapshot_user_traffic(self):
+        self.recorder.append_to_value_list('ftl_func_user_traffic',
+                {'timestamp': self.env.now/float(SEC),
+                 'write_traffic_size': self.written_bytes})
 
 def split_ext(n_pages_in_zone, extent):
     if extent.lpn_count == 0:
