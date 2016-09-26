@@ -914,6 +914,7 @@ def appmixbench_for_bw():
                     'snapshot_interval': [1*SEC],
                     'write_gc_log'     : [False],
                     'ssd_ncq_depth'    : [32],
+                    'max_log_blocks_ratio': [0.1],
 
                     'workload_class' : [ 'AppMix' ],
                     'run_seconds'    : [None],
