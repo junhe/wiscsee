@@ -912,7 +912,7 @@ def appmixbench_for_bw():
                     'gc_low_ratio'     : [0.7],
                     'not_check_gc_setting': [False],
                     'cache_mapped_data_bytes' :[int(1*lbabytes)],
-                    'segment_bytes'    : [128*MB],
+                    'segment_bytes'    : [4*MB],
                     'snapshot_interval': [1*SEC],
                     'write_gc_log'     : [False],
                     'ssd_ncq_depth'    : [32],
