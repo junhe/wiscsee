@@ -608,7 +608,7 @@ class AppMix(Workload):
                 num = appconf['num'],
                 db=appdir,
                 threads=1,
-                use_existing_db=0,
+                use_existing_db=appconf['use_existing_db'],
                 max_key=appconf['max_key'],
                 max_log=appconf['max_log'],
                 inst_id = seq_id,
