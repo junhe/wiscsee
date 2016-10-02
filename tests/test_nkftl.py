@@ -747,9 +747,10 @@ class TestWearLevelingVictimBlocks(AssertFinishTestCase):
         logmaptable = LogMappingTable(conf, block_pool, rec, helper)
         datablocktable = DataBlockMappingTable(conf, rec, helper)
 
-        datablock = self.use_a_data_block(conf, block_pool, oob)
+        datablock = self.use_a_data_block(conf, block_pool, oob, datablocktable)
 
-        vblocks = WearLevelingVictimBlocks(conf, block_pool, oob, 2)
+        vblocks = WearLevelingVictimBlocks(conf, block_pool, oob, 2,
+                logmaptable, datablocktable)
         blocknums = [blk for _, _, blk in vblocks.iterator_verbose()]
         self.assertListEqual(blocknums, [datablock])
         self.assertEqual(len(list(vblocks.iterator_verbose())), 1)
@@ -772,18 +773,21 @@ class TestWearLevelingVictimBlocks(AssertFinishTestCase):
         self.use_a_log_block(conf, oob, block_pool, logmaptable,
                 cnt=conf.n_pages_per_block, dgn=1)
 
-        vblocks = WearLevelingVictimBlocks(conf, block_pool, oob, 2)
+        vblocks = WearLevelingVictimBlocks(conf, block_pool, oob, 2,
+                logmaptable, datablocktable)
         blocknums = [blk for _, _, blk in vblocks.iterator_verbose()]
         self.assertEqual(len(list(vblocks.iterator_verbose())), 1)
 
         self.set_finished()
 
-    def use_a_data_block(self, conf, block_pool, oob):
+    def use_a_data_block(self, conf, block_pool, oob, datablocktable):
         blocknum = block_pool.pop_a_free_block_to_data_blocks()
         start, end = conf.block_to_page_range(blocknum)
 
         for ppn in range(start, end):
             oob.states.invalidate_page(ppn)
+
+        datablocktable.add_data_block_mapping(lbn=3, pbn=blocknum)
 
         return blocknum
 

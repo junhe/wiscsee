@@ -17,7 +17,10 @@ class TestLevelDB(unittest.TestCase):
             threads=1,
             use_existing_db=0,
             max_key=200,
-            max_log=-1)
+            max_log=-1,
+            inst_id=0,
+            do_strace=False
+            )
         leveldb_proc.run()
         leveldb_proc.wait()
 
@@ -50,7 +53,9 @@ class TestSqlite(unittest.TestCase):
                 pattern = 'random',
                 db_dir = '/tmp/sqlite_tmp_xlj23',
                 commit_period = 10,
-                max_key = 20
+                max_key = 20,
+                inst_id=0,
+                do_strace=False
                 )
         sqlite_proc.run()
         sqlite_proc.wait()
@@ -78,7 +83,9 @@ class TestSqlite(unittest.TestCase):
 
 class TestVarmail(unittest.TestCase):
     def test_varmail(self):
-        proc = VarmailProc('/tmp/varmail_tmp_lj23lj', 1, 8)
+        proc = VarmailProc('/tmp/varmail_tmp_lj23lj', 1, 8,
+                num_ops=100, inst_id=0, do_strace=False
+                )
         proc.run()
         proc.wait()
 
