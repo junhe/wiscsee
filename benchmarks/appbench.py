@@ -5,9 +5,11 @@ import glob
 
 from utilities import utils
 from experimenter import *
+import expconfs
 
 import prepare4pyreuse
 from pyreuse.sysutils.straceParser import parse_and_write_dirty_table
+
 
 class StatsMixin(object):
     def write_stats(self):
@@ -679,36 +681,10 @@ def appmixbench_for_read():
             expname = utils.get_expname()
             lbabytes = 1*GB
             para_dict = get_shared_para_dict(expname, lbabytes)
-            para_dict.update( {
-                    'age_workload_class': ['AppMix'],
-                    'aging_appconfs': [
-                            [
-                                {'name' : 'LevelDB',
-                                 'benchmarks': 'fillseq',
-                                 'num': 1*100000,
-                                 'max_key': 1*100000,
-                                 'max_log': -1,
-                                 'do_strace': False,
-                                 'use_existing_db': 0,
-                                 },
-                            ]
-                        ],
+            # para_dict.update()
+            para_dict.update(expconfs.leveldb_aging)
+            para_dict.update(expconfs.leveldb_target)
 
-                    'workload_class' : [ 'AppMix' ],
-                    'run_seconds'    : [None],
-                    'appconfs': [
-                            [ # list of app you want to run
-                                {'name' : 'LevelDB',
-                                 'benchmarks': 'readrandom',
-                                 'num': 1*100000,
-                                 'max_key': 1*100000,
-                                 'max_log': -1,
-                                 'do_strace': False,
-                                 'use_existing_db': 1,
-                                 },
-                            ]
-                        ],
-                    })
             self.parameter_combs = ParameterCombinations(para_dict)
 
         def __iter__(self):
