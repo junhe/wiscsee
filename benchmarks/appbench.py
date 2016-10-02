@@ -653,6 +653,78 @@ def appmixbench():
 
     main()
 
+
+def appmixbench_for_read():
+    class LocalExperimenter(Experimenter, StatsMixin):
+        def setup_workload(self):
+            self.conf['workload_class'] = self.para.workload_class
+            self.conf['workload_config'] = {
+                    'appconfs': self.para.appconfs,
+                    'run_seconds': self.para.run_seconds,
+                    }
+            self.conf['workload_conf_key'] = 'workload_config'
+
+            self.conf['age_workload_class'] = self.para.age_workload_class
+            self.conf['aging_workload_config'] = {
+                    'appconfs': self.para.aging_appconfs,
+                    'run_seconds': None,
+                    }
+            self.conf['aging_config_key'] = 'aging_workload_config'
+
+        def after_running(self):
+            self.write_stats()
+
+    class ParaDict(ParaDictIterMixin):
+        def __init__(self):
+            expname = utils.get_expname()
+            lbabytes = 1*GB
+            para_dict = get_shared_para_dict(expname, lbabytes)
+            para_dict.update( {
+                    'age_workload_class': ['AppMix'],
+                    'aging_appconfs': [
+                            [
+                                {'name' : 'LevelDB',
+                                 'benchmarks': 'fillseq',
+                                 'num': 1*100000,
+                                 'max_key': 1*100000,
+                                 'max_log': -1,
+                                 'do_strace': False,
+                                 'use_existing_db': 0,
+                                 },
+                            ]
+                        ],
+
+                    'workload_class' : [ 'AppMix' ],
+                    'run_seconds'    : [None],
+                    'appconfs': [
+                            [ # list of app you want to run
+                                {'name' : 'LevelDB',
+                                 'benchmarks': 'readrandom',
+                                 'num': 1*100000,
+                                 'max_key': 1*100000,
+                                 'max_log': -1,
+                                 'do_strace': False,
+                                 'use_existing_db': 1,
+                                 },
+                            ]
+                        ],
+                    })
+            self.parameter_combs = ParameterCombinations(para_dict)
+
+        def __iter__(self):
+            return iter(self.parameter_combs)
+
+    def main():
+        for para in ParaDict():
+            print para
+            Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+            obj = LocalExperimenter( Parameters(**para) )
+            obj.main()
+
+    main()
+
+
+
 def appmixbench_for_scaling():
     class LocalExperimenter(Experimenter, StatsMixin):
         def setup_workload(self):

@@ -52,6 +52,9 @@ appmix:
 appmix4lpncount:
 	sudo python -m benchmarks.appbench -t 'appmixbench_for_lpn_count()'
 
+appmix4read:
+	sudo python -m benchmarks.appbench -t 'appmixbench_for_read()'
+
 appmix4scaling:
 	sudo python -m benchmarks.appbench -t 'appmixbench_for_scaling()'
 
