@@ -50,7 +50,7 @@ class LevelDBProc(AppBase):
         db_bench_path = "../leveldb/db_bench"
         cmd = "{exe} --benchmarks={benchmarks} --num={num} --db={db} "\
                 "--threads={threads}  "\
-                "--dowrite_max_key={max_key} "\
+                "--max_key={max_key} "\
                 "--dowrite_skew_max_log={max_log} "\
                 "--use_existing_db={use_existing_db}"\
             .format(
