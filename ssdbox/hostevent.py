@@ -30,7 +30,7 @@ class ControlEvent(HostEventBase):
 
 class Event(HostEventBase):
     def __init__(self, sector_size, pid, operation, offset, size,
-            timestamp = None, pre_wait_time = None, sync = True, action = None):
+            timestamp = None, pre_wait_time = None, sync = True, action = 'D'):
         self.pid = int(pid)
         self.operation = operation
         self.offset = int(offset)
