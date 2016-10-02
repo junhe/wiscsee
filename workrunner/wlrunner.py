@@ -42,7 +42,7 @@ class WorkloadRunner(object):
             self.conf['dev_padding'] = 0
 
         # blktracer for making file system
-        self.blktracer_mkfs = blocktrace.BlockTraceManager(
+        self.blktracer_prepfs = blocktrace.BlockTraceManager(
             dev = self.conf['device_path'],
             event_file_column_names =  self.conf['event_file_column_names'],
             resultpath = self.conf.get_blkparse_result_path_mkfs(),
@@ -175,6 +175,10 @@ class WorkloadRunner(object):
         self.prepare_device()
         self.build_fs()
 
+        print '----------------------------------------------------'
+        print '---------Running Aging Workload_-------------------'
+        print '----------------------------------------------------'
+
         self.aging_workload.run()
         utils.drop_caches()
 
@@ -223,22 +227,25 @@ class WorkloadRunner(object):
             # strat blktrace
             # This is only for making and mounting file system, because we
             # want to separate them with workloads.
-            self.blktracer_mkfs.start_tracing_and_collecting()
+            self.blktracer_prepfs.start_tracing_and_collecting()
             time.sleep(1)
-            while self.blktracer_mkfs.proc == None:
+            while self.blktracer_prepfs.proc == None:
                 print 'Waiting for blktrace to start.....'
                 time.sleep(0.5)
 
             self.build_fs()
 
             # Age the file system
+            print '----------------------------------------------------'
+            print '---------Running Aging Workload-------------------'
+            print '----------------------------------------------------'
             self.aging_workload.run()
             utils.drop_caches()
 
             time.sleep(1)
-            self.blktracer_mkfs.stop_tracing_and_collecting()
+            self.blktracer_prepfs.stop_tracing_and_collecting()
             time.sleep(1)
-            self.blktracer_mkfs.create_event_file_from_blkparse()
+            self.blktracer_prepfs.create_event_file_from_blkparse()
 
             if self.conf['do_ncq_depth_time_line'] is True:
                 trace_filter=['issue', 'complete']
@@ -255,6 +262,9 @@ class WorkloadRunner(object):
             print 'Running workload ..................'
             self._pre_target_workload()
 
+            print '----------------------------------------------------'
+            print '---------Running       TARGET workload-------------------'
+            print '----------------------------------------------------'
             start_time = datetime.datetime.now()
             self.workload.run()
             end_time = datetime.datetime.now()
@@ -322,14 +332,33 @@ class WorkloadRunner(object):
 
         yield hostevent.ControlEvent(operation=OP_DISABLE_RECORDER)
 
-        mkfs_line_iter = hostevent.FileLineIterator(
-            self.conf.get_ftlsim_events_output_path_mkfs())
-        event_mkfs_iter = hostevent.EventIterator(self.conf, mkfs_line_iter)
-
-        for event in event_mkfs_iter:
+        # mkfs events
+        for event in self.prepfs_events():
             yield event
 
+        # target workload event
+        for event in self.target_workload_events():
+            yield event
+
+        # may send gc trigger
+        for event in self.gc_event():
+            yield event
+
+        for req in barriergen.barrier_events():
+            yield req
+        yield hostevent.ControlEvent(operation=OP_REC_BW)
+
+    def prepfs_events(self):
+        prepfs_line_iter = hostevent.FileLineIterator(
+            self.conf.get_ftlsim_events_output_path_mkfs())
+        event_prepfs_iter = hostevent.EventIterator(self.conf, prepfs_line_iter)
+
+        for event in event_prepfs_iter:
+            yield event
+
+    def target_workload_events(self):
         # special event indicates the start of workload
+        barriergen = BarrierGen(self.conf.ssd_ncq_depth())
         yield hostevent.ControlEvent(operation=OP_ENABLE_RECORDER)
         for req in barriergen.barrier_events():
             yield req
@@ -348,6 +377,8 @@ class WorkloadRunner(object):
         yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
                 arg1='interest_workload_end')
 
+    def gc_event(self):
+        barriergen = BarrierGen(self.conf.ssd_ncq_depth())
         if self.conf['do_gc_after_workload'] is True:
             for req in barriergen.barrier_events():
                 yield req
@@ -356,8 +387,11 @@ class WorkloadRunner(object):
 
             yield hostevent.ControlEvent(operation=OP_CLEAN)
 
-        for req in barriergen.barrier_events():
-            yield req
-        yield hostevent.ControlEvent(operation=OP_REC_BW)
+
+
+
+
+
+
 
 

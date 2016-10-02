@@ -63,6 +63,9 @@ class Config(dict):
     def get_blkparse_result_path(self):
         return os.path.join(self['result_dir'], 'blkparse-output.txt')
 
+    def get_blkparse_result_path_aging(self):
+        return os.path.join(self['result_dir'], 'blkparse-output-aging.txt')
+
     def get_blkparse_result_path_mkfs(self):
         "for file system making"
         return os.path.join(self['result_dir'], 'blkparse-output-mkfs.txt')
