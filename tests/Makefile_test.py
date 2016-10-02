@@ -81,7 +81,7 @@ class DftlextExp2(Experiment):
         self.conf["workload_src"] = LBAGENERATOR
         self.conf["lba_workload_class"] = "ExtentTestWorkload"
         self.conf["lba_workload_configs"]["ExtentTestWorkload"] = {
-            "op_count": 1000}
+            "op_count": 100}
         self.conf["age_workload_class"] = "NoOp"
 
     def setup_ftl(self):
@@ -386,6 +386,8 @@ class TestTimelineAndFlash(unittest.TestCase):
 class TestEventIter(unittest.TestCase):
     def test_main2(self):
         conf = config.ConfigNewFlash()
+        conf["event_file_column_names"] = ['pid', 'operation', 'offset', 'size',
+                    'timestamp', 'pre_wait_time', 'sync']
         events = list(ssdbox.hostevent.EventIterator(conf,
             ["1123 write 0 4096 0 0 S", "13 write 40960 4096 1 1 S"]))
         e = events[0]
