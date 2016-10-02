@@ -1,9 +1,13 @@
 from Makefile import *
 import csv
 import os
+import glob
 
 from utilities import utils
 from experimenter import *
+
+import prepare4pyreuse
+from pyreuse.sysutils.straceParser import parse_and_write_dirty_table
 
 class StatsMixin(object):
     def write_stats(self):
@@ -627,7 +631,7 @@ def appmixbench():
 
     main()
 
-def appmixbench_for_lpn_count():
+def appmixbench_for_scaling():
     class LocalExperimenter(Experimenter, StatsMixin):
         def setup_workload(self):
             self.conf['workload_class'] = self.para.workload_class
@@ -637,45 +641,114 @@ def appmixbench_for_lpn_count():
                     }
             self.conf['workload_conf_key'] = 'workload_config'
 
+            strace_files = glob.glob('/tmp/*strace.out')
+            for filepath in strace_files:
+                os.remove(filepath)
+
         def after_running(self):
-            pass
+            result_dir = self.conf['result_dir']
+            strace_files = glob.glob('/tmp/*strace.out')
+            print 'strace files', strace_files
+            for filepath in strace_files:
+                print 'parsing', filepath
+                filename = os.path.basename(filepath)
+                dirty_table_path = os.path.join(result_dir,
+                        filename + '.dirty_table')
+
+                parse_and_write_dirty_table(filepath, dirty_table_path)
+                os.remove(filepath)
 
     class ParaDict(ParaDictIterMixin):
         def __init__(self):
             expname = utils.get_expname()
-            lbabytes = 1*GB
+            lbabytes = 16*GB
             para_dict = get_shared_para_dict(expname, lbabytes)
+
+            leveldb_inst = { 'name' : 'LevelDB',
+                             'benchmarks': 'overwrite',
+                             'num': 10*MILLION,
+                             'max_key': 1*MILLION,
+                             'max_log': -1,
+                             'do_strace': False
+                            }
+
+            sqlite_inst = {'name': 'Sqlite',
+                            'pattern': 'random',
+                            'n_insertions': 120000,
+                            'max_key': 120000,
+                            'commit_period': 10,
+                            'do_strace': False,
+                           }
+            varmail_inst = {
+                             "name": "Varmail",
+                             "nfiles": 8000,
+                             "seconds": 360000,
+                             "num_ops": 1*MILLION,
+                             'do_strace': False,
+                            }
+
+
             para_dict.update( {
                     'ftl' : ['ftlcounter'],
                     'workload_class' : [ 'AppMix' ],
                     'dump_ext4_after_workload': [False],
+                    'only_get_traffic': [True],
                     'run_seconds'    : [None],
+
+                    'enable_blktrace': [False],
+                    'enable_simulation': [False],
+
                     'filesystem'     : ['ext4', 'f2fs', 'xfs'],
+
+                    'do_ncq_depth_time_line': [True],
+                    'fs_discard': [True],
                     'appconfs': [
-                            [ # list of app you want to run
-                                {'name' : 'LevelDB',
-                                 'benchmarks': 'overwrite',
-                                 'num': 120*MILLION,
-                                 'max_key': 5*MILLION,
-                                 'max_log': -1
-                                },
-                            ],
-                            [
-                                {
-                                 "name": "Varmail",
-                                 "nfiles": 8000,
-                                 "seconds": 360000,
-                                 "num_ops": 60*MILLION,
-                                },
-                            ],
-                            [
-                               {'name': 'Sqlite',
-                                'pattern': 'random',
-                                'n_insertions': 12000000,
-                                'max_key': 120000,
-                                'commit_period': 10,
-                               },
-                            ],
+                            [ leveldb_inst ] * 1,
+                            [ leveldb_inst ] * 2,
+                            [ leveldb_inst ] * 4,
+                            [ leveldb_inst ] * 8,
+                            [ leveldb_inst ] * 16,
+                            [ leveldb_inst ] * 32,
+                            [ leveldb_inst ] * 64,
+
+                            [ sqlite_inst ] * 1,
+                            [ sqlite_inst ] * 2,
+                            [ sqlite_inst ] * 4,
+                            [ sqlite_inst ] * 8,
+                            [ sqlite_inst ] * 16,
+                            [ sqlite_inst ] * 32,
+                            [ sqlite_inst ] * 64,
+
+                            [varmail_inst] * 1,
+                            [varmail_inst] * 2,
+                            [varmail_inst] * 4,
+                            [varmail_inst] * 8,
+                            [varmail_inst] * 16,
+                            [varmail_inst] * 32,
+                            [varmail_inst] * 64,
+
+                            # [
+                                # {
+                                 # "name": "F2FStest",
+                                # },
+                            # ],
+
+                            # [
+                                # {
+                                 # "name": "Varmail",
+                                 # "nfiles": 8000,
+                                 # "seconds": 360000,
+                                 # "num_ops": 60*MILLION,
+                                # },
+                            # ],
+                            # [
+                               # {'name': 'Sqlite',
+                                # 'pattern': 'random',
+                                # 'n_insertions': 12000000,
+                                # 'max_key': 120000,
+                                # 'commit_period': 10,
+                               # },
+                            # ],
                         ],
                     })
             self.parameter_combs = ParameterCombinations(para_dict)

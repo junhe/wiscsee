@@ -52,6 +52,9 @@ appmix:
 appmix4lpncount:
 	sudo python -m benchmarks.appbench -t 'appmixbench_for_lpn_count()'
 
+appmix4scaling:
+	sudo python -m benchmarks.appbench -t 'appmixbench_for_scaling()'
+
 appmix4wearleveling:
 	sudo python -m benchmarks.appbench -t 'appmixbench_for_wearleveling()'
 
@@ -79,4 +82,7 @@ filesnake:
 f2fsgc:
 	mkdir -p bin
 	cd ./foreign && gcc -o forcef2fsgc forcef2fsgc.c && mv forcef2fsgc ../bin/
+
+testncqparser:
+	./run_testclass.sh tests.misc_test.TestNCQParser
 

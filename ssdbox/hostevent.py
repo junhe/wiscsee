@@ -15,6 +15,7 @@ class ControlEvent(HostEventBase):
         self.arg1 = arg1
         self.arg2 = arg2
         self.arg3 = arg3
+        self.action = 'D' # following the format of data event
 
     def get_operation(self):
         return self.operation
@@ -29,7 +30,7 @@ class ControlEvent(HostEventBase):
 
 class Event(HostEventBase):
     def __init__(self, sector_size, pid, operation, offset, size,
-            timestamp = None, pre_wait_time = None, sync = True):
+            timestamp = None, pre_wait_time = None, sync = True, action = None):
         self.pid = int(pid)
         self.operation = operation
         self.offset = int(offset)
@@ -37,6 +38,8 @@ class Event(HostEventBase):
         self.sync = sync
         self.timestamp = timestamp
         self.pre_wait_time = pre_wait_time
+        self.action = action
+        assert action in ('D', 'C')
 
         assert self.offset % sector_size == 0,\
             "offset {} is not aligned with sector size {}.".format(
@@ -63,11 +66,12 @@ class Event(HostEventBase):
     def __str__(self):
         return "Event pid:{pid}, operation:{operation}, offset:{offset}, "\
                 "size:{size}, sector:{sector}, sector_count:{sector_count}, "\
-                "sync:{sync}, timestamp:{timestamp}"\
+                "sync:{sync}, timestamp:{timestamp}, action:{action}"\
                 .format(pid = self.pid, operation = self.operation,
                         offset = self.offset, size = self.size,
                         sector = self.sector, sector_count = self.sector_count,
-                        sync = self.sync, timestamp = self.timestamp)
+                        sync = self.sync, timestamp = self.timestamp,
+                        action = self.action)
 
 
 class FileLineIterator(object):

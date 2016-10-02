@@ -12,6 +12,13 @@ from pyreuse.sysutils.ftrace import *
 from commons import *
 
 
+strace_prefix = ' '.join(['strace',
+   '-o', '/tmp/{}.strace.out', '-f', '-ttt',
+   '-e', 'trace=open,close,fsync,fdatasync,sync,read,'\
+         'write,pread,pwrite,lseek',
+   '-s', '8']) + ' '
+
+
 class AppBase(object):
     def wait(self):
         self.p.wait()
@@ -23,7 +30,8 @@ class AppBase(object):
 
 class LevelDBProc(AppBase):
     def __init__(self, benchmarks, num, db,
-            threads, use_existing_db, max_key, max_log):
+            threads, use_existing_db, max_key, max_log,
+            inst_id, do_strace):
         self.benchmarks = benchmarks
         self.num = num
         self.db = db
@@ -32,6 +40,9 @@ class LevelDBProc(AppBase):
         self.max_key = max_key
         self.max_log = max_log
         self.p = None
+
+        self.do_strace = do_strace
+        self.inst_id = inst_id
 
     def run(self):
         utils.prepare_dir(self.db)
@@ -52,14 +63,22 @@ class LevelDBProc(AppBase):
                 max_log = self.max_log,
                 use_existing_db = self.use_existing_db
                 )
+
+        if self.do_strace is True:
+            cmd = strace_prefix.format(self.inst_id) + cmd
+
         print cmd
         cmd = shlex.split(cmd)
+        print cmd
         self.p = subprocess.Popen(cmd)
+
         return self.p
 
 
+
 class SqliteProc(AppBase):
-    def __init__(self, n_insertions, pattern, db_dir, commit_period, max_key):
+    def __init__(self, n_insertions, pattern, db_dir, commit_period, max_key,
+            inst_id, do_strace):
         self.n_insertions = n_insertions
         self.pattern = pattern
         self.db_dir = db_dir
@@ -67,6 +86,9 @@ class SqliteProc(AppBase):
         self.p = None
         self.commit_period = commit_period
         self.max_key = max_key
+
+        self.do_strace = do_strace
+        self.inst_id = inst_id
 
     def run(self):
         bench_path = './sqlitebench/bench.py'
@@ -76,6 +98,9 @@ class SqliteProc(AppBase):
         cmd = 'python {exe} -f {f} -n {n} -p {p} -e {e} -m {m}'.format(
             exe=bench_path, f=self.db_path, n=self.n_insertions, p=self.pattern,
             e=self.commit_period, m=self.max_key)
+
+        if self.do_strace is True:
+            cmd = strace_prefix.format(self.inst_id) + cmd
 
         print cmd
         cmd = shlex.split(cmd)
@@ -139,7 +164,8 @@ echo  "Varmail Version 3.0 personality successfully loaded"
 PART5  = "run {}"
 
 class VarmailProc(AppBase):
-    def __init__(self, dirpath, seconds, nfiles, num_ops):
+    def __init__(self, dirpath, seconds, nfiles,
+            num_ops, inst_id, do_strace):
         self.dirpath = dirpath
         self.seconds = seconds
         self.nfiles = nfiles # 8000 was often used
@@ -149,12 +175,18 @@ class VarmailProc(AppBase):
         self.conf_path = '/tmp/filebench.config.' + self.hash_str
         self.p = None
 
+        self.do_strace = do_strace
+        self.inst_id = inst_id
+
     def run(self):
         conf_text = self.get_conf_text()
         with open(self.conf_path, 'w') as f:
             f.write(conf_text)
 
         utils.prepare_dir(self.dirpath)
+
+        if self.do_strace is True:
+            cmd = strace_prefix.format(self.inst_id) + cmd
 
         cmd = 'filebench -f {}'.format(self.conf_path)
         print cmd
@@ -179,6 +211,10 @@ class VarmailProc(AppBase):
 class F2FSTester(AppBase):
     def __init__(self, dirpath):
         self.dirpath = dirpath
+
+        # nbytes = random.randint(2*MB, 5*MB)
+        nbytes = 128*MB
+        self.data_buf = 'a' * nbytes
 
     def run(self):
         utils.prepare_dir(self.dirpath)
@@ -216,9 +252,8 @@ class F2FSTester(AppBase):
         filename = 'f'+str(fileid)
         path = os.path.join(self.dirpath, filename)
 
-        nbytes = random.randint(4*MB, 5*MB)
-        with open(path, 'a') as f:
-            f.write('a'*nbytes)
+        with open(path, 'w') as f:
+            f.write(self.data_buf)
             if sync:
                 os.fdatasync(f)
 
