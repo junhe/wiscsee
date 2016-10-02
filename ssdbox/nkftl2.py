@@ -68,6 +68,7 @@ class Config(config.ConfigNCQFTL):
 
                 "n_concurrent_log_cleaners": 16,
             },
+            "write_gc_log": False,
         }
         self.update(local_itmes)
 
