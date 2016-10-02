@@ -570,6 +570,13 @@ def appmixbench():
                     }
             self.conf['workload_conf_key'] = 'workload_config'
 
+            self.conf['age_workload_class'] = self.para.age_workload_class
+            self.conf['aging_workload_config'] = {
+                    'appconfs': self.para.aging_appconfs,
+                    'run_seconds': None,
+                    }
+            self.conf['aging_config_key'] = 'aging_workload_config'
+
         def after_running(self):
             self.write_stats()
 
@@ -580,7 +587,21 @@ def appmixbench():
             para_dict = get_shared_para_dict(expname, lbabytes)
             para_dict.update( {
                     'workload_class' : [ 'AppMix' ],
-                    'run_seconds'    : [4],
+                    'run_seconds'    : [None],
+
+                    'age_workload_class': ['AppMix'],
+                    'aging_appconfs': [
+                            [
+                                {'name': 'Sqlite',
+                                 'pattern': 'random',
+                                 'n_insertions': 12000,
+                                 'commit_period': 10,
+                                 'max_key': 20,
+                                 'do_strace': False
+                                },
+                            ]
+                        ],
+
                     'appconfs': [
                             [ # list of app you want to run
 
@@ -591,28 +612,29 @@ def appmixbench():
                              # 'max_key': 1*100000,
                              # 'max_log': -1},
 
-                            # {'name': 'Sqlite',
-                             # 'pattern': 'random',
-                             # 'n_insertions': 12000,
-                             # 'commit_period': 10,
-                             # 'max_key': 20
-                             #},
+                            {'name': 'Sqlite',
+                             'pattern': 'random',
+                             'n_insertions': 12000,
+                             'commit_period': 10,
+                             'max_key': 20,
+                             'do_strace': False
+                            },
 
                             # {'name': 'Varmail',
                             #  'nfiles': 8000
                              # 'seconds': 2},
                              # -------------
 
-                            {
-                                "name": "Varmail",
-                                "nfiles": 200,
-                                "seconds": 600,
-                            },
-                            {
-                                "name": "Varmail",
-                                "nfiles": 50,
-                                "seconds": 600,
-                            }
+                            # {
+                                # "name": "Varmail",
+                                # "nfiles": 200,
+                                # "seconds": 600,
+                            # },
+                            # {
+                                # "name": "Varmail",
+                                # "nfiles": 50,
+                                # "seconds": 600,
+                            # }
                             ]
                         ],
                     })

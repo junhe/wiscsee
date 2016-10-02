@@ -265,6 +265,7 @@ def get_shared_para_dict(expname, lbabytes):
             'do_ncq_depth_time_line': [False],
             'fs_discard': [True],
             'only_get_traffic': [True],
+            'age_workload_class': ['NoOp'],
             }
     return para_dict
 
