@@ -52,4 +52,18 @@ class SqliteDB(object):
         table = [row for row in cursor.fetchall()]
         return table
 
+    def get_value(self, key):
+        cursor = self.conn.cursor()
+
+        cursor.execute("select name,description from benchtable where name = '{k}'"\
+            .format(k=key))
+
+        k, v = cursor.fetchone()
+
+        return v
+
+
+
+
+
 

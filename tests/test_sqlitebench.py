@@ -41,6 +41,16 @@ class TestSqliteDB(unittest.TestCase):
 
         bench.close()
 
+    def test_get(self):
+        bench = SqliteDB('/tmp/tmp.db')
+        bench.open()
+        bench.initialize()
+        bench.insert(key='888', value='999')
+        value = bench.get_value(key='888')
+        self.assertEquals(value, '999')
+
+        bench.close()
+
 
 class TestSqlitebench(unittest.TestCase):
     def test_random(self):
