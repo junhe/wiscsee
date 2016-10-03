@@ -74,7 +74,7 @@ class LevelDBProc(AppBase):
         # self.p = subprocess.Popen(cmd)
 
         cg = Cgroup(name='charlie', subs='memory')
-        cg.set_item('memory', 'memory.memsw.limit_in_bytes', 50*MB)
+        cg.set_item('memory', 'memory.limit_in_bytes', 1000*MB)
         self.p = cg.execute(cmd)
 
         return self.p
