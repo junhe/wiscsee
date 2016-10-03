@@ -8,6 +8,7 @@ from utilities import utils
 
 import prepare4pyreuse
 from pyreuse.sysutils.ftrace import *
+from pyreuse.sysutils.cgroup import *
 
 from commons import *
 
@@ -70,7 +71,11 @@ class LevelDBProc(AppBase):
         print cmd
         cmd = shlex.split(cmd)
         print cmd
-        self.p = subprocess.Popen(cmd)
+        # self.p = subprocess.Popen(cmd)
+
+        cg = Cgroup(name='charlie', subs='memory')
+        cg.set_item('memory', 'memory.memsw.limit_in_bytes', 50*MB)
+        self.p = cg.execute(cmd)
 
         return self.p
 
