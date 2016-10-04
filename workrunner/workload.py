@@ -615,15 +615,13 @@ class AppMix(Workload):
                 do_strace = appconf['do_strace']
                 )
 
-        elif appconf['name'] == 'LevelDB':
-            proc = LevelDBProc(
+        elif appconf['name'] == 'RocksDB':
+            proc = RocksDBProc(
                 benchmarks = appconf['benchmarks'],
                 num = appconf['num'],
                 db=appdir,
                 threads=1,
                 use_existing_db=appconf['use_existing_db'],
-                max_key=appconf['max_key'],
-                max_log=appconf['max_log'],
                 inst_id = seq_id,
                 do_strace = appconf['do_strace']
                 )

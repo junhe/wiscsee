@@ -283,8 +283,6 @@ class RocksDBProc(AppBase):
         self.db = db
         self.threads = threads
         self.use_existing_db = use_existing_db
-        self.max_key = max_key
-        self.max_log = max_log
         self.p = None
 
         self.do_strace = do_strace
@@ -303,8 +301,6 @@ class RocksDBProc(AppBase):
                 num = self.num,
                 db = self.db,
                 threads = self.threads,
-                max_key = self.max_key,
-                max_log = self.max_log,
                 use_existing_db = self.use_existing_db
                 )
 
@@ -314,11 +310,11 @@ class RocksDBProc(AppBase):
         print cmd
         cmd = shlex.split(cmd)
         print cmd
-        # self.p = subprocess.Popen(cmd)
+        self.p = subprocess.Popen(cmd)
 
-        cg = Cgroup(name='charlie', subs='memory')
-        cg.set_item('memory', 'memory.limit_in_bytes', 1000*MB)
-        self.p = cg.execute(cmd)
+        # cg = Cgroup(name='charlie', subs='memory')
+        # cg.set_item('memory', 'memory.limit_in_bytes', 1000*MB)
+        # self.p = cg.execute(cmd)
 
         return self.p
 
