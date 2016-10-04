@@ -36,7 +36,7 @@ class Bench(object):
 
         self.existing_keys = set()
 
-        if self.pattern == 'random_read':
+        if self.pattern in ('random_read', 'sequential_read'):
             print 'open existing'
             self.db = SqliteDB(db_path, use_existing_db=True)
         else:
@@ -56,6 +56,9 @@ class Bench(object):
 
         elif self.pattern == 'random_read':
             self.get_randomly()
+
+        elif self.pattern == 'sequential_read':
+            self.get_sequentially()
 
         else:
             raise NotImplementedError()
@@ -110,6 +113,11 @@ class Bench(object):
     def get_randomly(self):
         keys = range(self.n_insertions)
         random.shuffle(keys)
+        for i, k in enumerate(keys):
+            value = self.get_value(key=self.encode_key(k))
+
+    def get_sequentially(self):
+        keys = range(self.n_insertions)
         for i, k in enumerate(keys):
             value = self.get_value(key=self.encode_key(k))
 

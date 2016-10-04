@@ -134,6 +134,23 @@ class TestBenchClass(unittest.TestCase):
                 )
         b.run()
 
+    def test_sequential_read(self):
+        print 'write to it'
+        b = Bench(db_path = '/tmp/tmp.db',
+              n_insertions = 100,
+              pattern = 'random',
+              commit_period = 100,
+              max_key = 8
+                )
+        b.run()
+
+        b = Bench(db_path = '/tmp/tmp.db',
+              n_insertions = 100,
+              pattern = 'sequential_read',
+              commit_period = 100,
+              max_key = 8
+                )
+        b.run()
 
 
 if __name__ == '__main__':
