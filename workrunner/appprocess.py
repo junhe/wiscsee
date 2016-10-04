@@ -83,7 +83,7 @@ class LevelDBProc(AppBase):
 
 class SqliteProc(AppBase):
     def __init__(self, n_insertions, pattern, db_dir, commit_period, max_key,
-            inst_id, do_strace):
+            inst_id, do_strace, journal_mode):
         self.n_insertions = n_insertions
         self.pattern = pattern
         self.db_dir = db_dir
@@ -91,6 +91,7 @@ class SqliteProc(AppBase):
         self.p = None
         self.commit_period = commit_period
         self.max_key = max_key
+        self.journal_mode = journal_mode
 
         self.do_strace = do_strace
         self.inst_id = inst_id
@@ -100,9 +101,9 @@ class SqliteProc(AppBase):
 
         utils.prepare_dir_for_path(self.db_path)
 
-        cmd = 'python {exe} -f {f} -n {n} -p {p} -e {e} -m {m}'.format(
+        cmd = 'python {exe} -f {f} -n {n} -p {p} -e {e} -m {m} -j {j}'.format(
             exe=bench_path, f=self.db_path, n=self.n_insertions, p=self.pattern,
-            e=self.commit_period, m=self.max_key)
+            e=self.commit_period, m=self.max_key, j=self.journal_mode)
 
         if self.do_strace is True:
             cmd = strace_prefix.format(self.inst_id) + cmd
