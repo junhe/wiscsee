@@ -3,28 +3,30 @@ import time
 import sqlite3
 
 class SqliteDB(object):
-    def __init__(self, db_path):
+    def __init__(self, db_path, use_existing_db=False):
         self.db_path = db_path
+        self.use_existing_db = use_existing_db
 
         self.conn = None
 
-        # you need to check this before connect the database file
-        # otherwise you will have disk IO error
-        if os.path.exists(self.db_path) is True:
+    def open(self):
+        if self.use_existing_db is False and \
+                os.path.exists(self.db_path) is True:
             os.remove(self.db_path)
 
-    def open(self):
         self.conn = sqlite3.connect(self.db_path)
 
-    def initialize(self):
+        if self.use_existing_db is False:
+            schema_text = """
+                create table benchtable (
+                    name        text primary key,
+                    description text
+                );
+                """
+            self.conn.executescript(schema_text)
 
-        schema_text = """
-            create table benchtable (
-                name        text primary key,
-                description text
-            );
-            """
-        self.conn.executescript(schema_text)
+    def initialize(self):
+        pass
 
     def close(self):
         self.conn.close()
@@ -58,12 +60,12 @@ class SqliteDB(object):
         cursor.execute("select name,description from benchtable where name = '{k}'"\
             .format(k=key))
 
-        k, v = cursor.fetchone()
-
-        return v
-
-
-
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        else:
+            k, v = row
+            return v
 
 
 

@@ -36,17 +36,27 @@ class Bench(object):
 
         self.existing_keys = set()
 
-        self.db = SqliteDB(db_path)
+        if self.pattern == 'random_read':
+            print 'open existing'
+            self.db = SqliteDB(db_path, use_existing_db=True)
+        else:
+            self.db = SqliteDB(db_path)
+
         self.db.open()
-        self.db.initialize()
 
     def run(self):
         if self.pattern == 'sequential':
             self.insert_sequentially()
+
         elif self.pattern == 'random':
             self.insert_randomly()
+
         elif self.pattern == 'preload_and_random':
             self.preload_and_randomly_insert()
+
+        elif self.pattern == 'random_read':
+            self.get_randomly()
+
         else:
             raise NotImplementedError()
 
@@ -93,7 +103,15 @@ class Bench(object):
             self.db.insert(key=key, value=value)
             self.existing_keys.add(key)
 
+    def get_value(self, key):
+        value = self.db.get_value(key=key)
+        return value
 
+    def get_randomly(self):
+        keys = range(self.n_insertions)
+        random.shuffle(keys)
+        for i, k in enumerate(keys):
+            value = self.get_value(key=self.encode_key(k))
 
 
 def main():
