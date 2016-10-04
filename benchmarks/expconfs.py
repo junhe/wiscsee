@@ -60,7 +60,6 @@ leveldb_target = {
                      'do_strace': False,
                      'use_existing_db': 1,
                      },
-
                 ]
             ],
     }

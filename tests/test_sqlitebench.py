@@ -5,6 +5,8 @@ from sqlitebench.sqlitedb import *
 from utilities.utils import *
 from sqlitebench.bench import Bench
 
+import prepare4pyreuse
+from pyreuse.helpers import *
 
 class TestSqliteDB(unittest.TestCase):
     def test_init(self):
@@ -67,6 +69,33 @@ class TestSqliteDB(unittest.TestCase):
         value = bench.get_value(key='888')
         self.assertEquals(value, '999')
         bench.close()
+
+    def test_setting_journal_mode_WAL(self):
+        bench = SqliteDB('/tmp/tmp.db', journal_mode='WAL')
+        bench.open()
+        bench.initialize()
+        bench.insert(key='888', value='999')
+        value = bench.get_value(key='888')
+        self.assertEquals(value, '999')
+
+        bench.close()
+
+        version = read_byte_range('/tmp/tmp.db', start=18, size=1)
+        self.assertEqual(version[0], 2)
+
+    def test_setting_journal_default(self):
+        bench = SqliteDB('/tmp/tmp.db')
+        bench.open()
+        bench.initialize()
+        bench.insert(key='888', value='999')
+        value = bench.get_value(key='888')
+        self.assertEquals(value, '999')
+
+        bench.close()
+
+        version = read_byte_range('/tmp/tmp.db', start=18, size=1)
+        self.assertEqual(version[0], 1)
+
 
 
 class TestSqlitebench(unittest.TestCase):

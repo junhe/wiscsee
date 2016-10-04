@@ -681,7 +681,14 @@ def appmixbench_for_read():
             expname = utils.get_expname()
             lbabytes = 1*GB
             para_dict = get_shared_para_dict(expname, lbabytes)
-            # para_dict.update()
+            para_dict.update({
+                            'ftl' : ['ftlcounter'],
+                            'enable_simulation': [True],
+                            'dump_ext4_after_workload': [True],
+                            'only_get_traffic': [False],
+                            'do_ncq_depth_time_line': [True],
+                            'filesystem': ['ext4', 'f2fs', 'xfs'],
+                })
             para_dict.update(expconfs.leveldb_aging)
             para_dict.update(expconfs.leveldb_target)
 

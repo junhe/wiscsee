@@ -3,9 +3,10 @@ import time
 import sqlite3
 
 class SqliteDB(object):
-    def __init__(self, db_path, use_existing_db=False):
+    def __init__(self, db_path, use_existing_db=False, journal_mode='DELETE'):
         self.db_path = db_path
         self.use_existing_db = use_existing_db
+        self.journal_mode = journal_mode
 
         self.conn = None
 
@@ -16,6 +17,8 @@ class SqliteDB(object):
 
         self.conn = sqlite3.connect(self.db_path)
 
+        self._set_journal_mode()
+
         if self.use_existing_db is False:
             schema_text = """
                 create table benchtable (
@@ -24,6 +27,12 @@ class SqliteDB(object):
                 );
                 """
             self.conn.executescript(schema_text)
+
+    def _set_journal_mode(self):
+        ret = self.conn.execute("PRAGMA journal_mode={}".format(self.journal_mode))
+        mode = ret.fetchone()
+        print mode
+        assert mode[0] == self.journal_mode.lower()
 
     def initialize(self):
         pass
