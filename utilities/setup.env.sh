@@ -64,7 +64,7 @@ cd ../ && make f2fsgc
 
 # for RocksDB
 sudo apt-get install -y libgflags-dev
-sudo apt-get install -y  zlib1g-dev
+sudo apt-get install -y zlib1g-dev
 sudo apt-get install -y libbz2-dev
 cd $doradir
 cd ../..
