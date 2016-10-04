@@ -35,7 +35,6 @@ leveldb_aging = {
                      'do_strace': False,
                      'use_existing_db': 0,
                     },
-
                 ]
             ],
     }

@@ -71,7 +71,7 @@ class TestSqliteDB(unittest.TestCase):
 
 class TestSqlitebench(unittest.TestCase):
     def test_random(self):
-        shcmd('python sqlitebench/bench.py -f /tmp/tmpdb -n 100 -p random -e 10 -m 20')
+        shcmd('python sqlitebench/bench.py -f /tmp/tmpdb -n 100 -p random_put -e 10 -m 20')
 
     def test_sequential(self):
         shcmd('python sqlitebench/bench.py -f /tmp/tmpdb -n 100 -p sequential -e 10 -m 20')
@@ -84,7 +84,7 @@ class TestBenchClass(unittest.TestCase):
     def test_init(self):
         b = Bench(db_path = '/tmp/tmp.db',
               n_insertions = 100,
-              pattern = 'random',
+              pattern = 'random_put',
               commit_period = 10,
               max_key = 8
                 )
@@ -92,7 +92,7 @@ class TestBenchClass(unittest.TestCase):
     def test_random(self):
         b = Bench(db_path = '/tmp/tmp.db',
               n_insertions = 100,
-              pattern = 'random',
+              pattern = 'random_put',
               commit_period = 2,
               max_key = 8
                 )
@@ -116,11 +116,11 @@ class TestBenchClass(unittest.TestCase):
                 )
         b.run()
 
-    def test_random_read(self):
+    def test_random_get(self):
         print 'write to it'
         b = Bench(db_path = '/tmp/tmp.db',
               n_insertions = 100,
-              pattern = 'random',
+              pattern = 'random_put',
               commit_period = 100,
               max_key = 8
                 )
@@ -128,17 +128,17 @@ class TestBenchClass(unittest.TestCase):
 
         b = Bench(db_path = '/tmp/tmp.db',
               n_insertions = 100,
-              pattern = 'random_read',
+              pattern = 'random_get',
               commit_period = 100,
               max_key = 8
                 )
         b.run()
 
-    def test_sequential_read(self):
+    def test_sequential_get(self):
         print 'write to it'
         b = Bench(db_path = '/tmp/tmp.db',
               n_insertions = 100,
-              pattern = 'random',
+              pattern = 'random_put',
               commit_period = 100,
               max_key = 8
                 )
@@ -146,7 +146,7 @@ class TestBenchClass(unittest.TestCase):
 
         b = Bench(db_path = '/tmp/tmp.db',
               n_insertions = 100,
-              pattern = 'sequential_read',
+              pattern = 'sequential_get',
               commit_period = 100,
               max_key = 8
                 )

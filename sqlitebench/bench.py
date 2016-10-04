@@ -11,7 +11,7 @@ KEY_SIZE = 16 # 16 is the default key size in leveldb
 
 def parse_args():
     parser = argparse.ArgumentParser(
-            description="Example: python bench.py -f /tmp/tmp.db -n 100 -p random -e random -m 20")
+            description="Example: python bench.py -f /tmp/tmp.db -n 100 -p random_put -e 10 -m 20")
     parser.add_argument('-f', '--dbpath', action='store', required=True)
     parser.add_argument('-n', '--ninsertions', action='store', required=True)
     parser.add_argument('-p', '--pattern', action='store', required=True)
@@ -36,7 +36,7 @@ class Bench(object):
 
         self.existing_keys = set()
 
-        if self.pattern in ('random_read', 'sequential_read'):
+        if self.pattern in ('random_get', 'sequential_get'):
             print 'open existing'
             self.db = SqliteDB(db_path, use_existing_db=True)
         else:
@@ -48,16 +48,16 @@ class Bench(object):
         if self.pattern == 'sequential':
             self.insert_sequentially()
 
-        elif self.pattern == 'random':
+        elif self.pattern in ('random_put', 'random'):
             self.insert_randomly()
 
         elif self.pattern == 'preload_and_random':
             self.preload_and_randomly_insert()
 
-        elif self.pattern == 'random_read':
+        elif self.pattern == 'random_get':
             self.get_randomly()
 
-        elif self.pattern == 'sequential_read':
+        elif self.pattern == 'sequential_get':
             self.get_sequentially()
 
         else:
