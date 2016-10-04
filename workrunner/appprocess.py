@@ -275,6 +275,54 @@ class F2FSTester(AppBase):
         pass
 
 
+class RocksDBProc(AppBase):
+    def __init__(self, benchmarks, num, db,
+            threads, use_existing_db, inst_id, do_strace):
+        self.benchmarks = benchmarks
+        self.num = num
+        self.db = db
+        self.threads = threads
+        self.use_existing_db = use_existing_db
+        self.max_key = max_key
+        self.max_log = max_log
+        self.p = None
+
+        self.do_strace = do_strace
+        self.inst_id = inst_id
+
+    def run(self):
+        utils.prepare_dir(self.db)
+
+        db_bench_path = "../rocksdb/db_bench"
+        cmd = "{exe} --benchmarks={benchmarks} --num={num} --db={db} "\
+                "--threads={threads}  "\
+                "--use_existing_db={use_existing_db}"\
+            .format(
+                exe = db_bench_path,
+                benchmarks = self.benchmarks,
+                num = self.num,
+                db = self.db,
+                threads = self.threads,
+                max_key = self.max_key,
+                max_log = self.max_log,
+                use_existing_db = self.use_existing_db
+                )
+
+        if self.do_strace is True:
+            cmd = strace_prefix.format(self.inst_id) + cmd
+
+        print cmd
+        cmd = shlex.split(cmd)
+        print cmd
+        # self.p = subprocess.Popen(cmd)
+
+        cg = Cgroup(name='charlie', subs='memory')
+        cg.set_item('memory', 'memory.limit_in_bytes', 1000*MB)
+        self.p = cg.execute(cmd)
+
+        return self.p
+
+
 
 
 

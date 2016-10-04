@@ -62,6 +62,10 @@ cd ../pyfallocate && python fallocate_build.py
 cd ../ && make f2fsgc
 
 
+# for RocksDB
+sudo apt-get install -y libgflags-dev
+sudo apt-get install -y  zlib1g-dev
+sudo apt-get install -y libbz2-dev
 cd $doradir
 cd ../..
 git clone git@github.com:junhe/rocksdb.git
