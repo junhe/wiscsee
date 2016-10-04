@@ -61,3 +61,16 @@ cd ../pyfallocate && python fallocate_build.py
 
 cd ../ && make f2fsgc
 
+
+cd $doradir
+cd ../..
+git clone git@github.com:junhe/rocksdb.git
+cd rocksdb
+git checkout jun-v4.11.2
+make db_bench
+cd $doradir
+
+
+
+
+
