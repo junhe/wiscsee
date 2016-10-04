@@ -17,18 +17,22 @@ def parse_args():
     parser.add_argument('-p', '--pattern', action='store', required=True)
     parser.add_argument('-e', '--period', action='store', required=True)
     parser.add_argument('-m', '--maxkey', action='store', required=True)
+    parser.add_argument('-j', '--journalmode', action='store',
+            default='DELETE')
     args = parser.parse_args()
 
     return args
 
 
 class Bench(object):
-    def __init__(self, db_path, n_insertions, pattern, commit_period, max_key):
+    def __init__(self, db_path, n_insertions, pattern,
+            commit_period, max_key, journal_mode='DELETE'):
         self.db_path = db_path
         self.n_insertions = n_insertions
         self.pattern = pattern
         self.commit_period = commit_period
         self.max_key = max_key
+        self.journal_mode = journal_mode.upper()
         # 100 is the default value size in leveldb
         # 16 is the default key size in leveldb
         self.value_size = 100
@@ -38,9 +42,10 @@ class Bench(object):
 
         if self.pattern in ('random_get', 'sequential_get'):
             print 'open existing'
-            self.db = SqliteDB(db_path, use_existing_db=True)
+            self.db = SqliteDB(db_path, use_existing_db=True,
+                    journal_mode=journal_mode)
         else:
-            self.db = SqliteDB(db_path)
+            self.db = SqliteDB(db_path, journal_mode=journal_mode)
 
         self.db.open()
 
