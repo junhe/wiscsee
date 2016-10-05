@@ -130,12 +130,15 @@ proc_settings = {
 
 class ParameterPool(object):
     def __init__(self, expname, testname, filesystem):
-        lbabytes = 1*GB
-        shared_para_dict = get_shared_para_dict(expname, lbabytes)
-        shared_para_dict['filesystem'] = filesystem
+        self.lbabytes = 1 * GB
+        self.expname = expname
+        self.filesystem = filesystem
 
-        func = eval('self.{}'.format(testname))
-        func(shared_para_dict)
+        self.para_dicts = []
+
+        for name in testname:
+            func = eval('self.{}'.format(name))
+            func()
 
     def __iter__(self):
         for para_dict in self.para_dicts:
@@ -151,12 +154,21 @@ class ParameterPool(object):
                 'do_ncq_depth_time_line': [True],
             })
 
+    def get_base_dict(self):
+        shared_para_dict = get_shared_para_dict(
+                self.expname, self.lbabytes)
+        shared_para_dict['filesystem'] = self.filesystem
+
+        return shared_para_dict
+
+    def extend_para_dicts(self, para_dicts):
+        self.para_dicts.extend(para_dicts)
 
 
 
 
-
-    def rocksdb_reqscale_r_seq(self, shared_para_dict):
+    def rocksdb_reqscale_r_seq(self):
+        shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
 
         # set aging
@@ -180,10 +192,39 @@ class ParameterPool(object):
                 ],
         })
 
-        self.para_dicts = ParameterCombinations(shared_para_dict)
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
         pprint.pprint( self.para_dicts )
 
-    def rocksdb_reqscale_r_mix(self, shared_para_dict):
+    def rocksdb_reqscale_r_rand(self):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+
+        # set aging
+        shared_para_dict.update({
+            'age_workload_class': ['AppMix'],
+            'aging_appconfs': [
+                    [
+                        proc_settings['rocksdb']['aging_overwrite']
+                    ]
+                ],
+        })
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['rocksdb']['readrandom'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+        pprint.pprint( self.para_dicts )
+
+    def rocksdb_reqscale_r_mix(self):
+        shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
 
         # set aging
@@ -209,31 +250,11 @@ class ParameterPool(object):
                 ],
         })
 
-        self.para_dicts = ParameterCombinations(shared_para_dict)
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
         pprint.pprint( self.para_dicts )
 
-    def rocksdb_reqscale_w_mix(self, shared_para_dict):
-        self.env_reqscale(shared_para_dict)
-
-        # set aging
-        # Do nothing.
-
-        # set target
-        shared_para_dict.update({
-            'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [None],
-            'appconfs': [
-                    [
-                        proc_settings['rocksdb']['writeseq'],
-                        proc_settings['rocksdb']['writerandom'],
-                    ]
-                ],
-        })
-
-        self.para_dicts = ParameterCombinations(shared_para_dict)
-        pprint.pprint( self.para_dicts )
-
-    def rocksdb_reqscale_w_rand(self, shared_para_dict):
+    def rocksdb_reqscale_w_rand(self):
+        shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
 
         # set aging
@@ -253,7 +274,7 @@ class ParameterPool(object):
         self.para_dicts = ParameterCombinations(shared_para_dict)
         pprint.pprint( self.para_dicts )
 
-    def rocksdb_reqscale_w_seq(self, shared_para_dict):
+    def rocksdb_reqscale_w_seq(self):
         self.env_reqscale(shared_para_dict)
 
         # set aging
@@ -270,24 +291,15 @@ class ParameterPool(object):
                 ],
         })
 
-        self.para_dicts = ParameterCombinations(shared_para_dict)
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
         pprint.pprint( self.para_dicts )
 
-
-
-
-    def rocksdb_reqscale_r_rand(self, shared_para_dict):
+    def rocksdb_reqscale_w_mix(self):
+        shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
 
         # set aging
-        shared_para_dict.update({
-            'age_workload_class': ['AppMix'],
-            'aging_appconfs': [
-                    [
-                        proc_settings['rocksdb']['aging_overwrite']
-                    ]
-                ],
-        })
+        # Do nothing.
 
         # set target
         shared_para_dict.update({
@@ -295,16 +307,18 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['rocksdb']['readrandom'],
+                        proc_settings['rocksdb']['writeseq'],
+                        proc_settings['rocksdb']['writerandom'],
                     ]
                 ],
         })
 
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
         self.para_dicts = ParameterCombinations(shared_para_dict)
         pprint.pprint( self.para_dicts )
 
-
-    def leveldb_reqscale_r_seq(self, shared_para_dict):
+    def leveldb_reqscale_r_seq(self):
+        shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
 
         # set aging
@@ -328,7 +342,7 @@ class ParameterPool(object):
                 ],
         })
 
-        self.para_dicts = ParameterCombinations(shared_para_dict)
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
         pprint.pprint( self.para_dicts )
 
 

@@ -683,10 +683,11 @@ def appmixbench_for_rw():
                     expname = expname,
                     # testname = 'rocksdb_reqscale_r_mix',
                     # testname = 'rocksdb_reqscale_w_mix',
-                    testname = 'rocksdb_reqscale_w_rand',
+                    # testname = 'rocksdb_reqscale_w_rand',
                     # testname = 'rocksdb_reqscale_w_seq',
                     # testname = 'rocksdb_reqscale_r_rand',
-                    # testname = 'rocksdb_reqscale_r_seq',
+                    testname = ['rocksdb_reqscale_r_seq'],
+
                     # testname = 'leveldb_reqscale_r_seq',
                     filesystem = ['ext4']
                     )
