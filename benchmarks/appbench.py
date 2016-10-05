@@ -5,7 +5,7 @@ import glob
 
 from utilities import utils
 from experimenter import *
-import expconfs
+from expconfs import ParameterPool
 
 import prepare4pyreuse
 from pyreuse.sysutils.straceParser import parse_and_write_dirty_table
@@ -677,25 +677,16 @@ def appmixbench_for_read():
             self.write_stats()
 
     class ParaDict(ParaDictIterMixin):
-        def __init__(self):
-            expname = utils.get_expname()
-            lbabytes = 1*GB
-            para_dict = get_shared_para_dict(expname, lbabytes)
-            para_dict.update({
-                            'ftl' : ['ftlcounter'],
-                            'enable_simulation': [True],
-                            'dump_ext4_after_workload': [True],
-                            'only_get_traffic': [False],
-                            'do_ncq_depth_time_line': [True],
-                            'filesystem': ['ext4', 'f2fs', 'xfs'],
-                })
-            para_dict.update(expconfs.leveldb_aging)
-            para_dict.update(expconfs.leveldb_target)
-
-            self.parameter_combs = ParameterCombinations(para_dict)
-
         def __iter__(self):
-            return iter(self.parameter_combs)
+            expname = utils.get_expname()
+            para_pool = ParameterPool(
+                    expname = expname,
+                    testname = 'rocksdb_reqscale_r_seq',
+                    # testname = 'leveldb_reqscale_r_seq',
+                    filesystem = ['ext4']
+                    )
+
+            return iter(para_pool)
 
     def main():
         for para in ParaDict():

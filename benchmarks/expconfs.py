@@ -1,4 +1,8 @@
+import pprint
+
 from commons import *
+from experimenter import get_shared_para_dict
+from utilities.utils import *
 
 # LEVELDB
 #   k written_bytes valid_data_bytes   num max_key   hotness
@@ -13,56 +17,183 @@ from commons import *
 # 9 3     2.3927960       0.27410040 4e+06   3e+06  8.729633
 
 
-# To use, do
-# para_dict.update( leveldb_aging )
-leveldb_aging = {
-        'age_workload_class': ['AppMix'],
-        'aging_appconfs': [
-                [
-                    {'name' : 'LevelDB',
-                     'benchmarks': 'overwrite,compact',
-                     'num': 3*MILLION,
-                     'max_key': 3*MILLION,
-                     'max_log': -1,
-                     'do_strace': False,
-                     'use_existing_db': 0,
-                    },
-                    {'name' : 'LevelDB',
-                     'benchmarks': 'fillseq,compact',
-                     'num': 3*MILLION,
-                     'max_key': 3*MILLION,
-                     'max_log': -1,
-                     'do_strace': False,
-                     'use_existing_db': 0,
-                    },
-                ]
-            ],
-    }
+proc_settings = {
+    ######## LevelDB #######
+    'leveldb': {
 
-leveldb_target = {
-        'workload_class' : [ 'AppMix' ],
-        'run_seconds'    : [None],
-        'appconfs': [
-                [ # list of app you want to run
-                    {'name' : 'LevelDB',
-                     'benchmarks': 'readrandom',
-                     'num': 3*MILLION,
-                     'max_key': 3*MILLION,
-                     'max_log': -1,
-                     'do_strace': False,
-                     'use_existing_db': 1,
-                     },
-                    {'name' : 'LevelDB',
-                     'benchmarks': 'readseq',
-                     'num': 3*MILLION,
-                     'max_key': 3*MILLION,
-                     'max_log': -1,
-                     'do_strace': False,
-                     'use_existing_db': 1,
-                     },
-                ]
-            ],
-    }
+        'aging_overwrite':
+            {'name' : 'LevelDB',
+             'benchmarks': 'overwrite,compact',
+             'num': 3*MILLION,
+             'max_key': 3*MILLION,
+             'max_log': -1,
+             'do_strace': False,
+             'use_existing_db': 0,
+            },
+
+        'aging_fillseq':
+            {'name' : 'LevelDB',
+             'benchmarks': 'fillseq,compact',
+             'num': 3*MILLION,
+             'max_key': 3*MILLION,
+             'max_log': -1,
+             'do_strace': False,
+             'use_existing_db': 0,
+            },
+
+        'readrandom':
+            {'name' : 'LevelDB',
+             'benchmarks': 'readrandom',
+             'num': 3*MILLION,
+             'max_key': 3*MILLION,
+             'max_log': -1,
+             'do_strace': False,
+             'use_existing_db': 1,
+             },
+
+        'readseq':
+            {'name' : 'LevelDB',
+             'benchmarks': 'readseq',
+             'num': 3*MILLION,
+             'max_key': 3*MILLION,
+             'max_log': -1,
+             'do_strace': False,
+             'use_existing_db': 1,
+             },
+    }, ### LevelDB
+
+    ######## RocksDB #######
+    'rocksdb': {
+        'aging_overwrite':
+            {'name' : 'RocksDB',
+             'benchmarks': 'overwrite,compact',
+             'num': 3*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+            },
+
+        'aging_fillseq':
+            {'name' : 'RocksDB',
+             'benchmarks': 'fillseq,compact',
+             'num': 3*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+            },
+
+        'readrandom':
+            {'name' : 'RocksDB',
+             'benchmarks': 'readrandom',
+             'num': 3*MILLION,
+             'do_strace': False,
+             'use_existing_db': 1,
+             },
+
+        'readseq':
+            {'name' : 'RocksDB',
+             'benchmarks': 'readseq',
+             'num': 3*MILLION,
+             'do_strace': False,
+             'use_existing_db': 1,
+             },
+    }, ### RocksDB
+
+}
+
+
+class ParameterPool(object):
+    def __init__(self, expname, testname, filesystem):
+        lbabytes = 1*GB
+        shared_para_dict = get_shared_para_dict(expname, lbabytes)
+        shared_para_dict['filesystem'] = filesystem
+
+        if testname == 'rocksdb_reqscale_r_seq':
+            self.set_rocksdb_reqscale_r_seq(shared_para_dict)
+
+        elif testname == 'leveldb_reqscale_r_seq':
+            self.leveldb_reqscale_r_seq(shared_para_dict)
+
+        else:
+            raise RuntimeError('testname {} not implemented'.format(
+                testname))
+
+    def __iter__(self):
+        for para_dict in self.para_dicts:
+            yield para_dict
+
+    def env_reqscale_read(self, d):
+        d.update(
+            {
+                'ftl' : ['ftlcounter'],
+                'enable_simulation': [True],
+                'dump_ext4_after_workload': [True],
+                'only_get_traffic': [False],
+                'do_ncq_depth_time_line': [True],
+            })
+
+
+
+
+
+
+    def set_rocksdb_reqscale_r_seq(self, shared_para_dict):
+        self.env_reqscale_read(shared_para_dict)
+
+        # set aging
+        shared_para_dict.update({
+            'age_workload_class': ['AppMix'],
+            'aging_appconfs': [
+                    [
+                        proc_settings['rocksdb']['aging_fillseq']
+                    ]
+                ],
+        })
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['rocksdb']['readseq']
+                    ]
+                ],
+        })
+
+        self.para_dicts = ParameterCombinations(shared_para_dict)
+        pprint.pprint( self.para_dicts )
+
+
+    def leveldb_reqscale_r_seq(self, shared_para_dict):
+        self.env_reqscale_read(shared_para_dict)
+
+        # set aging
+        shared_para_dict.update({
+            'age_workload_class': ['AppMix'],
+            'aging_appconfs': [
+                    [
+                        proc_settings['leveldb']['aging_fillseq']
+                    ]
+                ],
+        })
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['leveldb']['readseq']
+                    ]
+                ],
+        })
+
+        self.para_dicts = ParameterCombinations(shared_para_dict)
+        pprint.pprint( self.para_dicts )
+
+
+
+
+
 
 
 

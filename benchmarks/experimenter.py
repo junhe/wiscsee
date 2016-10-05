@@ -266,6 +266,7 @@ def get_shared_para_dict(expname, lbabytes):
             'fs_discard': [True],
             'only_get_traffic': [True],
             'age_workload_class': ['NoOp'],
+            'aging_appconfs': [None],
             }
     return para_dict
 

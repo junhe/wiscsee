@@ -89,3 +89,6 @@ f2fsgc:
 testncqparser:
 	./run_testclass.sh tests.misc_test.TestNCQParser
 
+testpara:
+	./run_testclass.sh tests.test_parameterpool
+
