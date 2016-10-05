@@ -70,6 +70,7 @@ proc_settings = {
              'num': 3*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
+             'mem_limit_in_bytes': 1*GB,
             },
 
         'aging_fillseq':
@@ -78,6 +79,7 @@ proc_settings = {
              'num': 3*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
+             'mem_limit_in_bytes': 1*GB,
             },
 
         'readrandom':
