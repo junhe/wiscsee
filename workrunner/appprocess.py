@@ -296,7 +296,9 @@ class RocksDBProc(AppBase):
         db_bench_path = "../rocksdb/db_bench"
         cmd = "{exe} --benchmarks={benchmarks} --num={num} --db={db} "\
                 "--threads={threads}  "\
-                "--use_existing_db={use_existing_db}"\
+                "--use_existing_db={use_existing_db} "\
+                "--max_background_compactions=32 "\
+                "--max_background_flushes=16 " \
             .format(
                 exe = db_bench_path,
                 benchmarks = self.benchmarks,
