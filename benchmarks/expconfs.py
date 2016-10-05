@@ -106,15 +106,8 @@ class ParameterPool(object):
         shared_para_dict = get_shared_para_dict(expname, lbabytes)
         shared_para_dict['filesystem'] = filesystem
 
-        if testname == 'rocksdb_reqscale_r_seq':
-            self.set_rocksdb_reqscale_r_seq(shared_para_dict)
-
-        elif testname == 'leveldb_reqscale_r_seq':
-            self.leveldb_reqscale_r_seq(shared_para_dict)
-
-        else:
-            raise RuntimeError('testname {} not implemented'.format(
-                testname))
+        func = eval('self.{}'.format(testname))
+        func(shared_para_dict)
 
     def __iter__(self):
         for para_dict in self.para_dicts:
@@ -135,7 +128,7 @@ class ParameterPool(object):
 
 
 
-    def set_rocksdb_reqscale_r_seq(self, shared_para_dict):
+    def rocksdb_reqscale_r_seq(self, shared_para_dict):
         self.env_reqscale_read(shared_para_dict)
 
         # set aging

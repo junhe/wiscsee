@@ -656,7 +656,7 @@ def appmixbench():
     main()
 
 
-def appmixbench_for_read():
+def appmixbench_for_rw():
     class LocalExperimenter(Experimenter, StatsMixin):
         def setup_workload(self):
             self.conf['workload_class'] = self.para.workload_class
@@ -696,7 +696,6 @@ def appmixbench_for_read():
             obj.main()
 
     main()
-
 
 
 def appmixbench_for_scaling():
