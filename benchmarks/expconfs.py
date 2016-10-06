@@ -307,7 +307,7 @@ proc_settings = {
                         "seconds": 600,
                         "nfiles": 1000,
                         "name": "Varmail",
-                        "num_bytes": 3500,
+                        "num_bytes": 1*MB,
                         "do_strace": False,
                         "rwmode": 'read', # even it is read, it preallocates files
                         'mem_limit_in_bytes': 1*GB,
@@ -318,7 +318,7 @@ proc_settings = {
                         "seconds": 600,
                         "nfiles": 8000,
                         "name": "Varmail",
-                        "num_bytes": 3500,
+                        "num_bytes": 1*MB,
                         "do_strace": False,
                         'mem_limit_in_bytes': 1*GB,
                         "rwmode": 'read', # even it is read, it preallocates files
@@ -329,7 +329,7 @@ proc_settings = {
                         "seconds": 600,
                         "nfiles": 800,
                         "name": "Varmail",
-                        "num_bytes": 100000,
+                        "num_bytes": 512*MB,
                         "do_strace": False,
                         'mem_limit_in_bytes': 64*MB,
                         "rwmode": 'read'
@@ -340,7 +340,7 @@ proc_settings = {
                         "seconds": 600,
                         "nfiles": 8000,
                         "name": "Varmail",
-                        "num_bytes": 100000,
+                        "num_bytes": 512*MB,
                         "do_strace": False,
                         'mem_limit_in_bytes': 64*MB,
                         "rwmode": 'read'
@@ -351,7 +351,7 @@ proc_settings = {
                         "seconds": 600,
                         "nfiles": 800,
                         "name": "Varmail",
-                        "num_bytes": 100000,
+                        "num_bytes": 1*GB,
                         "do_strace": False,
                         'mem_limit_in_bytes': 1*GB,
                         "rwmode": 'write'
@@ -362,7 +362,7 @@ proc_settings = {
                         "seconds": 600,
                         "nfiles": 8000,
                         "name": "Varmail",
-                        "num_bytes": 1000000,
+                        "num_bytes": 1*GB,
                         "do_strace": False,
                         'mem_limit_in_bytes': 1*GB,
                         "rwmode": 'write'
@@ -1048,7 +1048,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [10],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['varmail']['small_read']
@@ -1077,7 +1077,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [10],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['varmail']['large_read'],
@@ -1107,7 +1107,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [10],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['varmail']['small_read'],
@@ -1172,7 +1172,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [10],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['varmail']['small_write'],
