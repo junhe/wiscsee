@@ -240,13 +240,14 @@ class VarmailProc(AppBase):
         else:
             raise RuntimeError('Not a valid rwmode for varmail')
 
-        return PART1.format(dirpath=self.dirpath, nfiles=self.nfiles) + \
+        conftext = PART1.format(dirpath=self.dirpath, nfiles=self.nfiles) + \
                 PART2 + \
                 flowop + \
                 PART3.format(self.num_bytes) + \
                 PART4 + \
                 PART5.format(self.seconds)
 
+        return conftext
 
     def terminate(self):
         raise NotImplementedError('this sometimes not work')
