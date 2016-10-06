@@ -17,9 +17,12 @@ class SqliteDB(object):
 
         self.conn = sqlite3.connect(self.db_path)
 
-        self._set_journal_mode()
+
+        print 'Journal mode', self._get_journal_mode()
 
         if self.use_existing_db is False:
+            self._set_journal_mode()
+            print 'After setting journal mode:', self._get_journal_mode()
             schema_text = """
                 create table benchtable (
                     name        text primary key,
@@ -29,10 +32,18 @@ class SqliteDB(object):
             self.conn.executescript(schema_text)
 
     def _set_journal_mode(self):
-        ret = self.conn.execute("PRAGMA journal_mode={}".format(self.journal_mode))
+        cmd = "PRAGMA journal_mode={}".format(self.journal_mode.upper())
+        print cmd
+        ret = self.conn.execute(cmd)
         mode = ret.fetchone()
         print mode
         assert mode[0] == self.journal_mode.lower()
+
+    def _get_journal_mode(self):
+        ret = self.conn.execute("PRAGMA journal_mode")
+        mode = ret.fetchone()
+
+        return mode[0]
 
     def initialize(self):
         pass

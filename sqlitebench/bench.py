@@ -135,7 +135,8 @@ def main():
           n_insertions = int(args.ninsertions),
           pattern = args.pattern,
           commit_period = int(args.period),
-          max_key = int(args.maxkey)
+          max_key = int(args.maxkey),
+          journal_mode = args.journalmode
             )
     b.run()
 

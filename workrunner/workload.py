@@ -634,7 +634,8 @@ class AppMix(Workload):
                 commit_period = appconf['commit_period'],
                 max_key = appconf['max_key'],
                 inst_id = seq_id,
-                do_strace = appconf['do_strace']
+                do_strace = appconf['do_strace'],
+                journal_mode = appconf['journal_mode']
                 )
 
         elif appconf['name'] == 'Varmail':
