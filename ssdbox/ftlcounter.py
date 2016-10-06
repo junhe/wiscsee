@@ -298,9 +298,9 @@ class LpnClassification(object):
         self.fs_block_size = 4096
 
     def classify(self):
-        extents = self._get_extents()
-        filepath_classifier = blockclassifiers.Ext4FileClassifier(extents,
-                self.fs_block_size)
+        # extents = self._get_extents()
+        # filepath_classifier = blockclassifiers.Ext4FileClassifier(extents,
+                # self.fs_block_size)
 
         range_table = self._get_range_table()
         classifier = blockclassifiers.Ext4BlockClassifier(range_table,
@@ -310,8 +310,8 @@ class LpnClassification(object):
         for lpn in self.lpns:
             offset  = lpn * self.flash_page_size
             sem = classifier.classify(offset)
-            if sem == 'UNKNOWN':
-                sem = filepath_classifier.classify(offset)
+            # if sem == 'UNKNOWN':
+                # sem = filepath_classifier.classify(offset)
             row = {'lpn': lpn,
                    'sem':sem}
             table.append(row)

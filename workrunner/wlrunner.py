@@ -309,7 +309,7 @@ class WorkloadRunner(object):
         if self.conf['filesystem'] == 'ext4' and self.conf['dump_ext4_after_workload'] is True:
             utils.shcmd('sync')
             self.dumpe2fs()
-            self.dump_extents()
+            # self.dump_extents()
 
     def dumpe2fs(self):
         dumppath = os.path.join(self.conf['result_dir'], 'dumpe2fs.out')
