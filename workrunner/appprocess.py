@@ -179,7 +179,7 @@ PART2_flowop_readintense = """
 
 
 
-PART3 = "flowop finishoncount name=finish,value={}"
+PART3 = "flowop finishonbytes name=finish,value={}"
 
 PART4 = """
   }
@@ -194,11 +194,11 @@ PART5  = "run {}"
 
 class VarmailProc(AppBase):
     def __init__(self, dirpath, seconds, nfiles,
-            num_ops, inst_id, do_strace, rwmode):
+            num_bytes, inst_id, do_strace, rwmode, mem_limit_in_bytes):
         self.dirpath = dirpath
         self.seconds = seconds
         self.nfiles = nfiles # 8000 was often used
-        self.num_ops = num_ops
+        self.num_bytes = num_bytes
         self.rwmode = rwmode
 
         self.hash_str = str(hash(dirpath))
@@ -234,7 +234,8 @@ class VarmailProc(AppBase):
 
         return PART1.format(dirpath=self.dirpath, nfiles=self.nfiles) + \
                 PART2 + \
-                PART3.format(self.num_ops) + \
+                flowop + \
+                PART3.format(self.num_bytes) + \
                 PART4 + \
                 PART5.format(self.seconds)
 

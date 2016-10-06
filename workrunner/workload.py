@@ -640,7 +640,7 @@ class AppMix(Workload):
 
         elif appconf['name'] == 'Varmail':
             proc = VarmailProc(appdir, appconf['seconds'], appconf['nfiles'],
-                    appconf['num_ops'],
+                    appconf['num_bytes'],
                     inst_id = seq_id,
                     do_strace = appconf['do_strace']
                     )
