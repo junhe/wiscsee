@@ -50,7 +50,7 @@ class Bench(object):
         self.db.open()
 
     def run(self):
-        if self.pattern == 'sequential':
+        if self.pattern in ('sequential_put', 'sequential'):
             self.insert_sequentially()
 
         elif self.pattern in ('random_put', 'random'):

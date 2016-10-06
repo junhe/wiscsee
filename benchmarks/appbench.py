@@ -685,22 +685,26 @@ def appmixbench_for_rw():
                         # 'rocksdb_reqscale_r_seq',
                         # 'rocksdb_reqscale_r_rand',
                         # 'rocksdb_reqscale_r_mix',
-
                         # 'rocksdb_reqscale_w_seq',
                         # 'rocksdb_reqscale_w_rand',
                         # 'rocksdb_reqscale_w_mix'
 
+                        # 'leveldb_reqscale_r_seq',
+                        # 'leveldb_reqscale_r_rand',
+                        # 'leveldb_reqscale_r_mix',
+                        # 'leveldb_reqscale_w_seq',
+                        # 'leveldb_reqscale_w_rand',
+                        # 'leveldb_reqscale_w_mix'
 
-                        'leveldb_reqscale_r_seq',
-                        'leveldb_reqscale_r_rand',
-                        'leveldb_reqscale_r_mix',
-
-                        'leveldb_reqscale_w_seq',
-                        'leveldb_reqscale_w_rand',
-                        'leveldb_reqscale_w_mix'
+                        'sqliteWAL_reqscale_r_seq',
+                        'sqliteWAL_reqscale_r_rand',
+                        'sqliteWAL_reqscale_r_mix',
+                        'sqliteWAL_reqscale_w_seq',
+                        'sqliteWAL_reqscale_w_rand',
+                        'sqliteWAL_reqscale_w_mix'
                         ],
-                    # filesystem = ['ext4', 'f2fs', 'xfs']
-                    filesystem = ['ext4']
+                    filesystem = ['ext4', 'f2fs', 'xfs']
+                    # filesystem = ['ext4']
                     )
 
             return iter(para_pool)
