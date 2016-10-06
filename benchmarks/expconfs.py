@@ -173,7 +173,7 @@ proc_settings = {
 
     }, ### RocksDB
 
-    ######## Sqlite #######
+    ######## SqliteWAL #######
     'sqliteWAL': {
         'aging_seq':
             {'name': 'Sqlite',
@@ -235,6 +235,70 @@ proc_settings = {
              'journal_mode': 'WAL'
             },
     }, ### Sqlite
+
+    ######## SqliteRollBack #######
+    'sqliteRB': {
+        'aging_seq':
+            {'name': 'Sqlite',
+             'pattern': 'sequential_put',
+             'n_insertions': 12000,
+             'commit_period': 10,
+             'max_key': 12000,
+             'do_strace': False,
+             'journal_mode': 'DELETE'
+            },
+
+        'aging_rand':
+            {'name': 'Sqlite',
+             'pattern': 'random_put',
+             'n_insertions': 12000,
+             'commit_period': 10,
+             'max_key': 12000,
+             'do_strace': False,
+             'journal_mode': 'DELETE'
+            },
+
+        'seq_get':
+            {'name': 'Sqlite',
+             'pattern': 'sequential_get',
+             'n_insertions': 12000,
+             'commit_period': 10,
+             'max_key': 12000,
+             'do_strace': False,
+             'journal_mode': 'DELETE'
+            },
+
+        'rand_get':
+            {'name': 'Sqlite',
+             'pattern': 'random_get',
+             'n_insertions': 12000,
+             'commit_period': 10,
+             'max_key': 12000,
+             'do_strace': False,
+             'journal_mode': 'DELETE'
+            },
+
+        'seq_put':
+            {'name': 'Sqlite',
+             'pattern': 'sequential_put',
+             'n_insertions': 12000,
+             'commit_period': 10,
+             'max_key': 12000,
+             'do_strace': False,
+             'journal_mode': 'DELETE'
+            },
+
+        'rand_put':
+            {'name': 'Sqlite',
+             'pattern': 'random_put',
+             'n_insertions': 12000,
+             'commit_period': 10,
+             'max_key': 12000,
+             'do_strace': False,
+             'journal_mode': 'DELETE'
+            },
+    }, ### Sqlite
+
 
 }
 
@@ -744,6 +808,160 @@ class ParameterPool(object):
         })
 
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def sqliteRB_reqscale_r_seq(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        shared_para_dict.update({
+            'age_workload_class': ['AppMix'],
+            'aging_appconfs': [
+                    [
+                        proc_settings['sqliteRB']['aging_seq']
+                    ]
+                ],
+        })
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [10],
+            'appconfs': [
+                    [
+                        proc_settings['sqliteRB']['seq_get']
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+        pprint.pprint( self.para_dicts )
+
+    def sqliteRB_reqscale_r_rand(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        shared_para_dict.update({
+            'age_workload_class': ['AppMix'],
+            'aging_appconfs': [
+                    [
+                        proc_settings['sqliteRB']['aging_rand']
+                    ]
+                ],
+        })
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [10],
+            'appconfs': [
+                    [
+                        proc_settings['sqliteRB']['rand_get'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+        pprint.pprint( self.para_dicts )
+
+    def sqliteRB_reqscale_r_mix(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        shared_para_dict.update({
+            'age_workload_class': ['AppMix'],
+            'aging_appconfs': [
+                    [
+                        proc_settings['sqliteRB']['aging_seq'],
+                        proc_settings['sqliteRB']['aging_rand']
+                    ]
+                ],
+        })
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [10],
+            'appconfs': [
+                    [
+                        proc_settings['sqliteRB']['seq_get'],
+                        proc_settings['sqliteRB']['rand_get'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+        pprint.pprint( self.para_dicts )
+
+    def sqliteRB_reqscale_w_seq(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['sqliteRB']['seq_put'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def sqliteRB_reqscale_w_rand(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['sqliteRB']['rand_put'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def sqliteRB_reqscale_w_mix(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [10],
+            'appconfs': [
+                    [
+                        proc_settings['sqliteRB']['seq_put'],
+                        proc_settings['sqliteRB']['rand_put'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
 
 
 
