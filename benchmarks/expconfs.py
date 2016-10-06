@@ -70,7 +70,7 @@ proc_settings = {
         'aging_overwrite':
             {'name' : 'RocksDB',
              'benchmarks': 'overwrite,compact',
-             'num': 3*MILLION,
+             'num': 5*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
              'mem_limit_in_bytes': 1*GB,
@@ -79,7 +79,7 @@ proc_settings = {
         'aging_fillseq':
             {'name' : 'RocksDB',
              'benchmarks': 'fillseq,compact',
-             'num': 3*MILLION,
+             'num': 5*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
              'mem_limit_in_bytes': 1*GB,
@@ -87,8 +87,8 @@ proc_settings = {
 
         'readrandom':
             {'name' : 'RocksDB',
-             'benchmarks': 'readrandom',
-             'num': 3*MILLION,
+             'benchmarks': repeat_bench('readrandom', 10),
+             'num': 5*MILLION,
              'do_strace': False,
              'use_existing_db': 1,
              'mem_limit_in_bytes': 128*MB,
@@ -96,8 +96,8 @@ proc_settings = {
 
         'readseq':
             {'name' : 'RocksDB',
-             'benchmarks': 'readseq,readseq,readseq,readseq,readseq,readseq',
-             'num': 3*MILLION,
+             'benchmarks': repeat_bench('readseq', 10),
+             'num': 5*MILLION,
              'do_strace': False,
              'use_existing_db': 1,
              'mem_limit_in_bytes': 128*MB,
@@ -105,23 +105,39 @@ proc_settings = {
 
         'writeseq':
             {'name' : 'RocksDB',
-             'benchmarks': repeat_bench('fillseq', 10),
-             'num': 1*MILLION,
+             'benchmarks': repeat_bench('fillseq', 1),
+             'num': 10*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
-             'mem_limit_in_bytes': 10*GB,
+             'mem_limit_in_bytes': 128*MB,
              },
 
         'writerandom':
             {'name' : 'RocksDB',
-             'benchmarks': repeat_bench('overwrite', 10),
+             'benchmarks': repeat_bench('overwrite', 1),
+             'num': 10*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+            },
+
+        'writeseq_for_mix':
+            {'name' : 'RocksDB',
+             'benchmarks': repeat_bench('fillseq', 1),
              'num': 3*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
-             'mem_limit_in_bytes': 10*GB,
+             'mem_limit_in_bytes': 128*MB,
              },
 
-
+        'writerandom_for_mix':
+            {'name' : 'RocksDB',
+             'benchmarks': repeat_bench('overwrite', 1),
+             'num': 3*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+            },
 
     }, ### RocksDB
 }
@@ -187,7 +203,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [None],
+            'run_seconds'    : [10],
             'appconfs': [
                     [
                         proc_settings['rocksdb']['readseq']
@@ -216,7 +232,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [None],
+            'run_seconds'    : [10],
             'appconfs': [
                     [
                         proc_settings['rocksdb']['readrandom'],
@@ -246,7 +262,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [5],
+            'run_seconds'    : [10],
             'appconfs': [
                     [
                         proc_settings['rocksdb']['readseq'],
@@ -256,28 +272,6 @@ class ParameterPool(object):
         })
 
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
-        pprint.pprint( self.para_dicts )
-
-    def rocksdb_reqscale_w_rand(self, testname):
-        shared_para_dict = self.get_base_dict()
-        self.env_reqscale(shared_para_dict)
-        self.set_testname(shared_para_dict, testname)
-
-        # set aging
-        # Do nothing.
-
-        # set target
-        shared_para_dict.update({
-            'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [None],
-            'appconfs': [
-                    [
-                        proc_settings['rocksdb']['writerandom'],
-                    ]
-                ],
-        })
-
-        self.para_dicts = ParameterCombinations(shared_para_dict)
         pprint.pprint( self.para_dicts )
 
     def rocksdb_reqscale_w_seq(self, testname):
@@ -300,9 +294,8 @@ class ParameterPool(object):
         })
 
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
-        pprint.pprint( self.para_dicts )
 
-    def rocksdb_reqscale_w_mix(self, testname):
+    def rocksdb_reqscale_w_rand(self, testname):
         shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
         self.set_testname(shared_para_dict, testname)
@@ -316,15 +309,44 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['rocksdb']['writeseq'],
                         proc_settings['rocksdb']['writerandom'],
                     ]
                 ],
         })
 
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
-        self.para_dicts = ParameterCombinations(shared_para_dict)
-        pprint.pprint( self.para_dicts )
+
+
+    def rocksdb_reqscale_w_mix(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [40],
+            'appconfs': [
+                    [
+                        proc_settings['rocksdb']['writeseq_for_mix'],
+                        proc_settings['rocksdb']['writerandom_for_mix'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+
+
+
+
+
+
+
+
 
     def leveldb_reqscale_r_seq(self, testname):
         shared_para_dict = self.get_base_dict()
@@ -354,17 +376,6 @@ class ParameterPool(object):
 
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
         pprint.pprint( self.para_dicts )
-
-
-
-
-
-
-
-
-
-
-
 
 
 

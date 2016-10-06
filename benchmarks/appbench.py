@@ -681,21 +681,23 @@ def appmixbench_for_rw():
             expname = utils.get_expname()
             para_pool = ParameterPool(
                     expname = expname,
-                    # testname = 'rocksdb_reqscale_r_mix',
-                    # testname = 'rocksdb_reqscale_w_mix',
-                    # testname = 'rocksdb_reqscale_w_rand',
-                    # testname = 'rocksdb_reqscale_w_seq',
-                    # testname = 'rocksdb_reqscale_r_rand',
-                    testname = ['rocksdb_reqscale_r_seq'],
+                    testname = [
+                        'rocksdb_reqscale_r_seq',
+                        'rocksdb_reqscale_r_rand',
+                        'rocksdb_reqscale_r_mix',
 
-                    # testname = 'leveldb_reqscale_r_seq',
-                    filesystem = ['ext4']
+                        'rocksdb_reqscale_w_seq',
+                        'rocksdb_reqscale_w_rand',
+                        'rocksdb_reqscale_w_mix'
+                        ],
+                    filesystem = ['ext4', 'f2fs', 'xfs']
                     )
 
             return iter(para_pool)
 
     def main():
         for para in ParaDict():
+            print '------------------------------------------'
             print para
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = LocalExperimenter( Parameters(**para) )
