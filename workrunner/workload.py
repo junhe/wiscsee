@@ -609,10 +609,9 @@ class AppMix(Workload):
                 db=appdir,
                 threads=1,
                 use_existing_db=appconf['use_existing_db'],
-                max_key=appconf['max_key'],
-                max_log=appconf['max_log'],
                 inst_id = seq_id,
-                do_strace = appconf['do_strace']
+                do_strace = appconf['do_strace'],
+                mem_limit_in_bytes = appconf['mem_limit_in_bytes']
                 )
 
         elif appconf['name'] == 'RocksDB':

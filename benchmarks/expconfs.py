@@ -23,46 +23,78 @@ def repeat_bench(name, n):
 proc_settings = {
     ######## LevelDB #######
     'leveldb': {
-
         'aging_overwrite':
             {'name' : 'LevelDB',
              'benchmarks': 'overwrite,compact',
-             'num': 3*MILLION,
-             'max_key': 3*MILLION,
-             'max_log': -1,
+             'num': 5*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
+             'mem_limit_in_bytes': 1*GB,
             },
 
         'aging_fillseq':
             {'name' : 'LevelDB',
              'benchmarks': 'fillseq,compact',
-             'num': 3*MILLION,
-             'max_key': 3*MILLION,
-             'max_log': -1,
+             'num': 5*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
+             'mem_limit_in_bytes': 1*GB,
             },
 
         'readrandom':
             {'name' : 'LevelDB',
-             'benchmarks': 'readrandom',
-             'num': 3*MILLION,
-             'max_key': 3*MILLION,
-             'max_log': -1,
+             'benchmarks': repeat_bench('readrandom', 10),
+             'num': 5*MILLION,
              'do_strace': False,
              'use_existing_db': 1,
+             'mem_limit_in_bytes': 128*MB,
              },
 
         'readseq':
             {'name' : 'LevelDB',
-             'benchmarks': 'readseq',
-             'num': 3*MILLION,
-             'max_key': 3*MILLION,
-             'max_log': -1,
+             'benchmarks': repeat_bench('readseq', 10),
+             'num': 5*MILLION,
              'do_strace': False,
              'use_existing_db': 1,
+             'mem_limit_in_bytes': 128*MB,
              },
+
+        'writeseq':
+            {'name' : 'LevelDB',
+             'benchmarks': repeat_bench('fillseq', 1),
+             'num': 10*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+             },
+
+        'writerandom':
+            {'name' : 'LevelDB',
+             'benchmarks': repeat_bench('overwrite', 1),
+             'num': 10*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+            },
+
+        'writeseq_for_mix':
+            {'name' : 'LevelDB',
+             'benchmarks': repeat_bench('fillseq', 1),
+             'num': 3*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+             },
+
+        'writerandom_for_mix':
+            {'name' : 'LevelDB',
+             'benchmarks': repeat_bench('overwrite', 1),
+             'num': 3*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+            },
+
     }, ### LevelDB
 
     ######## RocksDB #######
@@ -316,7 +348,6 @@ class ParameterPool(object):
 
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
 
-
     def rocksdb_reqscale_w_mix(self, testname):
         shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
@@ -341,13 +372,6 @@ class ParameterPool(object):
 
 
 
-
-
-
-
-
-
-
     def leveldb_reqscale_r_seq(self, testname):
         shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
@@ -366,7 +390,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [None],
+            'run_seconds'    : [10],
             'appconfs': [
                     [
                         proc_settings['leveldb']['readseq']
@@ -376,6 +400,134 @@ class ParameterPool(object):
 
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
         pprint.pprint( self.para_dicts )
+
+    def leveldb_reqscale_r_rand(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        shared_para_dict.update({
+            'age_workload_class': ['AppMix'],
+            'aging_appconfs': [
+                    [
+                        proc_settings['leveldb']['aging_overwrite']
+                    ]
+                ],
+        })
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [10],
+            'appconfs': [
+                    [
+                        proc_settings['leveldb']['readrandom'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+        pprint.pprint( self.para_dicts )
+
+    def leveldb_reqscale_r_mix(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        shared_para_dict.update({
+            'age_workload_class': ['AppMix'],
+            'aging_appconfs': [
+                    [
+                        proc_settings['leveldb']['aging_fillseq'],
+                        proc_settings['leveldb']['aging_overwrite']
+                    ]
+                ],
+        })
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [10],
+            'appconfs': [
+                    [
+                        proc_settings['leveldb']['readseq'],
+                        proc_settings['leveldb']['readrandom'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+        pprint.pprint( self.para_dicts )
+
+    def leveldb_reqscale_w_seq(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['leveldb']['writeseq'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def leveldb_reqscale_w_rand(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['leveldb']['writerandom'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def leveldb_reqscale_w_mix(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [40],
+            'appconfs': [
+                    [
+                        proc_settings['leveldb']['writeseq_for_mix'],
+                        proc_settings['leveldb']['writerandom_for_mix'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+
+
+
 
 
 

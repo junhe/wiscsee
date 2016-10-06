@@ -31,15 +31,14 @@ class AppBase(object):
 
 class LevelDBProc(AppBase):
     def __init__(self, benchmarks, num, db,
-            threads, use_existing_db, max_key, max_log,
-            inst_id, do_strace):
+            threads, use_existing_db,
+            inst_id, do_strace, mem_limit_in_bytes):
         self.benchmarks = benchmarks
         self.num = num
         self.db = db
         self.threads = threads
+        self.mem_limit_in_bytes = mem_limit_in_bytes
         self.use_existing_db = use_existing_db
-        self.max_key = max_key
-        self.max_log = max_log
         self.p = None
 
         self.do_strace = do_strace
@@ -51,8 +50,6 @@ class LevelDBProc(AppBase):
         db_bench_path = "../leveldb/db_bench"
         cmd = "{exe} --benchmarks={benchmarks} --num={num} --db={db} "\
                 "--threads={threads}  "\
-                "--max_key={max_key} "\
-                "--dowrite_skew_max_log={max_log} "\
                 "--use_existing_db={use_existing_db}"\
             .format(
                 exe = db_bench_path,
@@ -60,8 +57,6 @@ class LevelDBProc(AppBase):
                 num = self.num,
                 db = self.db,
                 threads = self.threads,
-                max_key = self.max_key,
-                max_log = self.max_log,
                 use_existing_db = self.use_existing_db
                 )
 
@@ -73,8 +68,9 @@ class LevelDBProc(AppBase):
         print cmd
         # self.p = subprocess.Popen(cmd)
 
-        cg = Cgroup(name='charlie', subs='memory')
-        cg.set_item('memory', 'memory.limit_in_bytes', 1000*MB)
+        cg = Cgroup(name='app'+str(self.inst_id), subs='memory')
+        cg.set_item('memory', 'memory.limit_in_bytes',
+                self.mem_limit_in_bytes)
         self.p = cg.execute(cmd)
 
         return self.p
