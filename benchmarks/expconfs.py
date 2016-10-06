@@ -300,6 +300,29 @@ proc_settings = {
     }, ### Sqlite
 
 
+    ######## Varmail  #######
+    'varmail': {
+        'aging_small'
+                    {
+                        "seconds": 600,
+                        "nfiles": 1000,
+                        "name": "Varmail",
+                        "num_ops": 3500,
+                        "do_strace": False,
+                        "rwmode": 'write'
+                    },
+
+        'small_read'
+                    {
+                        "seconds": 600,
+                        "nfiles": 1000,
+                        "name": "Varmail",
+                        "num_ops": 3500,
+                        "do_strace": False,
+                        "rwmode": 'read'
+                    },
+
+    }, ### Sqlite
 }
 
 
@@ -961,6 +984,160 @@ class ParameterPool(object):
         })
 
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def varmail_reqscale_r_small(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        shared_para_dict.update({
+            'age_workload_class': ['AppMix'],
+            'aging_appconfs': [
+                    [
+                        proc_settings['varmail']['aging_small']
+                    ]
+                ],
+        })
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [10],
+            'appconfs': [
+                    [
+                        proc_settings['varmail']['small_read']
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+        pprint.pprint( self.para_dicts )
+
+    def varmail_reqscale_r_large(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        shared_para_dict.update({
+            'age_workload_class': ['AppMix'],
+            'aging_appconfs': [
+                    [
+                        proc_settings['varmail']['aging_rand']
+                    ]
+                ],
+        })
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [10],
+            'appconfs': [
+                    [
+                        proc_settings['varmail']['rand_get'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+        pprint.pprint( self.para_dicts )
+
+    def varmail_reqscale_r_mix(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        shared_para_dict.update({
+            'age_workload_class': ['AppMix'],
+            'aging_appconfs': [
+                    [
+                        proc_settings['varmail']['aging_small'],
+                        proc_settings['varmail']['aging_rand']
+                    ]
+                ],
+        })
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [10],
+            'appconfs': [
+                    [
+                        proc_settings['varmail']['seq_get'],
+                        proc_settings['varmail']['rand_get'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+        pprint.pprint( self.para_dicts )
+
+    def varmail_reqscale_w_small(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['varmail']['seq_put'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def varmail_reqscale_w_rand(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['varmail']['rand_put'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def varmail_reqscale_w_mix(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [10],
+            'appconfs': [
+                    [
+                        proc_settings['varmail']['seq_put'],
+                        proc_settings['varmail']['rand_put'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
 
 
 

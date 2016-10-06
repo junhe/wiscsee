@@ -696,22 +696,24 @@ def appmixbench_for_rw():
                         # 'leveldb_reqscale_w_rand',
                         # 'leveldb_reqscale_w_mix'
 
-                        'sqliteWAL_reqscale_r_seq',
-                        'sqliteWAL_reqscale_r_rand',
-                        'sqliteWAL_reqscale_r_mix',
-                        'sqliteWAL_reqscale_w_seq',
-                        'sqliteWAL_reqscale_w_rand',
-                        'sqliteWAL_reqscale_w_mix'
+                        # 'sqliteWAL_reqscale_r_seq',
+                        # 'sqliteWAL_reqscale_r_rand',
+                        # 'sqliteWAL_reqscale_r_mix',
+                        # 'sqliteWAL_reqscale_w_seq',
+                        # 'sqliteWAL_reqscale_w_rand',
+                        # 'sqliteWAL_reqscale_w_mix'
 
-                        'sqliteRB_reqscale_r_seq',
-                        'sqliteRB_reqscale_r_rand',
-                        'sqliteRB_reqscale_r_mix',
-                        'sqliteRB_reqscale_w_seq',
-                        'sqliteRB_reqscale_w_rand',
-                        'sqliteRB_reqscale_w_mix'
+                        # 'sqliteRB_reqscale_r_seq',
+                        # 'sqliteRB_reqscale_r_rand',
+                        # 'sqliteRB_reqscale_r_mix',
+                        # 'sqliteRB_reqscale_w_seq',
+                        # 'sqliteRB_reqscale_w_rand',
+                        # 'sqliteRB_reqscale_w_mix'
+
+                        'varmail_reqscale_r_small'
                         ],
-                    filesystem = ['ext4', 'f2fs', 'xfs']
-                    # filesystem = ['ext4']
+                    # filesystem = ['ext4', 'f2fs', 'xfs']
+                    filesystem = ['ext4']
                     )
 
             return iter(para_pool)

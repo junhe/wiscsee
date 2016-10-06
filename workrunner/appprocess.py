@@ -137,6 +137,9 @@ define process name=filereader,instances=1
 {
   thread name=filereaderthread,memsize=10m,instances=$nthreads
   {
+"""
+
+PART2_flowop_origin = """
     flowop deletefile name=deletefile1,filesetname=bigfileset
     flowop createfile name=createfile2,filesetname=bigfileset,fd=1
     flowop appendfilerand name=appendfilerand2,iosize=$meanappendsize,fd=1
@@ -151,6 +154,30 @@ define process name=filereader,instances=1
     flowop readwholefile name=readfile4,fd=1,iosize=$iosize
     flowop closefile name=closefile4,fd=1
 """
+
+
+PART2_flowop_writeintense = """
+    flowop deletefile name=deletefile1,filesetname=bigfileset
+    flowop createfile name=createfile2,filesetname=bigfileset,fd=1
+    flowop appendfilerand name=appendfilerand2,iosize=$meanappendsize,fd=1
+    flowop fsync name=fsyncfile2,fd=1
+    flowop closefile name=closefile2,fd=1
+    flowop openfile name=openfile3,filesetname=bigfileset,fd=1
+    flowop appendfilerand name=appendfilerand3,iosize=$meanappendsize,fd=1
+    flowop fsync name=fsyncfile3,fd=1
+    flowop closefile name=closefile3,fd=1
+"""
+
+PART2_flowop_readintense = """
+    flowop openfile name=openfile3,filesetname=bigfileset,fd=1
+    flowop readwholefile name=readfile3,fd=1,iosize=$iosize
+    flowop closefile name=closefile3,fd=1
+    flowop openfile name=openfile4,filesetname=bigfileset,fd=1
+    flowop readwholefile name=readfile4,fd=1,iosize=$iosize
+    flowop closefile name=closefile4,fd=1
+"""
+
+
 
 PART3 = "flowop finishoncount name=finish,value={}"
 
@@ -167,11 +194,12 @@ PART5  = "run {}"
 
 class VarmailProc(AppBase):
     def __init__(self, dirpath, seconds, nfiles,
-            num_ops, inst_id, do_strace):
+            num_ops, inst_id, do_strace, rwmode):
         self.dirpath = dirpath
         self.seconds = seconds
         self.nfiles = nfiles # 8000 was often used
         self.num_ops = num_ops
+        self.rwmode = rwmode
 
         self.hash_str = str(hash(dirpath))
         self.conf_path = '/tmp/filebench.config.' + self.hash_str
@@ -197,6 +225,13 @@ class VarmailProc(AppBase):
         return self.p
 
     def get_conf_text(self):
+        if self.rwmode == 'read':
+            flowop = PART2_flowop_readintense
+        elif self.rwmode == 'write':
+            flowop = PART2_flowop_writeintense
+        else:
+            raise RuntimeError('Not a valid rwmode for varmail')
+
         return PART1.format(dirpath=self.dirpath, nfiles=self.nfiles) + \
                 PART2 + \
                 PART3.format(self.num_ops) + \
