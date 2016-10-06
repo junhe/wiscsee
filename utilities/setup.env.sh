@@ -7,6 +7,9 @@ sudo apt-get install -y cmake
 
 sudo apt-get install -y mpich mpich-doc libmpich-dev
 
+# for cgroup
+sudo apt-get install cgroup-bin cgroup-lite libcgroup1
+
 cd ../../
 git clone https://github.com/junhe/wlgen.git
 cd wlgen
