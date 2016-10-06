@@ -302,26 +302,71 @@ proc_settings = {
 
     ######## Varmail  #######
     'varmail': {
-        'aging_small'
+        'aging_small':
                     {
                         "seconds": 600,
                         "nfiles": 1000,
                         "name": "Varmail",
-                        "num_ops": 3500,
+                        "num_bytes": 3500,
                         "do_strace": False,
-                        "rwmode": 'write'
+                        "rwmode": 'read', # even it is read, it preallocates files
+                        'mem_limit_in_bytes': 1*GB,
                     },
 
-        'small_read'
+        'aging_large':
                     {
                         "seconds": 600,
-                        "nfiles": 1000,
+                        "nfiles": 8000,
                         "name": "Varmail",
-                        "num_ops": 3500,
+                        "num_bytes": 3500,
                         "do_strace": False,
+                        'mem_limit_in_bytes': 1*GB,
+                        "rwmode": 'read', # even it is read, it preallocates files
+                    },
+
+        'small_read':
+                    {
+                        "seconds": 600,
+                        "nfiles": 800,
+                        "name": "Varmail",
+                        "num_bytes": 100000,
+                        "do_strace": False,
+                        'mem_limit_in_bytes': 64*MB,
                         "rwmode": 'read'
                     },
 
+        'large_read':
+                    {
+                        "seconds": 600,
+                        "nfiles": 8000,
+                        "name": "Varmail",
+                        "num_bytes": 100000,
+                        "do_strace": False,
+                        'mem_limit_in_bytes': 64*MB,
+                        "rwmode": 'read'
+                    },
+
+        'small_write':
+                    {
+                        "seconds": 600,
+                        "nfiles": 800,
+                        "name": "Varmail",
+                        "num_bytes": 100000,
+                        "do_strace": False,
+                        'mem_limit_in_bytes': 1*GB,
+                        "rwmode": 'write'
+                    },
+
+        'large_write':
+                    {
+                        "seconds": 600,
+                        "nfiles": 8000,
+                        "name": "Varmail",
+                        "num_bytes": 1000000,
+                        "do_strace": False,
+                        'mem_limit_in_bytes': 1*GB,
+                        "rwmode": 'write'
+                    },
     }, ### Sqlite
 }
 
@@ -1024,7 +1069,7 @@ class ParameterPool(object):
             'age_workload_class': ['AppMix'],
             'aging_appconfs': [
                     [
-                        proc_settings['varmail']['aging_rand']
+                        proc_settings['varmail']['aging_large']
                     ]
                 ],
         })
@@ -1035,7 +1080,7 @@ class ParameterPool(object):
             'run_seconds'    : [10],
             'appconfs': [
                     [
-                        proc_settings['varmail']['rand_get'],
+                        proc_settings['varmail']['large_read'],
                     ]
                 ],
         })
@@ -1054,7 +1099,7 @@ class ParameterPool(object):
             'aging_appconfs': [
                     [
                         proc_settings['varmail']['aging_small'],
-                        proc_settings['varmail']['aging_rand']
+                        proc_settings['varmail']['aging_large'],
                     ]
                 ],
         })
@@ -1065,8 +1110,8 @@ class ParameterPool(object):
             'run_seconds'    : [10],
             'appconfs': [
                     [
-                        proc_settings['varmail']['seq_get'],
-                        proc_settings['varmail']['rand_get'],
+                        proc_settings['varmail']['small_read'],
+                        proc_settings['varmail']['large_read'],
                     ]
                 ],
         })
@@ -1088,14 +1133,14 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['varmail']['seq_put'],
+                        proc_settings['varmail']['small_write'],
                     ]
                 ],
         })
 
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
 
-    def varmail_reqscale_w_rand(self, testname):
+    def varmail_reqscale_w_large(self, testname):
         shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
         self.set_testname(shared_para_dict, testname)
@@ -1109,7 +1154,7 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['varmail']['rand_put'],
+                        proc_settings['varmail']['large_write'],
                     ]
                 ],
         })
@@ -1130,19 +1175,13 @@ class ParameterPool(object):
             'run_seconds'    : [10],
             'appconfs': [
                     [
-                        proc_settings['varmail']['seq_put'],
-                        proc_settings['varmail']['rand_put'],
+                        proc_settings['varmail']['small_write'],
+                        proc_settings['varmail']['large_write'],
                     ]
                 ],
         })
 
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
-
-
-
-
-
-
 
 
 

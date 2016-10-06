@@ -710,7 +710,12 @@ def appmixbench_for_rw():
                         # 'sqliteRB_reqscale_w_rand',
                         # 'sqliteRB_reqscale_w_mix'
 
-                        'varmail_reqscale_r_small'
+                        # 'varmail_reqscale_r_small',
+                        # 'varmail_reqscale_r_large',
+                        # 'varmail_reqscale_r_mix',
+                        # 'varmail_reqscale_w_small',
+                        'varmail_reqscale_w_large',
+                        # 'varmail_reqscale_w_mix'
                         ],
                     # filesystem = ['ext4', 'f2fs', 'xfs']
                     filesystem = ['ext4']
