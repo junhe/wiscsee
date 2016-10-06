@@ -28,6 +28,7 @@ cd $doradir
 cd ../..
 git clone git@github.com:junhe/leveldb.git
 cd leveldb
+git checkout v1.18
 make
 make db_bench
 cd $doradir
