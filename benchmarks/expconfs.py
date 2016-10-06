@@ -138,7 +138,7 @@ class ParameterPool(object):
 
         for name in testname:
             func = eval('self.{}'.format(name))
-            func()
+            func(name)
 
     def __iter__(self):
         for para_dict in self.para_dicts:
@@ -164,12 +164,15 @@ class ParameterPool(object):
     def extend_para_dicts(self, para_dicts):
         self.para_dicts.extend(para_dicts)
 
+    def set_testname(self, d, name):
+        d.update( {'testname': [name]} )
 
 
 
-    def rocksdb_reqscale_r_seq(self):
+    def rocksdb_reqscale_r_seq(self, testname):
         shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
 
         # set aging
         shared_para_dict.update({
@@ -195,9 +198,10 @@ class ParameterPool(object):
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
         pprint.pprint( self.para_dicts )
 
-    def rocksdb_reqscale_r_rand(self):
+    def rocksdb_reqscale_r_rand(self, testname):
         shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
 
         # set aging
         shared_para_dict.update({
@@ -223,9 +227,10 @@ class ParameterPool(object):
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
         pprint.pprint( self.para_dicts )
 
-    def rocksdb_reqscale_r_mix(self):
+    def rocksdb_reqscale_r_mix(self, testname):
         shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
 
         # set aging
         shared_para_dict.update({
@@ -253,9 +258,10 @@ class ParameterPool(object):
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
         pprint.pprint( self.para_dicts )
 
-    def rocksdb_reqscale_w_rand(self):
+    def rocksdb_reqscale_w_rand(self, testname):
         shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
 
         # set aging
         # Do nothing.
@@ -274,8 +280,10 @@ class ParameterPool(object):
         self.para_dicts = ParameterCombinations(shared_para_dict)
         pprint.pprint( self.para_dicts )
 
-    def rocksdb_reqscale_w_seq(self):
+    def rocksdb_reqscale_w_seq(self, testname):
+        shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
 
         # set aging
         # Do nothing.
@@ -294,9 +302,10 @@ class ParameterPool(object):
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
         pprint.pprint( self.para_dicts )
 
-    def rocksdb_reqscale_w_mix(self):
+    def rocksdb_reqscale_w_mix(self, testname):
         shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
 
         # set aging
         # Do nothing.
@@ -317,9 +326,10 @@ class ParameterPool(object):
         self.para_dicts = ParameterCombinations(shared_para_dict)
         pprint.pprint( self.para_dicts )
 
-    def leveldb_reqscale_r_seq(self):
+    def leveldb_reqscale_r_seq(self, testname):
         shared_para_dict = self.get_base_dict()
         self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
 
         # set aging
         shared_para_dict.update({
