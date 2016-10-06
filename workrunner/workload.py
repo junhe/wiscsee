@@ -642,7 +642,9 @@ class AppMix(Workload):
             proc = VarmailProc(appdir, appconf['seconds'], appconf['nfiles'],
                     appconf['num_bytes'],
                     inst_id = seq_id,
-                    do_strace = appconf['do_strace']
+                    do_strace = appconf['do_strace'],
+                    rwmode = appconf['rwmode'],
+                    mem_limit_in_bytes = appconf['mem_limit_in_bytes']
                     )
 
         elif appconf['name'] == 'F2FStest':

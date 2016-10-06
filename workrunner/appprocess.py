@@ -131,7 +131,7 @@ set $meanappendsize=16k
 """
 
 PART2 = """
-define fileset name=bigfileset,path=$dir,size=$filesize,entries=$nfiles,dirwidth=$meandirwidth,prealloc=80
+define fileset name=bigfileset,path=$dir,size=$filesize,entries=$nfiles,dirwidth=$meandirwidth,prealloc=100,reuse
 
 define process name=filereader,instances=1
 {
@@ -200,6 +200,7 @@ class VarmailProc(AppBase):
         self.nfiles = nfiles # 8000 was often used
         self.num_bytes = num_bytes
         self.rwmode = rwmode
+        self.mem_limit_in_bytes = mem_limit_in_bytes
 
         self.hash_str = str(hash(dirpath))
         self.conf_path = '/tmp/filebench.config.' + self.hash_str
@@ -220,7 +221,14 @@ class VarmailProc(AppBase):
 
         cmd = 'filebench -f {}'.format(self.conf_path)
         print cmd
-        self.p = subprocess.Popen(cmd, shell=True)
+        # self.p = subprocess.Popen(cmd, shell=True)
+
+        cmd = shlex.split(cmd)
+
+        cg = Cgroup(name='app'+str(self.inst_id), subs='memory')
+        cg.set_item('memory', 'memory.limit_in_bytes',
+                self.mem_limit_in_bytes)
+        self.p = cg.execute(cmd)
 
         return self.p
 
