@@ -102,6 +102,24 @@ class LocalityParaIter(object):
             local_dict.update({
                 'ftl': 'dftldes',
                 'cache_mapped_data_bytes' :lbabytes * coverage_ratio,
+                'ssd_ncq_depth'       : 1,
+                'n_pages_per_block'   : 64,
+                'stripe_size'         : 1,
+                'enable_blktrace'     : False,
+                'enable_simulation'   : True,
+                'segment_bytes'       : 2*GB,
+                'over_provisioning': 32, # 1.28 is a good number
+                'gc_high_ratio'    : 0.9,
+                'gc_low_ratio'     : 0.8,
+                'snapshot_interval': 1*SEC,
+                'write_gc_log'     : False,
+                'wear_leveling_check_interval': 1000*SEC,
+                'do_wear_leveling' : False,
+                'snapshot_valid_ratios': False,
+                'snapshot_erasure_count_dist': False,
+                'n_channels_per_dev'  : 16,
+                'do_gc_after_workload': False,
+                'do_ncq_depth_time_line': False,
                 })
 
             yield local_dict
