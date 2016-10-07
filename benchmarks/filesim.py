@@ -137,7 +137,7 @@ class LocalityParaIter(object):
                 'n_channels_per_dev'  : 16,
                 'do_gc_after_workload': False,
                 'do_ncq_depth_time_line': False,
-                'stop_sim_on_bytes': 0.5*MB,
+                'stop_sim_on_bytes': 1*GB,
                 })
 
             yield local_dict
