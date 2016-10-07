@@ -22,7 +22,6 @@ class Host(object):
                 # due to padding, accesing disk head will be negative.
                 continue
 
-            yield self._ncq.queue.put(event)
             if event.action == 'D':
                 yield self._ncq.queue.put(event)
 
