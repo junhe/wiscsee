@@ -1090,6 +1090,8 @@ class BlktraceEvents(LBAWorkloadGenerator):
         self.ftlsim_event_path = self.conf['lba_workload_configs']\
                 ['ftlsim_event_path']
 
+        self.stop_on_bytes = self.conf['stop_sim_on_bytes']
+
     def __iter__(self):
         barriergen = BarrierGen(self.conf.ssd_ncq_depth())
 
@@ -1130,8 +1132,16 @@ class BlktraceEvents(LBAWorkloadGenerator):
         workload_line_iter = hostevent.FileLineIterator(self.ftlsim_event_path)
         event_workload_iter = hostevent.EventIterator(self.conf, workload_line_iter)
 
+        total_rw_bytes = 0
         for event in event_workload_iter:
             yield event
+
+            if event.operation in [OP_READ, OP_WRITE] and event.action == 'D':
+                total_rw_bytes += event.size
+
+                if total_rw_bytes >= self.stop_on_bytes:
+                    print 'break! stop on ', self.stop_on_bytes/MB
+                    break
 
         for req in barriergen.barrier_events():
             yield req

@@ -41,6 +41,8 @@ class Experimenter(object):
 
         self.conf['dump_ext4_after_workload'] = self.para.dump_ext4_after_workload
 
+        self.conf['stop_sim_on_bytes'] = self.para.stop_sim_on_bytes
+
         if self.para.filesystem == 'ext4-nj':
             self.conf['filesystem'] = 'ext4'
 
@@ -270,6 +272,7 @@ def get_shared_para_dict(expname, lbabytes):
             'age_workload_class': ['NoOp'],
             'aging_appconfs': [None],
             'testname': [None],
+            'stop_sim_on_bytes': [float('Inf')],
             }
     return para_dict
 
