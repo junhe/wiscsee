@@ -1095,13 +1095,32 @@ class BlktraceEvents(LBAWorkloadGenerator):
 
         yield hostevent.ControlEvent(operation=OP_DISABLE_RECORDER)
 
-        mkfs_line_iter = hostevent.FileLineIterator(self.mkfs_event_path)
-        event_mkfs_iter = hostevent.EventIterator(self.conf, mkfs_line_iter)
-
-        for event in event_mkfs_iter:
+        # mkfs events
+        for event in self.prepfs_events():
             yield event
 
+        # target workload event
+        for event in self.target_workload_events():
+            yield event
+
+        # may send gc trigger
+        for event in self.gc_event():
+            yield event
+
+        for req in barriergen.barrier_events():
+            yield req
+        yield hostevent.ControlEvent(operation=OP_REC_BW)
+
+    def prepfs_events(self):
+        prepfs_line_iter = hostevent.FileLineIterator(self.mkfs_event_path)
+        event_prepfs_iter = hostevent.EventIterator(self.conf, prepfs_line_iter)
+
+        for event in event_prepfs_iter:
+            yield event
+
+    def target_workload_events(self):
         # special event indicates the start of workload
+        barriergen = BarrierGen(self.conf.ssd_ncq_depth())
         yield hostevent.ControlEvent(operation=OP_ENABLE_RECORDER)
         for req in barriergen.barrier_events():
             yield req
@@ -1117,10 +1136,17 @@ class BlktraceEvents(LBAWorkloadGenerator):
         for req in barriergen.barrier_events():
             yield req
         yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
-                arg1='gc_start_timestamp')
+                arg1='interest_workload_end')
 
-        yield hostevent.ControlEvent(operation=OP_CLEAN)
+    def gc_event(self):
+        barriergen = BarrierGen(self.conf.ssd_ncq_depth())
+        if self.conf['do_gc_after_workload'] is True:
+            for req in barriergen.barrier_events():
+                yield req
+            yield hostevent.ControlEvent(operation=OP_REC_TIMESTAMP,
+                    arg1='gc_start_timestamp')
 
+            yield hostevent.ControlEvent(operation=OP_CLEAN)
 
 
 
