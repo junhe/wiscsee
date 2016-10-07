@@ -118,7 +118,7 @@ class LocalityParaIter(object):
 
             local_dict.update({
                 'ftl': 'dftldes',
-                'cache_mapped_data_bytes' :lbabytes * coverage_ratio,
+                'cache_mapped_data_bytes' :int(lbabytes * coverage_ratio),
                 'ssd_ncq_depth'       : 1,
                 'n_pages_per_block'   : 64,
                 'stripe_size'         : 1,
