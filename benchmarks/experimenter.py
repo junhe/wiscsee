@@ -210,6 +210,8 @@ class Experimenter(object):
 
         self.check_config()
 
+        print self.conf
+
         run_workflow(self.conf)
 
     def main(self):
