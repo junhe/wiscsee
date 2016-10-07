@@ -1184,4 +1184,33 @@ class ParameterPool(object):
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
 
 
+    def tmptest_na_na_na(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_reqscale(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'enable_simulation': [False],
+            'appconfs': [
+                    [
+                        {'name' : 'LevelDB',
+                         'benchmarks': repeat_bench('overwrite', 1),
+                         'num': 10000,
+                         'do_strace': False,
+                         'use_existing_db': 0,
+                         'mem_limit_in_bytes': 1*GB,
+                        },
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+
 

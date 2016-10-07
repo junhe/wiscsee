@@ -683,6 +683,8 @@ def appmixbench_for_rw():
             para_pool = ParameterPool(
                     expname = expname,
                     testname = [
+                        'tmptest_na_na_na'
+
                         # 'rocksdb_reqscale_r_seq',
                         # 'rocksdb_reqscale_r_rand',
                         # 'rocksdb_reqscale_r_mix',
