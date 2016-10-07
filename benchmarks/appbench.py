@@ -1238,6 +1238,54 @@ def filesnakebench():
 
     main()
 
+class EventFileSets(object):
+    """
+    Given a dirpath, it returns a list. Each item in the list is
+    a dictionary contain event files of mkfs, for-ftlsim, and config.
+    """
+    def __init__(self, dirpath):
+        self.dirpath = dirpath
+
+    def get_sets(self):
+        """
+        iterate directories and return pairs of mkfs and ftlsim file paths
+        """
+        pairs = []
+        for root, dirs, files in os.walk(self.dirpath, topdown=False):
+            for name in files:
+                if name == 'blkparse-events-for-ftlsim-mkfs.txt':
+                    mkfs_path = os.path.join(root, 'blkparse-events-for-ftlsim-mkfs.txt')
+                    ftlsim_path = os.path.join(root, 'blkparse-events-for-ftlsim.txt')
+
+                    confjson = self._get_confjson(root)
+                    d = {'mkfs_path': mkfs_path,
+                         'ftlsim_path': ftlsim_path,
+                         'original_config': confjson,
+                         }
+
+                    if self._keep_subexp(confjson) is True:
+                        pairs.append(d)
+
+        return pairs
+
+    def _keep_subexp(self, confjson):
+        """
+        Return; true/false
+        """
+        return True
+        if all( [ confjson['filesystem'] in ('ext4', 'f2fs', 'xfs', 'btrfs'),
+                  confjson['segment_bytes'] == 128*KB,
+                  confjson['exp_parameters']['bench_to_run'] == 'test-insert-rand' ]):
+            return True
+        else:
+            return False
+
+    def _get_confjson(self, subexp_path):
+        confpath = os.path.join(subexp_path, 'config.json')
+        confjson = load_json(confpath)
+
+        return confjson
+
 
 
 def reproduce():

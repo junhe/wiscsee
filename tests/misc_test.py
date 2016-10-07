@@ -2,6 +2,7 @@ import socket
 import unittest
 import time
 import copy
+import pprint
 
 import workrunner
 import ssdbox
@@ -13,6 +14,7 @@ from ssdbox.simulator import GcLog
 from ssdbox.ftlsim_commons import Extent, random_channel_id
 from ssdbox.ftlcounter import LpnClassification, get_file_range_table, EventNCQParser
 from ssdbox import hostevent
+from benchmarks.appbench import EventFileSets
 
 class TestCpuhandler(unittest.TestCase):
     def test_cpu(self):
@@ -198,7 +200,13 @@ class TestNCQParser(unittest.TestCase):
         self.assertEqual(table[1]['post_depth'], 0)
 
 
-
+class TestEventFileSets(unittest.TestCase):
+    def test(self):
+        filesets = EventFileSets('tests/testdata/64mbfile')
+        sets = filesets.get_sets()
+        self.assertEqual(len(sets), 1)
+        self.assertEqual(sets[0]['mkfs_path'],
+            'tests/testdata/64mbfile/subexp-3563455040949707047-ext4-10-05-16-29-19-3141981191822244772/blkparse-events-for-ftlsim-mkfs.txt')
 
 
 
