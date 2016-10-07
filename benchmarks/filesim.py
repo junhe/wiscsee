@@ -23,10 +23,13 @@ class LocalExperimenter(Experimenter):
                 self.para.ftlsim_path
 
 class ParaDict(object):
+    def __init__(self, expname, trace_expnames):
+        self.expname = expname
+        self.trace_expnames = trace_expnames
     def __iter__(self):
-        expname = utils.get_expname()
+        expname = self.expname
 
-        subexps = self.subexps(['1gb'])
+        subexps = self.subexps(self.trace_expnames)
 
         for event_set in subexps:
             print event_set['mkfs_path']

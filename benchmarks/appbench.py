@@ -1243,7 +1243,11 @@ def filesnakebench():
 
 def simulate_from_event_files():
     def main():
-        for para in filesim.ParaDict():
+        expname = utils.get_expname()
+        trace_expnames = ['samplerun2']
+
+        for para in filesim.ParaDict(expname, trace_expnames):
+            print para
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = filesim.LocalExperimenter( Parameters(**para) )
             obj.main()
