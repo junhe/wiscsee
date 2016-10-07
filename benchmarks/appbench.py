@@ -1247,8 +1247,8 @@ def simulate_from_event_files():
     def main():
         expname = utils.get_expname()
         trace_expnames = ['samplerun2']
-        # rule = 'locality'
-        rule = 'alignment'
+        rule = 'locality'
+        # rule = 'alignment'
 
         for para in filesim.ParaDict(expname, trace_expnames, rule):
             print para
