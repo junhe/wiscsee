@@ -23,9 +23,11 @@ class LocalExperimenter(Experimenter):
                 self.para.ftlsim_path
 
 class ParaDict(object):
-    def __init__(self, expname, trace_expnames):
+    def __init__(self, expname, trace_expnames, rule):
         self.expname = expname
         self.trace_expnames = trace_expnames
+        self.rule = rule
+
     def __iter__(self):
         expname = self.expname
 
@@ -40,9 +42,21 @@ class ParaDict(object):
                 'expname': expname,
 
                 })
-            para_iter = LocalityParaIter(para_dict)
+
+            para_iter = self.get_para_iter(para_dict)
             for local_para_dict in para_iter:
                 yield local_para_dict
+
+    def get_para_iter(self, para_dict):
+        if self.rule == 'locality':
+            para_iter = LocalityParaIter(para_dict)
+        elif self.rule == 'alignment':
+            para_iter = AlignmentParaIter(para_dict)
+        else:
+            raise NotImplementedError(
+                '{} not supported here.'.format(self.rule))
+
+        return para_iter
 
     def subexps(self, expnames):
         subexp_sets = []

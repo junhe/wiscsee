@@ -1247,8 +1247,10 @@ def simulate_from_event_files():
     def main():
         expname = utils.get_expname()
         trace_expnames = ['samplerun2']
+        # rule = 'locality'
+        rule = 'alignment'
 
-        for para in filesim.ParaDict(expname, trace_expnames):
+        for para in filesim.ParaDict(expname, trace_expnames, rule):
             print para
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
             obj = filesim.LocalExperimenter( Parameters(**para) )
