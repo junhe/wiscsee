@@ -127,5 +127,43 @@ class LocalityParaIter(object):
 
             yield local_dict
 
+class AlignmentParaIter(object):
+    """
+    Given a para_dict (exp_parameters), generate a
+    series of para_dict with different cache sizes
+    """
+    def __init__(self, para_dict):
+        self.para_dict = para_dict
+
+    def __iter__(self):
+        local_dict = copy.deepcopy(self.para_dict)
+
+        lbabytes = local_dict['lbabytes']
+
+        local_dict.update({
+            'ftl': 'nkftl2',
+            'ssd_ncq_depth'  : [1],
+            'cache_mapped_data_bytes' :[lbabytes],
+            'n_pages_per_block': [64],
+            'stripe_size'    : [64],
+            'enable_blktrace': [False],
+            'enable_simulation': [True],
+            'segment_bytes'  : [128*KB],   # isolate each block
+            'max_log_blocks_ratio': [100], # never gc
+            'over_provisioning': [32], # 1.28 is a good number
+            'gc_high_ratio'    : [0.9],
+            'gc_low_ratio'     : [0.8],
+            'not_check_gc_setting': [True],
+            'snapshot_interval': [10*SEC],
+            'write_gc_log'     : [False],
+            'wear_leveling_check_interval': [100*SEC],
+            'do_wear_leveling' : [False],
+            'snapshot_valid_ratios': [False],
+            'snapshot_erasure_count_dist': [False],
+            'n_channels_per_dev'  : [1],
+            'do_gc_after_workload': [True],
+            })
+
+        yield local_dict
 
 
