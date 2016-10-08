@@ -683,7 +683,7 @@ def appmixbench_for_rw():
             para_pool = ParameterPool(
                     expname = expname,
                     testname = [
-                        'tmptest_na_na_na'
+                        # 'tmptest_na_na_na'
 
                         # 'rocksdb_reqscale_r_seq',
                         # 'rocksdb_reqscale_r_rand',
@@ -699,12 +699,12 @@ def appmixbench_for_rw():
                         # 'leveldb_reqscale_w_rand',
                         # 'leveldb_reqscale_w_mix'
 
-                        # 'sqliteWAL_reqscale_r_seq',
-                        # 'sqliteWAL_reqscale_r_rand',
-                        # 'sqliteWAL_reqscale_r_mix',
-                        # 'sqliteWAL_reqscale_w_seq',
-                        # 'sqliteWAL_reqscale_w_rand',
-                        # 'sqliteWAL_reqscale_w_mix'
+                        'sqliteWAL_reqscale_r_seq',
+                        'sqliteWAL_reqscale_r_rand',
+                        'sqliteWAL_reqscale_r_mix',
+                        'sqliteWAL_reqscale_w_seq',
+                        'sqliteWAL_reqscale_w_rand',
+                        'sqliteWAL_reqscale_w_mix'
 
                         # 'sqliteRB_reqscale_r_seq',
                         # 'sqliteRB_reqscale_r_rand',
@@ -713,12 +713,12 @@ def appmixbench_for_rw():
                         # 'sqliteRB_reqscale_w_rand',
                         # 'sqliteRB_reqscale_w_mix'
 
-                        'varmail_reqscale_r_small',
-                        'varmail_reqscale_r_large',
-                        'varmail_reqscale_r_mix',
-                        'varmail_reqscale_w_small',
-                        'varmail_reqscale_w_large',
-                        'varmail_reqscale_w_mix'
+                        # 'varmail_reqscale_r_small',
+                        # 'varmail_reqscale_r_large',
+                        # 'varmail_reqscale_r_mix',
+                        # 'varmail_reqscale_w_small',
+                        # 'varmail_reqscale_w_large',
+                        # 'varmail_reqscale_w_mix'
                         ],
                     filesystem = ['ext4', 'f2fs', 'xfs']
                     # filesystem = ['ext4']
