@@ -754,7 +754,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [10],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['sqliteWAL']['seq_get']
@@ -783,7 +783,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [10],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['sqliteWAL']['rand_get'],
@@ -813,7 +813,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [10],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['sqliteWAL']['seq_get'],
@@ -878,7 +878,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [10],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['sqliteWAL']['seq_put'],
@@ -907,7 +907,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [10],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['sqliteRB']['seq_get']
@@ -936,7 +936,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [10],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['sqliteRB']['rand_get'],
@@ -966,7 +966,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [10],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['sqliteRB']['seq_get'],
@@ -1031,7 +1031,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [10],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['sqliteRB']['seq_put'],
