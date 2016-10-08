@@ -1246,7 +1246,15 @@ def filesnakebench():
 def simulate_from_event_files():
     def main():
         expname = utils.get_expname()
-        trace_expnames = ['samplerun2']
+        trace_expnames = [
+                 'rocksdb-reqscale',
+                 'leveldb-reqscale-001',
+                 'sqliteRB-reqscale-001',
+                 'sqliteWAL-reqscale-001',
+                 'varmail-reqscale-002'
+
+                # 'samplerun2'
+        ]
         rule = 'locality'
         # rule = 'alignment'
 
