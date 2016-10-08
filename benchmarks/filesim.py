@@ -1,5 +1,6 @@
 import os
 import copy
+import time
 
 from experimenter import *
 from utilities import utils
@@ -32,6 +33,9 @@ class ParaDict(object):
         expname = self.expname
 
         subexps = self.subexps(self.trace_expnames)
+
+        print 'Number of subexps to simulate', len(subexps)
+        time.sleep(1)
 
         for event_set in subexps:
             print event_set['mkfs_path']
