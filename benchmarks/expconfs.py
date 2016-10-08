@@ -178,9 +178,9 @@ proc_settings = {
         'aging_seq':
             {'name': 'Sqlite',
              'pattern': 'sequential_put',
-             'n_insertions': 12000,
+             'n_insertions': 240000,
              'commit_period': 10,
-             'max_key': 12000,
+             'max_key': 240000,
              'do_strace': False,
              'journal_mode': 'WAL'
             },
@@ -188,9 +188,9 @@ proc_settings = {
         'aging_rand':
             {'name': 'Sqlite',
              'pattern': 'random_put',
-             'n_insertions': 12000,
+             'n_insertions': 240000,
              'commit_period': 10,
-             'max_key': 12000,
+             'max_key': 240000,
              'do_strace': False,
              'journal_mode': 'WAL'
             },
@@ -198,9 +198,9 @@ proc_settings = {
         'seq_get':
             {'name': 'Sqlite',
              'pattern': 'sequential_get',
-             'n_insertions': 12000,
+             'n_insertions': 240000,
              'commit_period': 10,
-             'max_key': 12000,
+             'max_key': 240000,
              'do_strace': False,
              'journal_mode': 'WAL'
             },
@@ -208,9 +208,9 @@ proc_settings = {
         'rand_get':
             {'name': 'Sqlite',
              'pattern': 'random_get',
-             'n_insertions': 12000,
+             'n_insertions': 240000,
              'commit_period': 10,
-             'max_key': 12000,
+             'max_key': 240000,
              'do_strace': False,
              'journal_mode': 'WAL'
             },
@@ -218,9 +218,9 @@ proc_settings = {
         'seq_put':
             {'name': 'Sqlite',
              'pattern': 'sequential_put',
-             'n_insertions': 12000,
+             'n_insertions': 240000,
              'commit_period': 10,
-             'max_key': 12000,
+             'max_key': 240000,
              'do_strace': False,
              'journal_mode': 'WAL'
             },
@@ -228,9 +228,9 @@ proc_settings = {
         'rand_put':
             {'name': 'Sqlite',
              'pattern': 'random_put',
-             'n_insertions': 12000,
+             'n_insertions': 240000,
              'commit_period': 10,
-             'max_key': 12000,
+             'max_key': 240000,
              'do_strace': False,
              'journal_mode': 'WAL'
             },
@@ -241,9 +241,9 @@ proc_settings = {
         'aging_seq':
             {'name': 'Sqlite',
              'pattern': 'sequential_put',
-             'n_insertions': 12000,
+             'n_insertions': 240000,
              'commit_period': 10,
-             'max_key': 12000,
+             'max_key': 240000,
              'do_strace': False,
              'journal_mode': 'DELETE'
             },
@@ -251,9 +251,9 @@ proc_settings = {
         'aging_rand':
             {'name': 'Sqlite',
              'pattern': 'random_put',
-             'n_insertions': 12000,
+             'n_insertions': 240000,
              'commit_period': 10,
-             'max_key': 12000,
+             'max_key': 240000,
              'do_strace': False,
              'journal_mode': 'DELETE'
             },
@@ -261,9 +261,9 @@ proc_settings = {
         'seq_get':
             {'name': 'Sqlite',
              'pattern': 'sequential_get',
-             'n_insertions': 12000,
+             'n_insertions': 240000,
              'commit_period': 10,
-             'max_key': 12000,
+             'max_key': 240000,
              'do_strace': False,
              'journal_mode': 'DELETE'
             },
@@ -271,9 +271,9 @@ proc_settings = {
         'rand_get':
             {'name': 'Sqlite',
              'pattern': 'random_get',
-             'n_insertions': 12000,
+             'n_insertions': 240000,
              'commit_period': 10,
-             'max_key': 12000,
+             'max_key': 240000,
              'do_strace': False,
              'journal_mode': 'DELETE'
             },
@@ -281,9 +281,9 @@ proc_settings = {
         'seq_put':
             {'name': 'Sqlite',
              'pattern': 'sequential_put',
-             'n_insertions': 12000,
+             'n_insertions': 240000,
              'commit_period': 10,
-             'max_key': 12000,
+             'max_key': 240000,
              'do_strace': False,
              'journal_mode': 'DELETE'
             },
@@ -291,9 +291,9 @@ proc_settings = {
         'rand_put':
             {'name': 'Sqlite',
              'pattern': 'random_put',
-             'n_insertions': 12000,
+             'n_insertions': 240000,
              'commit_period': 10,
-             'max_key': 12000,
+             'max_key': 240000,
              'do_strace': False,
              'journal_mode': 'DELETE'
             },
