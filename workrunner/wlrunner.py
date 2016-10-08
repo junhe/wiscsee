@@ -283,6 +283,7 @@ class WorkloadRunner(object):
             self.blktracer.stop_tracing_and_collecting()
             utils.shcmd("sync")
             self.blktracer.create_event_file_from_blkparse()
+            self.remove_raw_trace()
             return self.get_event_iterator()
         finally:
             # always try to clean up the blktrace processes
@@ -292,6 +293,10 @@ class WorkloadRunner(object):
         path = os.path.join(self.conf['result_dir'], 'app_duration.txt')
         with open(path, 'w') as f:
             f.write(str(secs))
+
+    def remove_raw_trace(self):
+        os.remove(self.conf.get_blkparse_result_path_mkfs())
+        os.remove(self.conf.get_blkparse_result_path())
 
     def _pre_target_workload(self):
         pass
