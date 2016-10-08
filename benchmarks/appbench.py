@@ -1247,13 +1247,13 @@ def simulate_from_event_files():
     def main():
         expname = utils.get_expname()
         trace_expnames = [
-                 'rocksdb-reqscale',
-                 'leveldb-reqscale-001',
-                 'sqliteRB-reqscale-001',
-                 'sqliteWAL-reqscale-001',
-                 'varmail-reqscale-002'
+                 # 'rocksdb-reqscale',
+                 # 'leveldb-reqscale-001',
+                 # 'varmail-reqscale-002'
+                 'sqlitewal-reqscale-240000-inserts-3',
+                 'sqliterb-reqscale-240000-insertions-4',
 
-                # 'samplerun2'
+                 # 'samplerun2'
         ]
         rule = 'locality'
         # rule = 'alignment'
