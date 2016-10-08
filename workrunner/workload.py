@@ -635,7 +635,8 @@ class AppMix(Workload):
                 max_key = appconf['max_key'],
                 inst_id = seq_id,
                 do_strace = appconf['do_strace'],
-                journal_mode = appconf['journal_mode']
+                journal_mode = appconf['journal_mode'],
+                mem_limit_in_bytes = appconf['mem_limit_in_bytes']
                 )
 
         elif appconf['name'] == 'Varmail':

@@ -182,6 +182,7 @@ proc_settings = {
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
              'journal_mode': 'WAL'
             },
 
@@ -192,6 +193,7 @@ proc_settings = {
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
              'journal_mode': 'WAL'
             },
 
@@ -202,6 +204,7 @@ proc_settings = {
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
              'journal_mode': 'WAL'
             },
 
@@ -212,6 +215,7 @@ proc_settings = {
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
              'journal_mode': 'WAL'
             },
 
@@ -222,6 +226,7 @@ proc_settings = {
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
              'journal_mode': 'WAL'
             },
 
@@ -232,6 +237,7 @@ proc_settings = {
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
              'journal_mode': 'WAL'
             },
     }, ### Sqlite
@@ -245,6 +251,7 @@ proc_settings = {
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
              'journal_mode': 'DELETE'
             },
 
@@ -255,6 +262,7 @@ proc_settings = {
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
              'journal_mode': 'DELETE'
             },
 
@@ -265,6 +273,7 @@ proc_settings = {
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
              'journal_mode': 'DELETE'
             },
 
@@ -275,6 +284,7 @@ proc_settings = {
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
              'journal_mode': 'DELETE'
             },
 
@@ -285,6 +295,7 @@ proc_settings = {
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
              'journal_mode': 'DELETE'
             },
 
@@ -295,6 +306,7 @@ proc_settings = {
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
              'journal_mode': 'DELETE'
             },
     }, ### Sqlite

@@ -79,7 +79,7 @@ class LevelDBProc(AppBase):
 
 class SqliteProc(AppBase):
     def __init__(self, n_insertions, pattern, db_dir, commit_period, max_key,
-            inst_id, do_strace, journal_mode):
+            inst_id, do_strace, journal_mode, mem_limit_in_bytes):
         self.n_insertions = n_insertions
         self.pattern = pattern
         self.db_dir = db_dir
@@ -88,6 +88,7 @@ class SqliteProc(AppBase):
         self.commit_period = commit_period
         self.max_key = max_key
         self.journal_mode = journal_mode
+        self.mem_limit_in_bytes = mem_limit_in_bytes
 
         self.do_strace = do_strace
         self.inst_id = inst_id
@@ -106,7 +107,12 @@ class SqliteProc(AppBase):
 
         print cmd
         cmd = shlex.split(cmd)
-        self.p = subprocess.Popen(cmd)
+        # self.p = subprocess.Popen(cmd)
+
+        cg = Cgroup(name='app'+str(self.inst_id), subs='memory')
+        cg.set_item('memory', 'memory.limit_in_bytes',
+                self.mem_limit_in_bytes)
+        self.p = cg.execute(cmd)
 
         return self.p
 
