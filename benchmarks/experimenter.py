@@ -272,7 +272,7 @@ def get_shared_para_dict(expname, lbabytes):
             'age_workload_class': ['NoOp'],
             'aging_appconfs': [None],
             'testname': [None],
-            'stop_sim_on_bytes': [float('Inf')],
+            'stop_sim_on_bytes': ['inf'],
             }
     return para_dict
 

@@ -1092,6 +1092,9 @@ class BlktraceEvents(LBAWorkloadGenerator):
 
         self.stop_on_bytes = self.conf['stop_sim_on_bytes']
 
+        if str(self.stop_on_bytes).lower() in ('inf', 'infinity', 'infinit'):
+            self.stop_on_bytes = float('inf')
+
     def __iter__(self):
         barriergen = BarrierGen(self.conf.ssd_ncq_depth())
 
