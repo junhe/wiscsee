@@ -181,6 +181,7 @@ class AlignmentParaIter(object):
             'snapshot_erasure_count_dist': False,
             'n_channels_per_dev'  : 16,
             'do_gc_after_workload': True,
+            'stop_sim_on_bytes': 1*GB,
             })
 
         yield local_dict

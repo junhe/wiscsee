@@ -1247,16 +1247,16 @@ def simulate_from_event_files():
     def main():
         expname = utils.get_expname()
         trace_expnames = [
-                 # 'rocksdb-reqscale',
+                 'rocksdb-reqscale',
                  # 'leveldb-reqscale-001',
+                 # 'sqlitewal-reqscale-240000-inserts-3',
+                 # 'sqliterb-reqscale-240000-insertions-4',
                  # 'varmail-reqscale-002'
-                 'sqlitewal-reqscale-240000-inserts-3',
-                 'sqliterb-reqscale-240000-insertions-4',
 
                  # 'samplerun2'
         ]
-        rule = 'locality'
-        # rule = 'alignment'
+        # rule = 'locality'
+        rule = 'alignment'
 
         for para in filesim.ParaDict(expname, trace_expnames, rule):
             print para
