@@ -806,7 +806,7 @@ def appmixbench_for_scaling():
 
                     'filesystem'     : ['ext4', 'f2fs', 'xfs'],
 
-                    'do_ncq_depth_time_line': [True],
+                    'trace_issue_and_complete': [True],
                     'fs_discard': [True],
                     'appconfs': [
                             [ leveldb_inst ] * 1,

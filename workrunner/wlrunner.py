@@ -247,7 +247,7 @@ class WorkloadRunner(object):
             time.sleep(1)
             self.blktracer_prepfs.create_event_file_from_blkparse()
 
-            if self.conf['do_ncq_depth_time_line'] is True:
+            if self.conf['trace_issue_and_complete'] is True:
                 trace_filter=['issue', 'complete']
             else:
                 trace_filter=['issue']

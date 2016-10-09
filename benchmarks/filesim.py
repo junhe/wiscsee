@@ -155,7 +155,7 @@ class LocalityParaIter(object):
                 'snapshot_erasure_count_dist': False,
                 'n_channels_per_dev'  : 16,
                 'do_gc_after_workload': False,
-                'do_ncq_depth_time_line': False,
+                'trace_issue_and_complete': False,
                 'stop_sim_on_bytes': 512*MB,
                 })
 

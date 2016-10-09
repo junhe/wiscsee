@@ -34,7 +34,7 @@ class Experimenter(object):
 
         self.conf['do_fstrim'] = False
 
-        self.conf['do_ncq_depth_time_line'] = self.para.do_ncq_depth_time_line
+        self.conf['trace_issue_and_complete'] = self.para.trace_issue_and_complete
 
         # filesystem
         self.conf['filesystem'] = self.para.filesystem
@@ -266,7 +266,7 @@ def get_shared_para_dict(expname, lbabytes):
             'snapshot_erasure_count_dist': [True],
             'n_channels_per_dev'  : [16],
             'do_gc_after_workload': [False],
-            'do_ncq_depth_time_line': [False],
+            'trace_issue_and_complete': [False],
             'fs_discard': [True],
             'only_get_traffic': [True],
             'age_workload_class': ['NoOp'],

@@ -407,7 +407,17 @@ class ParameterPool(object):
                 'enable_simulation': [True],
                 'dump_ext4_after_workload': [True],
                 'only_get_traffic': [False],
-                'do_ncq_depth_time_line': [True],
+                'trace_issue_and_complete': [True],
+            })
+
+    def env_wearlevel(self, d):
+        d.update(
+            {
+                'ftl' : ['ftlcounter'],
+                'enable_simulation': [True],
+                'dump_ext4_after_workload': [True],
+                'only_get_traffic': [False],
+                'trace_issue_and_complete': [False],
             })
 
     def get_base_dict(self):
