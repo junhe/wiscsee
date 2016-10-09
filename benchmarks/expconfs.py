@@ -566,56 +566,12 @@ proc_settings = {
 
     ######## Varmail  #######
     'varmail-wear': {
-        'aging_small':
-                    {
-                        "seconds": 600,
-                        "nfiles": 1000,
-                        "name": "Varmail",
-                        "num_bytes": 1*MB,
-                        "do_strace": False,
-                        "rwmode": 'read', # even it is read, it preallocates files
-                        'mem_limit_in_bytes': 1*GB,
-                    },
-
-        'aging_large':
-                    {
-                        "seconds": 600,
-                        "nfiles": 8000,
-                        "name": "Varmail",
-                        "num_bytes": 1*MB,
-                        "do_strace": False,
-                        'mem_limit_in_bytes': 1*GB,
-                        "rwmode": 'read', # even it is read, it preallocates files
-                    },
-
-        'small_read':
-                    {
-                        "seconds": 600,
-                        "nfiles": 800,
-                        "name": "Varmail",
-                        "num_bytes": 512*MB,
-                        "do_strace": False,
-                        'mem_limit_in_bytes': 64*MB,
-                        "rwmode": 'read'
-                    },
-
-        'large_read':
-                    {
-                        "seconds": 600,
-                        "nfiles": 8000,
-                        "name": "Varmail",
-                        "num_bytes": 512*MB,
-                        "do_strace": False,
-                        'mem_limit_in_bytes': 64*MB,
-                        "rwmode": 'read'
-                    },
-
         'small_write':
                     {
-                        "seconds": 600,
+                        "seconds": 60000,
                         "nfiles": 800,
                         "name": "Varmail",
-                        "num_bytes": 1*GB,
+                        "num_bytes": 50*GB,
                         "do_strace": False,
                         'mem_limit_in_bytes': 1*GB,
                         "rwmode": 'write'
@@ -623,10 +579,32 @@ proc_settings = {
 
         'large_write':
                     {
-                        "seconds": 600,
+                        "seconds": 60000,
                         "nfiles": 8000,
                         "name": "Varmail",
-                        "num_bytes": 1*GB,
+                        "num_bytes": 50*GB,
+                        "do_strace": False,
+                        'mem_limit_in_bytes': 1*GB,
+                        "rwmode": 'write'
+                    },
+
+        'small_write_formix':
+                    {
+                        "seconds": 60000,
+                        "nfiles": 800,
+                        "name": "Varmail",
+                        "num_bytes": 25*GB,
+                        "do_strace": False,
+                        'mem_limit_in_bytes': 1*GB,
+                        "rwmode": 'write'
+                    },
+
+        'large_write_formix':
+                    {
+                        "seconds": 60000,
+                        "nfiles": 8000,
+                        "name": "Varmail",
+                        "num_bytes": 25*GB,
                         "do_strace": False,
                         'mem_limit_in_bytes': 1*GB,
                         "rwmode": 'write'
@@ -1808,8 +1786,8 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['varmail-wear']['small_write'],
-                        proc_settings['varmail-wear']['large_write'],
+                        proc_settings['varmail-wear']['small_write_formix'],
+                        proc_settings['varmail-wear']['large_write_formix'],
                     ]
                 ],
         })
