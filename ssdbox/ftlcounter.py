@@ -163,13 +163,17 @@ class Ftl(ftlbuilder.FtlBuilder):
             return
 
         self.do_stats()
-        self.gen_ncq_depth_table_from_event()
+
+        if self.conf['gen_ncq_depth_table'] is True:
+            self.gen_ncq_depth_table_from_event()
 
     def do_stats(self):
         lpns = self.get_lpns()
 
         self.dump_counts(lpns)
-        self.dump_lpn_sem(lpns)
+
+        if self.conf['do_dump_lpn_sem'] is True:
+            self.dump_lpn_sem(lpns)
 
     def record_traffic(self):
         self.recorder.add_to_general_accumulater(

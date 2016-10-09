@@ -170,6 +170,8 @@ class Experimenter(object):
             self.conf['simulator_class'] = 'SimulatorNonDESSpeed'
             self.conf['ftl_type'] = 'ftlcounter'
             self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
+            self.conf['gen_ncq_depth_table'] = self.para.gen_ncq_depth_table
+            self.conf['do_dump_lpn_sem'] = self.para.do_dump_lpn_sem
 
             # Force wear leveling off since it is not implemented in nkftl
             self.conf['do_wear_leveling'] = False
@@ -274,6 +276,8 @@ def get_shared_para_dict(expname, lbabytes):
             'testname': [None],
             'stop_sim_on_bytes': ['inf'],
             'log_group_factor': [1000],
+            'gen_ncq_depth_table': [True],
+            'do_dump_lpn_sem': [True],
             }
     return para_dict
 
