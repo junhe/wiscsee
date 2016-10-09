@@ -414,10 +414,14 @@ class ParameterPool(object):
         d.update(
             {
                 'ftl' : ['ftlcounter'],
+                'device_path'    : ['/dev/loop0'],
                 'enable_simulation': [True],
                 'dump_ext4_after_workload': [True],
                 'only_get_traffic': [False],
                 'trace_issue_and_complete': [False],
+                'gen_ncq_depth_table': [False],
+                'do_dump_lpn_sem': [False],
+                'rm_blkparse_events': [True],
             })
 
     def get_base_dict(self):
