@@ -278,6 +278,7 @@ def get_shared_para_dict(expname, lbabytes):
             'log_group_factor': [1000],
             'gen_ncq_depth_table': [True],
             'do_dump_lpn_sem': [True],
+            'rm_blkparse_events': [False],
             }
     return para_dict
 

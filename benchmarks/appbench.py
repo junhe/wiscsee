@@ -677,6 +677,11 @@ def appmixbench_for_rw():
         def after_running(self):
             self.write_stats()
 
+            if self.para.rm_blkparse_events is True:
+                with cd(self.conf['result_dir']):
+                    shcmd('rm blkparse-events-for-ftlsim*')
+
+
     class ParaDict(ParaDictIterMixin):
         def __iter__(self):
             expname = utils.get_expname()
