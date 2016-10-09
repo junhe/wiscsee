@@ -380,6 +380,336 @@ proc_settings = {
                         "rwmode": 'write'
                     },
     }, ### Sqlite
+
+
+    ######################################
+    ######################################
+    ######################################
+    ######################################
+
+    'leveldb-wear': {
+        'writeseq':
+            {'name' : 'LevelDB',
+             'benchmarks': repeat_bench('fillseq', 1),
+             'num': 10*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+             },
+
+        'writerandom':
+            {'name' : 'LevelDB',
+             'benchmarks': repeat_bench('overwrite', 1),
+             'num': 10*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+            },
+
+        'writeseq_for_mix':
+            {'name' : 'LevelDB',
+             'benchmarks': repeat_bench('fillseq', 1),
+             'num': 3*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+             },
+
+        'writerandom_for_mix':
+            {'name' : 'LevelDB',
+             'benchmarks': repeat_bench('overwrite', 1),
+             'num': 3*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+            },
+
+    }, ### LevelDB
+
+    ######## RocksDB #######
+    'rocksdb-wear': {
+        'aging_overwrite':
+            {'name' : 'RocksDB',
+             'benchmarks': 'overwrite,compact',
+             'num': 5*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 1*GB,
+            },
+
+        'aging_fillseq':
+            {'name' : 'RocksDB',
+             'benchmarks': 'fillseq,compact',
+             'num': 5*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 1*GB,
+            },
+
+        'readrandom':
+            {'name' : 'RocksDB',
+             'benchmarks': repeat_bench('readrandom', 10),
+             'num': 5*MILLION,
+             'do_strace': False,
+             'use_existing_db': 1,
+             'mem_limit_in_bytes': 128*MB,
+             },
+
+        'readseq':
+            {'name' : 'RocksDB',
+             'benchmarks': repeat_bench('readseq', 10),
+             'num': 5*MILLION,
+             'do_strace': False,
+             'use_existing_db': 1,
+             'mem_limit_in_bytes': 128*MB,
+             },
+
+        'writeseq':
+            {'name' : 'RocksDB',
+             'benchmarks': repeat_bench('fillseq', 1),
+             'num': 10*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+             },
+
+        'writerandom':
+            {'name' : 'RocksDB',
+             'benchmarks': repeat_bench('overwrite', 1),
+             'num': 10*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+            },
+
+        'writeseq_for_mix':
+            {'name' : 'RocksDB',
+             'benchmarks': repeat_bench('fillseq', 1),
+             'num': 3*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+             },
+
+        'writerandom_for_mix':
+            {'name' : 'RocksDB',
+             'benchmarks': repeat_bench('overwrite', 1),
+             'num': 3*MILLION,
+             'do_strace': False,
+             'use_existing_db': 0,
+             'mem_limit_in_bytes': 128*MB,
+            },
+
+    }, ### RocksDB
+
+    ######## SqliteWAL #######
+    'sqliteWAL-wear': {
+        'aging_seq':
+            {'name': 'Sqlite',
+             'pattern': 'sequential_put',
+             'n_insertions': 240000,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
+             'journal_mode': 'WAL'
+            },
+
+        'aging_rand':
+            {'name': 'Sqlite',
+             'pattern': 'random_put',
+             'n_insertions': 240000,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
+             'journal_mode': 'WAL'
+            },
+
+        'seq_get':
+            {'name': 'Sqlite',
+             'pattern': 'sequential_get',
+             'n_insertions': 240000,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
+             'journal_mode': 'WAL'
+            },
+
+        'rand_get':
+            {'name': 'Sqlite',
+             'pattern': 'random_get',
+             'n_insertions': 240000,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
+             'journal_mode': 'WAL'
+            },
+
+        'seq_put':
+            {'name': 'Sqlite',
+             'pattern': 'sequential_put',
+             'n_insertions': 240000,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
+             'journal_mode': 'WAL'
+            },
+
+        'rand_put':
+            {'name': 'Sqlite',
+             'pattern': 'random_put',
+             'n_insertions': 240000,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
+             'journal_mode': 'WAL'
+            },
+    }, ### Sqlite
+
+    ######## SqliteRollBack #######
+    'sqliteRB-wear': {
+        'aging_seq':
+            {'name': 'Sqlite',
+             'pattern': 'sequential_put',
+             'n_insertions': 240000,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
+             'journal_mode': 'DELETE'
+            },
+
+        'aging_rand':
+            {'name': 'Sqlite',
+             'pattern': 'random_put',
+             'n_insertions': 240000,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
+             'journal_mode': 'DELETE'
+            },
+
+        'seq_get':
+            {'name': 'Sqlite',
+             'pattern': 'sequential_get',
+             'n_insertions': 240000,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
+             'journal_mode': 'DELETE'
+            },
+
+        'rand_get':
+            {'name': 'Sqlite',
+             'pattern': 'random_get',
+             'n_insertions': 240000,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
+             'journal_mode': 'DELETE'
+            },
+
+        'seq_put':
+            {'name': 'Sqlite',
+             'pattern': 'sequential_put',
+             'n_insertions': 240000,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
+             'journal_mode': 'DELETE'
+            },
+
+        'rand_put':
+            {'name': 'Sqlite',
+             'pattern': 'random_put',
+             'n_insertions': 240000,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 32*MB,
+             'journal_mode': 'DELETE'
+            },
+    }, ### Sqlite
+
+
+    ######## Varmail  #######
+    'varmail-wear': {
+        'aging_small':
+                    {
+                        "seconds": 600,
+                        "nfiles": 1000,
+                        "name": "Varmail",
+                        "num_bytes": 1*MB,
+                        "do_strace": False,
+                        "rwmode": 'read', # even it is read, it preallocates files
+                        'mem_limit_in_bytes': 1*GB,
+                    },
+
+        'aging_large':
+                    {
+                        "seconds": 600,
+                        "nfiles": 8000,
+                        "name": "Varmail",
+                        "num_bytes": 1*MB,
+                        "do_strace": False,
+                        'mem_limit_in_bytes': 1*GB,
+                        "rwmode": 'read', # even it is read, it preallocates files
+                    },
+
+        'small_read':
+                    {
+                        "seconds": 600,
+                        "nfiles": 800,
+                        "name": "Varmail",
+                        "num_bytes": 512*MB,
+                        "do_strace": False,
+                        'mem_limit_in_bytes': 64*MB,
+                        "rwmode": 'read'
+                    },
+
+        'large_read':
+                    {
+                        "seconds": 600,
+                        "nfiles": 8000,
+                        "name": "Varmail",
+                        "num_bytes": 512*MB,
+                        "do_strace": False,
+                        'mem_limit_in_bytes': 64*MB,
+                        "rwmode": 'read'
+                    },
+
+        'small_write':
+                    {
+                        "seconds": 600,
+                        "nfiles": 800,
+                        "name": "Varmail",
+                        "num_bytes": 1*GB,
+                        "do_strace": False,
+                        'mem_limit_in_bytes': 1*GB,
+                        "rwmode": 'write'
+                    },
+
+        'large_write':
+                    {
+                        "seconds": 600,
+                        "nfiles": 8000,
+                        "name": "Varmail",
+                        "num_bytes": 1*GB,
+                        "do_strace": False,
+                        'mem_limit_in_bytes': 1*GB,
+                        "rwmode": 'write'
+                    },
+    }, ### Sqlite
+
 }
 
 
@@ -1255,7 +1585,7 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['rocksdb']['writeseq'],
+                        proc_settings['rocksdb-wear']['writeseq'],
                     ]
                 ],
         })
@@ -1276,7 +1606,7 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['rocksdb']['writerandom'],
+                        proc_settings['rocksdb-wear']['writerandom'],
                     ]
                 ],
         })
@@ -1297,8 +1627,8 @@ class ParameterPool(object):
             'run_seconds'    : [40],
             'appconfs': [
                     [
-                        proc_settings['rocksdb']['writeseq_for_mix'],
-                        proc_settings['rocksdb']['writerandom_for_mix'],
+                        proc_settings['rocksdb-wear']['writeseq_for_mix'],
+                        proc_settings['rocksdb-wear']['writerandom_for_mix'],
                     ]
                 ],
         })
@@ -1320,7 +1650,7 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['leveldb']['writeseq'],
+                        proc_settings['leveldb-wear']['writeseq'],
                     ]
                 ],
         })
@@ -1341,7 +1671,7 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['leveldb']['writerandom'],
+                        proc_settings['leveldb-wear']['writerandom'],
                     ]
                 ],
         })
@@ -1362,8 +1692,8 @@ class ParameterPool(object):
             'run_seconds'    : [40],
             'appconfs': [
                     [
-                        proc_settings['leveldb']['writeseq_for_mix'],
-                        proc_settings['leveldb']['writerandom_for_mix'],
+                        proc_settings['leveldb-wear']['writeseq_for_mix'],
+                        proc_settings['leveldb-wear']['writerandom_for_mix'],
                     ]
                 ],
         })
@@ -1384,7 +1714,7 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['sqliteWAL']['seq_put'],
+                        proc_settings['sqliteWAL-wear']['seq_put'],
                     ]
                 ],
         })
@@ -1405,7 +1735,7 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['sqliteWAL']['rand_put'],
+                        proc_settings['sqliteWAL-wear']['rand_put'],
                     ]
                 ],
         })
@@ -1426,8 +1756,8 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['sqliteWAL']['seq_put'],
-                        proc_settings['sqliteWAL']['rand_put'],
+                        proc_settings['sqliteWAL-wear']['seq_put'],
+                        proc_settings['sqliteWAL-wear']['rand_put'],
                     ]
                 ],
         })
@@ -1449,7 +1779,7 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['sqliteRB']['seq_put'],
+                        proc_settings['sqliteRB-wear']['seq_put'],
                     ]
                 ],
         })
@@ -1470,7 +1800,7 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['sqliteRB']['rand_put'],
+                        proc_settings['sqliteRB-wear']['rand_put'],
                     ]
                 ],
         })
@@ -1491,8 +1821,8 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['sqliteRB']['seq_put'],
-                        proc_settings['sqliteRB']['rand_put'],
+                        proc_settings['sqliteRB-wear']['seq_put'],
+                        proc_settings['sqliteRB-wear']['rand_put'],
                     ]
                 ],
         })
@@ -1513,7 +1843,7 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['varmail']['small_write'],
+                        proc_settings['varmail-wear']['small_write'],
                     ]
                 ],
         })
@@ -1534,7 +1864,7 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['varmail']['large_write'],
+                        proc_settings['varmail-wear']['large_write'],
                     ]
                 ],
         })
@@ -1555,8 +1885,8 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['varmail']['small_write'],
-                        proc_settings['varmail']['large_write'],
+                        proc_settings['varmail-wear']['small_write'],
+                        proc_settings['varmail-wear']['large_write'],
                     ]
                 ],
         })
