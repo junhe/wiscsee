@@ -387,11 +387,12 @@ proc_settings = {
     ######################################
     ######################################
 
+    ######## LevelDB #######
     'leveldb-wear': {
         'writeseq':
             {'name' : 'LevelDB',
-             'benchmarks': repeat_bench('fillseq', 1),
-             'num': 10*MILLION,
+             'benchmarks': repeat_bench('fillseq', 100),
+             'num': 5*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
              'mem_limit_in_bytes': 2*GB,
@@ -399,8 +400,8 @@ proc_settings = {
 
         'writerandom':
             {'name' : 'LevelDB',
-             'benchmarks': repeat_bench('overwrite', 1),
-             'num': 10*MILLION,
+             'benchmarks': repeat_bench('overwrite', 50),
+             'num': 5*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
              'mem_limit_in_bytes': 2*GB,
@@ -408,7 +409,7 @@ proc_settings = {
 
         'writeseq_for_mix':
             {'name' : 'LevelDB',
-             'benchmarks': repeat_bench('fillseq', 1),
+             'benchmarks': repeat_bench('fillseq', 60),
              'num': 3*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
@@ -417,7 +418,7 @@ proc_settings = {
 
         'writerandom_for_mix':
             {'name' : 'LevelDB',
-             'benchmarks': repeat_bench('overwrite', 1),
+             'benchmarks': repeat_bench('overwrite', 60),
              'num': 3*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
@@ -425,6 +426,7 @@ proc_settings = {
             },
 
     }, ### LevelDB
+
 
     ######## RocksDB #######
     'rocksdb-wear': {
@@ -468,141 +470,98 @@ proc_settings = {
 
     ######## SqliteWAL #######
     'sqliteWAL-wear': {
-        'aging_seq':
-            {'name': 'Sqlite',
-             'pattern': 'sequential_put',
-             'n_insertions': 240000,
-             'commit_period': 10,
-             'max_key': 240000,
-             'do_strace': False,
-             'mem_limit_in_bytes': 32*MB,
-             'journal_mode': 'WAL'
-            },
-
-        'aging_rand':
-            {'name': 'Sqlite',
-             'pattern': 'random_put',
-             'n_insertions': 240000,
-             'commit_period': 10,
-             'max_key': 240000,
-             'do_strace': False,
-             'mem_limit_in_bytes': 32*MB,
-             'journal_mode': 'WAL'
-            },
-
-        'seq_get':
-            {'name': 'Sqlite',
-             'pattern': 'sequential_get',
-             'n_insertions': 240000,
-             'commit_period': 10,
-             'max_key': 240000,
-             'do_strace': False,
-             'mem_limit_in_bytes': 32*MB,
-             'journal_mode': 'WAL'
-            },
-
-        'rand_get':
-            {'name': 'Sqlite',
-             'pattern': 'random_get',
-             'n_insertions': 240000,
-             'commit_period': 10,
-             'max_key': 240000,
-             'do_strace': False,
-             'mem_limit_in_bytes': 32*MB,
-             'journal_mode': 'WAL'
-            },
-
         'seq_put':
             {'name': 'Sqlite',
              'pattern': 'sequential_put',
-             'n_insertions': 240000,
+             'n_insertions': 120*MILLION,
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
-             'mem_limit_in_bytes': 32*MB,
+             'mem_limit_in_bytes': 1*GB,
              'journal_mode': 'WAL'
             },
 
         'rand_put':
             {'name': 'Sqlite',
              'pattern': 'random_put',
-             'n_insertions': 240000,
+             'n_insertions': 20*MILLION,
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
-             'mem_limit_in_bytes': 32*MB,
+             'mem_limit_in_bytes': 1*GB,
              'journal_mode': 'WAL'
             },
+        'seq_put_formix':
+            {'name': 'Sqlite',
+             'pattern': 'sequential_put',
+             'n_insertions': 60*MILLION,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 1*GB,
+             'journal_mode': 'WAL'
+            },
+
+        'rand_put_formix':
+            {'name': 'Sqlite',
+             'pattern': 'random_put',
+             'n_insertions': 10*MILLION,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 1*GB,
+             'journal_mode': 'WAL'
+            },
+
     }, ### Sqlite
 
     ######## SqliteRollBack #######
     'sqliteRB-wear': {
-        'aging_seq':
-            {'name': 'Sqlite',
-             'pattern': 'sequential_put',
-             'n_insertions': 240000,
-             'commit_period': 10,
-             'max_key': 240000,
-             'do_strace': False,
-             'mem_limit_in_bytes': 32*MB,
-             'journal_mode': 'DELETE'
-            },
-
-        'aging_rand':
-            {'name': 'Sqlite',
-             'pattern': 'random_put',
-             'n_insertions': 240000,
-             'commit_period': 10,
-             'max_key': 240000,
-             'do_strace': False,
-             'mem_limit_in_bytes': 32*MB,
-             'journal_mode': 'DELETE'
-            },
-
-        'seq_get':
-            {'name': 'Sqlite',
-             'pattern': 'sequential_get',
-             'n_insertions': 240000,
-             'commit_period': 10,
-             'max_key': 240000,
-             'do_strace': False,
-             'mem_limit_in_bytes': 32*MB,
-             'journal_mode': 'DELETE'
-            },
-
-        'rand_get':
-            {'name': 'Sqlite',
-             'pattern': 'random_get',
-             'n_insertions': 240000,
-             'commit_period': 10,
-             'max_key': 240000,
-             'do_strace': False,
-             'mem_limit_in_bytes': 32*MB,
-             'journal_mode': 'DELETE'
-            },
-
         'seq_put':
             {'name': 'Sqlite',
              'pattern': 'sequential_put',
-             'n_insertions': 240000,
+             'n_insertions': 120*MILLION,
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
-             'mem_limit_in_bytes': 32*MB,
-             'journal_mode': 'DELETE'
+             'mem_limit_in_bytes': 1*GB,
+             'journal_mode': 'WAL'
             },
 
         'rand_put':
             {'name': 'Sqlite',
              'pattern': 'random_put',
-             'n_insertions': 240000,
+             'n_insertions': 20*MILLION,
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
-             'mem_limit_in_bytes': 32*MB,
-             'journal_mode': 'DELETE'
+             'mem_limit_in_bytes': 1*GB,
+             'journal_mode': 'WAL'
             },
+        'seq_put_formix':
+            {'name': 'Sqlite',
+             'pattern': 'sequential_put',
+             'n_insertions': 60*MILLION,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 1*GB,
+             'journal_mode': 'WAL'
+            },
+
+        'rand_put_formix':
+            {'name': 'Sqlite',
+             'pattern': 'random_put',
+             'n_insertions': 10*MILLION,
+             'commit_period': 10,
+             'max_key': 240000,
+             'do_strace': False,
+             'mem_limit_in_bytes': 1*GB,
+             'journal_mode': 'WAL'
+            },
+
     }, ### Sqlite
+
 
 
     ######## Varmail  #######
@@ -1720,8 +1679,8 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['sqliteWAL-wear']['seq_put'],
-                        proc_settings['sqliteWAL-wear']['rand_put'],
+                        proc_settings['sqliteWAL-wear']['seq_put_formix'],
+                        proc_settings['sqliteWAL-wear']['rand_put_formix'],
                     ]
                 ],
         })
@@ -1785,8 +1744,8 @@ class ParameterPool(object):
             'run_seconds'    : [None],
             'appconfs': [
                     [
-                        proc_settings['sqliteRB-wear']['seq_put'],
-                        proc_settings['sqliteRB-wear']['rand_put'],
+                        proc_settings['sqliteRB-wear']['seq_put_formix'],
+                        proc_settings['sqliteRB-wear']['rand_put_formix'],
                     ]
                 ],
         })
