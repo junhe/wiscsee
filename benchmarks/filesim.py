@@ -182,6 +182,7 @@ class AlignmentParaIter(object):
             'n_channels_per_dev'  : 16,
             'do_gc_after_workload': True,
             'stop_sim_on_bytes': 1*GB,
+            'log_group_factor': 100000,
             })
 
         yield local_dict
