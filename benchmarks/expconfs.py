@@ -1224,5 +1224,331 @@ class ParameterPool(object):
 
         self.extend_para_dicts(ParameterCombinations(shared_para_dict))
 
+    def _____SEPARATOR_______(self):
+        pass
+
+    def rocksdb_wearlevel_w_seq(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['rocksdb']['writeseq'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def rocksdb_wearlevel_w_rand(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['rocksdb']['writerandom'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def rocksdb_wearlevel_w_mix(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [40],
+            'appconfs': [
+                    [
+                        proc_settings['rocksdb']['writeseq_for_mix'],
+                        proc_settings['rocksdb']['writerandom_for_mix'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+
+    def leveldb_wearlevel_w_seq(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['leveldb']['writeseq'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def leveldb_wearlevel_w_rand(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['leveldb']['writerandom'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def leveldb_wearlevel_w_mix(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [40],
+            'appconfs': [
+                    [
+                        proc_settings['leveldb']['writeseq_for_mix'],
+                        proc_settings['leveldb']['writerandom_for_mix'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def sqliteWAL_wearlevel_w_seq(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['sqliteWAL']['seq_put'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def sqliteWAL_wearlevel_w_rand(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['sqliteWAL']['rand_put'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def sqliteWAL_wearlevel_w_mix(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['sqliteWAL']['seq_put'],
+                        proc_settings['sqliteWAL']['rand_put'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+
+    def sqliteRB_wearlevel_w_seq(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['sqliteRB']['seq_put'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def sqliteRB_wearlevel_w_rand(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['sqliteRB']['rand_put'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def sqliteRB_wearlevel_w_mix(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['sqliteRB']['seq_put'],
+                        proc_settings['sqliteRB']['rand_put'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def varmail_wearlevel_w_small(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['varmail']['small_write'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def varmail_wearlevel_w_large(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['varmail']['large_write'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+    def varmail_wearlevel_w_mix(self, testname):
+        shared_para_dict = self.get_base_dict()
+        self.env_wearlevel(shared_para_dict)
+        self.set_testname(shared_para_dict, testname)
+
+        # set aging
+        # Do nothing.
+
+        # set target
+        shared_para_dict.update({
+            'workload_class' : [ 'AppMix' ],
+            'run_seconds'    : [None],
+            'appconfs': [
+                    [
+                        proc_settings['varmail']['small_write'],
+                        proc_settings['varmail']['large_write'],
+                    ]
+                ],
+        })
+
+        self.extend_para_dicts(ParameterCombinations(shared_para_dict))
+
+
 
 
