@@ -717,12 +717,12 @@ def appmixbench_for_rw():
                         # 'leveldb_reqscale_w_rand',
                         # 'leveldb_reqscale_w_mix'
 
-                        'sqliteWAL_reqscale_r_seq',
-                        'sqliteWAL_reqscale_r_rand',
-                        'sqliteWAL_reqscale_r_mix',
-                        'sqliteWAL_reqscale_w_seq',
-                        'sqliteWAL_reqscale_w_rand',
-                        'sqliteWAL_reqscale_w_mix'
+                        # 'sqliteWAL_reqscale_r_seq',
+                        # 'sqliteWAL_reqscale_r_rand',
+                        # 'sqliteWAL_reqscale_r_mix',
+                        # 'sqliteWAL_reqscale_w_seq',
+                        # 'sqliteWAL_reqscale_w_rand',
+                        # 'sqliteWAL_reqscale_w_mix'
 
                         # 'sqliteRB_reqscale_r_seq',
                         # 'sqliteRB_reqscale_r_rand',
@@ -737,6 +737,27 @@ def appmixbench_for_rw():
                         # 'varmail_reqscale_w_small',
                         # 'varmail_reqscale_w_large',
                         # 'varmail_reqscale_w_mix'
+
+
+                        # 'rocksdb_wearlevel_w_seq',
+                        # 'rocksdb_wearlevel_w_rand',
+                        # 'rocksdb_wearlevel_w_mix',
+
+                        # 'leveldb_wearlevel_w_seq',
+                        # 'leveldb_wearlevel_w_rand',
+                        # 'leveldb_wearlevel_w_mix',
+
+                        # 'sqliteWAL_wearlevel_w_seq',
+                        # 'sqliteWAL_wearlevel_w_rand',
+                        # 'sqliteWAL_wearlevel_w_mix',
+
+                        # 'sqliteRB_wearlevel_w_seq',
+                        # 'sqliteRB_wearlevel_w_rand',
+                        # 'sqliteRB_wearlevel_w_mix',
+
+                        # 'varmail_wearlevel_w_small',
+                        # 'varmail_wearlevel_w_large',
+                        # 'varmail_wearlevel_w_mix'
                         ],
                     filesystem = ['ext4', 'f2fs', 'xfs']
                     # filesystem = ['ext4']
