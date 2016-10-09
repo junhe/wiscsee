@@ -207,31 +207,32 @@ class GroupingParaIter(object):
         if rwmode == 'r':
             raise StopIteration
 
-        local_dict.update({
-            'ftl': 'dftldes',
-            'ssd_ncq_depth'  : 1,
-            'cache_mapped_data_bytes' :lbabytes,
-            'n_pages_per_block': 64,
-            'stripe_size'    : 1,
-            'enable_blktrace': False,
-            'enable_simulation': True,
-            'segment_bytes'  : 128*MB,
-            'over_provisioning': 8, # 1.28 is a good number
-            'gc_high_ratio'    : 0.9,
-            'gc_low_ratio'     : 0.8,
-            'not_check_gc_setting': True,
-            'snapshot_interval': 0.1*SEC,
-            'write_gc_log'     : False,
-            'wear_leveling_check_interval': 100*SEC,
-            'do_wear_leveling' : False,
-            'snapshot_valid_ratios': True,
-            'snapshot_erasure_count_dist': False,
-            'n_channels_per_dev'  : 16,
-            'do_gc_after_workload': False,
-            'stop_sim_on_bytes': 2*GB,
-            })
+        for segment_bytes in [128*MB, 2*GB]:
+            local_dict.update({
+                'ftl': 'dftldes',
+                'ssd_ncq_depth'  : 1,
+                'cache_mapped_data_bytes' :lbabytes,
+                'n_pages_per_block': 64,
+                'stripe_size'    : 1,
+                'enable_blktrace': False,
+                'enable_simulation': True,
+                'segment_bytes'  : segment_bytes,
+                'over_provisioning': 8, # 1.28 is a good number
+                'gc_high_ratio'    : 0.9,
+                'gc_low_ratio'     : 0.8,
+                'not_check_gc_setting': True,
+                'snapshot_interval': 0.1*SEC,
+                'write_gc_log'     : False,
+                'wear_leveling_check_interval': 100*SEC,
+                'do_wear_leveling' : False,
+                'snapshot_valid_ratios': True,
+                'snapshot_erasure_count_dist': False,
+                'n_channels_per_dev'  : 16,
+                'do_gc_after_workload': False,
+                'stop_sim_on_bytes': 2*GB,
+                })
 
-        yield local_dict
+            yield local_dict
 
 
 def get_testname_rwmode(testname):
