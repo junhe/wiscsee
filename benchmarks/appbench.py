@@ -27,16 +27,29 @@ class StatsMixin(object):
         print 'written_bytes', written_bytes / GB
 
     def get_traffic_size(self):
-        filepath = os.path.join(self.conf['result_dir'], 'blkparse-events-for-ftlsim.txt')
-        with open(filepath, 'rb') as f:
-            reader = csv.reader(f, delimiter=' ')
-            total = 0
-            for row in reader:
-                op = row[1]
-                size = int(row[3])
-                if op == 'write':
-                    total += size
-        return total
+        filepath = os.path.join(self.conf['result_dir'], 'recorder.json')
+        if os.path.exists(filepath):
+            dic = utils.load_json(filepath)
+            traffic = dic['general_accumulator']['traffic_size']
+
+            print 'write:', traffic['write'] / float(GB), 'GB'
+            print 'read:', traffic['read'] / float(GB), 'GB'
+            print 'discard:', traffic['discard'] / float(GB), 'GB'
+
+            return traffic['write']
+
+        else:
+            filepath = os.path.join(self.conf['result_dir'],
+                    'blkparse-events-for-ftlsim.txt')
+            with open(filepath, 'rb') as f:
+                reader = csv.reader(f, delimiter=' ')
+                total = 0
+                for row in reader:
+                    op = row[1]
+                    size = int(row[3])
+                    if op == 'write':
+                        total += size
+            return total
 
 class ParaDictIterMixin(object):
     def iterate_blocksize_segsize_fs(self):
