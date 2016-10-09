@@ -1243,21 +1243,29 @@ def filesnakebench():
 
 
 
-def simulate_from_event_files():
+def simulate_from_event_files(app=None, rule=None):
     def main():
-        expname = utils.get_expname()
-        trace_expnames = [
-                 'rocksdb-reqscale',
-                 # 'leveldb-reqscale-001',
-                 # 'sqlitewal-reqscale-240000-inserts-3',
-                 # 'sqliterb-reqscale-240000-insertions-4',
-                 # 'varmail-reqscale-002'
+        if app == "" or rule == "":
+            print 'app/rule is not set'
+            print 'Usage: make simevents app=rocksdb rule=alignment'
+            exit(1)
 
-                 # 'samplerun2'
-        ]
+
+        expname = utils.get_expname()
+
+        appmap = {
+                'rocksdb': 'rocksdb-reqscale',
+                'leveldb': 'leveldb-reqscale-001',
+                'sqlitewal': 'sqlitewal-reqscale-240000-inserts-3',
+                'sqliterb': 'sqliterb-reqscale-240000-insertions-4',
+                'varmail': 'varmail-reqscale-002'
+                }
+
+        trace_expnames = [ appmap[app] ]
+
         # rule = 'locality'
         # rule = 'alignment'
-        rule = 'grouping'
+        # rule = 'grouping'
 
         for para in filesim.ParaDict(expname, trace_expnames, rule):
             print para

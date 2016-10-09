@@ -1,3 +1,10 @@
+
+simevents:
+	sudo python -m benchmarks.appbench -t 'simulate_from_event_files(app="$(app)", rule="$(rule)")'
+
+
+
+
 test:
 	sudo python -m unittest discover -s tests -v -p '*test*.py' > tmp
 
@@ -58,8 +65,6 @@ appmix4rw:
 appmix4scaling:
 	sudo python -m benchmarks.appbench -t 'appmixbench_for_scaling()'
 
-simevents:
-	sudo python -m benchmarks.appbench -t 'simulate_from_event_files()'
 
 appmix4wearleveling:
 	sudo python -m benchmarks.appbench -t 'appmixbench_for_wearleveling()'
