@@ -1,6 +1,6 @@
 
 simevents:
-	sudo python -m benchmarks.appbench -t 'simulate_from_event_files(app="$(app)", rule="$(rule)")'
+	sudo python -m benchmarks.appbench -t 'simulate_from_event_files(app="$(app)", rule="$(rule)", expname="$(expname)")'
 
 
 

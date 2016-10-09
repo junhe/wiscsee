@@ -1243,15 +1243,12 @@ def filesnakebench():
 
 
 
-def simulate_from_event_files(app=None, rule=None):
+def simulate_from_event_files(app=None, rule=None, expname=None):
     def main():
-        if app == "" or rule == "":
+        if app == "" or rule == "" or expname == "":
             print 'app/rule is not set'
-            print 'Usage: make simevents app=rocksdb rule=alignment'
+            print 'Usage: make simevents app=rocksdb rule=alignment expname=rocksdb-alginment-xxj3j'
             exit(1)
-
-
-        expname = utils.get_expname()
 
         appmap = {
                 'rocksdb': 'rocksdb-reqscale',
