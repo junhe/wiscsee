@@ -55,6 +55,9 @@ class ParaDict(object):
         if self.rule == 'locality':
             para_iter = LocalityParaIter(para_dict)
 
+        elif self.rule == 'localitysmall':
+            para_iter = LocalityParaIter(para_dict, coverage='small')
+
         elif self.rule == 'alignment':
             para_iter = AlignmentParaIter(para_dict)
 
@@ -116,11 +119,18 @@ class LocalityParaIter(object):
     Given a para_dict (exp_parameters), generate a
     series of para_dict with different cache sizes
     """
-    def __init__(self, para_dict):
+    def __init__(self, para_dict, coverage='large'):
         self.para_dict = para_dict
+        self.coverage = coverage
 
     def __iter__(self):
-        for coverage_ratio in [0.1, 0.5, 1]:
+        if self.coverage == 'large':
+            coverage_ratios = [0.1, 0.5, 1]
+        elif self.coverage == 'small':
+            coverage_ratios = [0.05, 0.01]
+
+
+        for coverage_ratio in coverage_ratios:
             local_dict = copy.deepcopy(self.para_dict)
 
             lbabytes = local_dict['lbabytes']

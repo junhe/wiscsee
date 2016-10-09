@@ -1261,6 +1261,7 @@ def simulate_from_event_files(app=None, rule=None, expname=None):
         trace_expnames = [ appmap[app] ]
 
         # rule = 'locality'
+        # rule = 'localitysmall'
         # rule = 'alignment'
         # rule = 'grouping'
 
