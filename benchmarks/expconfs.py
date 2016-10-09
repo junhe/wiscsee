@@ -571,7 +571,7 @@ proc_settings = {
                         "seconds": 60000,
                         "nfiles": 800,
                         "name": "Varmail",
-                        "num_bytes": 50*GB,
+                        "num_bytes": 80*GB,
                         "do_strace": False,
                         'mem_limit_in_bytes': 1*GB,
                         "rwmode": 'write'
@@ -582,7 +582,7 @@ proc_settings = {
                         "seconds": 60000,
                         "nfiles": 8000,
                         "name": "Varmail",
-                        "num_bytes": 50*GB,
+                        "num_bytes": 80*GB,
                         "do_strace": False,
                         'mem_limit_in_bytes': 1*GB,
                         "rwmode": 'write'
@@ -593,7 +593,7 @@ proc_settings = {
                         "seconds": 60000,
                         "nfiles": 800,
                         "name": "Varmail",
-                        "num_bytes": 25*GB,
+                        "num_bytes": 40*GB,
                         "do_strace": False,
                         'mem_limit_in_bytes': 1*GB,
                         "rwmode": 'write'
@@ -604,7 +604,7 @@ proc_settings = {
                         "seconds": 60000,
                         "nfiles": 8000,
                         "name": "Varmail",
-                        "num_bytes": 25*GB,
+                        "num_bytes": 40*GB,
                         "do_strace": False,
                         'mem_limit_in_bytes': 1*GB,
                         "rwmode": 'write'
