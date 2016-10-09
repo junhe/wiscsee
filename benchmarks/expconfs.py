@@ -394,7 +394,7 @@ proc_settings = {
              'num': 10*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
-             'mem_limit_in_bytes': 128*MB,
+             'mem_limit_in_bytes': 2*GB,
              },
 
         'writerandom':
@@ -403,7 +403,7 @@ proc_settings = {
              'num': 10*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
-             'mem_limit_in_bytes': 128*MB,
+             'mem_limit_in_bytes': 2*GB,
             },
 
         'writeseq_for_mix':
@@ -412,7 +412,7 @@ proc_settings = {
              'num': 3*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
-             'mem_limit_in_bytes': 128*MB,
+             'mem_limit_in_bytes': 2*GB,
              },
 
         'writerandom_for_mix':
@@ -421,83 +421,47 @@ proc_settings = {
              'num': 3*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
-             'mem_limit_in_bytes': 128*MB,
+             'mem_limit_in_bytes': 2*GB,
             },
 
     }, ### LevelDB
 
     ######## RocksDB #######
     'rocksdb-wear': {
-        'aging_overwrite':
-            {'name' : 'RocksDB',
-             'benchmarks': 'overwrite,compact',
-             'num': 5*MILLION,
-             'do_strace': False,
-             'use_existing_db': 0,
-             'mem_limit_in_bytes': 1*GB,
-            },
-
-        'aging_fillseq':
-            {'name' : 'RocksDB',
-             'benchmarks': 'fillseq,compact',
-             'num': 5*MILLION,
-             'do_strace': False,
-             'use_existing_db': 0,
-             'mem_limit_in_bytes': 1*GB,
-            },
-
-        'readrandom':
-            {'name' : 'RocksDB',
-             'benchmarks': repeat_bench('readrandom', 10),
-             'num': 5*MILLION,
-             'do_strace': False,
-             'use_existing_db': 1,
-             'mem_limit_in_bytes': 128*MB,
-             },
-
-        'readseq':
-            {'name' : 'RocksDB',
-             'benchmarks': repeat_bench('readseq', 10),
-             'num': 5*MILLION,
-             'do_strace': False,
-             'use_existing_db': 1,
-             'mem_limit_in_bytes': 128*MB,
-             },
-
         'writeseq':
             {'name' : 'RocksDB',
-             'benchmarks': repeat_bench('fillseq', 1),
-             'num': 10*MILLION,
+             'benchmarks': repeat_bench('fillseq', 100),
+             'num': 5*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
-             'mem_limit_in_bytes': 128*MB,
+             'mem_limit_in_bytes': 2*GB,
              },
 
         'writerandom':
             {'name' : 'RocksDB',
-             'benchmarks': repeat_bench('overwrite', 1),
-             'num': 10*MILLION,
+             'benchmarks': repeat_bench('overwrite', 50),
+             'num': 5*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
-             'mem_limit_in_bytes': 128*MB,
+             'mem_limit_in_bytes': 2*GB,
             },
 
         'writeseq_for_mix':
             {'name' : 'RocksDB',
-             'benchmarks': repeat_bench('fillseq', 1),
+             'benchmarks': repeat_bench('fillseq', 60),
              'num': 3*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
-             'mem_limit_in_bytes': 128*MB,
+             'mem_limit_in_bytes': 2*GB,
              },
 
         'writerandom_for_mix':
             {'name' : 'RocksDB',
-             'benchmarks': repeat_bench('overwrite', 1),
+             'benchmarks': repeat_bench('overwrite', 60),
              'num': 3*MILLION,
              'do_strace': False,
              'use_existing_db': 0,
-             'mem_limit_in_bytes': 128*MB,
+             'mem_limit_in_bytes': 2*GB,
             },
 
     }, ### RocksDB
@@ -1624,7 +1588,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [40],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['rocksdb-wear']['writeseq_for_mix'],
@@ -1689,7 +1653,7 @@ class ParameterPool(object):
         # set target
         shared_para_dict.update({
             'workload_class' : [ 'AppMix' ],
-            'run_seconds'    : [40],
+            'run_seconds'    : [None],
             'appconfs': [
                     [
                         proc_settings['leveldb-wear']['writeseq_for_mix'],
