@@ -1256,7 +1256,8 @@ def simulate_from_event_files():
                  # 'samplerun2'
         ]
         # rule = 'locality'
-        rule = 'alignment'
+        # rule = 'alignment'
+        rule = 'grouping'
 
         for para in filesim.ParaDict(expname, trace_expnames, rule):
             print para
