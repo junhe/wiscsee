@@ -197,6 +197,11 @@ class GroupingParaIter(object):
 
         lbabytes = local_dict['lbabytes']
 
+        rwmode = get_testname_rwmode(local_dict['testname'])
+        print 'rwmode', rwmode
+        if rwmode == 'r':
+            raise StopIteration
+
         local_dict.update({
             'ftl': 'dftldes',
             'ssd_ncq_depth'  : 1,
@@ -218,8 +223,15 @@ class GroupingParaIter(object):
             'snapshot_erasure_count_dist': False,
             'n_channels_per_dev'  : 16,
             'do_gc_after_workload': False,
+            'stop_sim_on_bytes': 1*GB,
             })
 
         yield local_dict
+
+
+def get_testname_rwmode(testname):
+    items = testname.split('_')
+    return items[2]
+
 
 
