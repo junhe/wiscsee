@@ -688,6 +688,16 @@ testname_dict = {
         'leveldb_reqscale_w_mix'
         ],
 
+    'rocksNlevelwrite_reqscale': [
+        'rocksdb_reqscale_w_seq',
+        'rocksdb_reqscale_w_rand',
+        'rocksdb_reqscale_w_mix',
+
+        'leveldb_reqscale_w_seq',
+        'leveldb_reqscale_w_rand',
+        'leveldb_reqscale_w_mix',
+        ],
+
     'sqlitewal_reqscale': [
         'sqliteWAL_reqscale_r_seq',
         'sqliteWAL_reqscale_r_rand',
