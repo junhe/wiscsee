@@ -2,6 +2,7 @@ from Makefile import *
 import csv
 import os
 import glob
+import time
 
 from utilities import utils
 from experimenter import *
@@ -1345,14 +1346,42 @@ def simulate_from_event_files(app=None, rule=None, expname=None):
             exit(1)
 
         appmap = {
+                # value is a exp_rel_path
                 'rocksdb': 'rocksdb-reqscale',
                 'leveldb': 'leveldb-reqscale-001',
                 'sqlitewal': 'sqlitewal-reqscale-240000-inserts-3',
                 'sqliterb': 'sqliterb-reqscale-240000-insertions-4',
-                'varmail': 'varmail-reqscale-002'
+                'varmail': 'varmail-reqscale-002',
+                'tmp': 'rocks_and_level_write_noOOS2/subexp-3959790978413626819-f2fs-10-10-16-41-16--4009885425202000064',
                 }
 
-        trace_expnames = [ appmap[app] ]
+        table =\
+            {'group0': ['rocks_and_level_write_noOOS2/subexp--1769718657183269759-ext4-10-10-16-40-18--5327014900870736072',
+                        'rocks_and_level_write_noOOS2/subexp-3959790978413626819-f2fs-10-10-16-41-16--4009885425202000064',
+                        'rocks_and_level_write_noOOS2/subexp--5400495843365659613-f2fs-10-10-16-50-41-1036897982225647212'],
+             'group1': ['rocks_and_level_write_noOOS2/subexp--2651559459791749708-ext4-10-10-16-37-11--2476577234383557317',
+                        'rocks_and_level_write_noOOS2/subexp--4012079044899239942-f2fs-10-10-16-47-24-8962436495046765337',
+                        'rocks_and_level_write_noOOS2/subexp-6734567197784924450-f2fs-10-10-16-38-08-5525072682590038137'],
+             'group2': ['rocks_and_level_write_noOOS2/subexp-3061564522848141715-xfs-10-10-16-48-19--5395887198175941667',
+                        'rocks_and_level_write_noOOS2/subexp--407794861899277989-ext4-10-10-16-34-23--1388338513924544090',
+                        'rocks_and_level_write_noOOS2/subexp-731938296861647804-ext4-10-10-16-46-26--7861811878071624305'],
+             'group3': ['rocks_and_level_write_noOOS2/subexp-3094175081237092577-ext4-10-10-16-49-42-7697824717987838947',
+                        'rocks_and_level_write_noOOS2/subexp--4321129376877859415-f2fs-10-10-16-44-25--7204748025581881532',
+                        'rocks_and_level_write_noOOS2/subexp--7650075805024570086-xfs-10-10-16-45-18--9114967625115597626'],
+             'group4': ['rocks_and_level_write_noOOS2/subexp-3348595430537727579-xfs-10-10-16-39-02-2209328006332006116',
+                        'rocks_and_level_write_noOOS2/subexp-4770662763680469818-xfs-10-10-16-36-11--4521167812851410244',
+                        'rocks_and_level_write_noOOS2/subexp--8663889719348096684-xfs-10-10-16-51-37--3241077762353620515'],
+             'group5': ['rocks_and_level_write_noOOS2/subexp-3633859889505807604-xfs-10-10-16-42-11--796626381758564691',
+                        'rocks_and_level_write_noOOS2/subexp--4837249144845266743-f2fs-10-10-16-35-18--8464917546135255015',
+                        'rocks_and_level_write_noOOS2/subexp-8721179042090565947-ext4-10-10-16-43-29--8110094886926018731']}
+
+        if app in table.keys():
+            trace_expnames = table[app]
+        else:
+            trace_expnames = [ appmap[app] ]
+
+        print trace_expnames
+        time.sleep(1)
 
         # rule = 'locality'
         # rule = 'localitysmall'
