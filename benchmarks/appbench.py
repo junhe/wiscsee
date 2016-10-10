@@ -669,8 +669,92 @@ def appmixbench():
 
     main()
 
+testname_dict = {
+    'rocksdb_reqscale': [
+        'rocksdb_reqscale_r_seq',
+        'rocksdb_reqscale_r_rand',
+        'rocksdb_reqscale_r_mix',
+        'rocksdb_reqscale_w_seq',
+        'rocksdb_reqscale_w_rand',
+        'rocksdb_reqscale_w_mix'
+        ],
 
-def appmixbench_for_rw():
+    'leveldb_reqscale': [
+        'leveldb_reqscale_r_seq',
+        'leveldb_reqscale_r_rand',
+        'leveldb_reqscale_r_mix',
+        'leveldb_reqscale_w_seq',
+        'leveldb_reqscale_w_rand',
+        'leveldb_reqscale_w_mix'
+        ],
+
+    'sqlitewal_reqscale': [
+        'sqliteWAL_reqscale_r_seq',
+        'sqliteWAL_reqscale_r_rand',
+        'sqliteWAL_reqscale_r_mix',
+        'sqliteWAL_reqscale_w_seq',
+        'sqliteWAL_reqscale_w_rand',
+        'sqliteWAL_reqscale_w_mix'
+        ],
+
+    'sqliterb_reqscale': [
+        'sqliteRB_reqscale_r_seq',
+        'sqliteRB_reqscale_r_rand',
+        'sqliteRB_reqscale_r_mix',
+        'sqliteRB_reqscale_w_seq',
+        'sqliteRB_reqscale_w_rand',
+        'sqliteRB_reqscale_w_mix'
+        ],
+
+    'varmail_reqscale': [
+        'varmail_reqscale_r_small',
+        'varmail_reqscale_r_large',
+        'varmail_reqscale_r_mix',
+        'varmail_reqscale_w_small',
+        'varmail_reqscale_w_large',
+        'varmail_reqscale_w_mix'
+        ],
+
+    ########### wear level ##############
+
+    'rocksdb_wearlevel':
+        [
+        'rocksdb_wearlevel_w_seq',
+        'rocksdb_wearlevel_w_rand',
+        'rocksdb_wearlevel_w_mix',
+        ],
+
+    'leveldb_wearlevel':
+        [
+        'leveldb_wearlevel_w_seq',
+        'leveldb_wearlevel_w_rand',
+        'leveldb_wearlevel_w_mix',
+        ],
+
+    'sqlitewal_wearlevel':
+        [
+        'sqliteWAL_wearlevel_w_seq',
+        'sqliteWAL_wearlevel_w_rand',
+        'sqliteWAL_wearlevel_w_mix',
+        ],
+
+    'sqliterb_wearlevel':
+        [
+        'sqliteRB_wearlevel_w_seq',
+        'sqliteRB_wearlevel_w_rand',
+        'sqliteRB_wearlevel_w_mix',
+        ],
+
+    'varmail_wearlevel':
+        [
+        'varmail_wearlevel_w_small',
+        'varmail_wearlevel_w_large',
+        'varmail_wearlevel_w_mix',
+        ],
+}
+
+
+def appmixbench_for_rw(testsetname, expname):
     class LocalExperimenter(Experimenter, StatsMixin):
         def setup_workload(self):
             self.conf['workload_class'] = self.para.workload_class
@@ -696,68 +780,14 @@ def appmixbench_for_rw():
 
 
     class ParaDict(ParaDictIterMixin):
+        def __init__(self, testsetname, expname):
+            self.testsetname = testsetname
+            self.expname = expname
+
         def __iter__(self):
-            expname = utils.get_expname()
             para_pool = ParameterPool(
-                    expname = expname,
-                    testname = [
-                        # 'tmptest_na_na_na'
-
-                        # 'rocksdb_reqscale_r_seq',
-                        # 'rocksdb_reqscale_r_rand',
-                        # 'rocksdb_reqscale_r_mix',
-                        # 'rocksdb_reqscale_w_seq',
-                        # 'rocksdb_reqscale_w_rand',
-                        # 'rocksdb_reqscale_w_mix'
-
-                        # 'leveldb_reqscale_r_seq',
-                        # 'leveldb_reqscale_r_rand',
-                        # 'leveldb_reqscale_r_mix',
-                        # 'leveldb_reqscale_w_seq',
-                        # 'leveldb_reqscale_w_rand',
-                        # 'leveldb_reqscale_w_mix'
-
-                        # 'sqliteWAL_reqscale_r_seq',
-                        # 'sqliteWAL_reqscale_r_rand',
-                        # 'sqliteWAL_reqscale_r_mix',
-                        # 'sqliteWAL_reqscale_w_seq',
-                        # 'sqliteWAL_reqscale_w_rand',
-                        # 'sqliteWAL_reqscale_w_mix'
-
-                        # 'sqliteRB_reqscale_r_seq',
-                        # 'sqliteRB_reqscale_r_rand',
-                        # 'sqliteRB_reqscale_r_mix',
-                        # 'sqliteRB_reqscale_w_seq',
-                        # 'sqliteRB_reqscale_w_rand',
-                        # 'sqliteRB_reqscale_w_mix'
-
-                        # 'varmail_reqscale_r_small',
-                        # 'varmail_reqscale_r_large',
-                        # 'varmail_reqscale_r_mix',
-                        # 'varmail_reqscale_w_small',
-                        # 'varmail_reqscale_w_large',
-                        # 'varmail_reqscale_w_mix'
-
-                        'rocksdb_wearlevel_w_seq',
-                        'rocksdb_wearlevel_w_rand',
-                        'rocksdb_wearlevel_w_mix',
-
-                        'leveldb_wearlevel_w_seq',
-                        'leveldb_wearlevel_w_rand',
-                        'leveldb_wearlevel_w_mix',
-
-                        'sqliteWAL_wearlevel_w_seq',
-                        'sqliteWAL_wearlevel_w_rand',
-                        'sqliteWAL_wearlevel_w_mix',
-
-                        'sqliteRB_wearlevel_w_seq',
-                        'sqliteRB_wearlevel_w_rand',
-                        'sqliteRB_wearlevel_w_mix',
-
-                        'varmail_wearlevel_w_small',
-                        'varmail_wearlevel_w_large',
-                        'varmail_wearlevel_w_mix',
-                        ],
+                    expname = self.expname,
+                    testname = testname_dict[self.testsetname],
                     filesystem = ['ext4', 'f2fs', 'xfs']
                     # filesystem = ['ext4']
                     )
@@ -765,7 +795,12 @@ def appmixbench_for_rw():
             return iter(para_pool)
 
     def main():
-        for para in ParaDict():
+        if testsetname == "" or expname == "":
+            print 'testsetname or expname missing'
+            print 'Usage: make appmix4rw testsetname=rocksdb_reqscale expname=myexp001'
+            exit(1)
+
+        for para in ParaDict(testsetname, expname):
             print '------------------------------------------'
             print para
             Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))

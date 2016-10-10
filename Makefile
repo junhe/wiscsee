@@ -2,8 +2,8 @@
 simevents:
 	sudo python -m benchmarks.appbench -t 'simulate_from_event_files(app="$(app)", rule="$(rule)", expname="$(expname)")'
 
-
-
+appmix4rw:
+	sudo python -m benchmarks.appbench -t 'appmixbench_for_rw(testsetname="$(testsetname)", expname="$(expname)")'
 
 test:
 	sudo python -m unittest discover -s tests -v -p '*test*.py' > tmp
@@ -59,8 +59,6 @@ appmix:
 appmix4lpncount:
 	sudo python -m benchmarks.appbench -t 'appmixbench_for_lpn_count()'
 
-appmix4rw:
-	sudo python -m benchmarks.appbench -t 'appmixbench_for_rw()'
 
 appmix4scaling:
 	sudo python -m benchmarks.appbench -t 'appmixbench_for_scaling()'
