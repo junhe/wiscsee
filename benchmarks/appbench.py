@@ -761,6 +761,17 @@ testname_dict = {
         'varmail_wearlevel_w_large',
         'varmail_wearlevel_w_mix',
         ],
+
+    'tmp':
+        [
+        # 'leveldb_reqscale_r_seq',
+        # 'leveldb_reqscale_r_rand',
+        # 'leveldb_reqscale_r_mix',
+        # 'leveldb_reqscale_w_seq',
+        'leveldb_reqscale_w_rand',
+        # 'leveldb_reqscale_w_mix'
+        ],
+
 }
 
 
