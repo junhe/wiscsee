@@ -9,7 +9,17 @@ para['expname'] = 'testxxx'
 
 # exec_sim.delay(para)
 print app.conf.BROKER_URL
-app.conf.BROKER_URL = 'amqp://guest@node-2//'
+app.conf.BROKER_URL = 'amqp://guest@node-1//'
 
+print app.conf.BROKER_URL
 
-exec_sim.delay(para)
+# exec_sim.delay(para)
+add.delay(8, 1000)
+add.delay(8, 1000)
+add.delay(8, 1000)
+add.delay(8, 1000)
+add.delay(8, 1000)
+add.delay(8, 1000)
+add.delay(8, 1000)
+add.delay(8, 1000)
+add.delay(8, 1000)
