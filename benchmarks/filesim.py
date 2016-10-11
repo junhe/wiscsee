@@ -53,7 +53,7 @@ class ParaDict(object):
 
     def get_para_iter(self, para_dict):
         if self.rule == 'locality':
-            para_iter = LocalityParaIter(para_dict)
+            para_iter = LocalityParaIter(para_dict, coverage='large')
 
         elif self.rule == 'localitysmall':
             para_iter = LocalityParaIter(para_dict, coverage='small')
@@ -129,7 +129,6 @@ class LocalityParaIter(object):
         elif self.coverage == 'small':
             coverage_ratios = [0.05, 0.01]
 
-
         for coverage_ratio in coverage_ratios:
             local_dict = copy.deepcopy(self.para_dict)
 
@@ -156,7 +155,7 @@ class LocalityParaIter(object):
                 'n_channels_per_dev'  : 16,
                 'do_gc_after_workload': False,
                 'trace_issue_and_complete': False,
-                'stop_sim_on_bytes': 512*MB,
+                'stop_sim_on_bytes': 1*GB,
                 })
 
             yield local_dict
