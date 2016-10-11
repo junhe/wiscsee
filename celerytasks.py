@@ -7,3 +7,6 @@ app = Celery('tasks', broker='amqp://guest@localhost//')
 def exec_sim(para_dict):
     execute_simulation(para_dict)
 
+@app.task
+def add(x, y):
+    return x + y
