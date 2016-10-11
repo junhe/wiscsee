@@ -9,17 +9,17 @@ para['expname'] = 'testxxx'
 
 # exec_sim.delay(para)
 print app.conf.BROKER_URL
-app.conf.BROKER_URL = 'amqp://guest@node-1//'
+app.conf.BROKER_URL = 'amqp://guest@node-0//'
+app.conf.CELERY_RESULT_BACKEND = 'rpc://guest@node-0//'
 
 print app.conf.BROKER_URL
 
 # exec_sim.delay(para)
-add.delay(8, 1000)
-add.delay(8, 1000)
-add.delay(8, 1000)
-add.delay(8, 1000)
-add.delay(8, 1000)
-add.delay(8, 1000)
-add.delay(8, 1000)
-add.delay(8, 1000)
-add.delay(8, 1000)
+ret = add.delay(8, 10003333)
+
+print ret.ready()
+time.sleep(1)
+print ret.ready()
+
+
+
