@@ -1374,7 +1374,7 @@ def simulate_from_event_files(app=None, rule=None, expname=None):
                         'rocks_and_level_write_noOOS2/subexp--8663889719348096684-xfs-10-10-16-51-37--3241077762353620515'],
              'group5': ['rocks_and_level_write_noOOS2/subexp-3633859889505807604-xfs-10-10-16-42-11--796626381758564691',
                         'rocks_and_level_write_noOOS2/subexp--4837249144845266743-f2fs-10-10-16-35-18--8464917546135255015',
-                        'rocks_and_level_write_noOOS2/subexp-8721179042090565947-ext4-10-10-16-43-29--8110094886926018731']
+                        'rocks_and_level_write_noOOS2/subexp-8721179042090565947-ext4-10-10-16-43-29--8110094886926018731'],
 
              'sqliterb-align-0': ['sqliterb-reqscale-240000-insertions-4/subexp--7571909590259533821-ext4-10-08-00-05-29-5223497787234525006',
                                   'sqliterb-reqscale-240000-insertions-4/subexp--3141442527781592876-f2fs-10-07-23-45-07--6856869384304485438'],
