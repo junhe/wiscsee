@@ -3,23 +3,42 @@ import time
 
 from utilities.utils import load_json
 
-d = load_json('./varmail-localoty.json')
-para = d['para_dicts'][0]
-para['expname'] = 'testxxx'
 
-# exec_sim.delay(para)
-print app.conf.BROKER_URL
+def get_total_finished(async_ret):
+    total_finished = 0
+    for ret in async_ret:
+        if ret.ready() == True:
+            total_finished += 1
+
+    return total_finished
+
+
+
+
+
+d = load_json('./varmail-localoty.json')
+para_list = d['para_dicts']
+
 app.conf.BROKER_URL = 'amqp://guest@node-0//'
 app.conf.CELERY_RESULT_BACKEND = 'rpc://guest@node-0//'
-
 print app.conf.BROKER_URL
+print app.conf.CELERY_RESULT_BACKEND
 
-# exec_sim.delay(para)
-ret = add.delay(8, 10003333)
 
-print ret.ready()
-time.sleep(1)
-print ret.ready()
+total_tasks = len(para_list)
+
+async_ret = []
+for para_dict in para_list:
+    ret = exec_sim.delay(para_dict)
+    async_ret.append(ret)
+
+
+timepast = 0
+while True:
+    time.sleep(5)
+    print get_total_finished(async_ret), '/', total_tasks
+    timepast += 5
+    print timepast
 
 
 
