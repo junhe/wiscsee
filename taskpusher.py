@@ -11,5 +11,5 @@ para['expname'] = 'testxxx'
 print app.conf.BROKER_URL
 app.conf.BROKER_URL = 'amqp://guest@node-2//'
 
-add.delay(4, 88)
 
+exec_sim.delay(para)
