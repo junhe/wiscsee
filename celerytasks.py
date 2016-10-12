@@ -1,5 +1,5 @@
 from celery import Celery
-from benchmarks.appbench import execute_simulation
+from benchmarks.appbench import execute_simulation, run_on_real_dev
 
 
 """
@@ -25,3 +25,8 @@ def exec_sim(para_dict):
 @app.task
 def add(x, y):
     return x + y
+
+@app.task
+def run_on_real_dev_by_para(para):
+    run_on_real_dev(para)
+
