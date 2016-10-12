@@ -1,5 +1,6 @@
 from workflow import run_workflow
 import os
+import csv
 
 import ssdbox
 from utilities.utils import *
@@ -282,5 +283,68 @@ def get_shared_para_dict(expname, lbabytes):
             }
     return para_dict
 
+
+class StatsMixin(object):
+    def write_stats(self):
+        stats_path = os.path.join(self.conf['result_dir'], 'stats.json')
+        disk_used_bytes = get_dir_size(self.conf['fs_mount_point'])
+
+        written_bytes = self.get_traffic_size()
+
+        d = {'disk_used_bytes': disk_used_bytes,
+             'written_bytes': written_bytes
+            }
+        dump_json(d, stats_path)
+        print 'disk_used_bytes', disk_used_bytes / GB
+        print 'written_bytes', written_bytes / GB
+
+    def get_traffic_size(self):
+        filepath = os.path.join(self.conf['result_dir'], 'recorder.json')
+        if os.path.exists(filepath):
+            dic = load_json(filepath)
+            traffic = dic['general_accumulator']['traffic_size']
+
+            print 'write:', traffic['write'] / float(GB), 'GB'
+            print 'read:', traffic['read'] / float(GB), 'GB'
+            print 'discard:', traffic['discard'] / float(GB), 'GB'
+
+            return traffic['write']
+
+        else:
+            filepath = os.path.join(self.conf['result_dir'],
+                    'blkparse-events-for-ftlsim.txt')
+            with open(filepath, 'rb') as f:
+                reader = csv.reader(f, delimiter=' ')
+                total = 0
+                for row in reader:
+                    op = row[1]
+                    size = int(row[3])
+                    if op == 'write':
+                        total += size
+            return total
+
+
+class RealDevExperimenter(Experimenter, StatsMixin):
+    def setup_workload(self):
+        self.conf['workload_class'] = self.para.workload_class
+        self.conf['workload_config'] = {
+                'appconfs': self.para.appconfs,
+                'run_seconds': self.para.run_seconds,
+                }
+        self.conf['workload_conf_key'] = 'workload_config'
+
+        self.conf['age_workload_class'] = self.para.age_workload_class
+        self.conf['aging_workload_config'] = {
+                'appconfs': self.para.aging_appconfs,
+                'run_seconds': None,
+                }
+        self.conf['aging_config_key'] = 'aging_workload_config'
+
+    def after_running(self):
+        self.write_stats()
+
+        if self.para.rm_blkparse_events is True:
+            with cd(self.conf['result_dir']):
+                shcmd('rm blkparse-events-for-ftlsim*')
 
 
