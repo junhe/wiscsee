@@ -196,79 +196,77 @@ def run_on_real_dev(para):
 
 
 def simulate_from_event_files(app=None, rule=None, expname=None):
-    def main():
-        if app == "" or rule == "" or expname == "":
-            print 'app/rule is not set'
-            print 'Usage: make simevents app=rocksdb rule=alignment expname=rocksdb-alginment-xxj3j'
-            exit(1)
+    if app == "" or rule == "" or expname == "":
+        print 'app/rule is not set'
+        print 'Usage: make simevents app=rocksdb rule=alignment expname=rocksdb-alginment-xxj3j'
+        exit(1)
 
-        appmap = {
-                # value is a exp_rel_path
-                'rocksdb': 'rocksdb-reqscale',
-                'leveldb': 'leveldb-reqscale-001',
-                'sqlitewal': 'sqlitewal-reqscale-240000-inserts-3',
-                'sqliterb': 'sqliterb-reqscale-240000-insertions-4',
-                'varmail': 'varmail-reqscale-002',
-                'tmp': 'rocks_and_level_write_noOOS2/subexp-3959790978413626819-f2fs-10-10-16-41-16--4009885425202000064',
-                }
+    appmap = {
+            # value is a exp_rel_path
+            'rocksdb': 'rocksdb-reqscale',
+            'leveldb': 'leveldb-reqscale-001',
+            'sqlitewal': 'sqlitewal-reqscale-240000-inserts-3',
+            'sqliterb': 'sqliterb-reqscale-240000-insertions-4',
+            'varmail': 'varmail-reqscale-002',
+            'tmp': 'rocks_and_level_write_noOOS2/subexp-3959790978413626819-f2fs-10-10-16-41-16--4009885425202000064',
+            }
 
-        table =\
-            {
-             'group0': ['rocks_and_level_write_noOOS2/subexp--1769718657183269759-ext4-10-10-16-40-18--5327014900870736072',
-                        'rocks_and_level_write_noOOS2/subexp-3959790978413626819-f2fs-10-10-16-41-16--4009885425202000064',
-                        'rocks_and_level_write_noOOS2/subexp--5400495843365659613-f2fs-10-10-16-50-41-1036897982225647212'],
-             'group1': ['rocks_and_level_write_noOOS2/subexp--2651559459791749708-ext4-10-10-16-37-11--2476577234383557317',
-                        'rocks_and_level_write_noOOS2/subexp--4012079044899239942-f2fs-10-10-16-47-24-8962436495046765337',
-                        'rocks_and_level_write_noOOS2/subexp-6734567197784924450-f2fs-10-10-16-38-08-5525072682590038137'],
-             'group2': ['rocks_and_level_write_noOOS2/subexp-3061564522848141715-xfs-10-10-16-48-19--5395887198175941667',
-                        'rocks_and_level_write_noOOS2/subexp--407794861899277989-ext4-10-10-16-34-23--1388338513924544090',
-                        'rocks_and_level_write_noOOS2/subexp-731938296861647804-ext4-10-10-16-46-26--7861811878071624305'],
-             'group3': ['rocks_and_level_write_noOOS2/subexp-3094175081237092577-ext4-10-10-16-49-42-7697824717987838947',
-                        'rocks_and_level_write_noOOS2/subexp--4321129376877859415-f2fs-10-10-16-44-25--7204748025581881532',
-                        'rocks_and_level_write_noOOS2/subexp--7650075805024570086-xfs-10-10-16-45-18--9114967625115597626'],
-             'group4': ['rocks_and_level_write_noOOS2/subexp-3348595430537727579-xfs-10-10-16-39-02-2209328006332006116',
-                        'rocks_and_level_write_noOOS2/subexp-4770662763680469818-xfs-10-10-16-36-11--4521167812851410244',
-                        'rocks_and_level_write_noOOS2/subexp--8663889719348096684-xfs-10-10-16-51-37--3241077762353620515'],
-             'group5': ['rocks_and_level_write_noOOS2/subexp-3633859889505807604-xfs-10-10-16-42-11--796626381758564691',
-                        'rocks_and_level_write_noOOS2/subexp--4837249144845266743-f2fs-10-10-16-35-18--8464917546135255015',
-                        'rocks_and_level_write_noOOS2/subexp-8721179042090565947-ext4-10-10-16-43-29--8110094886926018731'],
+    table =\
+        {
+         'group0': ['rocks_and_level_write_noOOS2/subexp--1769718657183269759-ext4-10-10-16-40-18--5327014900870736072',
+                    'rocks_and_level_write_noOOS2/subexp-3959790978413626819-f2fs-10-10-16-41-16--4009885425202000064',
+                    'rocks_and_level_write_noOOS2/subexp--5400495843365659613-f2fs-10-10-16-50-41-1036897982225647212'],
+         'group1': ['rocks_and_level_write_noOOS2/subexp--2651559459791749708-ext4-10-10-16-37-11--2476577234383557317',
+                    'rocks_and_level_write_noOOS2/subexp--4012079044899239942-f2fs-10-10-16-47-24-8962436495046765337',
+                    'rocks_and_level_write_noOOS2/subexp-6734567197784924450-f2fs-10-10-16-38-08-5525072682590038137'],
+         'group2': ['rocks_and_level_write_noOOS2/subexp-3061564522848141715-xfs-10-10-16-48-19--5395887198175941667',
+                    'rocks_and_level_write_noOOS2/subexp--407794861899277989-ext4-10-10-16-34-23--1388338513924544090',
+                    'rocks_and_level_write_noOOS2/subexp-731938296861647804-ext4-10-10-16-46-26--7861811878071624305'],
+         'group3': ['rocks_and_level_write_noOOS2/subexp-3094175081237092577-ext4-10-10-16-49-42-7697824717987838947',
+                    'rocks_and_level_write_noOOS2/subexp--4321129376877859415-f2fs-10-10-16-44-25--7204748025581881532',
+                    'rocks_and_level_write_noOOS2/subexp--7650075805024570086-xfs-10-10-16-45-18--9114967625115597626'],
+         'group4': ['rocks_and_level_write_noOOS2/subexp-3348595430537727579-xfs-10-10-16-39-02-2209328006332006116',
+                    'rocks_and_level_write_noOOS2/subexp-4770662763680469818-xfs-10-10-16-36-11--4521167812851410244',
+                    'rocks_and_level_write_noOOS2/subexp--8663889719348096684-xfs-10-10-16-51-37--3241077762353620515'],
+         'group5': ['rocks_and_level_write_noOOS2/subexp-3633859889505807604-xfs-10-10-16-42-11--796626381758564691',
+                    'rocks_and_level_write_noOOS2/subexp--4837249144845266743-f2fs-10-10-16-35-18--8464917546135255015',
+                    'rocks_and_level_write_noOOS2/subexp-8721179042090565947-ext4-10-10-16-43-29--8110094886926018731'],
 
-             'sqliterb-align-0': ['sqliterb-reqscale-240000-insertions-4/subexp--7571909590259533821-ext4-10-08-00-05-29-5223497787234525006',
-                                  'sqliterb-reqscale-240000-insertions-4/subexp--3141442527781592876-f2fs-10-07-23-45-07--6856869384304485438'],
-             'sqliterb-align-1': ['sqliterb-reqscale-240000-insertions-4/subexp-2742809270733970649-xfs-10-07-23-59-30--8341394983503659935',
-                                  'sqliterb-reqscale-240000-insertions-4/subexp-8553389467829355426-f2fs-10-08-00-03-23-1880758771844807441'],
-             'sqliterb-align-2': ['sqliterb-reqscale-240000-insertions-4/subexp-2758345266501184620-f2fs-10-08-00-13-21-866783223289054574',
-                                  'sqliterb-reqscale-240000-insertions-4/subexp-2336942718368821990-ext4-10-08-00-10-42-9127803783073608824'],
-             'sqliterb-align-3': ['sqliterb-reqscale-240000-insertions-4/subexp--1811502557637329453-xfs-10-08-00-04-23--7480859084318509711',
-                                  'sqliterb-reqscale-240000-insertions-4/subexp--2208768073357703318-ext4-10-07-23-44-02--3698939624785112052'],
-             'sqliterb-align-4': ['sqliterb-reqscale-240000-insertions-4/subexp--611519970204123274-ext4-10-07-23-54-06-3954495646325573485',
-                                  'sqliterb-reqscale-240000-insertions-4/subexp--2997539756754670987-ext4-10-07-23-47-09-3798978770958489688'],
-             'sqliterb-align-5': ['sqliterb-reqscale-240000-insertions-4/subexp-4908908674413587590-xfs-10-08-00-08-54--2361949898767176570',
-                                  'sqliterb-reqscale-240000-insertions-4/subexp-7524125378098933777-f2fs-10-08-00-07-24-5305576362074031946'],
-             'sqliterb-align-6': ['sqliterb-reqscale-240000-insertions-4/subexp-8302396001383885851-f2fs-10-07-23-49-33--1967830900465990693',
-                                  'sqliterb-reqscale-240000-insertions-4/subexp--3556361485728753380-ext4-10-08-00-02-14-442952194550896543'],
-             'sqliterb-align-7': ['sqliterb-reqscale-240000-insertions-4/subexp-3609841292231416489-xfs-10-08-00-15-22--5707918999480787436',
-                                  'sqliterb-reqscale-240000-insertions-4/subexp-6162233044671063036-f2fs-10-07-23-56-58--432793293883955356'],
-             'sqliterb-align-8': ['sqliterb-reqscale-240000-insertions-4/subexp-1961487334150063805-xfs-10-07-23-46-02-3881305204640570514',
-                                  'sqliterb-reqscale-240000-insertions-4/subexp--8986550952199358176-xfs-10-07-23-51-44-3510605567209788381'],
-             }
+         'sqliterb-align-0': ['sqliterb-reqscale-240000-insertions-4/subexp--7571909590259533821-ext4-10-08-00-05-29-5223497787234525006',
+                              'sqliterb-reqscale-240000-insertions-4/subexp--3141442527781592876-f2fs-10-07-23-45-07--6856869384304485438'],
+         'sqliterb-align-1': ['sqliterb-reqscale-240000-insertions-4/subexp-2742809270733970649-xfs-10-07-23-59-30--8341394983503659935',
+                              'sqliterb-reqscale-240000-insertions-4/subexp-8553389467829355426-f2fs-10-08-00-03-23-1880758771844807441'],
+         'sqliterb-align-2': ['sqliterb-reqscale-240000-insertions-4/subexp-2758345266501184620-f2fs-10-08-00-13-21-866783223289054574',
+                              'sqliterb-reqscale-240000-insertions-4/subexp-2336942718368821990-ext4-10-08-00-10-42-9127803783073608824'],
+         'sqliterb-align-3': ['sqliterb-reqscale-240000-insertions-4/subexp--1811502557637329453-xfs-10-08-00-04-23--7480859084318509711',
+                              'sqliterb-reqscale-240000-insertions-4/subexp--2208768073357703318-ext4-10-07-23-44-02--3698939624785112052'],
+         'sqliterb-align-4': ['sqliterb-reqscale-240000-insertions-4/subexp--611519970204123274-ext4-10-07-23-54-06-3954495646325573485',
+                              'sqliterb-reqscale-240000-insertions-4/subexp--2997539756754670987-ext4-10-07-23-47-09-3798978770958489688'],
+         'sqliterb-align-5': ['sqliterb-reqscale-240000-insertions-4/subexp-4908908674413587590-xfs-10-08-00-08-54--2361949898767176570',
+                              'sqliterb-reqscale-240000-insertions-4/subexp-7524125378098933777-f2fs-10-08-00-07-24-5305576362074031946'],
+         'sqliterb-align-6': ['sqliterb-reqscale-240000-insertions-4/subexp-8302396001383885851-f2fs-10-07-23-49-33--1967830900465990693',
+                              'sqliterb-reqscale-240000-insertions-4/subexp--3556361485728753380-ext4-10-08-00-02-14-442952194550896543'],
+         'sqliterb-align-7': ['sqliterb-reqscale-240000-insertions-4/subexp-3609841292231416489-xfs-10-08-00-15-22--5707918999480787436',
+                              'sqliterb-reqscale-240000-insertions-4/subexp-6162233044671063036-f2fs-10-07-23-56-58--432793293883955356'],
+         'sqliterb-align-8': ['sqliterb-reqscale-240000-insertions-4/subexp-1961487334150063805-xfs-10-07-23-46-02-3881305204640570514',
+                              'sqliterb-reqscale-240000-insertions-4/subexp--8986550952199358176-xfs-10-07-23-51-44-3510605567209788381'],
+         }
 
-        if app in table.keys():
-            trace_expnames = table[app]
-        else:
-            trace_expnames = [ appmap[app] ]
+    if app in table.keys():
+        trace_expnames = table[app]
+    else:
+        trace_expnames = [ appmap[app] ]
 
-        print trace_expnames
-        time.sleep(1)
+    print trace_expnames
+    time.sleep(1)
 
-        # rule = 'locality'
-        # rule = 'localitysmall'
-        # rule = 'alignment'
-        # rule = 'grouping'
+    # rule = 'locality'
+    # rule = 'localitysmall'
+    # rule = 'alignment'
+    # rule = 'grouping'
 
-        for para in filesim.ParaDict(expname, trace_expnames, rule):
-            execute_simulation(para)
-    main()
+    for para in filesim.ParaDict(expname, trace_expnames, rule):
+        execute_simulation(para)
 
 
 def execute_simulation(para):
