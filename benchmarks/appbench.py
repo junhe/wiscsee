@@ -162,31 +162,20 @@ testname_dict = {
 
 
 def appmixbench_for_rw(testsetname, expname):
-    class ParaDict(object):
-        def __init__(self, testsetname, expname):
-            self.testsetname = testsetname
-            self.expname = expname
+    if testsetname == "" or expname == "":
+        print 'testsetname or expname missing'
+        print 'Usage: make appmix4rw testsetname=rocksdb_reqscale expname=myexp001'
+        exit(1)
 
-        def __iter__(self):
-            para_pool = ParameterPool(
-                    expname = self.expname,
-                    testname = testname_dict[self.testsetname],
-                    filesystem = ['ext4', 'f2fs', 'xfs']
-                    # filesystem = ['ext4']
-                    )
+    para_pool = ParameterPool(
+            expname = expname,
+            testname = testname_dict[testsetname],
+            filesystem = ['ext4', 'f2fs', 'xfs']
+            # filesystem = ['ext4']
+            )
 
-            return iter(para_pool)
-
-    def main():
-        if testsetname == "" or expname == "":
-            print 'testsetname or expname missing'
-            print 'Usage: make appmix4rw testsetname=rocksdb_reqscale expname=myexp001'
-            exit(1)
-
-        for para in ParaDict(testsetname, expname):
-            run_on_real_dev(para)
-
-    main()
+    for para in para_pool:
+        run_on_real_dev(para)
 
 
 def run_on_real_dev(para):
