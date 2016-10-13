@@ -16,7 +16,8 @@ To run celery:
 
 """
 
-app = Celery('tasks', broker='amqp://guest@node-0//', backend='rpc://guest@node-0//')
+app = Celery('tasks', broker='amqp://guest@node-0//',
+        backend='amqp://guest@node-0//')
 
 @app.task
 def exec_sim(para_dict):

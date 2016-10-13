@@ -16,11 +16,12 @@ def get_total_finished(async_ret):
 
 
 
-d = load_json('./varmail-localoty.json')
+# d = load_json('./varmail-localoty.json')
+d = load_json('./wear-paras.json')
 para_list = d['para_dicts']
 
 app.conf.BROKER_URL = 'amqp://guest@node-0//'
-app.conf.CELERY_RESULT_BACKEND = 'rpc://guest@node-0//'
+app.conf.CELERY_RESULT_BACKEND = 'amqp://guest@node-0//'
 print app.conf.BROKER_URL
 print app.conf.CELERY_RESULT_BACKEND
 
