@@ -1,4 +1,4 @@
-from celerytasks import app, exec_sim, add
+from celerytasks import app, exec_sim, add, run_on_real_dev_by_para
 import time
 
 from utilities.utils import load_json
@@ -30,7 +30,9 @@ total_tasks = len(para_list)
 
 async_ret = []
 for para_dict in para_list:
-    ret = exec_sim.delay(para_dict)
+    para_dict['expname'] = 'wear-all-apps-by-celery'
+    # ret = exec_sim.delay(para_dict)
+    ret = run_on_real_dev_by_para(para_dict)
     async_ret.append(ret)
 
 
