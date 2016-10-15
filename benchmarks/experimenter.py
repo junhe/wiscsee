@@ -44,6 +44,8 @@ class Experimenter(object):
 
         self.conf['stop_sim_on_bytes'] = self.para.stop_sim_on_bytes
 
+        self.conf['sort_block_trace'] = self.para.sort_block_trace
+
         if self.para.filesystem == 'ext4-nj':
             self.conf['filesystem'] = 'ext4'
 
@@ -280,6 +282,7 @@ def get_shared_para_dict(expname, lbabytes):
             'gen_ncq_depth_table': [True],
             'do_dump_lpn_sem': [True],
             'rm_blkparse_events': [False],
+            'sort_block_trace': [True],
             }
     return para_dict
 

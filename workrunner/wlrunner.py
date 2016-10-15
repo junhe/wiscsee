@@ -48,7 +48,8 @@ class WorkloadRunner(object):
             resultpath = self.conf.get_blkparse_result_path_mkfs(),
             to_ftlsim_path = self.conf.get_ftlsim_events_output_path_mkfs(),
             sector_size = self.conf['sector_size'],
-            padding_bytes = self.conf['dev_padding']
+            padding_bytes = self.conf['dev_padding'],
+            do_sort = self.conf['sort_block_trace']
             )
 
         # blktracer for running workload
@@ -58,7 +59,8 @@ class WorkloadRunner(object):
             resultpath = self.conf.get_blkparse_result_path(),
             to_ftlsim_path = self.conf.get_ftlsim_events_output_path(),
             sector_size = self.conf['sector_size'],
-            padding_bytes = self.conf['dev_padding']
+            padding_bytes = self.conf['dev_padding'],
+            do_sort = self.conf['sort_block_trace']
             )
 
         self.aging_workload = eval("workload.{wlclass}(confobj = self.conf, " \
