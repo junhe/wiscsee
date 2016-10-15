@@ -809,6 +809,7 @@ class ParameterPool(object):
                 'gen_ncq_depth_table': [False],
                 'do_dump_lpn_sem': [True],
                 'rm_blkparse_events': [True],
+                'sort_block_trace': [False],
             })
 
     def get_base_dict(self):
