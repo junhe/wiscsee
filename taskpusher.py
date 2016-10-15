@@ -1,5 +1,6 @@
 from celerytasks import app, exec_sim, add, run_on_real_dev_by_para
 import time
+import pprint
 
 from utilities.utils import load_json
 
@@ -30,16 +31,23 @@ total_tasks = len(para_list)
 
 async_ret = []
 for para_dict in para_list:
-    para_dict['expname'] = 'wear-all-apps-by-celery'
+    if para_dict['testname'].startswith('sqliteRB'):
+        for d in para_dict['appconfs']:
+            d['journal_mode'] = 'DELETE'
+    else:
+        continue
+
+    para_dict['expname'] = 'wear-all-apps-sqliterb-makeup7'
+
     # ret = exec_sim.delay(para_dict)
-    ret = run_on_real_dev_by_para(para_dict)
+    ret = run_on_real_dev_by_para.delay(para_dict)
     async_ret.append(ret)
 
 
 timepast = 0
 while True:
     time.sleep(5)
-    print get_total_finished(async_ret), '/', total_tasks
+    print get_total_finished(async_ret), '/', len(async_ret)
     timepast += 5
     print timepast
 
