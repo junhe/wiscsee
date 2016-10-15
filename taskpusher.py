@@ -34,6 +34,7 @@ for para_dict in para_list:
     if para_dict['testname'].startswith('sqliteRB'):
         for d in para_dict['appconfs']:
             d['journal_mode'] = 'DELETE'
+        para_dict['sort_block_trace'] = False
     else:
         continue
 
