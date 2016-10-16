@@ -30,8 +30,9 @@ class Experimenter(object):
 
         self.conf['linux_ncq_depth'] = self.para.linux_ncq_depth
 
-        set_vm_default()
-        set_vm("dirty_bytes", self.para.dirty_bytes)
+        if not self.para.dirty_bytes is None:
+            set_vm_default()
+            set_vm("dirty_bytes", self.para.dirty_bytes)
 
         self.conf['do_fstrim'] = False
 
@@ -141,7 +142,7 @@ class Experimenter(object):
             self.conf['snapshot_valid_ratios'] = self.para.snapshot_valid_ratios
             self.conf['snapshot_erasure_count_dist'] = self.para.snapshot_erasure_count_dist
             self.conf['do_gc_after_workload'] = self.para.do_gc_after_workload
-            self.conf.cache_mapped_data_bytes = self.para.cache_mapped_data_bytes
+            self.conf.cache_mapped_data_bytes = int(self.para.cache_mapped_data_bytes)
             self.conf['write_gc_log'] = self.para.write_gc_log
 
         elif self.para.ftl == 'nkftl2':
