@@ -222,6 +222,9 @@ def execute_simulation(para):
 
     This function is only for simulating blktrace events as LBA workload
     """
+    default_para = get_shared_para_dict(None, None)
+    default_para.update(para)
+    para = default_para
     Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
     obj = filesim.LocalExperimenter( Parameters(**para) )
     obj.main()
