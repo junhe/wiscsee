@@ -13,48 +13,6 @@ import prepare4pyreuse
 from pyreuse.sysutils.straceParser import parse_and_write_dirty_table
 
 
-class ParaDictIterMixin(object):
-    def iterate_blocksize_segsize_fs(self):
-        para = self.parameter_combs[0]
-        lbabytes = para['lbabytes']
-        updatedicts = [
-            # {'segment_bytes': 2*MB, 'n_pages_per_block': 128*KB/(2*KB)},
-            # {'segment_bytes': 16*MB,        'n_pages_per_block': 128*KB/(2*KB)},
-            # {'segment_bytes': lbabytes * 2, 'n_pages_per_block': 128*KB/(2*KB)},
-
-            # {'segment_bytes': 16*MB,        'n_pages_per_block': 1*MB/(2*KB)},
-            # {'segment_bytes': 128*MB,        'n_pages_per_block': 1*MB/(2*KB)},
-            {'segment_bytes': lbabytes * 2, 'n_pages_per_block': 1*MB/(2*KB)},
-            ]
-        new_update_dics = []
-        for d in updatedicts:
-            for fs in ['ext4', 'f2fs', 'xfs', 'btrfs']:
-            # for fs in ['btrfs', 'xfs']:
-                new_d = copy.copy(d)
-                new_d['filesystem'] = fs
-
-                new_update_dics.append(new_d)
-
-        for update_dict in new_update_dics:
-            tmp_para = copy.deepcopy(para)
-            tmp_para.update(update_dict)
-            yield tmp_para
-
-    def iterate_blocksize_for_alignment(self):
-        local_paras = []
-        for parameters in self.parameter_combs:
-            for block_size in self.block_sizes:
-                para = copy.deepcopy(parameters)
-                para['n_pages_per_block'] = block_size / (2*KB)
-                para['stripe_size'] = para['n_pages_per_block']
-                para['segment_bytes'] = block_size
-
-                local_paras.append(para)
-
-        for para in local_paras:
-            yield para
-
-
 testname_dict = {
     'rocksdb_reqscale': [
         'rocksdb_reqscale_r_seq',
