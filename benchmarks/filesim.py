@@ -64,6 +64,9 @@ class ParaDict(object):
         elif self.rule == 'grouping':
             para_iter = GroupingParaIter(para_dict)
 
+        elif self.rule == 'integration':
+            para_iter = IntegrationParaIter(para_dict)
+
         else:
             raise NotImplementedError(
                 '{} not supported here.'.format(self.rule))
@@ -246,6 +249,85 @@ class GroupingParaIter(object):
 
             yield local_dict
 
+
+class IntegrationParaIter(object):
+    """
+    It simulates a block trace on realistic FTL.
+    """
+    def __init__(self, para_dict):
+        self.para_dict = para_dict
+        self.lbabytes = para_dict['lbabytes']
+
+    def __iter__(self):
+        yield self.get_for_dftl()
+        yield self.get_for_nkftl()
+
+    def get_for_dftl(self):
+        local_dict = copy.deepcopy(self.para_dict)
+        local_dict.update({
+            'ftl': 'dftldes',
+            'ssd_ncq_depth'  : 1,  #<--------------------------------has to set
+            'dirty_bytes'    : None,
+            'cache_mapped_data_bytes' : 0.1 * self.lbabytes,
+            'n_pages_per_block': 64,
+            'stripe_size'    : 1,
+            'enable_blktrace': False,
+            'enable_simulation': True,
+            'segment_bytes'  : 128*MB,
+            'over_provisioning': 1.50, # 1.28 is a good number
+            'gc_high_ratio'    : 0.9,
+            'gc_low_ratio'     : 0.8,
+            'not_check_gc_setting': True,
+            'snapshot_interval': 0.1*SEC,
+            'write_gc_log'     : False,
+            'wear_leveling_check_interval': 100*SEC,
+            'do_wear_leveling' : False,
+            'snapshot_valid_ratios': True,
+            'snapshot_erasure_count_dist': False,
+            'n_channels_per_dev'  : 16,
+            'do_gc_after_workload': False,
+            'stop_sim_on_bytes': 'inf',
+            'trace_issue_and_complete': False,
+            })
+
+        return local_dict
+
+    def get_for_nkftl(self):
+        local_dict = copy.deepcopy(self.para_dict)
+        local_dict.update({
+            'ftl'            : 'nkftl2',
+            'dirty_bytes'    : None,
+            'ssd_ncq_depth'  : 1,  #<--------------------------------has to set
+            'n_pages_per_block': 64, # 128KB block
+            'stripe_size'    : 64, # stripe size is the block size
+            'enable_blktrace': False,
+            'enable_simulation': True,
+            'f2fs_gc_after_workload': False,
+            'segment_bytes'  : 1*MB, # thus N=8
+            'max_log_blocks_ratio': 0.1,
+            'n_online_cpus'  : 'all',
+            'over_provisioning': 1.5, # 1.28 is a good number
+            'gc_high_ratio'    : 0.9,
+            'gc_low_ratio'     : 0.8,
+            'not_check_gc_setting': True,
+            'snapshot_interval': 0.1*SEC,
+            'write_gc_log'     : False,
+            'wear_leveling_check_interval': 100*SEC,
+            'do_wear_leveling' : False,
+            'wear_leveling_factor': 2,
+            'wear_leveling_diff': 10,
+            'snapshot_valid_ratios': True,
+            'snapshot_erasure_count_dist': False,
+            'n_channels_per_dev'  : 16,
+            'do_gc_after_workload': False,
+            'trace_issue_and_complete': False,
+            'age_workload_class': 'NoOp',
+            'aging_appconfs': None,
+            'stop_sim_on_bytes': 'inf',
+            'log_group_factor': 1, # So N=8, K=8
+            })
+
+        return local_dict
 
 def get_testname_rwmode(testname):
     items = testname.split('_')
