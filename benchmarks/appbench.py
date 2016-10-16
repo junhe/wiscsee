@@ -175,7 +175,7 @@ def run_from_para_dict_json():
 
         print 'keep', testname
 
-        para['stop_sim_on_bytes'] = 1*MB
+        para['stop_sim_on_bytes'] = 2*GB
 
         execute_simulation(para)
 
