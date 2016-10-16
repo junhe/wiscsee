@@ -142,6 +142,27 @@ def run_on_real_dev(para):
     obj.main()
 
 
+def collect_para_dicts():
+    expname = 'mydefaultexpname'
+    expnames = [
+            # value is a exp_rel_path
+            'rocksdb-reqscale',
+            'leveldb-reqscale-001',
+            'sqlitewal-reqscale-240000-inserts-3',
+            'sqliterb-reqscale-240000-insertions-4',
+            'varmail-reqscale-002',
+           ]
+    rule = 'integration'
+
+    paras = []
+    for para in filesim.ParaDict(expname=expname,
+            trace_expnames=expnames, rule=rule):
+        pprint.pprint( para )
+        paras.append(para)
+
+    utils.dump_json({'para_dicts': paras}, 'integration-para-dicts.json')
+
+
 def simulate_from_event_files(app=None, rule=None, expname=None):
     if app == "" or rule == "" or expname == "":
         print 'app/rule is not set'
