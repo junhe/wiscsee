@@ -1,4 +1,7 @@
 
+runlocalbwsim:
+	sudo python -m benchmarks.appbench -t 'run_from_para_dict_json()'
+
 simevents:
 	sudo python -m benchmarks.appbench -t 'simulate_from_event_files(app="$(app)", rule="$(rule)", expname="$(expname)")'
 

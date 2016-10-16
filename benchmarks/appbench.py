@@ -163,6 +163,23 @@ def collect_para_dicts():
     utils.dump_json({'para_dicts': paras}, 'integration-para-dicts.json')
 
 
+def run_from_para_dict_json():
+    para_dicts = utils.load_json('./integration-para-dicts.json')['para_dicts']
+
+    for para in para_dicts:
+        testname = para['testname']
+
+        if '_r_' in testname:
+            print 'skip', testname
+            continue
+
+        print 'keep', testname
+
+        para['stop_sim_on_bytes'] = 1*MB
+
+        execute_simulation(para)
+
+
 def simulate_from_event_files(app=None, rule=None, expname=None):
     if app == "" or rule == "" or expname == "":
         print 'app/rule is not set'
