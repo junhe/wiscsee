@@ -629,7 +629,7 @@ proc_settings = {
         'seq_put':
             {'name': 'Sqlite',
              'pattern': 'sequential_put',
-             'n_insertions': 20*MILLION,
+             'n_insertions': 100*MILLION,
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
@@ -650,7 +650,7 @@ proc_settings = {
         'seq_put_formix':
             {'name': 'Sqlite',
              'pattern': 'sequential_put',
-             'n_insertions': 20*MILLION,
+             'n_insertions': 100*MILLION,
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
@@ -676,7 +676,7 @@ proc_settings = {
         'seq_put':
             {'name': 'Sqlite',
              'pattern': 'sequential_put',
-             'n_insertions': 20*MILLION,
+             'n_insertions': 100*MILLION,
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
@@ -697,7 +697,7 @@ proc_settings = {
         'seq_put_formix':
             {'name': 'Sqlite',
              'pattern': 'sequential_put',
-             'n_insertions': 20*MILLION,
+             'n_insertions': 100*MILLION,
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
