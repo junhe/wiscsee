@@ -681,7 +681,7 @@ proc_settings = {
              'max_key': 240000,
              'do_strace': False,
              'mem_limit_in_bytes': 1*GB,
-             'journal_mode': 'WAL'
+             'journal_mode': 'DELETE'
             },
 
         'rand_put':
@@ -692,7 +692,7 @@ proc_settings = {
              'max_key': 240000,
              'do_strace': False,
              'mem_limit_in_bytes': 1*GB,
-             'journal_mode': 'WAL'
+             'journal_mode': 'DELETE'
             },
         'seq_put_formix':
             {'name': 'Sqlite',
@@ -702,7 +702,7 @@ proc_settings = {
              'max_key': 240000,
              'do_strace': False,
              'mem_limit_in_bytes': 1*GB,
-             'journal_mode': 'WAL'
+             'journal_mode': 'DELETE'
             },
 
         'rand_put_formix':
@@ -713,7 +713,7 @@ proc_settings = {
              'max_key': 240000,
              'do_strace': False,
              'mem_limit_in_bytes': 1*GB,
-             'journal_mode': 'WAL'
+             'journal_mode': 'DELETE'
             },
 
     }, ### Sqlite
