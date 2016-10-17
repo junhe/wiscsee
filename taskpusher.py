@@ -31,19 +31,28 @@ total_tasks = len(para_list)
 
 async_ret = []
 for para_dict in para_list:
-    if para_dict['testname'].startswith('sqliteRB'):
-        for d in para_dict['appconfs']:
-            d['journal_mode'] = 'DELETE'
-        para_dict['sort_block_trace'] = False
-    else:
+    testname = para_dict['testname']
+
+    # skip non-sqlite
+    if not (testname.startswith('sqliteRB') or testname.startswith('sqliteWAL')):
         continue
 
-    para_dict['expname'] = 'wear-all-apps-sqliterb-makeup7'
+    # set sqliteRB and sqliteWAL to both have smaller insertions
+    for d in para_dict['appconfs']:
+        d['n_insertions'] = 60000000
+    para_dict['sort_block_trace'] = False
+    para_dict['do_dump_lpn_sem'] = False
 
-    # ret = exec_sim.delay(para_dict)
+    # set sqliteRB to be really sqliteRB
+    if testname.startswith('sqliteRB'):
+        for d in para_dict['appconfs']:
+            d['journal_mode'] = 'DELETE'
+
+
+    para_dict['expname'] = 'wear-sqliterb-sqlitewal-makeup-nosem2'
+
     ret = run_on_real_dev_by_para.delay(para_dict)
     async_ret.append(ret)
-
 
 timepast = 0
 while True:
