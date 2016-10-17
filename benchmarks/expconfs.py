@@ -807,7 +807,7 @@ class ParameterPool(object):
                 'only_get_traffic': [False],
                 'trace_issue_and_complete': [False],
                 'gen_ncq_depth_table': [False],
-                'do_dump_lpn_sem': [True],
+                'do_dump_lpn_sem': [False],
                 'rm_blkparse_events': [True],
                 'sort_block_trace': [False],
             })
