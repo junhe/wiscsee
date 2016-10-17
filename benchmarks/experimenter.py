@@ -287,6 +287,15 @@ def get_shared_para_dict(expname, lbabytes):
             }
     return para_dict
 
+def get_shared_nolist_para_dict(expname, lbabytes):
+    d = get_shared_para_dict(expname, lbabytes)
+    dd = {}
+    for k, vlist in d.items():
+        assert len(vlist) == 1
+        dd[k] = vlist[0]
+
+    return dd
+
 
 class StatsMixin(object):
     def write_stats(self):
