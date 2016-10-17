@@ -376,7 +376,11 @@ class Ftl(object):
     def snapshot_user_traffic(self):
         self.recorder.append_to_value_list('ftl_func_user_traffic',
                 {'timestamp': self.env.now/float(SEC),
-                 'write_traffic_size': self.written_bytes})
+                 'write_traffic_size': self.written_bytes,
+                 'read_traffic_size': self.read_bytes,
+                 'discard_traffic_size': self.discarded_bytes,
+                 },
+                )
 
     def snapshot_erasure_count_dist(self):
         dist = self.block_pool.get_erasure_count_dist()

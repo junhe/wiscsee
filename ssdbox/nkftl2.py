@@ -2116,7 +2116,11 @@ class Ftl(ftlbuilder.FtlBuilder):
     def snapshot_user_traffic(self):
         self.recorder.append_to_value_list('ftl_func_user_traffic',
                 {'timestamp': self.env.now/float(SEC),
-                 'write_traffic_size': self.written_bytes})
+                 'write_traffic_size': self.written_bytes,
+                 'read_traffic_size': self.read_bytes,
+                 'discard_traffic_size': self.discarded_bytes,
+                 },
+                )
 
 def split_ext(n_pages_in_zone, extent):
     if extent.lpn_count == 0:
