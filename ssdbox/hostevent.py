@@ -108,7 +108,8 @@ class EventIterator(object):
                 self.event_file_column_names, items))
         dic = dict(zip(self.event_file_column_names, items))
         dic['sector_size'] = self.sector_size
-        dic['pre_wait_time'] = float(dic['pre_wait_time'])
+        if dic['pre_wait_time'] != 'NA':
+            dic['pre_wait_time'] = float(dic['pre_wait_time'])
 
         dic['operation'] = self._convert(dic['operation'])
 
