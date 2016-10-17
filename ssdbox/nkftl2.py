@@ -1801,6 +1801,7 @@ class Ftl(ftlbuilder.FtlBuilder):
     def read_ext(self, extent):
         req_size = extent.lpn_count * self.conf.page_size
         self.recorder.add_to_general_accumulater('traffic', 'read', req_size)
+        self.read_bytes += req_size
         if self.read_bytes > self.pre_read_bytes + self.display_interval:
             print 'Read (MB)', self.pre_read_bytes / MB, 'reading', round(float(req_size) / MB, 2)
             sys.stdout.flush()
