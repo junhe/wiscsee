@@ -378,7 +378,7 @@ proc_settings = {
         'seq_put':
             {'name': 'Sqlite',
              'pattern': 'sequential_put',
-             'n_insertions': 240000,
+             'n_insertions': 240000*8, # 240000=400MB
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
@@ -389,7 +389,7 @@ proc_settings = {
         'rand_put':
             {'name': 'Sqlite',
              'pattern': 'random_put',
-             'n_insertions': 240000,
+             'n_insertions': 400000, #240000=1.8GB
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
@@ -447,7 +447,7 @@ proc_settings = {
         'seq_put':
             {'name': 'Sqlite',
              'pattern': 'sequential_put',
-             'n_insertions': 240000,
+             'n_insertions': 400000, #240000=2GB
              'commit_period': 10,
              'max_key': 240000,
              'do_strace': False,
