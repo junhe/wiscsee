@@ -164,7 +164,7 @@ def collect_para_dicts():
         filesystem = para['filesystem']
         ncq_median = medians[testname][filesystem]
 
-        para['ssd_ncq_depth'] = ncq_median
+        para['ssd_ncq_depth'] = int(ncq_median)
 
         paras.append(para)
 
