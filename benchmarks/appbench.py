@@ -147,18 +147,25 @@ def collect_para_dicts():
     expname = 'mydefaultexpname'
     expnames = [
             # value is a exp_rel_path
-            'rocksdb-reqscale',
-            'leveldb-reqscale-001',
-            'sqlitewal-reqscale-240000-inserts-3',
-            'sqliterb-reqscale-240000-insertions-4',
-            'varmail-reqscale-002',
+            'leveldb-longer-for-gc-sorttrace',
+            'rocksdb-longer-for-gc-sorttrace2',
+            'sqlitewal-longer-for-gc-sorttrace',
+            'sqliterb-longer-for-gc-sorttrace',
+            'varmail-reqscale-002'
            ]
     rule = 'integration'
+
+    medians = load_json('./ncq-medians-dict.json')
 
     paras = []
     for para in filesim.ParaDict(expname=expname,
             trace_expnames=expnames, rule=rule):
-        pprint.pprint( para )
+        testname = para['testname']
+        filesystem = para['filesystem']
+        ncq_median = medians[testname][filesystem]
+
+        para['ssd_ncq_depth'] = ncq_median
+
         paras.append(para)
 
     utils.dump_json({'para_dicts': paras}, 'integration-para-dicts.json')

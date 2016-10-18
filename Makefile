@@ -1,3 +1,5 @@
+collectparadicts:
+	sudo python -m benchmarks.appbench -t 'collect_para_dicts()'
 
 runlocalbwsim:
 	sudo python -m benchmarks.appbench -t 'run_from_para_dict_json()'
