@@ -304,7 +304,7 @@ class IntegrationParaIter(object):
             'enable_simulation': True,
             'f2fs_gc_after_workload': False,
             'segment_bytes'  : 1*MB, # thus N=8
-            'max_log_blocks_ratio': 0.1,
+            'max_log_blocks_ratio': 0.07,
             'n_online_cpus'  : 'all',
             'over_provisioning': 1.5, # 1.28 is a good number
             'gc_high_ratio'    : 0.9,
@@ -324,7 +324,7 @@ class IntegrationParaIter(object):
             'age_workload_class': 'NoOp',
             'aging_appconfs': None,
             'stop_sim_on_bytes': 'inf',
-            'log_group_factor': 1, # So N=8, K=8
+            'log_group_factor': 10, # So N=8, K=80. max log blocks =800
             })
 
         return local_dict
