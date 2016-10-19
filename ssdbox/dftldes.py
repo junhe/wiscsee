@@ -1434,7 +1434,9 @@ class Cleaner(object):
             )
 
         # limit number of cleaner processes
-        self.n_cleaners = self.conf.n_channels_per_dev * 64
+        # self.n_cleaners = self.conf.n_channels_per_dev * 64
+        self.n_cleaners = self.conf['n_gc_procs']
+        print 'n_cleaners:', self.n_cleaners
         self._block_cleaner_res = simpy.Resource(self.env, capacity=self.n_cleaners)
 
         self.n_victim_per_batch = self.conf.n_channels_per_dev * 2

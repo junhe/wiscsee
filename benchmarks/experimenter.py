@@ -144,6 +144,7 @@ class Experimenter(object):
             self.conf['do_gc_after_workload'] = self.para.do_gc_after_workload
             self.conf.cache_mapped_data_bytes = int(self.para.cache_mapped_data_bytes)
             self.conf['write_gc_log'] = self.para.write_gc_log
+            self.conf['n_gc_procs'] = self.para.n_gc_procs
 
         elif self.para.ftl == 'nkftl2':
             self.conf['simulator_class'] = 'SimulatorDESNew'
@@ -160,7 +161,7 @@ class Experimenter(object):
             self.conf['snapshot_valid_ratios'] = False
             self.conf['snapshot_erasure_count_dist'] = self.para.snapshot_erasure_count_dist
             self.conf['do_gc_after_workload'] = self.para.do_gc_after_workload
-
+            self.conf['n_gc_procs'] = self.para.n_gc_procs
 
         elif self.para.ftl == 'dftlext':
             self.conf['simulator_class'] = 'SimulatorNonDESSpeed'
@@ -284,6 +285,7 @@ def get_shared_para_dict(expname, lbabytes):
             'do_dump_lpn_sem': [True],
             'rm_blkparse_events': [False],
             'sort_block_trace': [True],
+            'n_gc_procs': [16],
             }
     return para_dict
 
