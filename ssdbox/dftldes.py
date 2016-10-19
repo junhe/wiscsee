@@ -1884,7 +1884,7 @@ class Config(config.ConfigNCQFTL):
             "cache_entry_bytes": 8, # 4 bytes for lpn, 4 bytes for ppn
             "GC_high_threshold_ratio": 0.95,
             "GC_low_threshold_ratio": 0.9,
-            "over_provisioning": 1.28,
+            "over_provisioning": 1.28, #TODO: this is not used
             "mapping_cache_bytes": None, # cmt: cached mapping table
             "do_not_check_gc_setting": False,
             "write_gc_log": True,
