@@ -176,16 +176,13 @@ def run_from_para_dict_json():
 
     for para in para_dicts:
         testname = para['testname']
+        filesystem = para['filesystem']
+        ftl = para['ftl']
 
-        if '_r_' in testname:
-            print 'skip', testname
-            continue
-
-        print 'keep', testname
-
-        para['stop_sim_on_bytes'] = 2*GB
-
-        execute_simulation(para)
+        if testname == 'sqliteRB_reqscale_w_rand' and filesystem == 'xfs' and ftl == 'nkftl2':
+            pprint.pprint( para )
+            para['stop_sim_on_bytes'] = 3*GB
+            execute_simulation(para)
 
 
 def simulate_from_event_files(app=None, rule=None, expname=None):
