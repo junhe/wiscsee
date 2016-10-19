@@ -27,16 +27,16 @@ async_ret = []
 for para_dict in para_list:
     testname = para_dict['testname']
 
-    # skip read until we also record read traffic size
-    # if '_r_' in testname:
-        # continue
+    if 'sqlite' in testname and 'rand' in testname and para_dict['ftl'] == 'dftldes':
+        para_dict['sort_block_trace'] = False
+        para_dict['expname'] = 'integration-1-gc-proc-really-1'
+        para_dict['stop_sim_on_bytes'] = 3*GB
+        para_dict['n_channels_per_dev'] = 16
+        para_dict['n_gc_procs'] = 1
 
-    para_dict['sort_block_trace'] = False
-    para_dict['expname'] = 'integration-all-180'
-    para_dict['stop_sim_on_bytes'] = 'inf'
-
-    ret = exec_sim.delay(para_dict)
-    async_ret.append(ret)
+        ret = exec_sim.delay(para_dict)
+        async_ret.append(ret)
+        # print testname, para_dict['ftl']
 
 timepast = 0
 while True:
