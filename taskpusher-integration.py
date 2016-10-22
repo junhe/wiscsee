@@ -29,10 +29,13 @@ for para_dict in para_list:
 
     if 'sqlite' in testname and 'rand' in testname and para_dict['ftl'] == 'dftldes':
         para_dict['sort_block_trace'] = False
-        para_dict['expname'] = 'integration-1-gc-proc-really-1'
+        para_dict['expname'] = 'integration-1.1provision-1024cleaners'
         para_dict['stop_sim_on_bytes'] = 3*GB
         para_dict['n_channels_per_dev'] = 16
-        para_dict['n_gc_procs'] = 1
+        para_dict['n_gc_procs'] = 16*64
+        para_dict['gc_high_ratio'] = 0.96
+        para_dict['gc_low_ratio'] = 0.92
+        para_dict['over_provisioning'] = 1.1
 
         ret = exec_sim.delay(para_dict)
         async_ret.append(ret)
