@@ -1,33 +1,22 @@
-GIT Branches
+Doraemon Manual
 -------------------------
 
-- master
-- dev
-- exp.snapshot
+Makefile.py is no longer used. I usually start running experiments
+by Makefile.
 
-exp.snapshot should be the most active branch, where you write code, commit
-before running an experiment. 
+Most of the experiments can be run with `make xxxx`. The implementation
+of the experiment setup is in ./benchmarks/appbench.py. Right now there 
+are only a few functions in appbench.py, so it won't be too hard to run.
 
-Th useful code changes in exp.snapshot will go to dev branch. Here you may
-need to merge commits and split out the useful changes you've made. You don't
-want those trivial experiment-unique settings go to dev (and eventually
-master branch).
+Breifly, `appmixbench_for_rw()` is for running on real device, for example, 
+doing request scale test on SSDs. `execute_simulation` is for running
+traces on SSD simulator.  
 
-You may have different dev branches (dev.try.A, dev.try.B, ...). If you feel 
-good about your dev branch, you can merge it to master. If you have different
-dev branches you want to merge, you may need to resolve conflicts. 
+You can run simulation on multiple nodes by celery. Use `run-celery-on-nodes.py`
+to run celery. Use `./taskpusher-integration.py` to push tasks to workers.
 
-Remeber, exp.snapshot can be messy. dev and master should be clean.
+The traces needed for simulation are in `datahose/localreults` on the MAC.
 
-Try to use only one dev and exp.snapshot for this project. It will be easier.
-
-**Make it beautiful to make it useful!**
-
-
-
-## Branch introduction
-
-- dev.dftlExt: development branch for extent based dftl, which support 
-`sec_write()` and etc.
+The current master branch has the latest code that is used for EuroSys submission.
 
 
