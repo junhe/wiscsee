@@ -14,7 +14,7 @@ from ssdbox.simulator import GcLog
 from ssdbox.ftlsim_commons import Extent, random_channel_id
 from ssdbox.ftlcounter import LpnClassification, get_file_range_table, EventNCQParser
 from ssdbox import hostevent
-from benchmarks.appbench import EventFileSets
+from benchmarks.filesim import EventFileSets
 
 class TestCpuhandler(unittest.TestCase):
     def test_cpu(self):
