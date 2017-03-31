@@ -213,6 +213,7 @@ class Config(dict):
             "simulation_processor"  : 'e2e', # regular, extent
             "stripe_size"           : 4,  # unit: page
             "max_victim_valid_ratio": 0.9,
+            "n_gc_procs"            : 1,
 
             "do_gc_after_workload"  : True,
 
