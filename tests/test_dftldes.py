@@ -2412,37 +2412,35 @@ class TestCleaning4Channel(unittest.TestCase):
         cleaner = dftl.get_cleaner()
 
         victims = ssdbox.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
-        datablockcleaner = ssdbox.dftldes.DataBlockCleaner(
-            conf = objs['conf'],
-            flash = objs['flash_controller'],
-            oob = oob,
-            block_pool = block_pool,
-            mappings = mappings,
-            rec = objs['rec'],
-            env = objs['env'])
 
         n_data_used_blocks = len(block_pool.data_usedblocks)
 
-
         n = conf.n_pages_per_block
+        self.assertEqual(env.now, 0)
         yield env.process(dftl.write_ext(Extent(0, n)))
+        # read a translation page and write n pages to the same channel
+        self.assertEqual(env.now, time_read_page + time_program_page * n)
         yield env.process(dftl.write_ext(Extent(0, n)))
+        # the translation table is in memory, you only need to program pages
+        self.assertEqual(env.now, time_read_page + 2 * time_program_page * n)
         yield env.process(dftl.write_ext(Extent(0, n)))
+        # the translation table is in memory, you only need to program pages
+        self.assertEqual(env.now, time_read_page + 3 * time_program_page * n)
         yield env.process(dftl.write_ext(Extent(0, n)))
-
-        # yield env.process(dftl.write_ext(Extent(0, n)))
-        # yield env.process(dftl.write_ext(Extent(0, n)))
-        # yield env.process(dftl.write_ext(Extent(0, n)))
-        # yield env.process(dftl.write_ext(Extent(0, n)))
+        # the translation table is in memory, you only need to program pages
+        self.assertEqual(env.now, time_read_page + 4 * time_program_page * n)
 
         victim_blocks = list(victims.iterator_verbose())
+        # you should have 3 blocks because you overwrote the same logical
+        # block 3 times
+        self.assertEqual(len(victim_blocks), 3)
 
         valid_ratio, block_type, victim_block = victim_blocks[0]
 
         s = env.now
         yield env.process(cleaner.clean())
         if cleaner.n_cleaners == 1:
-            self.assertEqual(env.now, s + time_erase_block * 4)
+            self.assertEqual(env.now, s + time_erase_block * 3) #<--------
         elif cleaner.n_cleaners >= 4:
             self.assertEqual(env.now, s + time_erase_block)
 

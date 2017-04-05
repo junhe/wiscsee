@@ -1,5 +1,5 @@
 testone:
-	./run_testclass.sh tests.test_parameterpool.TestParameterPool
+	./run_testclass.sh tests.test_dftldes.TestCleaning4Channel
 
 collectparadicts:
 	sudo python -m benchmarks.appbench -t 'collect_para_dicts()'
