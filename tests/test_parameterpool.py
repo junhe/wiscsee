@@ -7,12 +7,9 @@ class TestParameterPool(unittest.TestCase):
     def test_init(self):
         pool = ParameterPool(
                 expname = 'myexpname',
-                testname = 'rocksdb-reqscale-r-seq',
+                testname = ['rocksdb_reqscale_r_seq'],
                 filesystem = ['ext4', 'f2fs']
                 )
-
-
-
 
 
 
