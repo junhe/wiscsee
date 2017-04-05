@@ -70,6 +70,7 @@ class Experimenter(object):
         self.conf["n_online_cpus"] = 'all'
 
         self.conf['linux_ncq_depth'] = 31
+        self.conf['sort_block_trace'] = True
 
     def setup_workload(self):
         self.conf['workload_class'] = 'NoOp'
