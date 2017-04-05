@@ -1,6 +1,9 @@
 collectparadicts:
 	sudo python -m benchmarks.appbench -t 'collect_para_dicts()'
 
+testmisc:
+	./run_testclass.sh tests.misc_test.TestEventFileSets
+
 runlocalbwsim:
 	sudo python -m benchmarks.appbench -t 'run_from_para_dict_json()'
 

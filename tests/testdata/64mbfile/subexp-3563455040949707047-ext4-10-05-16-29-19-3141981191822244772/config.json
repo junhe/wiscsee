@@ -1,0 +1,250 @@
+{
+    "hash": 3141981191822244772, 
+    "snapshot_interval": 100000000.0, 
+    "high_log_block_ratio": 0.4, 
+    "wear_leveling_diff": 10, 
+    "high_data_block_ratio": 0.4, 
+    "workload_conf": {
+        "filename": "test.file", 
+        "generating_func": "self.generate_random_workload", 
+        "iterations": 1, 
+        "chunk_size": 524288, 
+        "n_col": 5, 
+        "chunk_count": 8
+    }, 
+    "expname": "64mbfile", 
+    "do_not_check_gc_setting": true, 
+    "verbose_level": -1, 
+    "cache_entry_bytes": 8, 
+    "record_bad_victim_block": false, 
+    "translation_page_entry_bytes": 4, 
+    "exp_parameters": {
+        "gc_high_ratio": 0.9, 
+        "f2fs_ipu_policy": 16, 
+        "aging_appconfs": null, 
+        "cache_mapped_data_bytes": 2147483648, 
+        "snapshot_interval": 100000000.0, 
+        "do_ncq_depth_time_line": true, 
+        "wear_leveling_diff": 10, 
+        "ssd_ncq_depth": 1, 
+        "dirty_bytes": 4294967296, 
+        "run_seconds": null, 
+        "expname": "64mbfile", 
+        "segment_bytes": 2097152, 
+        "gc_low_ratio": 0.0, 
+        "n_pages_per_block": 64, 
+        "stripe_size": 1, 
+        "enable_blktrace": true, 
+        "over_provisioning": 32, 
+        "ext4hasjournal": true, 
+        "workload_class": "AppMix", 
+        "not_check_gc_setting": true, 
+        "age_workload_class": "NoOp", 
+        "do_wear_leveling": false, 
+        "ftl": "ftlcounter", 
+        "appconfs": [
+            {
+                "name": "RocksDB", 
+                "mem_limit_in_bytes": 10737418240, 
+                "do_strace": false, 
+                "num": 10000000, 
+                "benchmarks": "overwrite,overwrite,overwrite", 
+                "use_existing_db": 0
+            }
+        ], 
+        "f2fs_min_fsync_blocks": 8, 
+        "device_path": "/dev/sdc1", 
+        "enable_simulation": true, 
+        "do_gc_after_workload": false, 
+        "linux_ncq_depth": 31, 
+        "n_online_cpus": "all", 
+        "lbabytes": 2147483648, 
+        "fs_discard": true, 
+        "ext4datamode": "ordered", 
+        "n_channels_per_dev": 16, 
+        "only_get_traffic": false, 
+        "snapshot_erasure_count_dist": true, 
+        "f2fs_gc_after_workload": false, 
+        "wear_leveling_factor": 2, 
+        "snapshot_valid_ratios": true, 
+        "write_gc_log": true, 
+        "dump_ext4_after_workload": true, 
+        "filesystem": "ext4", 
+        "max_log_blocks_ratio": 100, 
+        "wear_leveling_check_interval": 10000000000
+    }, 
+    "segment_bytes": 2097152, 
+    "do_gc_after_workload": true, 
+    "sector_size": 512, 
+    "stripe_size": 1, 
+    "ext4": {
+        "make_opts": {
+            "-O": [
+                "^uninit_bg", 
+                "has_journal"
+            ], 
+            "-b": [
+                4096
+            ]
+        }
+    }, 
+    "max_victim_valid_ratio": 0.9, 
+    "perf": {
+        "perf_path": "perf", 
+        "flamegraph_dir": null
+    }, 
+    "dump_ext4_after_workload": true, 
+    "linux_version": "4.5.4", 
+    "flash_config": {
+        "n_chips_per_package": 1, 
+        "n_packages_per_channel": 1, 
+        "n_planes_per_chip": 1, 
+        "t_PROG": 200000, 
+        "n_channels_per_dev": 16, 
+        "t_RC": 0, 
+        "t_R": 20000, 
+        "page_read_time": 20000, 
+        "t_WC": 0, 
+        "n_pages_per_block": 64, 
+        "n_blocks_per_plane": 32768, 
+        "page_size": 2048, 
+        "t_BERS": 1500000.0, 
+        "block_erase_time": 1600000.0, 
+        "page_prog_time": 200000
+    }, 
+    "simulation_processor": "e2e", 
+    "btrfs": {
+        "make_opts": {}
+    }, 
+    "do_fstrim": false, 
+    "dev_padding": 8388608, 
+    "ftl_type": "ftlcounter", 
+    "lba_workload_configs": {}, 
+    "age_workload_class": "NoOp", 
+    "result_dir": "/tmp/results/64mbfile/subexp-3563455040949707047-ext4-10-05-16-29-19-3141981191822244772", 
+    "hybridmapftl": {
+        "low_log_block_ratio": 0.32
+    }, 
+    "workload_src": "WLRUNNER", 
+    "do_wear_leveling": false, 
+    "device_path": "/dev/sdc1", 
+    "enable_simulation": true, 
+    "f2fs": {
+        "sysfs": {
+            "ipu_policy": 16, 
+            "min_fsync_blocks": 8
+        }, 
+        "make_opts": {}
+    }, 
+    "wrap_by_perf": false, 
+    "linux_io_scheduler": "noop", 
+    "linux_ncq_depth": 31, 
+    "fs_mount_point": "/mnt/fsonloop", 
+    "time": "10-05-16-29-19", 
+    "SSDFramework": {
+        "ncq_depth": 1, 
+        "data_cache_max_n_entries": 4096
+    }, 
+    "GC_threshold_ratio": 0.95, 
+    "output_target": "file", 
+    "targetdir": "/tmp/results", 
+    "workload_class": "AppMix", 
+    "mnt_opts": {
+        "ext4": {
+            "discard": {
+                "include_name": false, 
+                "opt_name": "discard", 
+                "value": "discard"
+            }
+        }, 
+        "f2fs": {
+            "discard": {
+                "include_name": false, 
+                "opt_name": "discard", 
+                "value": "discard"
+            }
+        }, 
+        "btrfs": {
+            "discard": {
+                "include_name": false, 
+                "opt_name": "discard", 
+                "value": "discard"
+            }, 
+            "autodefrag": {
+                "include_name": false, 
+                "opt_name": "autodefrag", 
+                "value": "autodefrag"
+            }, 
+            "ssd": {
+                "include_name": false, 
+                "opt_name": "ssd", 
+                "value": "ssd"
+            }
+        }, 
+        "xfs": {
+            "discard": {
+                "include_name": false, 
+                "opt_name": "discard", 
+                "value": "discard"
+            }
+        }
+    }, 
+    "print_when_finished": false, 
+    "aging_workload_config": {
+        "run_seconds": null, 
+        "appconfs": null
+    }, 
+    "simulator_class": "SimulatorNonDESSpeed", 
+    "enable_blktrace": true, 
+    "only_get_traffic": false, 
+    "snapshot_erasure_count_dist": false, 
+    "f2fs_gc_after_workload": false, 
+    "mapping_cache_bytes": 8388608, 
+    "filesystem": "ext4", 
+    "wear_leveling_factor": 2, 
+    "aging_config_key": "aging_workload_config", 
+    "lba_workload_class": "Manual", 
+    "snapshot_valid_ratios": false, 
+    "do_ncq_depth_time_line": true, 
+    "over_provisioning": 1.28, 
+    "workload_conf_key": "workload_config", 
+    "simulator_enable_interval": false, 
+    "workload_config": {
+        "run_seconds": null, 
+        "appconfs": [
+            {
+                "name": "RocksDB", 
+                "mem_limit_in_bytes": 10737418240, 
+                "do_strace": false, 
+                "num": 10000000, 
+                "benchmarks": "overwrite,overwrite,overwrite", 
+                "use_existing_db": 0
+            }
+        ]
+    }, 
+    "event_file_column_names": [
+        "pid", 
+        "action", 
+        "operation", 
+        "offset", 
+        "size", 
+        "timestamp", 
+        "pre_wait_time", 
+        "sync"
+    ], 
+    "aging_config": {
+        "filename": "aging.file", 
+        "generating_func": "self.generate_random_workload", 
+        "iterations": 1, 
+        "chunk_size": 524288, 
+        "n_col": 5, 
+        "chunk_count": 8
+    }, 
+    "n_online_cpus": "all", 
+    "subexpname": "subexp-3563455040949707047", 
+    "dev_size_mb": 2048, 
+    "tmpfs_mount_point": "/mnt/tmpfs", 
+    "GC_low_threshold_ratio": 0.9, 
+    "wear_leveling_check_interval": 10000000000, 
+    "process_queue_depth": 32
+}
