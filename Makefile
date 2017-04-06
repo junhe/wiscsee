@@ -1,5 +1,5 @@
 testone:
-	./run_testclass.sh tests.test_dftldes.TestCleaning4Channel
+	./run_testclass.sh tests.test_dftldes.TestLevelingWear
 
 collectparadicts:
 	sudo python -m benchmarks.appbench -t 'collect_para_dicts()'
