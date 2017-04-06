@@ -61,7 +61,6 @@ def on_fs_config(conf):
         }
 
 
-@unittest.skip('This does not work with pypy.')
 class TestWorkflow(unittest.TestCase):
     def test_init(self):
         conf = create_config()
@@ -103,7 +102,6 @@ class TestWorkflow(unittest.TestCase):
         wf = Workflow(conf)
         wf.run_simulator([ctrl_event, event])
 
-    @unittest.skipUnless(TESTALL == True, "Skip unless we want to test all")
     def test_on_fs_run_and_sim(self):
         conf = create_config()
         on_fs_config(conf)

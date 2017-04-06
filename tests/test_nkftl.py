@@ -2345,23 +2345,21 @@ def create_loggroup2_one_channel():
 
 
 class TestLogGroup2(unittest.TestCase):
-    @unittest.skip("")
     def test_next_ppns_in_channel(self):
         blockpool, loggroup = create_loggroup2()
 
-        found, ppns = loggroup._next_ppns_in_channel(n=1)
+        ppns = loggroup._next_ppns_in_channel(n=1, channel_id=0)
 
-        self.assertEqual(found, True)
-        self.assertEqual(len(ppns), 1)
+        # it can only get you page when some block has been allocated.
+        # So you need to use next_ppns_in_channel_with_allocation
+        self.assertEqual(len(ppns), 0)
 
-    @unittest.skip("")
     def test_next_ppns_in_channel_failure(self):
         blockpool, loggroup = create_loggroup2()
         n_pages_per_block = blockpool.n_pages_per_block
 
-        found, ppns = loggroup._next_ppns_in_channel(n=n_pages_per_block + 1)
+        ppns = loggroup._next_ppns_in_channel(n=n_pages_per_block + 1, channel_id=0)
 
-        self.assertEqual(found, False)
         self.assertEqual(len(ppns), 0)
 
     def test_incr_channel(self):
@@ -2905,7 +2903,7 @@ class TestConcurrency_DataGroupGC(AssertFinishTestCase, WriteNCheckMixin):
         print 'end......'
 
 
-@unittest.skip("Takes too long")
+@unittest.skipUnless(TESTALL == True, "Takes too long")
 class TestConcurrency_RandomWritesBroad(AssertFinishTestCase, WriteNCheckMixin):
     def test_write(self):
         ftl, conf, rec, env = create_nkftl()

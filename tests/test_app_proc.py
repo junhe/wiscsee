@@ -54,17 +54,6 @@ class TestVarmail(unittest.TestCase):
         proc.run()
         proc.wait()
 
-    @unittest.skip('too long')
-    def test_varmail_kill(self):
-        proc = VarmailProc('/tmp/varmail_tmp_lj23lj', 191, 8)
-        proc.run()
-        time.sleep(5)
-        proc.terminate()
-
-        while True:
-            time.sleep(1)
-            utils.shcmd('ps -ef|grep filebench')
-
 def main():
     unittest.main()
 

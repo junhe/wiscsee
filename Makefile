@@ -1,5 +1,5 @@
 testone:
-	./run_testclass.sh tests.test_dftldes.TestLevelingWear
+	./run_testclass.sh tests.test_nkftl.TestLogGroup2
 
 collectparadicts:
 	sudo python -m benchmarks.appbench -t 'collect_para_dicts()'

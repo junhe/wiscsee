@@ -15,6 +15,7 @@ from ssdbox.ftlsim_commons import Extent, random_channel_id
 from ssdbox.ftlcounter import LpnClassification, get_file_range_table, EventNCQParser
 from ssdbox import hostevent
 from benchmarks.filesim import EventFileSets
+from commons import *
 
 class TestCpuhandler(unittest.TestCase):
     def test_cpu(self):
@@ -132,7 +133,7 @@ class TestImportPyreuse(unittest.TestCase):
         pyreuse.helpers.shcmd("echo 33333")
 
 class TestClassifyGcLOG(unittest.TestCase):
-    @unittest.skip("Need real device mounted")
+    @unittest.skipUnless(TESTALL == True, "Need real device mounted")
     def test(self):
         gclog = GcLog(
                 device_path='/dev/sdc1',
@@ -168,7 +169,7 @@ class TestGroupToBatches(unittest.TestCase):
                                        [3, 4, 5],
                                        [6]])
 
-@unittest.skip('need real device')
+@unittest.skipUnless(TESTALL == True, 'need real device')
 class TestLpnClassification(unittest.TestCase):
     def test(self):
         classifier = LpnClassification(
