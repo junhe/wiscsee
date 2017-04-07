@@ -4,6 +4,7 @@ from workflow import *
 import ssdbox
 from utilities import utils
 from ssdbox.hostevent import Event, ControlEvent
+from benchmarks import expconfs, appbench
 
 import os
 
@@ -176,6 +177,30 @@ class TestWorkflowWithSimpleRW(unittest.TestCase):
 
         datapath = os.path.join(conf["fs_mount_point"], 'datafile')
         self.assertTrue(os.path.exists(datapath))
+
+
+class TestRequestScale(unittest.TestCase):
+    def test(self):
+        para_pool = expconfs.ParameterPool(
+                expname = "tmptest",
+                testname = ["sqliteWAL_reqscale_w_rand"],
+                filesystem = ['ext4']
+                )
+
+        for para in para_pool:
+            appbench.run_on_real_dev(para)
+
+class TestUniformDataLifetime(unittest.TestCase):
+    def test(self):
+        para_pool = expconfs.ParameterPool(
+                expname = "tmptest",
+                testname = ["sqliteWAL_wearlevel_w_rand"],
+                filesystem = ['ext4']
+                )
+
+        for para in para_pool:
+            appbench.run_on_real_dev(para)
+
 
 if __name__ == '__main__':
     unittest.main()

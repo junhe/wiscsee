@@ -1,6 +1,8 @@
 testworkflow:
 	#./run_testclass.sh tests.test_workflow.TestWorkflow
-	./run_testclass.sh tests.test_workflow.TestWorkflowWithSimpleRW
+	#./run_testclass.sh tests.test_workflow.TestWorkflowWithSimpleRW
+	#./run_testclass.sh tests.test_workflow.TestRequestScale
+	./run_testclass.sh tests.test_workflow.TestUniformDataLifetime
 
 testone:
 	#./run_testclass.sh tests.misc_test.TestClassifyGcLOG
