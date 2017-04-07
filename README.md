@@ -1,3 +1,35 @@
+Release Notes
+-------------------------
+
+Requirements from users' perspective
+
+- Specify a command to run, WiscSee will run it, collect trace and simulate it.
+    - Results will include raw block trace, events, 
+
+
+In general
+- Allow choosing file systems
+- Allow specify workloads
+
+
+- Request Scale
+    - Output the table with timestamp, queue depth, ...
+- Locality
+    - Report the miss ratio
+- Aligned Sequentiality
+    - Report the unaligned ratio
+- Grouping by Death Time
+    - Report the snapshots of valid ratios
+- Uniform Data Lifetime
+    - The raw block trace should be enough
+
+TODO:
+
+- Use FIO as the workload, get all outputs for all rules
+- Remove useless workloads
+- Remove useless setup codes
+
+
 Doraemon Manual
 -------------------------
 
