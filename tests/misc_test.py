@@ -133,7 +133,7 @@ class TestImportPyreuse(unittest.TestCase):
         pyreuse.helpers.shcmd("echo 33333")
 
 class TestClassifyGcLOG(unittest.TestCase):
-    @unittest.skipUnless(TESTALL == True, "Need real device mounted")
+    @unittest.skip("Need real device mounted")
     def test(self):
         gclog = GcLog(
                 device_path='/dev/sdc1',
@@ -169,7 +169,7 @@ class TestGroupToBatches(unittest.TestCase):
                                        [3, 4, 5],
                                        [6]])
 
-@unittest.skipUnless(TESTALL == True, 'need real device')
+@unittest.skip('need real device')
 class TestLpnClassification(unittest.TestCase):
     def test(self):
         classifier = LpnClassification(

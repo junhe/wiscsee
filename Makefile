@@ -1,5 +1,8 @@
 testone:
-	./run_testclass.sh tests.test_nkftl.TestLogGroup2
+	#./run_testclass.sh tests.misc_test.TestClassifyGcLOG
+	#./run_testclass.sh tests.test_nkftl.TestLogGroup2
+	#./run_testclass.sh tests.test_workflow.TestWorkflow
+	./run_testclass.sh tests._workrunner.test_workload.TestPatternSuite
 
 collectparadicts:
 	sudo python -m benchmarks.appbench -t 'collect_para_dicts()'

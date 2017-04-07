@@ -39,7 +39,7 @@ class Event(HostEventBase):
         self.timestamp = timestamp
         self.pre_wait_time = pre_wait_time
         self.action = action
-        assert action in ('D', 'C')
+        assert action in ('D', 'C'), "action:{}".format(action)
 
         assert self.offset % sector_size == 0,\
             "offset {} is not aligned with sector size {}.".format(

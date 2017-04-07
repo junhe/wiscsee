@@ -229,7 +229,12 @@ class WorkloadRunner(object):
             # strat blktrace
             # This is only for making and mounting file system, because we
             # want to separate them with workloads.
-            self.blktracer_prepfs.start_tracing_and_collecting()
+            if self.conf['trace_issue_and_complete'] is True:
+                trace_filter=['issue', 'complete']
+            else:
+                trace_filter=['issue']
+
+            self.blktracer_prepfs.start_tracing_and_collecting(trace_filter=trace_filter)
             time.sleep(1)
             while self.blktracer_prepfs.proc == None:
                 print 'Waiting for blktrace to start.....'
@@ -248,11 +253,6 @@ class WorkloadRunner(object):
             self.blktracer_prepfs.stop_tracing_and_collecting()
             time.sleep(1)
             self.blktracer_prepfs.create_event_file_from_blkparse()
-
-            if self.conf['trace_issue_and_complete'] is True:
-                trace_filter=['issue', 'complete']
-            else:
-                trace_filter=['issue']
 
             self.blktracer.start_tracing_and_collecting(trace_filter=trace_filter)
 
@@ -285,7 +285,7 @@ class WorkloadRunner(object):
             self.blktracer.stop_tracing_and_collecting()
             utils.shcmd("sync")
             self.blktracer.create_event_file_from_blkparse()
-            self.remove_raw_trace()
+            # self.remove_raw_trace()
             return self.get_event_iterator()
         finally:
             # always try to clean up the blktrace processes

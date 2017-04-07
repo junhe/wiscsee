@@ -203,6 +203,8 @@ class Config(dict):
             # directmap, blockmap, pagemap, hybridmap, dftl2, tpftl, nkftl
             "ftl_type"              : "nkftl2",
             "sector_size"           : 512,
+            "sort_block_trace"      : True,
+            "trace_issue_and_complete": False,
 
             ############## For ssdbox ######
             "enable_simulation"     : True,
