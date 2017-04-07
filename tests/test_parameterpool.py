@@ -7,7 +7,7 @@ class TestParameterPool(unittest.TestCase):
     def test_init(self):
         pool = ParameterPool(
                 expname = 'myexpname',
-                testname = ['rocksdb_reqscale_r_seq'],
+                testname = ['sqliteWAL_reqscale_w_rand'],
                 filesystem = ['ext4', 'f2fs']
                 )
 
