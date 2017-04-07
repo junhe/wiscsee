@@ -207,6 +207,39 @@ class FIONEW(Workload):
         pass
 
 
+class SimpleRandReadWrite(Workload):
+    def __init__(self, confobj, workload_conf_key = None):
+        super(SimpleRandReadWrite, self).__init__(confobj, workload_conf_key)
+
+    def run(self):
+        mnt = self.conf["fs_mount_point"]
+        datafile = os.path.join(mnt, "datafile")
+        region = 2 * MB
+        chunksize = 64 * KB
+        n_chunks = region / chunksize
+        chunkids = range(n_chunks)
+
+        buf = "a" * chunksize
+        f = open(datafile, "w+")
+        random.shuffle(chunkids)
+        for chunkid in chunkids:
+            offset = chunkid * chunksize
+            f.seek(offset)
+            f.write(buf)
+            os.fsync(f)
+
+        random.shuffle(chunkids)
+        for chunkid in chunkids:
+            offset = chunkid * chunksize
+            f.seek(offset)
+            buf = f.read()
+            os.fsync(f)
+
+        f.close()
+
+    def stop(self):
+        pass
+
 class PatternSuite(Workload):
     def __init__(self, confobj, workload_conf_key = None):
         super(PatternSuite, self).__init__(confobj, workload_conf_key)

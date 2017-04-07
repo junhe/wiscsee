@@ -780,8 +780,6 @@ class ParameterPool(object):
         self.para_dicts = []
 
         for name in testname:
-            print '-=----'
-            print name
             func = eval('self.{}'.format(name))
             func(name)
 
