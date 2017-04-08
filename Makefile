@@ -7,7 +7,8 @@ testworkflow:
 	#./run_testclass.sh tests.test_workflow.TestAlignment
 	#./run_testclass.sh tests.test_workflow.TestTraceOnly
 	#./run_testclass.sh tests.test_workflow.Test_TraceAndSimulateNKFTL
-	./run_testclass.sh tests.test_workflow.Test_TraceAndSimulateNKFTL
+	#./run_testclass.sh tests.test_workflow.Test_TraceAndSimulateNKFTL
+	./run_testclass.sh tests.test_workflow.Test_TraceOnly2
 
 testone:
 	#./run_testclass.sh tests.misc_test.TestClassifyGcLOG

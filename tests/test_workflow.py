@@ -185,44 +185,20 @@ class TestGrouping(unittest.TestCase):
 
 
 
+class Test_TraceOnly2(unittest.TestCase):
+    def test_run(self):
+        class LocalExperimenter(experimenter.Experimenter):
+            def setup_workload(self):
+                self.conf['workload_class'] = "SimpleRandReadWrite"
 
+        para = experimenter.get_shared_nolist_para_dict("test_exp_TraceOnly2", 16*MB)
+        para['device_path'] = "/dev/loop0"
+        para['enable_simulation'] = False
+        para['enable_blktrace'] = True
 
-
-class TestTraceOnly(unittest.TestCase):
-    def create_config(self):
-        conf = ssdbox.dftldes.Config()
-        conf['enable_simulation'] = False
-        conf['enable_blktrace'] = True
-
-        utils.set_exp_metadata(conf, save_data = True,
-                expname = 'test_expname_TtestTraceOnly_xjjjsdj23',
-                subexpname = 'test_subexpname')
-
-        logicsize_mb = 16
-
-        # environment
-        conf['device_path'] = "/dev/loop0"
-        conf['dev_size_mb'] = logicsize_mb
-        conf['filesystem'] = "ext4"
-        conf["n_online_cpus"] = 'all'
-
-        # workload
-        conf['workload_class'] = 'SimpleRandReadWrite'
-
-        utils.runtime_update(conf)
-        return conf
-
-    def test_on_fs_run_and_sim(self):
-        conf = self.create_config()
-
-        if os.path.exists(conf['result_dir']):
-            shutil.rmtree(conf['result_dir'])
-
-        wf = Workflow(conf)
-        wf.run()
-
-        datapath = os.path.join(conf["fs_mount_point"], 'datafile')
-        self.assertTrue(os.path.exists(datapath))
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        obj = LocalExperimenter( Parameters(**para) )
+        obj.main()
 
 
 class Test_TraceAndSimulateDFTLDES(unittest.TestCase):
