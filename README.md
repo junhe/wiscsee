@@ -1,15 +1,16 @@
 Release Notes
 -------------------------
 
-Requirements from users' perspective
-
-- Specify a command to run, WiscSee will run it, collect trace and simulate it.
-    - Results will include raw block trace, events, 
-
-
-In general
-- Allow choosing file systems
-- Allow specify workloads
+Demo
+- Run workload and get traces, without simulation
+- Run workload, get trace, and simulate on dftl
+- Run workload, get trace, and simulate on nkftl
+- Generate LBA workload and simulate
+- Specify trace and study request scale
+- Specify trace and study locality
+- Specify trace and study alignment
+- Specify trace and study grouping
+- Specify trace and study data lifetime
 
 
 - Request Scale
@@ -25,7 +26,6 @@ In general
 
 TODO:
 
-- Use FIO as the workload, get all outputs for all rules
 - Remove useless workloads
 - Remove useless setup codes
 

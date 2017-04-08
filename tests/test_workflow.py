@@ -137,8 +137,8 @@ class TestWorkflowWithSimpleRW(unittest.TestCase):
 
         conf['enable_simulation'] = True
 
-        utils.set_exp_metadata(conf, save_data = False,
-                expname = 'test_expname',
+        utils.set_exp_metadata(conf, save_data = True,
+                expname = 'test_expname_TestWorkflowWithSimpleRW_xjhxh32sh81h',
                 subexpname = 'test_subexpname')
 
         conf['ftl_type'] = 'dftldes'
@@ -146,16 +146,12 @@ class TestWorkflowWithSimpleRW(unittest.TestCase):
 
         logicsize_mb = 16
         conf.n_cache_entries = conf.n_mapping_entries_per_page * 16
+        # 1.28 is the over-provisioing ratio
         conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
 
-        utils.runtime_update(conf)
-
-        return conf
-
-    def on_fs_config(self, conf):
         # environment
         conf['device_path'] = "/dev/loop0"
-        conf['dev_size_mb'] = 16
+        conf['dev_size_mb'] = logicsize_mb
         conf['filesystem'] = "ext4"
         conf["n_online_cpus"] = 'all'
 
@@ -163,12 +159,49 @@ class TestWorkflowWithSimpleRW(unittest.TestCase):
 
         # workload
         conf['workload_class'] = 'SimpleRandReadWrite'
+
+        utils.runtime_update(conf)
         return conf
 
     def test_on_fs_run_and_sim(self):
         conf = self.create_config()
-        self.on_fs_config(conf)
         conf['enable_blktrace'] = True
+
+        if os.path.exists(conf['result_dir']):
+            shutil.rmtree(conf['result_dir'])
+
+        wf = Workflow(conf)
+        wf.run()
+
+        datapath = os.path.join(conf["fs_mount_point"], 'datafile')
+        self.assertTrue(os.path.exists(datapath))
+
+class TestTraceOnly(unittest.TestCase):
+    def create_config(self):
+        conf = ssdbox.dftldes.Config()
+        conf['enable_simulation'] = False
+        conf['enable_blktrace'] = True
+
+        utils.set_exp_metadata(conf, save_data = True,
+                expname = 'test_expname_TtestTraceOnly_xjjjsdj23',
+                subexpname = 'test_subexpname')
+
+        logicsize_mb = 16
+
+        # environment
+        conf['device_path'] = "/dev/loop0"
+        conf['dev_size_mb'] = logicsize_mb
+        conf['filesystem'] = "ext4"
+        conf["n_online_cpus"] = 'all'
+
+        # workload
+        conf['workload_class'] = 'SimpleRandReadWrite'
+
+        utils.runtime_update(conf)
+        return conf
+
+    def test_on_fs_run_and_sim(self):
+        conf = self.create_config()
 
         if os.path.exists(conf['result_dir']):
             shutil.rmtree(conf['result_dir'])

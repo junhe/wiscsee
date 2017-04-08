@@ -5,7 +5,7 @@ testworkflow:
 	#./run_testclass.sh tests.test_workflow.TestUniformDataLifetime
 	#./run_testclass.sh tests.test_workflow.TestLocality
 	#./run_testclass.sh tests.test_workflow.TestAlignment
-	./run_testclass.sh tests.test_workflow.TestGrouping
+	./run_testclass.sh tests.test_workflow.TestTraceOnly
 
 testone:
 	#./run_testclass.sh tests.misc_test.TestClassifyGcLOG
