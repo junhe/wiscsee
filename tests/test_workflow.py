@@ -4,7 +4,8 @@ from workflow import *
 import ssdbox
 from utilities import utils
 from ssdbox.hostevent import Event, ControlEvent
-from benchmarks import expconfs, appbench
+from benchmarks import expconfs, appbench, filesim
+from pyreuse.helpers import shcmd
 
 import os
 
@@ -200,6 +201,18 @@ class TestUniformDataLifetime(unittest.TestCase):
 
         for para in para_pool:
             appbench.run_on_real_dev(para)
+
+class TestLocality(unittest.TestCase):
+    def test(self):
+        old_dir = "/tmp/results/sqlitewal-reqscale-240000-inserts-3"
+        if os.path.exists(old_dir):
+            shutil.rmtree(old_dir)
+
+        # copy the data to
+        shcmd("cp -r ./tests/testdata/sqlitewal-reqscale-240000-inserts-3 /tmp/results/")
+
+        for para in filesim.ParaDict("testexpname", ['sqlitewal-reqscale-240000-inserts-3'], "locality"):
+            appbench.execute_simulation(para)
 
 
 if __name__ == '__main__':
