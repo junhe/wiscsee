@@ -6,6 +6,7 @@ testworkflow:
 	#./run_testclass.sh tests.test_workflow.TestLocality
 	#./run_testclass.sh tests.test_workflow.TestAlignment
 	#./run_testclass.sh tests.test_workflow.TestTraceOnly
+	#./run_testclass.sh tests.test_workflow.Test_TraceAndSimulateNKFTL
 	./run_testclass.sh tests.test_workflow.Test_TraceAndSimulateNKFTL
 
 testone:

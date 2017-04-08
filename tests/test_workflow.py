@@ -1,4 +1,5 @@
 import unittest
+import collections
 import shutil
 from workflow import *
 import ssdbox
@@ -6,6 +7,7 @@ from utilities import utils
 from ssdbox.hostevent import Event, ControlEvent
 from benchmarks import expconfs, appbench, filesim
 from pyreuse.helpers import shcmd
+from benchmarks import experimenter
 
 import os
 
@@ -224,126 +226,31 @@ class TestTraceOnly(unittest.TestCase):
 
 
 class Test_TraceAndSimulateDFTLDES(unittest.TestCase):
-    def create_config(self):
-        conf = ssdbox.dftldes.Config()
-        conf['SSDFramework']['ncq_depth'] = 1
+    def test_run(self):
+        class LocalExperimenter(experimenter.Experimenter):
+            def setup_workload(self):
+                self.conf['workload_class'] = "SimpleRandReadWrite"
 
-        conf['flash_config']['n_pages_per_block'] = 64
-        conf['flash_config']['n_blocks_per_plane'] = 2
-        conf['flash_config']['n_planes_per_chip'] = 1
-        conf['flash_config']['n_chips_per_package'] = 1
-        conf['flash_config']['n_packages_per_channel'] = 1
-        conf['flash_config']['n_channels_per_dev'] = 4
-
-        # set ftl
-        # when ssd size is too small, setting may not be good, just don't check it
-        conf['do_not_check_gc_setting'] = True
-        conf.GC_high_threshold_ratio = 0.96
-        conf.GC_low_threshold_ratio = 0
-
-        conf['enable_simulation'] = True
-
-        utils.set_exp_metadata(conf, save_data = True,
-                expname = 'test_expname_TestTraceAndSimulateDFTLDES_xjhxh32sh81h',
-                subexpname = 'test_subexpname')
-
-        conf['ftl_type'] = 'dftldes'
-        conf['simulator_class'] = 'SimulatorDESNew'
-
-        logicsize_mb = 16
-        conf.n_cache_entries = conf.n_mapping_entries_per_page * 16
-        # 1.28 is the over-provisioing ratio
-        conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
-
-        # environment
-        conf['device_path'] = "/dev/loop0"
-        conf['dev_size_mb'] = logicsize_mb
-        conf['filesystem'] = "ext4"
-        conf["n_online_cpus"] = 'all'
-
-        conf['linux_ncq_depth'] = 31
-
-        # workload
-        conf['workload_class'] = 'SimpleRandReadWrite'
-
-        utils.runtime_update(conf)
-        return conf
-
-    def test_on_fs_run_and_sim(self):
-        conf = self.create_config()
-        conf['enable_blktrace'] = True
-
-        if os.path.exists(conf['result_dir']):
-            shutil.rmtree(conf['result_dir'])
-
-        wf = Workflow(conf)
-        wf.run()
-
-        datapath = os.path.join(conf["fs_mount_point"], 'datafile')
-        self.assertTrue(os.path.exists(datapath))
+        para = experimenter.get_shared_nolist_para_dict("test_exp_TraceAndSimulateDFTLDES_xjjj", 16*MB)
+        para['device_path'] = "/dev/loop0"
+        para['ftl'] = "dftldes"
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        obj = LocalExperimenter( Parameters(**para) )
+        obj.main()
 
 
 class Test_TraceAndSimulateNKFTL(unittest.TestCase):
-    def create_config(self):
-        conf = ssdbox.nkftl2.Config()
-        conf['SSDFramework']['ncq_depth'] = 1
+    def test_run(self):
+        class LocalExperimenter(experimenter.Experimenter):
+            def setup_workload(self):
+                self.conf['workload_class'] = "SimpleRandReadWrite"
 
-        conf['flash_config']['n_pages_per_block'] = 64
-        conf['flash_config']['n_blocks_per_plane'] = 2
-        conf['flash_config']['n_planes_per_chip'] = 1
-        conf['flash_config']['n_chips_per_package'] = 1
-        conf['flash_config']['n_packages_per_channel'] = 1
-        conf['flash_config']['n_channels_per_dev'] = 4
-
-        # set ftl
-        # when ssd size is too small, setting may not be good, just don't check it
-        conf['do_not_check_gc_setting'] = True
-        conf.GC_high_threshold_ratio = 0.96
-        conf.GC_low_threshold_ratio = 0
-
-        conf['enable_simulation'] = True
-
-        utils.set_exp_metadata(conf, save_data = True,
-                expname = 'test_expname_TestTraceAndSimulateDFTLDES_xjhxh32sh81h',
-                subexpname = 'test_subexpname')
-
-        conf['ftl_type'] = 'dftldes'
-        conf['simulator_class'] = 'SimulatorDESNew'
-
-        logicsize_mb = 16
-        conf.n_cache_entries = conf.n_mapping_entries_per_page * 16
-        # 1.28 is the over-provisioing ratio
-        conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
-
-        # environment
-        conf['device_path'] = "/dev/loop0"
-        conf['dev_size_mb'] = logicsize_mb
-        conf['filesystem'] = "ext4"
-        conf["n_online_cpus"] = 'all'
-
-        conf['linux_ncq_depth'] = 31
-
-        # workload
-        conf['workload_class'] = 'SimpleRandReadWrite'
-
-        utils.runtime_update(conf)
-        return conf
-
-    def test_on_fs_run_and_sim(self):
-        conf = self.create_config()
-        conf['enable_blktrace'] = True
-
-        if os.path.exists(conf['result_dir']):
-            shutil.rmtree(conf['result_dir'])
-
-        wf = Workflow(conf)
-        wf.run()
-
-        datapath = os.path.join(conf["fs_mount_point"], 'datafile')
-        self.assertTrue(os.path.exists(datapath))
-
-
-
+        para = experimenter.get_shared_nolist_para_dict("test_exp_TraceAndSimulateNKFTL_xjjj", 16*MB)
+        para['device_path'] = "/dev/loop0"
+        para['ftl'] = "nkftl2"
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        obj = LocalExperimenter( Parameters(**para) )
+        obj.main()
 
 
 
