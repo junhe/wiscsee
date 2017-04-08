@@ -216,12 +216,6 @@ class GroupingParaIter(object):
 
         lbabytes = local_dict['lbabytes']
 
-        print local_dict['testname']
-        rwmode = get_testname_rwmode(local_dict['testname'])
-        print 'rwmode', rwmode
-        if rwmode == 'r':
-            raise StopIteration
-
         for segment_bytes in [128*MB, 2*GB]:
             local_dict.update({
                 'ftl': 'dftldes',
@@ -329,10 +323,5 @@ class IntegrationParaIter(object):
             })
 
         return local_dict
-
-def get_testname_rwmode(testname):
-    items = testname.split('_')
-    return items[2]
-
 
 

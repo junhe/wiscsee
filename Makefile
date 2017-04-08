@@ -4,7 +4,7 @@ testworkflow:
 	#./run_testclass.sh tests.test_workflow.TestRequestScale
 	#./run_testclass.sh tests.test_workflow.TestUniformDataLifetime
 	#./run_testclass.sh tests.test_workflow.TestLocality
-	./run_testclass.sh tests.test_workflow.TestAlignment
+	#./run_testclass.sh tests.test_workflow.TestAlignment
 	./run_testclass.sh tests.test_workflow.TestGrouping
 
 testone:
