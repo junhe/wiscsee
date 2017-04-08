@@ -216,6 +216,7 @@ class GroupingParaIter(object):
 
         lbabytes = local_dict['lbabytes']
 
+        print local_dict['testname']
         rwmode = get_testname_rwmode(local_dict['testname'])
         print 'rwmode', rwmode
         if rwmode == 'r':

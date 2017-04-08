@@ -1,0 +1,257 @@
+{
+    "stop_sim_on_bytes": "Infinit", 
+    "hash": -2726320246496492803, 
+    "snapshot_interval": 100000000.0, 
+    "high_log_block_ratio": 0.4, 
+    "wear_leveling_diff": 10, 
+    "high_data_block_ratio": 0.4, 
+    "workload_conf": {
+        "filename": "test.file", 
+        "generating_func": "self.generate_random_workload", 
+        "iterations": 1, 
+        "chunk_size": 524288, 
+        "n_col": 5, 
+        "chunk_count": 8
+    }, 
+    "print_when_finished": false, 
+    "expname": "sqlitewal-reqscale-240000-inserts-3", 
+    "verbose_level": -1, 
+    "cache_entry_bytes": 8, 
+    "record_bad_victim_block": false, 
+    "translation_page_entry_bytes": 4, 
+    "exp_parameters": {
+        "gc_high_ratio": 0.9, 
+        "stop_sim_on_bytes": "Infinit", 
+        "f2fs_ipu_policy": 16, 
+        "aging_appconfs": null, 
+        "cache_mapped_data_bytes": 1073741824, 
+        "snapshot_interval": 100000000.0, 
+        "do_ncq_depth_time_line": true, 
+        "wear_leveling_diff": 10, 
+        "ssd_ncq_depth": 1, 
+        "dirty_bytes": 4294967296, 
+        "run_seconds": null, 
+        "expname": "sqlitewal-reqscale-240000-inserts-3", 
+        "segment_bytes": 2097152, 
+        "do_gc_after_workload": false, 
+        "n_pages_per_block": 64, 
+        "stripe_size": 1, 
+        "dump_ext4_after_workload": true, 
+        "ext4hasjournal": true, 
+        "workload_class": "AppMix", 
+        "not_check_gc_setting": true, 
+        "age_workload_class": "NoOp", 
+        "do_wear_leveling": false, 
+        "ftl": "ftlcounter", 
+        "appconfs": [
+            {
+                "name": "Sqlite", 
+                "n_insertions": 240000, 
+                "pattern": "random_put", 
+                "mem_limit_in_bytes": 33554432, 
+                "do_strace": false, 
+                "max_key": 240000, 
+                "commit_period": 10, 
+                "journal_mode": "WAL"
+            }
+        ], 
+        "f2fs_min_fsync_blocks": 8, 
+        "device_path": "/dev/sdc1", 
+        "enable_simulation": true, 
+        "gc_low_ratio": 0.0, 
+        "linux_ncq_depth": 31, 
+        "n_online_cpus": "all", 
+        "testname": "sqliteWAL_reqscale_w_rand", 
+        "lbabytes": 1073741824, 
+        "fs_discard": true, 
+        "ext4datamode": "ordered", 
+        "enable_blktrace": true, 
+        "only_get_traffic": false, 
+        "snapshot_erasure_count_dist": true, 
+        "f2fs_gc_after_workload": false, 
+        "wear_leveling_factor": 2, 
+        "snapshot_valid_ratios": true, 
+        "over_provisioning": 32, 
+        "write_gc_log": true, 
+        "filesystem": "ext4", 
+        "max_log_blocks_ratio": 100, 
+        "n_channels_per_dev": 16, 
+        "wear_leveling_check_interval": 10000000000
+    }, 
+    "segment_bytes": 2097152, 
+    "do_gc_after_workload": true, 
+    "sector_size": 512, 
+    "stripe_size": 1, 
+    "ext4": {
+        "make_opts": {
+            "-O": [
+                "^uninit_bg", 
+                "has_journal"
+            ], 
+            "-b": [
+                4096
+            ]
+        }
+    }, 
+    "max_victim_valid_ratio": 0.9, 
+    "perf": {
+        "perf_path": "perf", 
+        "flamegraph_dir": null
+    }, 
+    "dump_ext4_after_workload": true, 
+    "workload_config": {
+        "run_seconds": null, 
+        "appconfs": [
+            {
+                "name": "Sqlite", 
+                "n_insertions": 240000, 
+                "pattern": "random_put", 
+                "mem_limit_in_bytes": 33554432, 
+                "do_strace": false, 
+                "max_key": 240000, 
+                "commit_period": 10, 
+                "journal_mode": "WAL"
+            }
+        ]
+    }, 
+    "linux_version": "4.5.4", 
+    "result_dir": "/tmp/results/sqlitewal-reqscale-240000-inserts-3/subexp-7928737328932659543-ext4-10-07-23-50-10--2726320246496492803", 
+    "workload_class": "AppMix", 
+    "btrfs": {
+        "make_opts": {}
+    }, 
+    "do_fstrim": false, 
+    "GC_threshold_ratio": 0.95, 
+    "ftl_type": "ftlcounter", 
+    "do_ncq_depth_time_line": true, 
+    "age_workload_class": "NoOp", 
+    "dev_padding": 8388608, 
+    "hybridmapftl": {
+        "low_log_block_ratio": 0.32
+    }, 
+    "workload_src": "WLRUNNER", 
+    "do_wear_leveling": false, 
+    "device_path": "/dev/sdc1", 
+    "enable_simulation": true, 
+    "f2fs": {
+        "sysfs": {
+            "ipu_policy": 16, 
+            "min_fsync_blocks": 8
+        }, 
+        "make_opts": {}
+    }, 
+    "wrap_by_perf": false, 
+    "linux_io_scheduler": "noop", 
+    "linux_ncq_depth": 31, 
+    "fs_mount_point": "/mnt/fsonloop", 
+    "time": "10-07-23-50-10", 
+    "SSDFramework": {
+        "ncq_depth": 1, 
+        "data_cache_max_n_entries": 4096
+    }, 
+    "output_target": "file", 
+    "targetdir": "/tmp/results", 
+    "flash_config": {
+        "n_chips_per_package": 1, 
+        "n_packages_per_channel": 1, 
+        "n_planes_per_chip": 1, 
+        "n_blocks_per_plane": 16384, 
+        "t_PROG": 200000, 
+        "page_size": 2048, 
+        "n_channels_per_dev": 16, 
+        "block_erase_time": 1600000.0, 
+        "t_RC": 0, 
+        "t_R": 20000, 
+        "t_WC": 0, 
+        "page_prog_time": 200000, 
+        "t_BERS": 1500000.0, 
+        "page_read_time": 20000, 
+        "n_pages_per_block": 64
+    }, 
+    "mnt_opts": {
+        "btrfs": {
+            "discard": {
+                "include_name": false, 
+                "opt_name": "discard", 
+                "value": "discard"
+            }, 
+            "autodefrag": {
+                "include_name": false, 
+                "opt_name": "autodefrag", 
+                "value": "autodefrag"
+            }, 
+            "ssd": {
+                "include_name": false, 
+                "opt_name": "ssd", 
+                "value": "ssd"
+            }
+        }, 
+        "xfs": {
+            "discard": {
+                "include_name": false, 
+                "opt_name": "discard", 
+                "value": "discard"
+            }
+        }, 
+        "ext4": {
+            "discard": {
+                "include_name": false, 
+                "opt_name": "discard", 
+                "value": "discard"
+            }
+        }, 
+        "f2fs": {
+            "discard": {
+                "include_name": false, 
+                "opt_name": "discard", 
+                "value": "discard"
+            }
+        }
+    }, 
+    "simulation_processor": "e2e", 
+    "aging_workload_config": {
+        "run_seconds": null, 
+        "appconfs": null
+    }, 
+    "simulator_class": "SimulatorNonDESSpeed", 
+    "enable_blktrace": true, 
+    "only_get_traffic": false, 
+    "snapshot_erasure_count_dist": false, 
+    "f2fs_gc_after_workload": false, 
+    "mapping_cache_bytes": 4194304, 
+    "filesystem": "ext4", 
+    "wear_leveling_factor": 2, 
+    "lba_workload_configs": {}, 
+    "lba_workload_class": "Manual", 
+    "snapshot_valid_ratios": false, 
+    "over_provisioning": 1.28, 
+    "workload_conf_key": "workload_config", 
+    "simulator_enable_interval": false, 
+    "do_not_check_gc_setting": true, 
+    "event_file_column_names": [
+        "pid", 
+        "action", 
+        "operation", 
+        "offset", 
+        "size", 
+        "timestamp", 
+        "pre_wait_time", 
+        "sync"
+    ], 
+    "aging_config": {
+        "filename": "aging.file", 
+        "generating_func": "self.generate_random_workload", 
+        "iterations": 1, 
+        "chunk_size": 524288, 
+        "n_col": 5, 
+        "chunk_count": 8
+    }, 
+    "aging_config_key": "aging_workload_config", 
+    "n_online_cpus": "all", 
+    "subexpname": "subexp-7928737328932659543", 
+    "dev_size_mb": 1024, 
+    "tmpfs_mount_point": "/mnt/tmpfs", 
+    "GC_low_threshold_ratio": 0.9, 
+    "wear_leveling_check_interval": 10000000000, 
+    "process_queue_depth": 32
+}

@@ -204,14 +204,39 @@ class TestUniformDataLifetime(unittest.TestCase):
 
 class TestLocality(unittest.TestCase):
     def test(self):
-        old_dir = "/tmp/results/sqlitewal-reqscale-240000-inserts-3"
+        old_dir = "/tmp/results/sqlitewal-update"
         if os.path.exists(old_dir):
             shutil.rmtree(old_dir)
 
         # copy the data to
-        shcmd("cp -r ./tests/testdata/sqlitewal-reqscale-240000-inserts-3 /tmp/results/")
+        shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
 
-        for para in filesim.ParaDict("testexpname", ['sqlitewal-reqscale-240000-inserts-3'], "locality"):
+        for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "locality"):
+            appbench.execute_simulation(para)
+
+class TestAlignment(unittest.TestCase):
+    def test(self):
+        old_dir = "/tmp/results/sqlitewal-update"
+        if os.path.exists(old_dir):
+            shutil.rmtree(old_dir)
+
+        # copy the data to
+        shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
+
+        for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "alignment"):
+            appbench.execute_simulation(para)
+
+
+class TestGrouping(unittest.TestCase):
+    def test(self):
+        old_dir = "/tmp/results/sqlitewal-update"
+        if os.path.exists(old_dir):
+            shutil.rmtree(old_dir)
+
+        # copy the data to
+        shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
+
+        for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "grouping"):
             appbench.execute_simulation(para)
 
 
