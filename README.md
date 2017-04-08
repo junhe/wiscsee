@@ -2,10 +2,12 @@ Release Notes
 -------------------------
 
 Demo
-- Run workload and get traces, without simulation
+- Run workload and get traces, without simulation (DONE)
 - Run workload, get trace, and simulate on dftl
 - Run workload, get trace, and simulate on nkftl
 - Generate LBA workload and simulate
+- Specify trace and simulate on dftl
+- Specify trace and simulate on nkftl
 - Specify trace and study request scale
 - Specify trace and study locality
 - Specify trace and study alignment

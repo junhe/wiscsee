@@ -118,99 +118,6 @@ class TestWorkflow(unittest.TestCase):
 
         self.assertTrue(os.path.exists(datapath))
 
-class TestWorkflowWithSimpleRW(unittest.TestCase):
-    def create_config(self):
-        conf = ssdbox.dftldes.Config()
-        conf['SSDFramework']['ncq_depth'] = 1
-
-        conf['flash_config']['n_pages_per_block'] = 64
-        conf['flash_config']['n_blocks_per_plane'] = 2
-        conf['flash_config']['n_planes_per_chip'] = 1
-        conf['flash_config']['n_chips_per_package'] = 1
-        conf['flash_config']['n_packages_per_channel'] = 1
-        conf['flash_config']['n_channels_per_dev'] = 4
-
-        # set ftl
-        conf['do_not_check_gc_setting'] = True
-        conf.GC_high_threshold_ratio = 0.96
-        conf.GC_low_threshold_ratio = 0
-
-        conf['enable_simulation'] = True
-
-        utils.set_exp_metadata(conf, save_data = True,
-                expname = 'test_expname_TestWorkflowWithSimpleRW_xjhxh32sh81h',
-                subexpname = 'test_subexpname')
-
-        conf['ftl_type'] = 'dftldes'
-        conf['simulator_class'] = 'SimulatorDESNew'
-
-        logicsize_mb = 16
-        conf.n_cache_entries = conf.n_mapping_entries_per_page * 16
-        # 1.28 is the over-provisioing ratio
-        conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
-
-        # environment
-        conf['device_path'] = "/dev/loop0"
-        conf['dev_size_mb'] = logicsize_mb
-        conf['filesystem'] = "ext4"
-        conf["n_online_cpus"] = 'all'
-
-        conf['linux_ncq_depth'] = 31
-
-        # workload
-        conf['workload_class'] = 'SimpleRandReadWrite'
-
-        utils.runtime_update(conf)
-        return conf
-
-    def test_on_fs_run_and_sim(self):
-        conf = self.create_config()
-        conf['enable_blktrace'] = True
-
-        if os.path.exists(conf['result_dir']):
-            shutil.rmtree(conf['result_dir'])
-
-        wf = Workflow(conf)
-        wf.run()
-
-        datapath = os.path.join(conf["fs_mount_point"], 'datafile')
-        self.assertTrue(os.path.exists(datapath))
-
-class TestTraceOnly(unittest.TestCase):
-    def create_config(self):
-        conf = ssdbox.dftldes.Config()
-        conf['enable_simulation'] = False
-        conf['enable_blktrace'] = True
-
-        utils.set_exp_metadata(conf, save_data = True,
-                expname = 'test_expname_TtestTraceOnly_xjjjsdj23',
-                subexpname = 'test_subexpname')
-
-        logicsize_mb = 16
-
-        # environment
-        conf['device_path'] = "/dev/loop0"
-        conf['dev_size_mb'] = logicsize_mb
-        conf['filesystem'] = "ext4"
-        conf["n_online_cpus"] = 'all'
-
-        # workload
-        conf['workload_class'] = 'SimpleRandReadWrite'
-
-        utils.runtime_update(conf)
-        return conf
-
-    def test_on_fs_run_and_sim(self):
-        conf = self.create_config()
-
-        if os.path.exists(conf['result_dir']):
-            shutil.rmtree(conf['result_dir'])
-
-        wf = Workflow(conf)
-        wf.run()
-
-        datapath = os.path.join(conf["fs_mount_point"], 'datafile')
-        self.assertTrue(os.path.exists(datapath))
 
 
 class TestRequestScale(unittest.TestCase):
@@ -271,6 +178,177 @@ class TestGrouping(unittest.TestCase):
 
         for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "grouping"):
             appbench.execute_simulation(para)
+
+
+
+
+
+
+
+
+class TestTraceOnly(unittest.TestCase):
+    def create_config(self):
+        conf = ssdbox.dftldes.Config()
+        conf['enable_simulation'] = False
+        conf['enable_blktrace'] = True
+
+        utils.set_exp_metadata(conf, save_data = True,
+                expname = 'test_expname_TtestTraceOnly_xjjjsdj23',
+                subexpname = 'test_subexpname')
+
+        logicsize_mb = 16
+
+        # environment
+        conf['device_path'] = "/dev/loop0"
+        conf['dev_size_mb'] = logicsize_mb
+        conf['filesystem'] = "ext4"
+        conf["n_online_cpus"] = 'all'
+
+        # workload
+        conf['workload_class'] = 'SimpleRandReadWrite'
+
+        utils.runtime_update(conf)
+        return conf
+
+    def test_on_fs_run_and_sim(self):
+        conf = self.create_config()
+
+        if os.path.exists(conf['result_dir']):
+            shutil.rmtree(conf['result_dir'])
+
+        wf = Workflow(conf)
+        wf.run()
+
+        datapath = os.path.join(conf["fs_mount_point"], 'datafile')
+        self.assertTrue(os.path.exists(datapath))
+
+
+class Test_TraceAndSimulateDFTLDES(unittest.TestCase):
+    def create_config(self):
+        conf = ssdbox.dftldes.Config()
+        conf['SSDFramework']['ncq_depth'] = 1
+
+        conf['flash_config']['n_pages_per_block'] = 64
+        conf['flash_config']['n_blocks_per_plane'] = 2
+        conf['flash_config']['n_planes_per_chip'] = 1
+        conf['flash_config']['n_chips_per_package'] = 1
+        conf['flash_config']['n_packages_per_channel'] = 1
+        conf['flash_config']['n_channels_per_dev'] = 4
+
+        # set ftl
+        # when ssd size is too small, setting may not be good, just don't check it
+        conf['do_not_check_gc_setting'] = True
+        conf.GC_high_threshold_ratio = 0.96
+        conf.GC_low_threshold_ratio = 0
+
+        conf['enable_simulation'] = True
+
+        utils.set_exp_metadata(conf, save_data = True,
+                expname = 'test_expname_TestTraceAndSimulateDFTLDES_xjhxh32sh81h',
+                subexpname = 'test_subexpname')
+
+        conf['ftl_type'] = 'dftldes'
+        conf['simulator_class'] = 'SimulatorDESNew'
+
+        logicsize_mb = 16
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 16
+        # 1.28 is the over-provisioing ratio
+        conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
+
+        # environment
+        conf['device_path'] = "/dev/loop0"
+        conf['dev_size_mb'] = logicsize_mb
+        conf['filesystem'] = "ext4"
+        conf["n_online_cpus"] = 'all'
+
+        conf['linux_ncq_depth'] = 31
+
+        # workload
+        conf['workload_class'] = 'SimpleRandReadWrite'
+
+        utils.runtime_update(conf)
+        return conf
+
+    def test_on_fs_run_and_sim(self):
+        conf = self.create_config()
+        conf['enable_blktrace'] = True
+
+        if os.path.exists(conf['result_dir']):
+            shutil.rmtree(conf['result_dir'])
+
+        wf = Workflow(conf)
+        wf.run()
+
+        datapath = os.path.join(conf["fs_mount_point"], 'datafile')
+        self.assertTrue(os.path.exists(datapath))
+
+
+class Test_TraceAndSimulateNKFTL(unittest.TestCase):
+    def create_config(self):
+        conf = ssdbox.nkftl2.Config()
+        conf['SSDFramework']['ncq_depth'] = 1
+
+        conf['flash_config']['n_pages_per_block'] = 64
+        conf['flash_config']['n_blocks_per_plane'] = 2
+        conf['flash_config']['n_planes_per_chip'] = 1
+        conf['flash_config']['n_chips_per_package'] = 1
+        conf['flash_config']['n_packages_per_channel'] = 1
+        conf['flash_config']['n_channels_per_dev'] = 4
+
+        # set ftl
+        # when ssd size is too small, setting may not be good, just don't check it
+        conf['do_not_check_gc_setting'] = True
+        conf.GC_high_threshold_ratio = 0.96
+        conf.GC_low_threshold_ratio = 0
+
+        conf['enable_simulation'] = True
+
+        utils.set_exp_metadata(conf, save_data = True,
+                expname = 'test_expname_TestTraceAndSimulateDFTLDES_xjhxh32sh81h',
+                subexpname = 'test_subexpname')
+
+        conf['ftl_type'] = 'dftldes'
+        conf['simulator_class'] = 'SimulatorDESNew'
+
+        logicsize_mb = 16
+        conf.n_cache_entries = conf.n_mapping_entries_per_page * 16
+        # 1.28 is the over-provisioing ratio
+        conf.set_flash_num_blocks_by_bytes(int(logicsize_mb * 2**20 * 1.28))
+
+        # environment
+        conf['device_path'] = "/dev/loop0"
+        conf['dev_size_mb'] = logicsize_mb
+        conf['filesystem'] = "ext4"
+        conf["n_online_cpus"] = 'all'
+
+        conf['linux_ncq_depth'] = 31
+
+        # workload
+        conf['workload_class'] = 'SimpleRandReadWrite'
+
+        utils.runtime_update(conf)
+        return conf
+
+    def test_on_fs_run_and_sim(self):
+        conf = self.create_config()
+        conf['enable_blktrace'] = True
+
+        if os.path.exists(conf['result_dir']):
+            shutil.rmtree(conf['result_dir'])
+
+        wf = Workflow(conf)
+        wf.run()
+
+        datapath = os.path.join(conf["fs_mount_point"], 'datafile')
+        self.assertTrue(os.path.exists(datapath))
+
+
+
+
+
+
+
+
 
 
 if __name__ == '__main__':
