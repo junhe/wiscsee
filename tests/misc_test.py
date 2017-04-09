@@ -60,7 +60,7 @@ class TestSettingScheduler(unittest.TestCase):
         self.assertEqual(scheduler, read_scheduler)
 
 
-class Experimenter(object):
+class Experiment(object):
     def __init__(self):
         self.conf = ssdbox.dftldes.Config()
 
@@ -123,7 +123,7 @@ class Experimenter(object):
 
 class TestF2FSGCCall(unittest.TestCase):
     def test(self):
-        obj = Experimenter()
+        obj = Experiment()
         obj.main()
 
 class TestImportPyreuse(unittest.TestCase):

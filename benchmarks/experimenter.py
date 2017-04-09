@@ -8,7 +8,7 @@ from utilities.utils import *
 from commons import *
 from config import MountOption as MOpt
 
-class Experimenter(object):
+class Experiment(object):
     def __init__(self, para):
         if para.ftl == 'nkftl2':
             self.conf = ssdbox.nkftl2.Config()
@@ -340,7 +340,7 @@ class StatsMixin(object):
             return total
 
 
-class RealDevExperimenter(Experimenter, StatsMixin):
+class RealDevExperiment(Experiment, StatsMixin):
     def setup_workload(self):
         self.conf['workload_class'] = self.para.workload_class
         self.conf['workload_config'] = {
@@ -364,7 +364,7 @@ class RealDevExperimenter(Experimenter, StatsMixin):
                 shcmd('rm blkparse-events-for-ftlsim*')
 
 
-class ExistingTraceExperimenter(Experimenter):
+class ExistingTraceExperiment(Experiment):
     def setup_workload(self):
         self.conf["workload_src"] = LBAGENERATOR
 
@@ -378,7 +378,7 @@ class ExistingTraceExperimenter(Experimenter):
 
 def run_on_real_dev(para):
     Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-    obj = RealDevExperimenter( Parameters(**para) )
+    obj = RealDevExperiment( Parameters(**para) )
     obj.main()
 
 
@@ -392,7 +392,7 @@ def execute_simulation(para):
     default_para.update(para)
     para = default_para
     Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-    obj = ExistingTraceExperimenter( Parameters(**para) )
+    obj = ExistingTraceExperiment( Parameters(**para) )
     obj.main()
 
 

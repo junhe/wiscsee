@@ -119,7 +119,7 @@ class TestWorkflow(unittest.TestCase):
 
 class Test_TraceOnly(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experiment.Experimenter):
+        class LocalExperiment(experiment.Experiment):
             def setup_workload(self):
                 self.conf['workload_class'] = "SimpleRandReadWrite"
 
@@ -129,13 +129,13 @@ class Test_TraceOnly(unittest.TestCase):
         para['enable_blktrace'] = True
 
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-        obj = LocalExperimenter( Parameters(**para) )
+        obj = LocalExperiment( Parameters(**para) )
         obj.main()
 
 
 class Test_TraceAndSimulateDFTLDES(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experiment.Experimenter):
+        class LocalExperiment(experiment.Experiment):
             def setup_workload(self):
                 self.conf['workload_class'] = "SimpleRandReadWrite"
 
@@ -143,13 +143,13 @@ class Test_TraceAndSimulateDFTLDES(unittest.TestCase):
         para['device_path'] = "/dev/loop0"
         para['ftl'] = "dftldes"
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-        obj = LocalExperimenter( Parameters(**para) )
+        obj = LocalExperiment( Parameters(**para) )
         obj.main()
 
 
 class Test_TraceAndSimulateNKFTL(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experiment.Experimenter):
+        class LocalExperiment(experiment.Experiment):
             def setup_workload(self):
                 self.conf['workload_class'] = "SimpleRandReadWrite"
 
@@ -157,12 +157,12 @@ class Test_TraceAndSimulateNKFTL(unittest.TestCase):
         para['device_path'] = "/dev/loop0"
         para['ftl'] = "nkftl2"
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-        obj = LocalExperimenter( Parameters(**para) )
+        obj = LocalExperiment( Parameters(**para) )
         obj.main()
 
 
 class Test_SimulateForSyntheticWorkload(unittest.TestCase):
-        class LocalExperimenter(experiment.Experimenter):
+        class LocalExperiment(experiment.Experiment):
             def setup_workload(self):
                 self.conf['workload_src'] = LBAGENERATOR
                 self.conf['lba_workload_class'] = "AccessesWithDist"
@@ -178,13 +178,13 @@ class Test_SimulateForSyntheticWorkload(unittest.TestCase):
         para = experiment.get_shared_nolist_para_dict("test_exp_SimulateForSyntheticWorkload", 16*MB)
         para['ftl'] = "nkftl2"
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-        obj = LocalExperimenter( Parameters(**para) )
+        obj = LocalExperiment( Parameters(**para) )
         obj.main()
 
 
 class TestUsingExistingTraceToSimulate(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experiment.Experimenter):
+        class LocalExperiment(experiment.Experiment):
             def setup_workload(self):
                 self.conf["workload_src"] = LBAGENERATOR
                 self.conf["lba_workload_class"] = "BlktraceEvents"
@@ -201,7 +201,7 @@ class TestUsingExistingTraceToSimulate(unittest.TestCase):
             })
 
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-        obj = LocalExperimenter( Parameters(**para) )
+        obj = LocalExperiment( Parameters(**para) )
         obj.main()
 
 
@@ -209,7 +209,7 @@ class TestUsingExistingTraceToSimulate(unittest.TestCase):
 
 class TestUsingExistingTraceToStudyRequestScale(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experiment.Experimenter):
+        class LocalExperiment(experiment.Experiment):
             def setup_workload(self):
                 self.conf["workload_src"] = LBAGENERATOR
                 self.conf["lba_workload_class"] = "BlktraceEvents"
@@ -232,7 +232,7 @@ class TestUsingExistingTraceToStudyRequestScale(unittest.TestCase):
             })
 
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-        obj = LocalExperimenter( Parameters(**para) )
+        obj = LocalExperiment( Parameters(**para) )
         obj.main()
 
 
@@ -242,7 +242,7 @@ class TestUsingExistingTraceToStudyRequestScale(unittest.TestCase):
 
 class TestRunningWorkloadAndOutputRequestScale(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experiment.Experimenter):
+        class LocalExperiment(experiment.Experiment):
             def setup_workload(self):
                 self.conf['workload_class'] = "SimpleRandReadWrite"
 
@@ -259,7 +259,7 @@ class TestRunningWorkloadAndOutputRequestScale(unittest.TestCase):
             })
 
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-        obj = LocalExperimenter( Parameters(**para) )
+        obj = LocalExperiment( Parameters(**para) )
         obj.main()
 
 
@@ -303,7 +303,7 @@ class TestGrouping(unittest.TestCase):
 
 class TestUniformDataLifetime(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experiment.Experimenter):
+        class LocalExperiment(experiment.Experiment):
             def setup_workload(self):
                 self.conf['workload_class'] = "SimpleRandReadWrite"
 
@@ -323,7 +323,7 @@ class TestUniformDataLifetime(unittest.TestCase):
             })
 
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-        obj = LocalExperimenter( Parameters(**para) )
+        obj = LocalExperiment( Parameters(**para) )
         obj.main()
 
 
