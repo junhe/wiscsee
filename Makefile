@@ -2,7 +2,7 @@ test:
 	sudo python -m unittest discover -s tests -v -p '*test*.py' > tmp
 
 testworkflow:
-	./run_testclass.sh tests.test_workflow.TestUniformDataLifetime
+	./run_testclass.sh tests.test_workflow
 
 f2fsgc:
 	mkdir -p bin

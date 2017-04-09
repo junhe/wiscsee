@@ -364,6 +364,18 @@ class RealDevExperimenter(Experimenter, StatsMixin):
                 shcmd('rm blkparse-events-for-ftlsim*')
 
 
+class ExistingTraceExperimenter(Experimenter):
+    def setup_workload(self):
+        self.conf["workload_src"] = LBAGENERATOR
+
+        self.conf["lba_workload_class"] = "BlktraceEvents"
+
+        self.conf['lba_workload_configs']['mkfs_event_path'] = \
+                self.para.mkfs_path
+        self.conf['lba_workload_configs']['ftlsim_event_path'] = \
+                self.para.ftlsim_path
+
+
 def run_on_real_dev(para):
     Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
     obj = RealDevExperimenter( Parameters(**para) )
@@ -380,7 +392,7 @@ def execute_simulation(para):
     default_para.update(para)
     para = default_para
     Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-    obj = filesim.LocalExperimenter( Parameters(**para) )
+    obj = ExistingTraceExperimenter( Parameters(**para) )
     obj.main()
 
 

@@ -7,22 +7,6 @@ from utilities import utils
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 
 
-"""
-This module is used to read event file and simulate those events
-"""
-
-
-class LocalExperimenter(Experimenter):
-    def setup_workload(self):
-        self.conf["workload_src"] = LBAGENERATOR
-
-        self.conf["lba_workload_class"] = "BlktraceEvents"
-
-        self.conf['lba_workload_configs']['mkfs_event_path'] = \
-                self.para.mkfs_path
-        self.conf['lba_workload_configs']['ftlsim_event_path'] = \
-                self.para.ftlsim_path
-
 class ParaDict(object):
     def __init__(self, expname, trace_expnames, rule):
         self.expname = expname
