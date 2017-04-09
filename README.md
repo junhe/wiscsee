@@ -2,18 +2,17 @@ Release Notes
 -------------------------
 
 Demo
-- Run workload and get traces, without simulation (DONE)
-- Run workload, get trace, and simulate on dftl (DONE)
-- Run workload, get trace, and simulate on nkftl (DONE)
-- Generate LBA workload and simulate (DONE)
-- Specify trace and simulate on dftl       10min (7:33-7:52) 20min (DONE)
-- Specify trace and simulate on nkftl      10min (DONE, just use the one above)
-- Specify trace and study request scale    20min (8:08-
-- Specify trace and study locality         10min
-- Specify trace and study alignment        10min
-- Specify trace and study grouping         10min
-- Specify trace and study data lifetime    10min
-
+- Run workload and get traces, without simulation
+- Run workload, get trace, and simulate on dftl
+- Run workload, get trace, and simulate on nkftl
+- Generate LBA workload and simulate
+- Specify trace and simulate on dftl      
+- Specify trace and simulate on nkftl    
+- Specify trace and study request scale  
+- Specify trace and study locality       
+- Specify trace and study alignment      
+- Specify trace and study grouping       
+- Specify trace and study data lifetime  
 
 TODO:
 
