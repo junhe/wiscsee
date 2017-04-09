@@ -2,7 +2,7 @@ import os
 import copy
 import time
 
-from experimenter import *
+from experiment import *
 from utilities import utils
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 

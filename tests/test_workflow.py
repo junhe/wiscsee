@@ -10,7 +10,7 @@ from utilities import utils
 from ssdbox.hostevent import Event, ControlEvent
 from benchmarks import rule_parameter
 from pyreuse.helpers import shcmd
-from benchmarks import experimenter
+from benchmarks import experiment
 
 
 def create_config():
@@ -119,11 +119,11 @@ class TestWorkflow(unittest.TestCase):
 
 class Test_TraceOnly(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experimenter.Experimenter):
+        class LocalExperimenter(experiment.Experimenter):
             def setup_workload(self):
                 self.conf['workload_class'] = "SimpleRandReadWrite"
 
-        para = experimenter.get_shared_nolist_para_dict("test_exp_TraceOnly2", 16*MB)
+        para = experiment.get_shared_nolist_para_dict("test_exp_TraceOnly2", 16*MB)
         para['device_path'] = "/dev/loop0"
         para['enable_simulation'] = False
         para['enable_blktrace'] = True
@@ -135,11 +135,11 @@ class Test_TraceOnly(unittest.TestCase):
 
 class Test_TraceAndSimulateDFTLDES(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experimenter.Experimenter):
+        class LocalExperimenter(experiment.Experimenter):
             def setup_workload(self):
                 self.conf['workload_class'] = "SimpleRandReadWrite"
 
-        para = experimenter.get_shared_nolist_para_dict("test_exp_TraceAndSimulateDFTLDES_xjjj", 16*MB)
+        para = experiment.get_shared_nolist_para_dict("test_exp_TraceAndSimulateDFTLDES_xjjj", 16*MB)
         para['device_path'] = "/dev/loop0"
         para['ftl'] = "dftldes"
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
@@ -149,11 +149,11 @@ class Test_TraceAndSimulateDFTLDES(unittest.TestCase):
 
 class Test_TraceAndSimulateNKFTL(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experimenter.Experimenter):
+        class LocalExperimenter(experiment.Experimenter):
             def setup_workload(self):
                 self.conf['workload_class'] = "SimpleRandReadWrite"
 
-        para = experimenter.get_shared_nolist_para_dict("test_exp_TraceAndSimulateNKFTL_xjjj", 16*MB)
+        para = experiment.get_shared_nolist_para_dict("test_exp_TraceAndSimulateNKFTL_xjjj", 16*MB)
         para['device_path'] = "/dev/loop0"
         para['ftl'] = "nkftl2"
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
@@ -162,7 +162,7 @@ class Test_TraceAndSimulateNKFTL(unittest.TestCase):
 
 
 class Test_SimulateForSyntheticWorkload(unittest.TestCase):
-        class LocalExperimenter(experimenter.Experimenter):
+        class LocalExperimenter(experiment.Experimenter):
             def setup_workload(self):
                 self.conf['workload_src'] = LBAGENERATOR
                 self.conf['lba_workload_class'] = "AccessesWithDist"
@@ -175,7 +175,7 @@ class Test_SimulateForSyntheticWorkload(unittest.TestCase):
                         'zipf_alpha': None,
                         }
 
-        para = experimenter.get_shared_nolist_para_dict("test_exp_SimulateForSyntheticWorkload", 16*MB)
+        para = experiment.get_shared_nolist_para_dict("test_exp_SimulateForSyntheticWorkload", 16*MB)
         para['ftl'] = "nkftl2"
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
         obj = LocalExperimenter( Parameters(**para) )
@@ -184,7 +184,7 @@ class Test_SimulateForSyntheticWorkload(unittest.TestCase):
 
 class TestUsingExistingTraceToSimulate(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experimenter.Experimenter):
+        class LocalExperimenter(experiment.Experimenter):
             def setup_workload(self):
                 self.conf["workload_src"] = LBAGENERATOR
                 self.conf["lba_workload_class"] = "BlktraceEvents"
@@ -193,7 +193,7 @@ class TestUsingExistingTraceToSimulate(unittest.TestCase):
                 self.conf['lba_workload_configs']['ftlsim_event_path'] = \
                         self.para.ftlsim_path
 
-        para = experimenter.get_shared_nolist_para_dict("test_exp_TestUsingExistingTraceToSimulate_jj23hx", 1*GB)
+        para = experiment.get_shared_nolist_para_dict("test_exp_TestUsingExistingTraceToSimulate_jj23hx", 1*GB)
         para.update({
             'ftl': "dftldes",
             "mkfs_path": "./tests/testdata/sqlitewal-update/subexp-7928737328932659543-ext4-10-07-23-50-10--2726320246496492803/blkparse-events-for-ftlsim-mkfs.txt",
@@ -209,7 +209,7 @@ class TestUsingExistingTraceToSimulate(unittest.TestCase):
 
 class TestUsingExistingTraceToStudyRequestScale(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experimenter.Experimenter):
+        class LocalExperimenter(experiment.Experimenter):
             def setup_workload(self):
                 self.conf["workload_src"] = LBAGENERATOR
                 self.conf["lba_workload_class"] = "BlktraceEvents"
@@ -218,7 +218,7 @@ class TestUsingExistingTraceToStudyRequestScale(unittest.TestCase):
                 self.conf['lba_workload_configs']['ftlsim_event_path'] = \
                         self.para.ftlsim_path
 
-        para = experimenter.get_shared_nolist_para_dict("test_exp_TestUsingExistingTraceToStudyRequestScale_jj23hx", 1*GB)
+        para = experiment.get_shared_nolist_para_dict("test_exp_TestUsingExistingTraceToStudyRequestScale_jj23hx", 1*GB)
         para.update({
             'ftl': "ftlcounter",
             "mkfs_path": "./tests/testdata/sqlitewal-update/subexp-7928737328932659543-ext4-10-07-23-50-10--2726320246496492803/blkparse-events-for-ftlsim-mkfs.txt",
@@ -242,11 +242,11 @@ class TestUsingExistingTraceToStudyRequestScale(unittest.TestCase):
 
 class TestRunningWorkloadAndOutputRequestScale(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experimenter.Experimenter):
+        class LocalExperimenter(experiment.Experimenter):
             def setup_workload(self):
                 self.conf['workload_class'] = "SimpleRandReadWrite"
 
-        para = experimenter.get_shared_nolist_para_dict("test_exp_TestRequestScale_jjj3nx", 16*MB)
+        para = experiment.get_shared_nolist_para_dict("test_exp_TestRequestScale_jjj3nx", 16*MB)
         para['device_path'] = "/dev/loop0"
         para.update(
             {
@@ -273,7 +273,7 @@ class TestLocality(unittest.TestCase):
         shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
 
         for para in rule_parameter.ParaDict("testexpname", ['sqlitewal-update'], "locality"):
-            experimenter.execute_simulation(para)
+            experiment.execute_simulation(para)
 
 class TestAlignment(unittest.TestCase):
     def test(self):
@@ -285,7 +285,7 @@ class TestAlignment(unittest.TestCase):
         shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
 
         for para in rule_parameter.ParaDict("testexpname", ['sqlitewal-update'], "alignment"):
-            experimenter.execute_simulation(para)
+            experiment.execute_simulation(para)
 
 
 class TestGrouping(unittest.TestCase):
@@ -298,16 +298,16 @@ class TestGrouping(unittest.TestCase):
         shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
 
         for para in rule_parameter.ParaDict("testexpname", ['sqlitewal-update'], "grouping"):
-            experimenter.execute_simulation(para)
+            experiment.execute_simulation(para)
 
 
 class TestUniformDataLifetime(unittest.TestCase):
     def test_run(self):
-        class LocalExperimenter(experimenter.Experimenter):
+        class LocalExperimenter(experiment.Experimenter):
             def setup_workload(self):
                 self.conf['workload_class'] = "SimpleRandReadWrite"
 
-        para = experimenter.get_shared_nolist_para_dict("test_exp_TestUniformDataLifetime", 16*MB)
+        para = experiment.get_shared_nolist_para_dict("test_exp_TestUniformDataLifetime", 16*MB)
         para.update(
             {
                 'ftl' : 'ftlcounter',
