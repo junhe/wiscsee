@@ -1,7 +1,9 @@
 import unittest
 import pprint
 
+import ssdbox
 from workflow import run_workflow
+import config
 
 
 class Experiment(object):

@@ -1,5 +1,4 @@
 import config_test
-import datacache_test
 import flashcontroller_test
 import lrulist_test
 import misc_test

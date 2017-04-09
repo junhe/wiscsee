@@ -15,7 +15,6 @@ import bidict
 import config
 from commons import *
 from ftlsim_commons import *
-import datacache
 import flash
 import flashcontroller
 import ftlbuilder
@@ -367,9 +366,6 @@ class SSDFramework(object):
 
         self.flash_controller = flashcontroller.controller.Controller3(
                 self.env, self.conf, self.recorder)
-
-        self.datacache = datacache.DataCache(
-            self.conf['SSDFramework']['data_cache_max_n_entries'], self.env)
 
         if self.conf['ftl_type'] == 'dftldes':
             self.realftl = dftldes.Dftl(self.conf, self.recorder,
