@@ -8,9 +8,9 @@ from workflow import *
 import ssdbox
 from utilities import utils
 from ssdbox.hostevent import Event, ControlEvent
-from benchmarks import rule_parameter
+from config_helper import rule_parameter
 from pyreuse.helpers import shcmd
-from benchmarks import experiment
+from config_helper import experiment
 
 
 def create_config():
