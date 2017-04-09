@@ -6,7 +6,7 @@ from workflow import *
 import ssdbox
 from utilities import utils
 from ssdbox.hostevent import Event, ControlEvent
-from benchmarks import appbench, filesim
+from benchmarks import filesim
 from pyreuse.helpers import shcmd
 from benchmarks import experimenter
 
@@ -272,7 +272,7 @@ class TestLocality(unittest.TestCase):
         shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
 
         for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "locality"):
-            appbench.execute_simulation(para)
+            experimenter.execute_simulation(para)
 
 class TestAlignment(unittest.TestCase):
     def test(self):
@@ -284,7 +284,7 @@ class TestAlignment(unittest.TestCase):
         shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
 
         for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "alignment"):
-            appbench.execute_simulation(para)
+            experimenter.execute_simulation(para)
 
 
 class TestGrouping(unittest.TestCase):
@@ -297,7 +297,7 @@ class TestGrouping(unittest.TestCase):
         shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
 
         for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "grouping"):
-            appbench.execute_simulation(para)
+            experimenter.execute_simulation(para)
 
 
 class TestUniformDataLifetime(unittest.TestCase):
