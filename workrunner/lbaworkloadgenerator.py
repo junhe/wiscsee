@@ -5,8 +5,6 @@ import config
 import workload
 from ssdbox import hostevent
 from commons import *
-from accpatterns import patterns
-from patternsuite import *
 
 from pyreuse.general.zipf import ZipfGenerator
 

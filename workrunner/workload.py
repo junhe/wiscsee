@@ -15,8 +15,6 @@ from utilities import utils
 import workloadlist
 from appprocess import *
 
-from accpatterns import patterns
-import patternsuite
 
 from pyreuse.helpers import *
 

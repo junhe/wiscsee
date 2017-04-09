@@ -56,15 +56,7 @@ def on_fs_config(conf):
     conf['linux_ncq_depth'] = 31
 
     # workload
-    conf['workload_class'] = 'PatternSuite'
-    conf['workload_conf_key'] = 'PatternSuite'
-    conf['PatternSuite'] = {'patternname': 'SRandomWrite',
-        'parameters': {
-            'zone_size': 1*MB,
-            'chunk_size': 512*KB,
-            'traffic_size': 1*MB,
-            }
-        }
+    conf['workload_class'] = 'SimpleRandReadWrite'
 
 class TestWorkflow(unittest.TestCase):
     def test_init(self):
