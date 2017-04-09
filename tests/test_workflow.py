@@ -1,16 +1,17 @@
 import unittest
 import collections
 import shutil
+import os
 
+from config import LBAGENERATOR
 from workflow import *
 import ssdbox
 from utilities import utils
 from ssdbox.hostevent import Event, ControlEvent
-from benchmarks import filesim
+from benchmarks import rule_parameter
 from pyreuse.helpers import shcmd
 from benchmarks import experimenter
 
-import os
 
 def create_config():
     conf = ssdbox.dftldes.Config()
@@ -271,7 +272,7 @@ class TestLocality(unittest.TestCase):
         # copy the data to
         shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
 
-        for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "locality"):
+        for para in rule_parameter.ParaDict("testexpname", ['sqlitewal-update'], "locality"):
             experimenter.execute_simulation(para)
 
 class TestAlignment(unittest.TestCase):
@@ -283,7 +284,7 @@ class TestAlignment(unittest.TestCase):
         # copy the data to
         shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
 
-        for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "alignment"):
+        for para in rule_parameter.ParaDict("testexpname", ['sqlitewal-update'], "alignment"):
             experimenter.execute_simulation(para)
 
 
@@ -296,7 +297,7 @@ class TestGrouping(unittest.TestCase):
         # copy the data to
         shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
 
-        for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "grouping"):
+        for para in rule_parameter.ParaDict("testexpname", ['sqlitewal-update'], "grouping"):
             experimenter.execute_simulation(para)
 
 
