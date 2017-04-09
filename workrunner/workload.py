@@ -16,7 +16,6 @@ import workloadlist
 from appprocess import *
 
 from accpatterns import patterns
-from .patternonfile import File
 import patternsuite
 
 from pyreuse.helpers import *
@@ -234,32 +233,6 @@ class SimpleRandReadWrite(Workload):
             buf = f.read()
             os.fsync(f)
 
-        f.close()
-
-    def stop(self):
-        pass
-
-class PatternSuite(Workload):
-    def __init__(self, confobj, workload_conf_key = None):
-        super(PatternSuite, self).__init__(confobj, workload_conf_key)
-
-
-    def _get_iter(self):
-        patternname = self.workload_conf['patternname']
-        patterncls = eval('patternsuite.'+patternname)
-        req_iter = patterncls(**self.workload_conf['parameters'])
-        return req_iter
-
-    def run(self):
-        datapath = os.path.join(self.conf["fs_mount_point"], 'datafile')
-
-        # req_iter = patterns.Random(op=patterns.WRITE, zone_offset=0, zone_size=8*MB,
-                # chunk_size=1*MB, traffic_size=1*MB)
-        req_iter = self._get_iter()
-
-        f = File(datapath)
-        f.open()
-        f.access(req_iter)
         f.close()
 
     def stop(self):
