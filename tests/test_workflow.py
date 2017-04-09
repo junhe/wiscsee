@@ -301,17 +301,29 @@ class TestGrouping(unittest.TestCase):
 
 
 class TestUniformDataLifetime(unittest.TestCase):
-    def test(self):
-        para_pool = expconfs.ParameterPool(
-                expname = "tmptest",
-                testname = ["sqliteWAL_wearlevel_w_rand"],
-                filesystem = ['ext4']
-                )
+    def test_run(self):
+        class LocalExperimenter(experimenter.Experimenter):
+            def setup_workload(self):
+                self.conf['workload_class'] = "SimpleRandReadWrite"
 
-        for para in para_pool:
-            appbench.run_on_real_dev(para)
+        para = experimenter.get_shared_nolist_para_dict("test_exp_TestUniformDataLifetime", 16*MB)
+        para.update(
+            {
+                'ftl' : 'ftlcounter',
+                'device_path'    : '/dev/loop0',
+                'enable_simulation': True,
+                'dump_ext4_after_workload': True,
+                'only_get_traffic': False,
+                'trace_issue_and_complete': False,
+                'gen_ncq_depth_table': False,
+                'do_dump_lpn_sem': False,
+                'rm_blkparse_events': True,
+                'sort_block_trace': False,
+            })
 
-
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        obj = LocalExperimenter( Parameters(**para) )
+        obj.main()
 
 
 if __name__ == '__main__':

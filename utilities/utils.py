@@ -11,9 +11,7 @@ import string
 import shlex
 import time
 import glob
-from time import localtime, strftime
 
-from pyreuse.sysutils.ftrace import trace_cmd
 from pyreuse.helpers import table_to_str
 
 def shcmd(cmd, ignore_error=False):
