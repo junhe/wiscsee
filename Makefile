@@ -1,14 +1,14 @@
 testworkflow:
 	#./run_testclass.sh tests.test_workflow.TestWorkflow
 	#./run_testclass.sh tests.test_workflow.TestWorkflowWithSimpleRW
-	#./run_testclass.sh tests.test_workflow.TestRequestScale
+	./run_testclass.sh tests.test_workflow.TestRequestScale
 	#./run_testclass.sh tests.test_workflow.TestUniformDataLifetime
 	#./run_testclass.sh tests.test_workflow.TestLocality
 	#./run_testclass.sh tests.test_workflow.TestAlignment
 	#./run_testclass.sh tests.test_workflow.TestTraceOnly
 	#./run_testclass.sh tests.test_workflow.Test_TraceAndSimulateNKFTL
 	#./run_testclass.sh tests.test_workflow.Test_TraceAndSimulateNKFTL
-	./run_testclass.sh tests.test_workflow.Test_SimulateForSyntheticWorkload
+	#./run_testclass.sh tests.test_workflow.Test_SimulateForSyntheticWorkload
 
 testone:
 	#./run_testclass.sh tests.misc_test.TestClassifyGcLOG

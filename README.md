@@ -5,7 +5,7 @@ Demo
 - Run workload and get traces, without simulation (DONE)
 - Run workload, get trace, and simulate on dftl (DONE)
 - Run workload, get trace, and simulate on nkftl (DONE)
-- Generate LBA workload and simulate
+- Generate LBA workload and simulate (DONE)
 - Specify trace and simulate on dftl
 - Specify trace and simulate on nkftl
 - Specify trace and study request scale

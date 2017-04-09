@@ -122,66 +122,6 @@ class TestWorkflow(unittest.TestCase):
 
 
 
-class TestRequestScale(unittest.TestCase):
-    def test(self):
-        para_pool = expconfs.ParameterPool(
-                expname = "tmptest",
-                testname = ["sqliteWAL_reqscale_w_rand"],
-                filesystem = ['ext4']
-                )
-
-        for para in para_pool:
-            appbench.run_on_real_dev(para)
-
-class TestUniformDataLifetime(unittest.TestCase):
-    def test(self):
-        para_pool = expconfs.ParameterPool(
-                expname = "tmptest",
-                testname = ["sqliteWAL_wearlevel_w_rand"],
-                filesystem = ['ext4']
-                )
-
-        for para in para_pool:
-            appbench.run_on_real_dev(para)
-
-class TestLocality(unittest.TestCase):
-    def test(self):
-        old_dir = "/tmp/results/sqlitewal-update"
-        if os.path.exists(old_dir):
-            shutil.rmtree(old_dir)
-
-        # copy the data to
-        shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
-
-        for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "locality"):
-            appbench.execute_simulation(para)
-
-class TestAlignment(unittest.TestCase):
-    def test(self):
-        old_dir = "/tmp/results/sqlitewal-update"
-        if os.path.exists(old_dir):
-            shutil.rmtree(old_dir)
-
-        # copy the data to
-        shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
-
-        for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "alignment"):
-            appbench.execute_simulation(para)
-
-
-class TestGrouping(unittest.TestCase):
-    def test(self):
-        old_dir = "/tmp/results/sqlitewal-update"
-        if os.path.exists(old_dir):
-            shutil.rmtree(old_dir)
-
-        # copy the data to
-        shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
-
-        for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "grouping"):
-            appbench.execute_simulation(para)
-
-
 
 class Test_TraceOnly(unittest.TestCase):
     def test_run(self):
@@ -246,6 +186,89 @@ class Test_SimulateForSyntheticWorkload(unittest.TestCase):
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
         obj = LocalExperimenter( Parameters(**para) )
         obj.main()
+
+
+
+class TestRequestScale(unittest.TestCase):
+    def test_run(self):
+        class LocalExperimenter(experimenter.Experimenter):
+            def setup_workload(self):
+                self.conf['workload_class'] = "SimpleRandReadWrite"
+
+        para = experimenter.get_shared_nolist_para_dict("test_exp_TestRequestScale_jjj3nx", 16*MB)
+        para['device_path'] = "/dev/loop0"
+        para.update(
+            {
+                'device_path': "/dev/loop0",
+                'ftl' : 'ftlcounter',
+                'enable_simulation': True,
+                'dump_ext4_after_workload': True,
+                'only_get_traffic': False,
+                'trace_issue_and_complete': True,
+            })
+
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        obj = LocalExperimenter( Parameters(**para) )
+        obj.main()
+
+
+class TestUniformDataLifetime(unittest.TestCase):
+    def test(self):
+        para_pool = expconfs.ParameterPool(
+                expname = "tmptest",
+                testname = ["sqliteWAL_wearlevel_w_rand"],
+                filesystem = ['ext4']
+                )
+
+        for para in para_pool:
+            appbench.run_on_real_dev(para)
+
+class TestLocality(unittest.TestCase):
+    def test(self):
+        old_dir = "/tmp/results/sqlitewal-update"
+        if os.path.exists(old_dir):
+            shutil.rmtree(old_dir)
+
+        # copy the data to
+        shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
+
+        for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "locality"):
+            appbench.execute_simulation(para)
+
+class TestAlignment(unittest.TestCase):
+    def test(self):
+        old_dir = "/tmp/results/sqlitewal-update"
+        if os.path.exists(old_dir):
+            shutil.rmtree(old_dir)
+
+        # copy the data to
+        shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
+
+        for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "alignment"):
+            appbench.execute_simulation(para)
+
+
+class TestGrouping(unittest.TestCase):
+    def test(self):
+        old_dir = "/tmp/results/sqlitewal-update"
+        if os.path.exists(old_dir):
+            shutil.rmtree(old_dir)
+
+        # copy the data to
+        shcmd("cp -r ./tests/testdata/sqlitewal-update /tmp/results/")
+
+        for para in filesim.ParaDict("testexpname", ['sqlitewal-update'], "grouping"):
+            appbench.execute_simulation(para)
+
+
+
+
+
+
+
+
+
+
 
 
 
