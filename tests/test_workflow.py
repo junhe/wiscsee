@@ -210,6 +210,35 @@ class TestUsingExistingTraceToSimulate(unittest.TestCase):
         obj = LocalExperimenter( Parameters(**para) )
         obj.main()
 
+class TestUsingExistingTraceToStudyRequestScale(unittest.TestCase):
+    def test_run(self):
+        class LocalExperimenter(experimenter.Experimenter):
+            def setup_workload(self):
+                self.conf["workload_src"] = LBAGENERATOR
+                self.conf["lba_workload_class"] = "BlktraceEvents"
+                self.conf['lba_workload_configs']['mkfs_event_path'] = \
+                        self.para.mkfs_path
+                self.conf['lba_workload_configs']['ftlsim_event_path'] = \
+                        self.para.ftlsim_path
+
+        para = experimenter.get_shared_nolist_para_dict("test_exp_TestUsingExistingTraceToStudyRequestScale_jj23hx", 1*GB)
+        para.update({
+            'ftl': "ftlcounter",
+            "mkfs_path": "./tests/testdata/sqlitewal-update/subexp-7928737328932659543-ext4-10-07-23-50-10--2726320246496492803/blkparse-events-for-ftlsim-mkfs.txt",
+            "ftlsim_path": "./tests/testdata/sqlitewal-update/subexp-7928737328932659543-ext4-10-07-23-50-10--2726320246496492803/blkparse-events-for-ftlsim.txt",
+            'ftl' : 'ftlcounter',
+            'enable_simulation': True,
+            'dump_ext4_after_workload': True,
+            'only_get_traffic': False,
+            'trace_issue_and_complete': True,
+            'do_dump_lpn_sem': False,
+            })
+
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        obj = LocalExperimenter( Parameters(**para) )
+        obj.main()
+
+
 
 class TestRequestScale(unittest.TestCase):
     def test_run(self):

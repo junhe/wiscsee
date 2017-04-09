@@ -277,7 +277,11 @@ class Ftl(ftlbuilder.FtlBuilder):
         return "ftlcounter"
 
     def gen_ncq_depth_table_from_event(self):
-        event_file_path = self.conf.get_ftlsim_events_output_path()
+        if self.conf["workload_src"] == config.LBAGENERATOR:
+            event_file_path = self.conf["lba_workload_configs"]["ftlsim_event_path"]
+        else:
+            event_file_path = self.conf.get_ftlsim_events_output_path()
+
         workload_line_iter = hostevent.FileLineIterator(event_file_path)
         event_workload_iter = hostevent.EventIterator(self.conf, workload_line_iter)
 
