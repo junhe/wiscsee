@@ -7,7 +7,6 @@ from ssdbox import hostevent
 from commons import *
 from accpatterns import patterns
 from patternsuite import *
-from accpatterns.contractbench import *
 
 import prepare4pyreuse
 from pyreuse.general.zipf import ZipfGenerator
