@@ -65,11 +65,6 @@ def create_ssd_request(conf, event):
             None,
             event.operation)
 
-def create_ssd_request_with_cache(conf, event, in_cache):
-    req = create_ssd_request(conf, event)
-    req.in_cache(in_cache)
-    return req
-
 
 class NCQSingleQueue(object):
     """

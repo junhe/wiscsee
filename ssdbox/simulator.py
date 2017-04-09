@@ -11,7 +11,6 @@ import pprint
 import config
 import ssdframework
 import dftlext
-import dmftl
 import flash
 import nkftl2
 import recorder
@@ -27,6 +26,7 @@ from utilities import utils
 import prepare4pyreuse
 from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
 from pyreuse.fsutils import ext4dumpextents
+from .gc_analysis import GcLog
 
 class Simulator(object):
     __metaclass__ = abc.ABCMeta
@@ -96,84 +96,9 @@ class SimulatorDESNew(Simulator):
             gclog.classify_lpn_in_gclog()
 
 
-class GcLog(object):
-    def __init__(self, device_path, result_dir, flash_page_size):
-        self.device_path = device_path
-        self.result_dir = result_dir
-        self.flash_page_size = flash_page_size
-
-        self.gclog_path = os.path.join(self.result_dir, 'gc.log')
-        self.dumpe2fs_out_path = os.path.join(self.result_dir, 'dumpe2fs.out')
-        self.extents_path = os.path.join(self.result_dir, 'extents.json')
-        self.fs_block_size = 4096
-
-    def classify_lpn_in_gclog(self):
-        extents = self._get_extents()
-        filepath_classifier = blockclassifiers.Ext4FileClassifier(extents,
-                self.fs_block_size)
-
-        range_table = self._get_range_table()
-        classifier = blockclassifiers.Ext4BlockClassifier(range_table,
-                self.fs_block_size)
-
-        new_table = []
-        with open(self.gclog_path , 'rb') as f:
-            reader = csv.DictReader(f, skipinitialspace=True)
-            for row in reader:
-                newrow = dict(zip(row.keys()[0].split(), row.values()[0].split()))
-                if newrow['lpn'] != 'NA':
-                    offset = int(newrow['lpn']) * self.flash_page_size
-                    sem = classifier.classify(offset)
-                    if sem == 'UNKNOWN':
-                        sem = filepath_classifier.classify(offset)
-                else:
-                    sem = 'NA'
-                newrow['semantics'] = sem
-                new_table.append(newrow)
-
-        with open(self.gclog_path+'.parsed', 'w') as f:
-            f.write(utils.table_to_str(new_table))
-
-    def _get_extents(self):
-        d = utils.load_json(self.extents_path)
-        extents = d['extents']
-
-        return extents
-
-    def _get_range_table(self):
-        with open(self.dumpe2fs_out_path, 'r') as f:
-            text = f.read()
-
-        header_text, bg_text = text.split("\n\n\n")
-
-        range_table = dumpe2fsparser.parse_bg_text(bg_text)
-
-        j_start, j_end = self._get_journal_block_ext(header_text)
-        if j_start != -1:
-            range_table.append( {'journal': (j_start, j_end)} )
-
-        return range_table
-
-    def _get_journal_block_ext(self, header_text):
-        header_dict = dumpe2fsparser.parse_header_text(header_text)
-
-        if header_dict.has_key('journal-inode') is not True:
-            return -1, -1
-
-        journal_inum = header_dict['journal-inode']
-        journal_len = header_dict['journal-length']
-
-        ext_text = ext4dumpextents.dump_extents_of_a_file(self.device_path,
-                '<{}>'.format(journal_inum))
-        table = ext4dumpextents.parse_dump_extents_output(ext_text)
-        return table[0]['Physical_start'], table[0]['Physical_end']
-
-
 def create_simulator(simulator_class, conf, event_iter):
     cls = eval(simulator_class)
     return cls(conf, event_iter)
-
-
 
 
 def random_data(addr):
@@ -270,66 +195,6 @@ class SimulatorNonDESSpeed(SimulatorNonDES):
         self.ftl.sec_discard(
             sector = event.sector,
             count = event.sector_count)
-
-
-class SimulatorNonDESe2eExtent(SimulatorNonDES):
-    """
-    This one does not do e2e test
-    It uses extents
-    """
-    def __init__(self, conf, event_iter):
-        super(SimulatorNonDESe2eExtent, self).__init__(conf, event_iter)
-
-        self.lpn_to_data = {}
-
-    def get_sim_type(self):
-        return "NonDESe2eExtent"
-
-    def write(self, event):
-        """
-        1. Generate random data
-        2. Copy random data to lsn_to_data
-        3. Write data by ftl
-        """
-        extent = event.get_lpn_extent(self.conf)
-
-        data = []
-        for lpn in extent.lpn_iter():
-            content = random_data(lpn)
-            self.lpn_to_data[lpn] = content
-            data.append(content)
-
-        self.ftl.write_ext(extent, data = data)
-
-    def read(self, event):
-        """
-        read extent from flash and check if the data is correct.
-        """
-        extent = event.get_lpn_extent(self.conf)
-        data = self.ftl.read_ext(extent)
-
-        self.check_read(event, data)
-
-    def check_read(self, event, data):
-        extent = event.get_lpn_extent(self.conf)
-        for lpn, lpn_data in zip(extent.lpn_iter(), data):
-            if self.lpn_to_data.get(lpn, None) != lpn_data:
-                msg = "Data is not correct. Got: {read}, "\
-                        "Correct: {correct}. lpn={lpn}".format(
-                        read=lpn_data,
-                        correct=self.lpn_to_data.get(lpn, None),
-                        lpn=lpn)
-                print msg
-
-    def discard(self, event):
-        extent = event.get_lpn_extent(self.conf)
-        self.ftl.discard_ext(extent)
-
-        for lpn in extent.lpn_iter():
-            try:
-                del self.lpn_to_data[lpn]
-            except KeyError:
-                pass
 
 
 class SimulatorNonDESe2e(SimulatorNonDES):
@@ -458,65 +323,5 @@ class SimulatorDESSync(Simulator):
     def discard(self):
         raise NotImplementedError()
 
-class SimulatorDESTime(Simulator):
-    def __init__(self, conf, event_iter):
-        super(SimulatorDESTime, self).__init__(conf, None)
-
-
-        self.event_iter = event_iter
-
-        self.env = simpy.Environment()
-        self.ssdframework = ssdframework.SSDFramework(self.conf, self.recorder,
-                self.env)
-
-    def host_proc(self, event_iter):
-        """
-        This process acts like a producer, putting requests to ncq
-        """
-
-        # this token is acquired before we issue request to queue.
-        # it effectively control the queue depth of this process
-        token = simpy.Resource(self.env,
-                capacity = self.conf['process_queue_depth'])
-
-        for event in event_iter:
-            event.token = token
-            event.token_req = event.token.request()
-
-            if self.conf['simulator_enable_interval'] == True:
-                if event.operation in (OP_READ, OP_WRITE, OP_DISCARD):
-                    yield self.env.timeout(int(event.pre_wait_time * SEC))
-
-            yield self.ssdframework.ncq.queue.put(event)
-
-        for i in range(self.conf['SSDFramework']['ncq_depth']):
-            event = hostevent.ControlEvent(OP_SHUT_SSD)
-
-            event.token = token
-            event.token_req = event.token.request()
-
-            yield event.token_req
-
-            yield self.ssdframework.ncq.queue.put(event)
-
-        print 'Host finish time', self.env.now
-
-    def run(self):
-        self.env.process(self.host_proc(self.event_iter))
-        self.env.process(self.ssdframework.run())
-
-        self.env.run()
-
-    def get_sim_type(self):
-        return "SimulatorDESTime"
-
-    def write(self):
-        raise NotImplementedError()
-
-    def read(self):
-        raise NotImplementedError()
-
-    def discard(self):
-        raise NotImplementedError()
 
 

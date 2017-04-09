@@ -15,8 +15,6 @@ from ssdbox.devblockpool import *
 from ftlsim_commons import *
 from commons import *
 
-from . import blkpool
-
 """
 ############## Checklist ###############
 When you conduct an operation, consider how it affects the following data
@@ -37,8 +35,6 @@ DATA_USER = "data.user"
 IN_LOG_BLOCK = "IN_LOG_BLOCK"
 IN_DATA_BLOCK = "IN_DATA_BLOCK"
 TYPE_LOG_BLOCK, TYPE_DATA_BLOCK = ('TYPE_LOG_BLOCK', 'TYPE_DATA_BLOCK')
-
-global_debug = False
 
 TAG_PARTIAL_MERGE   = 'PARTIAL.MERGE'
 TAG_SWITCH_MERGE    = 'SWITCH.MERGE'

@@ -70,7 +70,7 @@ class DftlextExp(Experiment):
         self.conf['enable_simulation'] = True
 
     def setup_workload(self):
-        self.conf["workload_src"] = LBAGENERATOR
+        self.conf["workload_src"] = config.LBAGENERATOR
         self.conf["lba_workload_class"] = "TestWorkload"
         self.conf["age_workload_class"] = "NoOp"
 
@@ -104,7 +104,7 @@ class DftlextExp2(Experiment):
         self.conf['enable_simulation'] = True
 
     def setup_workload(self):
-        self.conf["workload_src"] = LBAGENERATOR
+        self.conf["workload_src"] = config.LBAGENERATOR
         self.conf["lba_workload_class"] = "ExtentTestWorkload"
         self.conf["lba_workload_configs"]["ExtentTestWorkload"] = {
             "op_count": 100}
@@ -139,7 +139,7 @@ class DftlextExpE2e(Experiment):
         self.conf['enable_simulation'] = True
 
     def setup_workload(self):
-        self.conf["workload_src"] = LBAGENERATOR
+        self.conf["workload_src"] = config.LBAGENERATOR
         self.conf["lba_workload_class"] = "ExtentTestWorkload"
         self.conf["lba_workload_configs"]["ExtentTestWorkload"] = {
             "op_count": 1000}
@@ -186,7 +186,7 @@ class TestDftextGC(unittest.TestCase):
         self.conf['enable_simulation'] = True
 
     def setup_workload(self):
-        self.conf["workload_src"] = LBAGENERATOR
+        self.conf["workload_src"] = config.LBAGENERATOR
         self.conf["lba_workload_class"] = "ExtentTestWorkload"
         self.conf["lba_workload_configs"]["ExtentTestWorkload"] = {
             "op_count": 1000}
@@ -227,7 +227,7 @@ class TestDftextGCSingleChannel(unittest.TestCase):
         self.conf['enable_simulation'] = True
 
     def setup_workload(self):
-        self.conf["workload_src"] = LBAGENERATOR
+        self.conf["workload_src"] = config.LBAGENERATOR
         self.conf["lba_workload_class"] = "ExtentTestWorkload"
         self.conf["lba_workload_configs"]["ExtentTestWorkload"] = {
             "op_count": 1000}

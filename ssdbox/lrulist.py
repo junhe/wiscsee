@@ -1,5 +1,4 @@
 import collections
-import ordereddict
 
 class Node(object):
     def __init__(self, key = None, value = None, empty = False):
@@ -172,69 +171,6 @@ class LinkedList(object):
             listview.append(str(node))
             node = node.next
         listview = '->'.join(listview)
-
-        return listview
-
-
-class DictByLinkedList(collections.MutableMapping):
-    def __init__(self, data = None, **kwargs):
-        self.table = {}
-        # node must be type 'class Node'
-        self.linked_list = LinkedList()
-
-        if data == None:
-            data = {}
-        self.update(data, **kwargs)
-
-    def __getitem__(self, key):
-        node = self.table[key]
-        return node.value
-
-    def has_key(self, key):
-        return self.table.has_key(key)
-
-    def keys(self):
-        return self.table.keys()
-
-    def get(self, key, default = None):
-        if self.table.has_key(key):
-            # will affect list order
-            return self.__getitem__(key)
-        else:
-            # will not affect list order
-            return default
-
-    def __setitem__(self, key, value):
-        if self.table.has_key(key):
-            # update
-            self.table[key].value = value
-        else:
-            # create new
-            node = Node(key = key, value = value)
-            self.linked_list.add_to_head(node)
-            self.table[key] = node
-
-    def __delitem__(self, key):
-        node = self.table[key]
-        del self.table[key]
-
-        self.linked_list.delete(node)
-
-    def __iter__(self):
-        return iter(self.table)
-
-    def __len__(self):
-        return len(self.linked_list)
-
-    def __repr__(self):
-        listview = []
-        node = self.linked_list.head()
-        while node != self.linked_list._end_guard:
-            listview.append(node.visual())
-            if node.empty:
-                break
-            node = node.next
-        listview = '->\n'.join(listview)
 
         return listview
 
