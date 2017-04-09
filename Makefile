@@ -8,7 +8,7 @@ testworkflow:
 	#./run_testclass.sh tests.test_workflow.TestTraceOnly
 	#./run_testclass.sh tests.test_workflow.Test_TraceAndSimulateNKFTL
 	#./run_testclass.sh tests.test_workflow.Test_TraceAndSimulateNKFTL
-	./run_testclass.sh tests.test_workflow.Test_TraceOnly2
+	./run_testclass.sh tests.test_workflow.Test_SimulateForSyntheticWorkload
 
 testone:
 	#./run_testclass.sh tests.misc_test.TestClassifyGcLOG

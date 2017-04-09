@@ -183,9 +183,7 @@ class TestGrouping(unittest.TestCase):
 
 
 
-
-
-class Test_TraceOnly2(unittest.TestCase):
+class Test_TraceOnly(unittest.TestCase):
     def test_run(self):
         class LocalExperimenter(experimenter.Experimenter):
             def setup_workload(self):
@@ -229,8 +227,25 @@ class Test_TraceAndSimulateNKFTL(unittest.TestCase):
         obj.main()
 
 
+class Test_SimulateForSyntheticWorkload(unittest.TestCase):
+        class LocalExperimenter(experimenter.Experimenter):
+            def setup_workload(self):
+                self.conf['workload_src'] = LBAGENERATOR
+                self.conf['lba_workload_class'] = "AccessesWithDist"
+                self.conf['AccessesWithDist'] = {
+                        'lba_access_dist': 'uniform',
+                        'traffic_size': 8*MB,
+                        'chunk_size': 64*KB,
+                        'space_size': 8*MB,
+                        'skew_factor': None,
+                        'zipf_alpha': None,
+                        }
 
-
+        para = experimenter.get_shared_nolist_para_dict("test_exp_SimulateForSyntheticWorkload", 16*MB)
+        para['ftl'] = "nkftl2"
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        obj = LocalExperimenter( Parameters(**para) )
+        obj.main()
 
 
 
