@@ -3,7 +3,6 @@ import os
 import time
 import datetime
 
-import prepare4pyreuse
 from pyreuse.sysutils import blocktrace
 from pyreuse.fsutils.ext4dumpextents import get_extents_of_dir
 import config

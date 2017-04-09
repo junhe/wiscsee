@@ -23,7 +23,6 @@ from ftlsim_commons import *
 from .host import Host
 from utilities import utils
 
-import prepare4pyreuse
 from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
 from pyreuse.fsutils import ext4dumpextents
 from .gc_analysis import GcLog

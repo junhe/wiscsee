@@ -20,13 +20,9 @@ from .bitmap import FlashBitmap2
 from commons import *
 from ssdbox import hostevent
 
-import prepare4pyreuse
 from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
 from pyreuse.fsutils import ext4dumpextents
 from pyreuse.sysutils.filefragparser import filefrag, get_file_range_table
-
-
-
 
 
 class Config(config.ConfigNCQFTL):

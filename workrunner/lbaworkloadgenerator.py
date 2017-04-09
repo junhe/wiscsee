@@ -8,7 +8,6 @@ from commons import *
 from accpatterns import patterns
 from patternsuite import *
 
-import prepare4pyreuse
 from pyreuse.general.zipf import ZipfGenerator
 
 class LBAWorkloadGenerator(object):

@@ -6,7 +6,6 @@ import random
 
 from utilities import utils
 
-import prepare4pyreuse
 from pyreuse.sysutils.ftrace import *
 from pyreuse.sysutils.cgroup import *
 

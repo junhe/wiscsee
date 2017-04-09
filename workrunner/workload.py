@@ -19,7 +19,6 @@ from accpatterns import patterns
 from .patternonfile import File
 import patternsuite
 
-import prepare4pyreuse
 from pyreuse.helpers import *
 
 try:

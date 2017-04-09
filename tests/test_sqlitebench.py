@@ -5,7 +5,6 @@ from sqlitebench.sqlitedb import *
 from utilities.utils import *
 from sqlitebench.bench import Bench
 
-import prepare4pyreuse
 from pyreuse.helpers import *
 
 class TestSqliteDB(unittest.TestCase):

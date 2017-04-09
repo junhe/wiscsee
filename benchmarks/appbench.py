@@ -9,7 +9,6 @@ from experimenter import *
 from expconfs import ParameterPool
 import filesim
 
-import prepare4pyreuse
 from pyreuse.sysutils.straceParser import parse_and_write_dirty_table
 
 

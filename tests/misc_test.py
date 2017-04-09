@@ -128,7 +128,6 @@ class TestF2FSGCCall(unittest.TestCase):
 
 class TestImportPyreuse(unittest.TestCase):
     def test(self):
-        import prepare4pyreuse
         import pyreuse
         pyreuse.helpers.shcmd("echo 33333")
 

@@ -25,7 +25,6 @@ from utilities import utils
 import dftldes
 import nkftl2
 
-import prepare4pyreuse
 from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
 
 class SsdBase(object):
