@@ -1,28 +1,11 @@
-import abc
-import argparse
-import random
-import simpy
-import sys
 import os
 import csv
-import pprint
-
-import config
-import ssdframework
-import dftlext
-import flash
-import nkftl2
-import recorder
-import hostevent
-import dftldes
-import ftlcounter
 
 from commons import *
 from ftlsim_commons import *
 from .host import Host
 from utilities import utils
 
-import prepare4pyreuse
 from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
 from pyreuse.fsutils import ext4dumpextents
 
