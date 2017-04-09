@@ -1,5 +1,5 @@
-from Makefile import *
 import csv
+import collections
 import os
 import glob
 import time

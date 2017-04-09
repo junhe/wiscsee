@@ -4,8 +4,8 @@ import simpy
 
 import flashcontroller
 import ssdbox
+from utilities.utils import *
 from commons import *
-from Makefile import *
 
 
 class TestTemplate(unittest.TestCase):

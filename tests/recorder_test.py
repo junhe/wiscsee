@@ -1,7 +1,7 @@
 import config
 import unittest
 
-from Makefile import *
+from utilities.utils import *
 
 class TestFTLwithDFTL(unittest.TestCase):
     def setup_config(self):

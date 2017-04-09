@@ -1,6 +1,7 @@
 import unittest
 import collections
 import shutil
+
 from workflow import *
 import ssdbox
 from utilities import utils

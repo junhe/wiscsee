@@ -1,6 +1,5 @@
 import unittest
 
-# from Makefile import *
 from utilities.utils import *
 from ssdbox.blkpool import *
 import ssdbox
