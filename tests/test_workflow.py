@@ -210,6 +210,9 @@ class TestUsingExistingTraceToSimulate(unittest.TestCase):
         obj = LocalExperimenter( Parameters(**para) )
         obj.main()
 
+
+
+
 class TestUsingExistingTraceToStudyRequestScale(unittest.TestCase):
     def test_run(self):
         class LocalExperimenter(experimenter.Experimenter):
@@ -239,8 +242,11 @@ class TestUsingExistingTraceToStudyRequestScale(unittest.TestCase):
         obj.main()
 
 
+###################################################################
+# Experiments setting similar to SSD Contract paper
+###################################################################
 
-class TestRequestScale(unittest.TestCase):
+class TestRunningWorkloadAndOutputRequestScale(unittest.TestCase):
     def test_run(self):
         class LocalExperimenter(experimenter.Experimenter):
             def setup_workload(self):
@@ -262,17 +268,6 @@ class TestRequestScale(unittest.TestCase):
         obj = LocalExperimenter( Parameters(**para) )
         obj.main()
 
-
-class TestUniformDataLifetime(unittest.TestCase):
-    def test(self):
-        para_pool = expconfs.ParameterPool(
-                expname = "tmptest",
-                testname = ["sqliteWAL_wearlevel_w_rand"],
-                filesystem = ['ext4']
-                )
-
-        for para in para_pool:
-            appbench.run_on_real_dev(para)
 
 class TestLocality(unittest.TestCase):
     def test(self):
@@ -312,13 +307,16 @@ class TestGrouping(unittest.TestCase):
             appbench.execute_simulation(para)
 
 
+class TestUniformDataLifetime(unittest.TestCase):
+    def test(self):
+        para_pool = expconfs.ParameterPool(
+                expname = "tmptest",
+                testname = ["sqliteWAL_wearlevel_w_rand"],
+                filesystem = ['ext4']
+                )
 
-
-
-
-
-
-
+        for para in para_pool:
+            appbench.run_on_real_dev(para)
 
 
 

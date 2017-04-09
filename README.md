@@ -15,17 +15,6 @@ Demo
 - Specify trace and study data lifetime    10min
 
 
-- Request Scale
-    - Output the table with timestamp, queue depth, ...
-- Locality
-    - Report the miss ratio
-- Aligned Sequentiality
-    - Report the unaligned ratio
-- Grouping by Death Time
-    - Report the snapshots of valid ratios
-- Uniform Data Lifetime
-    - The raw block trace should be enough
-
 TODO:
 
 - Remove useless workloads
