@@ -6,7 +6,6 @@ import time
 
 from utilities import utils
 from experimenter import *
-from expconfs import ParameterPool
 import filesim
 
 from pyreuse.sysutils.straceParser import parse_and_write_dirty_table

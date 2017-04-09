@@ -6,7 +6,7 @@ from workflow import *
 import ssdbox
 from utilities import utils
 from ssdbox.hostevent import Event, ControlEvent
-from benchmarks import expconfs, appbench, filesim
+from benchmarks import appbench, filesim
 from pyreuse.helpers import shcmd
 from benchmarks import experimenter
 
