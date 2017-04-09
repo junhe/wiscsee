@@ -35,8 +35,8 @@ class Bench(object):
         self.journal_mode = journal_mode.upper()
         # 100 is the default value size in leveldb
         # 16 is the default key size in leveldb
-        self.value_size = 100
-        self.key_size = 16
+        self.value_size = VALUE_SIZE
+        self.key_size = KEY_SIZE
 
         self.existing_keys = set()
 

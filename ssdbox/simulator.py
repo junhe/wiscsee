@@ -8,7 +8,6 @@ import os
 import csv
 import pprint
 
-import bmftl
 import config
 import ssdframework
 import dftlext

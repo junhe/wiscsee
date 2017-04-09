@@ -4,10 +4,6 @@ from commons import *
 from experimenter import get_shared_para_dict
 from utilities.utils import *
 
-def repeat_bench(name, n):
-    return ','.join([name] * n)
-
-
 proc_settings = {
     ######## SqliteWAL #######
     'sqliteWAL': {
