@@ -7,6 +7,7 @@ import ssdbox
 from utilities.utils import *
 from commons import *
 from config import MountOption as MOpt
+from config import LBAGENERATOR
 
 class Experiment(object):
     def __init__(self, para):

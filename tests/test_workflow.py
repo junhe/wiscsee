@@ -3,7 +3,7 @@ import collections
 import shutil
 import os
 
-from config import LBAGENERATOR
+import config
 from workflow import *
 import ssdbox
 from utilities import utils
@@ -164,7 +164,7 @@ class Test_TraceAndSimulateNKFTL(unittest.TestCase):
 class Test_SimulateForSyntheticWorkload(unittest.TestCase):
         class LocalExperiment(experiment.Experiment):
             def setup_workload(self):
-                self.conf['workload_src'] = LBAGENERATOR
+                self.conf['workload_src'] = config.LBAGENERATOR
                 self.conf['lba_workload_class'] = "AccessesWithDist"
                 self.conf['AccessesWithDist'] = {
                         'lba_access_dist': 'uniform',
@@ -186,7 +186,7 @@ class TestUsingExistingTraceToSimulate(unittest.TestCase):
     def test_run(self):
         class LocalExperiment(experiment.Experiment):
             def setup_workload(self):
-                self.conf["workload_src"] = LBAGENERATOR
+                self.conf["workload_src"] = config.LBAGENERATOR
                 self.conf["lba_workload_class"] = "BlktraceEvents"
                 self.conf['lba_workload_configs']['mkfs_event_path'] = \
                         self.para.mkfs_path
@@ -211,7 +211,7 @@ class TestUsingExistingTraceToStudyRequestScale(unittest.TestCase):
     def test_run(self):
         class LocalExperiment(experiment.Experiment):
             def setup_workload(self):
-                self.conf["workload_src"] = LBAGENERATOR
+                self.conf["workload_src"] = config.LBAGENERATOR
                 self.conf["lba_workload_class"] = "BlktraceEvents"
                 self.conf['lba_workload_configs']['mkfs_event_path'] = \
                         self.para.mkfs_path
