@@ -239,7 +239,7 @@ class Experiment(object):
 def get_shared_para_dict(expname, lbabytes):
     para_dict = {
             'ftl'            : ['dftldes'],
-            'device_path'    : ['/dev/sdc1'],
+            'device_path'    : ['/dev/loop0'],
             # 'filesystem'     : ['f2fs', 'ext4', 'ext4-nj', 'btrfs', 'xfs'],
             'filesystem'     : ['ext4'],
             'ext4datamode'   : ['ordered'],

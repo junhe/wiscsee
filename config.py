@@ -248,7 +248,6 @@ class Config(dict):
             "dev_size_mb"      : None,
             "tmpfs_mount_point"     : "/mnt/tmpfs",
 
-            # "device_path"           : "/dev/sdc1", # or sth. like /dev/sdc1
             "device_path"           : "/dev/loop0", # or sth. like /dev/sdc1
             "dev_padding"      : 8*MB,
 

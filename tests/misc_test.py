@@ -44,8 +44,8 @@ class TestLinuxNCQDepth(unittest.TestCase):
             return
 
         depth = 2
-        utils.set_linux_ncq_depth("sdc", depth)
-        read_depth = utils.get_linux_ncq_depth("sdc")
+        utils.set_linux_ncq_depth("loop0", depth)
+        read_depth = utils.get_linux_ncq_depth("loop0")
         self.assertEqual(depth, read_depth)
 
 class TestSettingScheduler(unittest.TestCase):
@@ -54,9 +54,9 @@ class TestSettingScheduler(unittest.TestCase):
             return
 
         scheduler = 'noop'
-        utils.set_linux_io_scheduler("sdc", scheduler)
+        utils.set_linux_io_scheduler("loop0", scheduler)
 
-        read_scheduler = utils.get_linux_io_scheduler("sdc")
+        read_scheduler = utils.get_linux_io_scheduler("loop0")
         self.assertEqual(scheduler, read_scheduler)
 
 
