@@ -9,7 +9,6 @@ import config
 import cpuhandler
 import filesystem
 import fshelper
-import ftrace
 from wiscsim import hostevent
 from utilities import utils
 import workload

@@ -8,14 +8,10 @@ import subprocess
 
 from commons import *
 import config
-import fio
 import multiwriters
-import perf
 from utilities import utils
-import workloadlist
 
 from pyreuse.helpers import *
-from pyreuse.sysutils.ftrace import trace_cmd
 from pyreuse.apputils.parseleveldboutput import parse_file
 
 class Workload(object):
