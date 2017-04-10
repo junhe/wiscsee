@@ -21,11 +21,11 @@ WiscSee contains several demos to help you get started quickly. The demos show
 
 # Download and Setup
 
-## Option 1: VM Image
+#### Option 1: VM Image
 
-## Option 2: Docker Image
+#### Option 2: Docker Image
 
-## Option 3: Git clone
+#### Option 3: Git clone
 
 1. Setup
 
@@ -54,7 +54,7 @@ command. We also pretend that `/dev/loop0` is an SSD. We will use `dd` to write
 to a file system mounted on `/dev/loop0`. We simulate this workload on an SSD
 simulator.
 
-#### Specify your application 
+#### 1. Specify your application 
 
 Open `workrunner/workload.py`, add the following code
 
@@ -75,7 +75,7 @@ class LinuxDD(Workload):
 ```
 
 
-#### Setup Experiment
+#### 2. Setup Experiment
 
 Open `tests/test_demo.py`, add the following code
 
@@ -95,13 +95,13 @@ class Test_TraceAndSimulateLinuxDD(unittest.TestCase):
 ```
 
 
-#### Run
+#### 3. Run
 
 ```
 ./run_testclass.sh tests.test_demo.Test_TraceAndSimulateLinuxDD
 ```
 
-#### Check Results
+#### 4. Check Results
 
 WiscSee puts results to `/tmp/results/`. In my case, the results of this
 experiment is in
