@@ -74,6 +74,7 @@ class LinuxDD(Workload):
         pass
 ```
 
+In the next step we will tell WiscSee to use this class.
 
 #### 2. Setup Experiment
 
@@ -87,12 +88,21 @@ class Test_TraceAndSimulateLinuxDD(unittest.TestCase):
                 self.conf['workload_class'] = "LinuxDD"
 
         para = experiment.get_shared_nolist_para_dict("test_exp_LinuxDD", 16*MB)
-        para['device_path'] = "/dev/loop0"
+        para['device_path'] = "/dev/loop0" 
+        para['filesystem'] = "ext4"
         para['ftl'] = "dftldes"
         Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
         obj = LocalExperiment( Parameters(**para) )
         obj.main()
 ```
+
+We implement the experiment as a test for convenience of this tutorial.
+
+`self.conf['workload_class'] = "LinuxDD"` tells WiscSee to use class `LinuxDD`
+to run the application. 
+
+You may check `./config_helper/experiment.py` and `config.py` for more options
+of experiments.
 
 
 #### 3. Run
@@ -120,8 +130,6 @@ dumpe2fs.out                            dumpe2fs results of ext4
 recorder.json                           various statistics, such as valid ratio distributions, number of flash writes, ...
 recorder.log                            no longer used
 ```
-
-
 
 
 

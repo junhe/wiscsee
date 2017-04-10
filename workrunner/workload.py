@@ -87,18 +87,18 @@ class SimpleRandReadWrite(Workload):
         pass
 
 
-# class LinuxDD(Workload):
-    # def __init__(self, confobj, workload_conf_key = None):
-        # super(LinuxDD, self).__init__(confobj, workload_conf_key)
+class LinuxDD(Workload):
+    def __init__(self, confobj, workload_conf_key = None):
+        super(LinuxDD, self).__init__(confobj, workload_conf_key)
 
-    # def run(self):
-        # mnt = self.conf["fs_mount_point"]
-        # cmd = "dd if=/dev/zero of={}/datafile bs=64k count=128".format(mnt)
-        # print cmd
-        # subprocess.call(cmd, shell=True)
-        # subprocess.call("sync")
+    def run(self):
+        mnt = self.conf["fs_mount_point"]
+        cmd = "dd if=/dev/zero of={}/datafile bs=64k count=128".format(mnt)
+        print cmd
+        subprocess.call(cmd, shell=True)
+        subprocess.call("sync")
 
-    # def stop(self):
-        # pass
+    def stop(self):
+        pass
 
 
