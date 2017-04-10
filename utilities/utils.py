@@ -141,7 +141,11 @@ def get_linux_io_scheduler(devname):
     filepath = "/sys/block/{}/queue/scheduler".format(devname)
     with open(filepath, 'r') as f:
         line = f.readline()
-        return re.search(r'\[(\w+)\]', line).group(1)
+        # return re.search(r'\[(\w+)\]', line).group(1)
+        if not m is None:
+            return m.group(1)
+        else:
+            return line.strip()
 
 def runtime_update(conf):
     """
