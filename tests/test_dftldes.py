@@ -4,9 +4,8 @@ import simpy
 
 from ssdbox import ftlsim_commons
 
-import ssdbox
 from utilities import utils
-import flashcontroller
+import ssdbox
 from ssdbox.ftlsim_commons import Extent
 from ssdbox.dftldes import LpnTable, LpnTableMvpn, UNINITIATED, \
         split_ext_by_segment
@@ -73,7 +72,7 @@ def create_blockpool(conf):
     return ssdbox.dftldes.BlockPool(conf)
 
 def create_flashcontrolelr(conf, env, rec):
-    return flashcontroller.controller.Controller3(env, conf, rec)
+    return ssdbox.controller.Controller3(env, conf, rec)
 
 def create_simpy_env():
     return simpy.Environment()

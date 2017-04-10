@@ -2,7 +2,6 @@ import config
 import unittest
 import simpy
 
-import flashcontroller
 import ssdbox
 from utilities.utils import *
 from commons import *
@@ -57,7 +56,7 @@ class TestChannel(unittest.TestCase):
 
     def my_run(self):
         env = simpy.Environment()
-        channel = flashcontroller.controller.Channel(env, self.conf)
+        channel = ssdbox.controller.Channel(env, self.conf)
         env.process(self.access(env, channel))
         env.run()
 
@@ -84,7 +83,7 @@ class TestController(unittest.TestCase):
         pass
 
     def access(self, env,  controller):
-        addr = flashcontroller.controller.FlashAddress()
+        addr = ssdbox.controller.FlashAddress()
         addr.channel = 1
 
         channel = controller.channels[addr.channel]
@@ -104,7 +103,7 @@ class TestController(unittest.TestCase):
 
     def my_run(self):
         env = simpy.Environment()
-        controller = flashcontroller.controller.Controller(env, self.conf)
+        controller = ssdbox.controller.Controller(env, self.conf)
         env.process(self.access(env, controller))
         env.run()
 
@@ -132,7 +131,7 @@ class TestControllerTranslation(unittest.TestCase):
 
     def my_run(self):
         env = simpy.Environment()
-        controller = flashcontroller.controller.Controller(env, self.conf)
+        controller = ssdbox.controller.Controller(env, self.conf)
         addr = controller.physical_to_machine_page(0)
         for n in addr.location:
             self.assertEqual(n, 0)
@@ -164,8 +163,8 @@ class TestControllerRequest(unittest.TestCase):
         pass
 
     def create_request(self, channel, op):
-        req = flashcontroller.controller.FlashRequest()
-        req.addr = flashcontroller.controller.FlashAddress()
+        req = ssdbox.controller.FlashRequest()
+        req.addr = ssdbox.controller.FlashAddress()
         req.addr.channel = channel
         if op == 'read':
             req.operation = OP_READ
@@ -200,7 +199,7 @@ class TestControllerRequest(unittest.TestCase):
 
     def my_run(self):
         env = simpy.Environment()
-        controller = flashcontroller.controller.Controller(env, self.conf)
+        controller = ssdbox.controller.Controller(env, self.conf)
         env.process(self.access(env, controller))
         env.run()
 
@@ -226,7 +225,7 @@ class TestFlashAddress(unittest.TestCase):
         pass
 
     def my_run(self):
-        addr = flashcontroller.controller.FlashAddress()
+        addr = ssdbox.controller.FlashAddress()
         addr.page = 3
         addr.channel = 5
         self.assertEqual(addr.page, 3)
@@ -263,8 +262,8 @@ class TestControllerRequest2(unittest.TestCase):
         pass
 
     def create_request(self, channel, op):
-        req = flashcontroller.controller.FlashRequest()
-        req.addr = flashcontroller.controller.FlashAddress()
+        req = ssdbox.controller.FlashRequest()
+        req.addr = ssdbox.controller.FlashAddress()
         req.addr.channel = channel
         if op == 'read':
             req.operation = OP_READ
@@ -299,7 +298,7 @@ class TestControllerRequest2(unittest.TestCase):
 
     def my_run(self):
         env = simpy.Environment()
-        controller = flashcontroller.controller.Controller(env, self.conf)
+        controller = ssdbox.controller.Controller(env, self.conf)
         env.process(self.access(env, controller))
         env.run()
 
@@ -341,7 +340,7 @@ class TestControllerTime(unittest.TestCase):
 
     def my_run(self):
         env = simpy.Environment()
-        controller = flashcontroller.controller.Controller(env, self.conf)
+        controller = ssdbox.controller.Controller(env, self.conf)
 
         self.assertEqual(controller.channels[0].read_time, 9)
         self.assertEqual(controller.channels[0].program_time, 9)
@@ -376,8 +375,8 @@ class TestControllerTag(unittest.TestCase):
         pass
 
     def create_request(self, channel, op):
-        req = flashcontroller.controller.FlashRequest()
-        req.addr = flashcontroller.controller.FlashAddress()
+        req = ssdbox.controller.FlashRequest()
+        req.addr = ssdbox.controller.FlashAddress()
         req.addr.channel = channel
         if op == 'read':
             req.operation = OP_READ
@@ -429,7 +428,7 @@ class TestControllerTag(unittest.TestCase):
             )
         rec.enable()
 
-        controller = flashcontroller.controller.Controller3(env, self.conf, rec)
+        controller = ssdbox.controller.Controller3(env, self.conf, rec)
         env.process(self.access(env, controller))
         env.run()
 

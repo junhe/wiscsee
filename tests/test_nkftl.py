@@ -13,7 +13,6 @@ from utilities.utils import choose_exp_metadata, runtime_update
 from workflow import run_workflow
 from config import LBAGENERATOR
 from ssdbox.ftlsim_commons import *
-import flashcontroller
 
 TDATA = 'TDATA'
 TLOG = 'TLOG'
@@ -90,7 +89,7 @@ def create_env():
     return env
 
 def create_flash_controller(env, conf, rec):
-    flash_controller = flashcontroller.controller.Controller3(
+    flash_controller = ssdbox.controller.Controller3(
             env, conf, rec)
     return flash_controller
 

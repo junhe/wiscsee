@@ -16,7 +16,7 @@ import config
 from commons import *
 from ftlsim_commons import *
 import flash
-import flashcontroller
+import controller
 import ftlbuilder
 import hostevent
 import lrulist
@@ -43,7 +43,7 @@ class Ssd(SsdBase):
         self.ncq = ncq # should be initialized in Simulator
         self.n_processes = self.ncq.ncq_depth
 
-        self.flash_controller = flashcontroller.controller.Controller3(
+        self.flash_controller = controller.Controller3(
                 self.env, self.conf, self.recorder)
 
         print 'initializing ssd...........', self.conf['ftl_type']
@@ -363,7 +363,7 @@ class SSDFramework(object):
                 ncq_depth = self.conf['SSDFramework']['ncq_depth'],
                 simpy_env = self.env)
 
-        self.flash_controller = flashcontroller.controller.Controller3(
+        self.flash_controller = controller.Controller3(
                 self.env, self.conf, self.recorder)
 
         if self.conf['ftl_type'] == 'dftldes':
