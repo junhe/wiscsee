@@ -3,7 +3,7 @@ import csv
 import collections
 
 from workflow import run_workflow
-import ssdbox
+import wiscsim
 from utilities.utils import *
 from commons import *
 from config import MountOption as MOpt
@@ -12,13 +12,13 @@ from config import LBAGENERATOR
 class Experiment(object):
     def __init__(self, para):
         if para.ftl == 'nkftl2':
-            self.conf = ssdbox.nkftl2.Config()
+            self.conf = wiscsim.nkftl2.Config()
         elif para.ftl == 'dftldes':
-            self.conf = ssdbox.dftldes.Config()
+            self.conf = wiscsim.dftldes.Config()
         elif para.ftl == 'dftlext':
-            self.conf = ssdbox.dftlext.Config()
+            self.conf = wiscsim.dftlext.Config()
         elif para.ftl == 'ftlcounter':
-            self.conf = ssdbox.ftlcounter.Config()
+            self.conf = wiscsim.ftlcounter.Config()
         else:
             print para.ftl
             raise NotImplementedError()
@@ -192,16 +192,16 @@ class Experiment(object):
 
     def check_config(self):
         if self.conf['ftl_type'] == 'dftldes':
-            assert isinstance(self.conf, ssdbox.dftldes.Config)
+            assert isinstance(self.conf, wiscsim.dftldes.Config)
             assert self.conf['simulator_class'] == 'SimulatorDESNew'
         elif self.conf['ftl_type'] == 'nkftl2':
-            assert isinstance(self.conf, ssdbox.nkftl2.Config)
+            assert isinstance(self.conf, wiscsim.nkftl2.Config)
             assert self.conf['simulator_class'] == 'SimulatorDESNew'
         elif self.conf['ftl_type'] == 'dftlext':
-            assert isinstance(self.conf, ssdbox.dftlext.Config)
+            assert isinstance(self.conf, wiscsim.dftlext.Config)
             assert self.conf['simulator_class'] == 'SimulatorNonDESSpeed'
         elif self.conf['ftl_type'] == 'ftlcounter':
-            assert isinstance(self.conf, ssdbox.ftlcounter.Config)
+            assert isinstance(self.conf, wiscsim.ftlcounter.Config)
             assert self.conf['simulator_class'] == 'SimulatorNonDESSpeed'
         else:
             RuntimeError("ftl type may not be supported here")

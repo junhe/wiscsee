@@ -5,16 +5,16 @@ import os
 
 import config
 from workflow import *
-import ssdbox
+import wiscsim
 from utilities import utils
-from ssdbox.hostevent import Event, ControlEvent
+from wiscsim.hostevent import Event, ControlEvent
 from config_helper import rule_parameter
 from pyreuse.helpers import shcmd
 from config_helper import experiment
 
 
 def create_config():
-    conf = ssdbox.dftldes.Config()
+    conf = wiscsim.dftldes.Config()
     conf['SSDFramework']['ncq_depth'] = 1
 
     conf['flash_config']['n_pages_per_block'] = 64

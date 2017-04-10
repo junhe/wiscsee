@@ -1,15 +1,15 @@
 import unittest
 
 from utilities.utils import *
-from ssdbox.blkpool import *
-import ssdbox
+from wiscsim.blkpool import *
+import wiscsim
 
 def create_blockpool(conf):
-    return ssdbox.dftldes.BlockPool(conf)
+    return wiscsim.dftldes.BlockPool(conf)
 
 
 def create_config():
-    conf = ssdbox.dftldes.Config()
+    conf = wiscsim.dftldes.Config()
 
     conf['flash_config']['n_pages_per_block'] = 64
     conf['flash_config']['n_blocks_per_plane'] = 2
@@ -32,7 +32,7 @@ class TestBlockPool_data(unittest.TestCase):
     Test pop_a_free_block_data
     """
     def setup_config(self):
-        self.conf = ssdbox.dftlext.Config()
+        self.conf = wiscsim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -46,7 +46,7 @@ class TestBlockPool_data(unittest.TestCase):
 
     def my_run(self):
         runtime_update(self.conf)
-        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        block_pool = wiscsim.blkpool.BlockPool(self.conf)
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
 
@@ -80,7 +80,7 @@ class TestBlockPool_next_data(unittest.TestCase):
     Test pop_a_free_block_data
     """
     def setup_config(self):
-        self.conf = ssdbox.dftlext.Config()
+        self.conf = wiscsim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -94,7 +94,7 @@ class TestBlockPool_next_data(unittest.TestCase):
 
     def my_run(self):
         runtime_update(self.conf)
-        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        block_pool = wiscsim.blkpool.BlockPool(self.conf)
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
 
@@ -124,7 +124,7 @@ class TestBlockPool_next_gc_data(unittest.TestCase):
     Test pop_a_free_block_data
     """
     def setup_config(self):
-        self.conf = ssdbox.dftlext.Config()
+        self.conf = wiscsim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -138,7 +138,7 @@ class TestBlockPool_next_gc_data(unittest.TestCase):
 
     def my_run(self):
         runtime_update(self.conf)
-        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        block_pool = wiscsim.blkpool.BlockPool(self.conf)
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
 
@@ -190,7 +190,7 @@ class TestBlockPool_stripping(unittest.TestCase):
         runtime_update(self.conf)
 
         self.conf['stripe_size'] = 2
-        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        block_pool = wiscsim.blkpool.BlockPool(self.conf)
         block_pool.pool._next_channel = 0
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
@@ -215,7 +215,7 @@ class TestBlockPool_stripping(unittest.TestCase):
         runtime_update(self.conf)
 
         self.conf['stripe_size'] = 1
-        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        block_pool = wiscsim.blkpool.BlockPool(self.conf)
         block_pool.pool._next_channel = 0
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
@@ -234,7 +234,7 @@ class TestBlockPool_stripping(unittest.TestCase):
         runtime_update(self.conf)
 
         self.conf['stripe_size'] = float('inf')
-        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        block_pool = wiscsim.blkpool.BlockPool(self.conf)
         block_pool.pool._next_channel = 0
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
@@ -279,7 +279,7 @@ class TestBlockPool_outofspace(unittest.TestCase):
     def my_run_1(self):
         runtime_update(self.conf)
         self.conf['stripe_size'] = 2
-        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        block_pool = wiscsim.blkpool.BlockPool(self.conf)
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
 
@@ -292,26 +292,26 @@ class TestBlockPool_outofspace(unittest.TestCase):
 
     def my_run_2(self):
         runtime_update(self.conf)
-        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        block_pool = wiscsim.blkpool.BlockPool(self.conf)
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
 
         n = self.conf.total_num_pages() + 1
 
-        with self.assertRaises(ssdbox.blkpool.OutOfSpaceError):
+        with self.assertRaises(wiscsim.blkpool.OutOfSpaceError):
             ppns_to_write = block_pool.next_n_data_pages_to_program_striped(
                     n = n)
 
     def my_run_3(self):
         runtime_update(self.conf)
         self.conf['stripe_size'] = float('inf')
-        block_pool = ssdbox.blkpool.BlockPool(self.conf)
+        block_pool = wiscsim.blkpool.BlockPool(self.conf)
         n_channels = block_pool.n_channels
         n_blocks_per_channel = self.conf.n_blocks_per_channel
 
         n = self.conf.total_num_pages() + 1
 
-        with self.assertRaises(ssdbox.blkpool.OutOfSpaceError):
+        with self.assertRaises(wiscsim.blkpool.OutOfSpaceError):
             ppns_to_write = block_pool.next_n_data_pages_to_program_striped(
                 n = n)
 

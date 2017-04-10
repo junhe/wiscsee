@@ -1,5 +1,5 @@
 import unittest
-from ssdbox.devblockpool import *
+from wiscsim.devblockpool import *
 from collections import Counter
 
 from utilities import utils

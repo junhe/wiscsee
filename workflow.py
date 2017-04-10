@@ -4,8 +4,8 @@ import os
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 from commons import *
 from utilities.utils import *
-import ssdbox
-from ssdbox.simulator import create_simulator
+import wiscsim
+from wiscsim.simulator import create_simulator
 import workrunner
 
 

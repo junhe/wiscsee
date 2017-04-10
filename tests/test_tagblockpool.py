@@ -1,5 +1,5 @@
 import unittest
-from ssdbox.tagblockpool import *
+from wiscsim.tagblockpool import *
 
 
 TDATA = 'TDATA'

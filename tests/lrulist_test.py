@@ -1,13 +1,13 @@
 import unittest
 
-import ssdbox
-from ssdbox.lrulist import LinkedList, Node, LruDict, LruCache
+import wiscsim
+from wiscsim.lrulist import LinkedList, Node, LruDict, LruCache
 import profile
 
 
 class Test_lrucache(unittest.TestCase):
     def test1(self):
-        lrucache = ssdbox.lrulist.LruCache()
+        lrucache = wiscsim.lrulist.LruCache()
         lrucache[1] = 11
         lrucache[2] = 22
         lrucache[3] = 33

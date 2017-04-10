@@ -18,7 +18,7 @@ from utilities import utils
 from .blkpool import BlockPool
 from .bitmap import FlashBitmap2
 from commons import *
-from ssdbox import hostevent
+from wiscsim import hostevent
 
 from pyreuse.sysutils import blocktrace, blockclassifiers, dumpe2fsparser
 from pyreuse.fsutils import ext4dumpextents

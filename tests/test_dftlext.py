@@ -1,7 +1,7 @@
 import unittest
 import pprint
 
-import ssdbox
+import wiscsim
 from workflow import run_workflow
 import config
 from utilities.utils import *
@@ -60,7 +60,7 @@ class TestTemplate(unittest.TestCase):
 class DftlextExp(Experiment):
     def __init__(self):
         # Get default setting
-        self.conf = ssdbox.dftlext.Config()
+        self.conf = wiscsim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -94,7 +94,7 @@ class DftlextExp2(Experiment):
     """
     def __init__(self):
         # Get default setting
-        self.conf = ssdbox.dftlext.Config()
+        self.conf = wiscsim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -129,7 +129,7 @@ class DftlextExpE2e(Experiment):
     """
     def __init__(self):
         # Get default setting
-        self.conf = ssdbox.dftlext.Config()
+        self.conf = wiscsim.dftlext.Config()
 
     def setup_environment(self):
         metadata_dic = choose_exp_metadata(self.conf, interactive = False)
@@ -175,7 +175,7 @@ class DftlextTest3(unittest.TestCase):
 
 class TestDftextGC(unittest.TestCase):
     def setup_config(self):
-        self.conf = ssdbox.dftlext.Config()
+        self.conf = wiscsim.dftlext.Config()
         self.conf.n_channels_per_dev = 4
 
     def setup_environment(self):
@@ -215,7 +215,7 @@ class TestDftextGC(unittest.TestCase):
 
 class TestDftextGCSingleChannel(unittest.TestCase):
     def setup_config(self):
-        self.conf = ssdbox.dftlext.Config()
+        self.conf = wiscsim.dftlext.Config()
 
         print '1', self.conf.n_blocks_per_dev
 
@@ -256,7 +256,7 @@ class TestDftextGCSingleChannel(unittest.TestCase):
 
 class TestDftlextTimeline(unittest.TestCase):
     def setup_config(self):
-        self.conf = ssdbox.dftlext.Config()
+        self.conf = wiscsim.dftlext.Config()
 
     def setup_environment(self):
         pass
@@ -268,13 +268,13 @@ class TestDftlextTimeline(unittest.TestCase):
         pass
 
     def my_run(self):
-        tl = ssdbox.dftlext.Timeline(self.conf)
+        tl = wiscsim.dftlext.Timeline(self.conf)
         tl.turn_on()
-        tl.add_logical_op(0, 100, ssdbox.dftlext.LOGICAL_READ)
+        tl.add_logical_op(0, 100, wiscsim.dftlext.LOGICAL_READ)
         tl.incr_time_stamp('flash.read', 3)
         self.assertEqual(tl.table[-1]['end_timestamp'],
             tl.conf['flash_config']['page_read_time'] * 3)
-        tl.add_logical_op(200, 100, ssdbox.dftlext.LOGICAL_READ)
+        tl.add_logical_op(200, 100, wiscsim.dftlext.LOGICAL_READ)
         self.assertEqual(tl.table[-1]['start_timestamp'],
             tl.conf['flash_config']['page_read_time'] * 3)
 
@@ -288,7 +288,7 @@ class TestDftlextTimeline(unittest.TestCase):
 
 class TestDftlextParallelFlash(unittest.TestCase):
     def setup_config(self):
-        self.conf = ssdbox.dftlext.Config()
+        self.conf = wiscsim.dftlext.Config()
         # 2 pages per block, 2 blocks per channel, 2 channels in total
         self.conf['flash_config']['n_pages_per_block'] = 2
         self.conf['flash_config']['n_blocks_per_plane'] = 2
@@ -309,14 +309,14 @@ class TestDftlextParallelFlash(unittest.TestCase):
 
     def my_run(self):
         runtime_update(self.conf)
-        rec = ssdbox.recorder.Recorder(output_target = self.conf['output_target'],
+        rec = wiscsim.recorder.Recorder(output_target = self.conf['output_target'],
             output_directory = self.conf['result_dir'],
             verbose_level = self.conf['verbose_level'],
             print_when_finished = self.conf['print_when_finished']
             )
         rec.disable()
-        fc = ssdbox.dftlext.ParallelFlash(self.conf, rec,
-                ssdbox.dftlext.GlobalHelper(self.conf))
+        fc = wiscsim.dftlext.ParallelFlash(self.conf, rec,
+                wiscsim.dftlext.GlobalHelper(self.conf))
 
         self.assertEqual(fc.get_max_channel_page_count(ppns = [0]), 1)
         self.assertEqual(fc.get_max_channel_page_count(ppns = [0, 1, 2, 3]), 4)
@@ -343,7 +343,7 @@ class TestDftlextParallelFlash(unittest.TestCase):
 
 class TestTimelineAndFlash(unittest.TestCase):
     def setup_config(self):
-        self.conf = ssdbox.dftlext.Config()
+        self.conf = wiscsim.dftlext.Config()
         # 2 pages per block, 2 blocks per channel, 2 channels in total
         self.conf['sector_size'] = self.conf['flash_config']['page_size']
         self.conf['flash_config']['n_pages_per_block'] = 2
@@ -376,21 +376,21 @@ class TestTimelineAndFlash(unittest.TestCase):
 
         runtime_update(self.conf)
 
-        self.rec = ssdbox.recorder.Recorder(
+        self.rec = wiscsim.recorder.Recorder(
             output_target = self.conf['output_target'],
             output_directory = self.conf['result_dir'],
             verbose_level = self.conf['verbose_level'],
             print_when_finished = self.conf['print_when_finished']
             )
 
-        self.ftl = ssdbox.dftlext.Dftl(self.conf, self.rec,
-            ssdbox.flash.Flash(recorder = self.rec, confobj = self.conf))
+        self.ftl = wiscsim.dftlext.Dftl(self.conf, self.rec,
+            wiscsim.flash.Flash(recorder = self.rec, confobj = self.conf))
 
     def my_run(self):
         self.ftl.global_helper.timeline.turn_on()
         n = 1
         sectors = list(range(n))
-        data = [ssdbox.simulator.random_data(sec) for sec in sectors]
+        data = [wiscsim.simulator.random_data(sec) for sec in sectors]
         self.ftl.sec_write(0, n, data = data)
 
         # a write involve a tranlation page read and data page write
@@ -414,7 +414,7 @@ class TestEventIter(unittest.TestCase):
         conf = config.ConfigNewFlash()
         conf["event_file_column_names"] = ['pid', 'operation', 'offset', 'size',
                     'timestamp', 'pre_wait_time', 'sync']
-        events = list(ssdbox.hostevent.EventIterator(conf,
+        events = list(wiscsim.hostevent.EventIterator(conf,
             ["1123 write 0 4096 0 0 S", "13 write 40960 4096 1 1 S"]))
         e = events[0]
         self.assertEqual(e.pid, 1123)

@@ -11,7 +11,7 @@ import ftlbuilder
 import recorder
 from utilities import utils
 from .bitmap import FlashBitmap2
-from ssdbox.devblockpool import *
+from wiscsim.devblockpool import *
 from ftlsim_commons import *
 from commons import *
 

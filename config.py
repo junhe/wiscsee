@@ -206,7 +206,7 @@ class Config(dict):
             "sort_block_trace"      : True,
             "trace_issue_and_complete": False,
 
-            ############## For ssdbox ######
+            ############## For wiscsim ######
             "enable_simulation"     : True,
             "flash_page_size"       : 4096,
             "flash_npage_per_block" : 4,

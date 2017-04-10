@@ -1,6 +1,6 @@
 import unittest
-import ssdbox
-from ssdbox.ftlsim_commons import *
+import wiscsim
+from wiscsim.ftlsim_commons import *
 
 
 class TestNCQSingleQueue(unittest.TestCase):

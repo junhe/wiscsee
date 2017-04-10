@@ -3,22 +3,22 @@ import random
 import simpy
 from collections import namedtuple
 
-from ssdbox.nkftl2 import *
-from ssdbox import flash
-import ssdbox
+from wiscsim.nkftl2 import *
+from wiscsim import flash
+import wiscsim
 import config
 from commons import *
 from utilities import utils
 from utilities.utils import choose_exp_metadata, runtime_update
 from workflow import run_workflow
 from config import LBAGENERATOR
-from ssdbox.ftlsim_commons import *
+from wiscsim.ftlsim_commons import *
 
 TDATA = 'TDATA'
 TLOG = 'TLOG'
 
 def create_config():
-    conf = ssdbox.nkftl2.Config()
+    conf = wiscsim.nkftl2.Config()
 
     conf['flash_config']['n_pages_per_block'] = 8
     conf['flash_config']['n_blocks_per_plane'] = 2
@@ -45,7 +45,7 @@ def create_config():
     return conf
 
 def create_config_1_channel():
-    conf = ssdbox.nkftl2.Config()
+    conf = wiscsim.nkftl2.Config()
 
     conf['flash_config']['n_pages_per_block'] = 32
     conf['flash_config']['n_blocks_per_plane'] = 64
@@ -67,7 +67,7 @@ def create_config_1_channel():
 
 
 def create_recorder(conf):
-    rec = ssdbox.recorder.Recorder(output_target = conf['output_target'],
+    rec = wiscsim.recorder.Recorder(output_target = conf['output_target'],
         output_directory = conf['result_dir'],
         verbose_level = conf['verbose_level'],
         print_when_finished = conf['print_when_finished']
@@ -89,7 +89,7 @@ def create_env():
     return env
 
 def create_flash_controller(env, conf, rec):
-    flash_controller = ssdbox.controller.Controller3(
+    flash_controller = wiscsim.controller.Controller3(
             env, conf, rec)
     return flash_controller
 
@@ -100,7 +100,7 @@ def create_nkftl():
     des_flash = create_flash_controller(env, conf, rec)
 
     ftl = Ftl(conf, rec,
-        ssdbox.flash.Flash(recorder=rec, confobj=conf), env,
+        wiscsim.flash.Flash(recorder=rec, confobj=conf), env,
         des_flash)
     return ftl, conf, rec, env
 
@@ -2285,7 +2285,7 @@ class TestCleanDataGroup(AssertFinishTestCase, UseLogBlocksMixin):
 
 
 def create_config_2():
-    conf = ssdbox.nkftl2.Config()
+    conf = wiscsim.nkftl2.Config()
 
     conf['flash_config']['n_pages_per_block'] = 32
     conf['flash_config']['n_blocks_per_plane'] = 64

@@ -1,11 +1,11 @@
 import unittest
 
-import ssdbox
+import wiscsim
 from utilities import utils
-from ssdbox.bitmap import FlashBitmap2
+from wiscsim.bitmap import FlashBitmap2
 
 def create_config():
-    conf = ssdbox.dftldes.Config()
+    conf = wiscsim.dftldes.Config()
     conf['SSDFramework']['ncq_depth'] = 1
 
     conf['flash_config']['n_pages_per_block'] = 64

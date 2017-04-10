@@ -5,15 +5,15 @@ import copy
 import pprint
 
 import workrunner
-import ssdbox
+import wiscsim
 from utilities import utils
 from config import MountOption as MOpt
 from config import ConfigNCQFTL
 from workflow import run_workflow
-from ssdbox.simulator import GcLog
-from ssdbox.ftlsim_commons import Extent, random_channel_id
-from ssdbox.ftlcounter import LpnClassification, get_file_range_table, EventNCQParser
-from ssdbox import hostevent
+from wiscsim.simulator import GcLog
+from wiscsim.ftlsim_commons import Extent, random_channel_id
+from wiscsim.ftlcounter import LpnClassification, get_file_range_table, EventNCQParser
+from wiscsim import hostevent
 from config_helper.rule_parameter import EventFileSets
 from commons import *
 
@@ -62,7 +62,7 @@ class TestSettingScheduler(unittest.TestCase):
 
 class Experiment(object):
     def __init__(self):
-        self.conf = ssdbox.dftldes.Config()
+        self.conf = wiscsim.dftldes.Config()
 
     def setup_environment(self):
         self.conf['device_path'] = '/dev/loop0'

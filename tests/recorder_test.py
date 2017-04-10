@@ -1,7 +1,7 @@
 import config
 import unittest
 
-import ssdbox
+import wiscsim
 from utilities.utils import *
 
 class TestFTLwithDFTL(unittest.TestCase):
@@ -24,8 +24,8 @@ class TestFTLwithDFTL(unittest.TestCase):
     def my_run(self):
         runtime_update(self.conf)
 
-        recorder = ssdbox.recorder.Recorder(
-                output_target = ssdbox.recorder.FILE_TARGET,
+        recorder = wiscsim.recorder.Recorder(
+                output_target = wiscsim.recorder.FILE_TARGET,
                 output_directory = "/tmp"
                 )
         recorder.enable()
@@ -62,8 +62,8 @@ class TestCountMe(unittest.TestCase):
     def my_run(self):
         runtime_update(self.conf)
 
-        recorder = ssdbox.recorder.Recorder(
-                output_target = ssdbox.recorder.FILE_TARGET,
+        recorder = wiscsim.recorder.Recorder(
+                output_target = wiscsim.recorder.FILE_TARGET,
                 output_directory = '/tmp'
                 )
         recorder.enable()

@@ -10,7 +10,7 @@ import cpuhandler
 import filesystem
 import fshelper
 import ftrace
-from ssdbox import hostevent
+from wiscsim import hostevent
 from utilities import utils
 import workload
 

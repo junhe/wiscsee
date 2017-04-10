@@ -3,7 +3,7 @@ import random
 
 import config
 import workload
-from ssdbox import hostevent
+from wiscsim import hostevent
 from commons import *
 
 from pyreuse.general.zipf import ZipfGenerator

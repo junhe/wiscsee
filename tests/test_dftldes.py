@@ -2,12 +2,12 @@ import unittest
 import random
 import simpy
 
-from ssdbox import ftlsim_commons
+from wiscsim import ftlsim_commons
 
 from utilities import utils
-import ssdbox
-from ssdbox.ftlsim_commons import Extent
-from ssdbox.dftldes import LpnTable, LpnTableMvpn, UNINITIATED, \
+import wiscsim
+from wiscsim.ftlsim_commons import Extent
+from wiscsim.dftldes import LpnTable, LpnTableMvpn, UNINITIATED, \
         split_ext_by_segment
 from config import WLRUNNER, LBAGENERATOR, LBAMULTIPROC
 from commons import *
@@ -15,7 +15,7 @@ from utilities.utils import get_expname
 import collections
 from workflow import run_workflow
 
-class FtlTest(ssdbox.dftldes.Ftl):
+class FtlTest(wiscsim.dftldes.Ftl):
     def get_mappings(self):
         return self._mappings
 
@@ -27,7 +27,7 @@ class FtlTest(ssdbox.dftldes.Ftl):
 
 
 def create_config():
-    conf = ssdbox.dftldes.Config()
+    conf = wiscsim.dftldes.Config()
     conf['SSDFramework']['ncq_depth'] = 1
 
     conf['flash_config']['n_pages_per_block'] = 64
@@ -56,7 +56,7 @@ def create_config():
 
 
 def create_recorder(conf):
-    rec = ssdbox.recorder.Recorder(output_target = conf['output_target'],
+    rec = wiscsim.recorder.Recorder(output_target = conf['output_target'],
         output_directory = conf['result_dir'],
         verbose_level = conf['verbose_level'],
         print_when_finished = conf['print_when_finished']
@@ -65,30 +65,30 @@ def create_recorder(conf):
     return rec
 
 def create_oob(conf):
-    oob = ssdbox.dftldes.OutOfBandAreas(conf)
+    oob = wiscsim.dftldes.OutOfBandAreas(conf)
     return oob
 
 def create_blockpool(conf):
-    return ssdbox.dftldes.BlockPool(conf)
+    return wiscsim.dftldes.BlockPool(conf)
 
 def create_flashcontrolelr(conf, env, rec):
-    return ssdbox.controller.Controller3(env, conf, rec)
+    return wiscsim.controller.Controller3(env, conf, rec)
 
 def create_simpy_env():
     return simpy.Environment()
 
 def create_translation_directory(conf, oob, block_pool):
-    return ssdbox.dftldes.GlobalTranslationDirectory(conf, oob, block_pool)
+    return wiscsim.dftldes.GlobalTranslationDirectory(conf, oob, block_pool)
 
 def create_mapping_on_flash(conf):
-    return ssdbox.dftldes.MappingOnFlash(conf)
+    return wiscsim.dftldes.MappingOnFlash(conf)
 
 def create_victimblocks():
     conf = create_config()
     block_pool = create_blockpool(conf)
     oob = create_oob(conf)
 
-    vbs = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
+    vbs = wiscsim.dftldes.VictimBlocks(conf, block_pool, oob)
 
     return vbs
 
@@ -97,7 +97,7 @@ def create_wearlevelingvictimblocks():
     block_pool = create_blockpool(conf)
     oob = create_oob(conf)
 
-    vbs = ssdbox.dftldes.WearLevelingVictimBlocks(conf, block_pool, oob, 5)
+    vbs = wiscsim.dftldes.WearLevelingVictimBlocks(conf, block_pool, oob, 5)
 
     return vbs
 
@@ -109,8 +109,8 @@ def create_obj_set(conf):
     flash_controller = create_flashcontrolelr(conf, env, rec)
     directory = create_translation_directory(conf, oob, block_pool)
     gmt = create_mapping_on_flash(conf)
-    victimblocks = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
-    trans_page_locks = ssdbox.dftldes.LockPool(env)
+    victimblocks = wiscsim.dftldes.VictimBlocks(conf, block_pool, oob)
+    trans_page_locks = wiscsim.dftldes.LockPool(env)
 
     return {'conf':conf, 'rec':rec, 'oob':oob, 'block_pool':block_pool,
             'flash_controller':flash_controller, 'env':env, 'directory':directory,
@@ -120,7 +120,7 @@ def create_obj_set(conf):
 
 
 def create_mapping_cache(objs):
-    mapping_cache = ssdbox.dftldes.MappingCache(
+    mapping_cache = wiscsim.dftldes.MappingCache(
             confobj = objs['conf'],
             block_pool = objs['block_pool'],
             flashobj = objs['flash_controller'],
@@ -136,7 +136,7 @@ def create_mapping_cache(objs):
 
 def create_datablockcleaner(objs):
     mappings = create_mapping_cache(objs)
-    datablockcleaner = ssdbox.dftldes.DataBlockCleaner(
+    datablockcleaner = wiscsim.dftldes.DataBlockCleaner(
             conf = objs['conf'],
             flash = objs['flash_controller'],
             oob = objs['oob'],
@@ -722,7 +722,7 @@ class TestParallelTranslation(unittest.TestCase):
         conf = create_config()
         objs = create_obj_set(conf)
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
 
@@ -731,7 +731,7 @@ class TestParallelTranslation(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
     def proc_test_write(self, env, dftl):
@@ -743,7 +743,7 @@ class TestWrite(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write(objs, dftl, Extent(0, 1)))
@@ -771,7 +771,7 @@ class TestWrite(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write_larger(objs, dftl, Extent(0, 2)))
@@ -800,7 +800,7 @@ class TestWrite(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write_larger2(objs, dftl,
@@ -834,7 +834,7 @@ class TestWrite(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write_2vpn(objs, dftl,
@@ -865,7 +865,7 @@ class TestWrite(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write_outofspace(objs, dftl,
@@ -877,7 +877,7 @@ class TestWrite(unittest.TestCase):
         time_read_page = objs['flash_controller'].channels[0].read_time
         time_program_page = objs['flash_controller'].channels[0].program_time
 
-        with self.assertRaises(ssdbox.blkpool.OutOfSpaceError):
+        with self.assertRaises(wiscsim.blkpool.OutOfSpaceError):
             yield env.process(dftl.write_ext(ext))
 
 
@@ -887,7 +887,7 @@ class TestRead(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_read(objs, dftl, Extent(0, 1)))
@@ -909,7 +909,7 @@ class TestRead(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         # read a whole m_vpn's lpn
@@ -938,7 +938,7 @@ class TestRead(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         # read two m_vpn's lpns
@@ -964,12 +964,12 @@ class TestSplit(unittest.TestCase):
         conf = create_config()
         n = conf.n_mapping_entries_per_page
 
-        result = ssdbox.dftldes.split_ext_to_mvpngroups(conf, Extent(0, n))
+        result = wiscsim.dftldes.split_ext_to_mvpngroups(conf, Extent(0, n))
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].lpn_start, 0)
         self.assertEqual(result[0].end_lpn(), n)
 
-        result = ssdbox.dftldes.split_ext_to_mvpngroups(conf, Extent(0, n + 1))
+        result = wiscsim.dftldes.split_ext_to_mvpngroups(conf, Extent(0, n + 1))
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0].lpn_start, 0)
         self.assertEqual(result[0].end_lpn(), n)
@@ -983,7 +983,7 @@ class TestDiscard(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_discard(objs, dftl, Extent(0, 1)))
@@ -1122,7 +1122,7 @@ class TestLockPool(unittest.TestCase):
 
     def test_request(self):
         env = simpy.Environment()
-        respool = ssdbox.dftldes.LockPool(env)
+        respool = wiscsim.dftldes.LockPool(env)
 
         env.process(self.init_proc(env, respool))
         env.run()
@@ -1130,7 +1130,7 @@ class TestLockPool(unittest.TestCase):
 
 class TestParallelDFTL(unittest.TestCase):
     def setup_config(self):
-        self.conf = ssdbox.dftldes.Config()
+        self.conf = wiscsim.dftldes.Config()
         self.conf['SSDFramework']['ncq_depth'] = 1
 
         self.conf['flash_config']['n_pages_per_block'] = 2
@@ -1185,7 +1185,7 @@ class TestParallelDFTL(unittest.TestCase):
 
 class TestFTLwithMoreData(unittest.TestCase):
     def setup_config(self):
-        self.conf = ssdbox.dftldes.Config()
+        self.conf = wiscsim.dftldes.Config()
         self.conf['SSDFramework']['ncq_depth'] = 2
 
         self.conf['flash_config']['page_size'] = 2048
@@ -1252,7 +1252,7 @@ class TestTranslationWithWrite(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write(objs, dftl))
@@ -1313,7 +1313,7 @@ class TestTranslationWithWriteTwice(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write(objs, dftl))
@@ -1361,7 +1361,7 @@ class TestTranslationWriteBacks(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write(objs, dftl))
@@ -1406,7 +1406,7 @@ class TestTranslationWithWriteNotAligned(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write(objs, dftl))
@@ -1458,7 +1458,7 @@ class TestTranslationWithWriteNotAligned(unittest.TestCase):
 
 class TestWearLevelingVictimBlocks(unittest.TestCase):
     def test_entry(self):
-        ssdbox.dftldes.WearLevelingVictimBlocks
+        wiscsim.dftldes.WearLevelingVictimBlocks
 
     def test_init(self):
         create_wearlevelingvictimblocks()
@@ -1495,7 +1495,7 @@ class TestWearLevelingVictimBlocks(unittest.TestCase):
 
 class TestVictimBlocks(unittest.TestCase):
     def test_entry(self):
-        ssdbox.dftldes.VictimBlocks
+        wiscsim.dftldes.VictimBlocks
 
     def test_init(self):
         create_victimblocks()
@@ -1512,7 +1512,7 @@ class TestVictimBlocks(unittest.TestCase):
         block_pool = create_blockpool(conf)
         oob = create_oob(conf)
 
-        vbs = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
+        vbs = wiscsim.dftldes.VictimBlocks(conf, block_pool, oob)
 
         ppn = block_pool.next_data_page_to_program()
 
@@ -1533,7 +1533,7 @@ class TestVictimBlocks(unittest.TestCase):
         # use one more
         ppns = block_pool.next_n_data_pages_to_program_striped(1)
 
-        vbs = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
+        vbs = wiscsim.dftldes.VictimBlocks(conf, block_pool, oob)
 
         victims = list(vbs.iterator())
         self.assertEqual(len(victims), 1)
@@ -1570,7 +1570,7 @@ class TestVictimBlocks(unittest.TestCase):
         # use one more
         ppns = block_pool.next_n_data_pages_to_program_striped(1)
 
-        vbs = ssdbox.dftldes.VictimBlocks(conf, block_pool, oob)
+        vbs = wiscsim.dftldes.VictimBlocks(conf, block_pool, oob)
 
         victims = list(vbs.iterator())
 
@@ -1619,7 +1619,7 @@ class TestGC(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write(objs, dftl))
@@ -1636,7 +1636,7 @@ class TestGC(unittest.TestCase):
         block_pool = dftl.block_pool
         oob = dftl.oob
 
-        victims = ssdbox.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
+        victims = wiscsim.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
 
 
         conf = objs['conf']
@@ -1686,8 +1686,8 @@ class TestDataBlockCleaner(unittest.TestCase):
         oob = dftl.oob
         mappings = dftl.get_mappings()
 
-        victims = ssdbox.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
-        datablockcleaner = ssdbox.dftldes.DataBlockCleaner(
+        victims = wiscsim.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
+        datablockcleaner = wiscsim.dftldes.DataBlockCleaner(
             conf = objs['conf'],
             flash = objs['flash_controller'],
             oob = oob,
@@ -1780,8 +1780,8 @@ class TestTransBlockCleaner(unittest.TestCase):
         # there should be a current translation block
         self.assertGreater(len(block_pool.current_blocks()), 0)
 
-        victims = ssdbox.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
-        transblockcleaner = ssdbox.dftldes.TransBlockCleaner(
+        victims = wiscsim.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
+        transblockcleaner = wiscsim.dftldes.TransBlockCleaner(
             conf = objs['conf'],
             flash = objs['flash_controller'],
             oob = oob,
@@ -1911,8 +1911,8 @@ class TestCleaningDataBlocksByCleaner(unittest.TestCase):
         mappings = dftl.get_mappings()
         cleaner = dftl.get_cleaner()
 
-        victims = ssdbox.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
-        datablockcleaner = ssdbox.dftldes.DataBlockCleaner(
+        victims = wiscsim.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
+        datablockcleaner = wiscsim.dftldes.DataBlockCleaner(
             conf = objs['conf'],
             flash = objs['flash_controller'],
             oob = oob,
@@ -1984,9 +1984,9 @@ class TestLevelingWear(unittest.TestCase):
         mappings = dftl.get_mappings()
         cleaner = dftl.get_cleaner()
 
-        victims = ssdbox.dftldes.WearLevelingVictimBlocks(objs['conf'],
+        victims = wiscsim.dftldes.WearLevelingVictimBlocks(objs['conf'],
                 block_pool, oob, 1)
-        datablockcleaner = ssdbox.dftldes.DataBlockCleaner(
+        datablockcleaner = wiscsim.dftldes.DataBlockCleaner(
             conf = objs['conf'],
             flash = objs['flash_controller'],
             oob = oob,
@@ -2082,8 +2082,8 @@ class TestCleaningTransBlocksByCleaner(unittest.TestCase):
         # there should be a current translation block
         self.assertGreater(len(block_pool.current_blocks()), 0)
 
-        victims = ssdbox.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
-        transblockcleaner = ssdbox.dftldes.TransBlockCleaner(
+        victims = wiscsim.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
+        transblockcleaner = wiscsim.dftldes.TransBlockCleaner(
             conf = objs['conf'],
             flash = objs['flash_controller'],
             oob = oob,
@@ -2184,8 +2184,8 @@ class TestCleaningTransBlocksByCleaner4Channel(unittest.TestCase):
         # there should be a current translation block
         self.assertGreater(len(block_pool.current_blocks()), 0)
 
-        victims = ssdbox.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
-        transblockcleaner = ssdbox.dftldes.TransBlockCleaner(
+        victims = wiscsim.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
+        transblockcleaner = wiscsim.dftldes.TransBlockCleaner(
             conf = objs['conf'],
             flash = objs['flash_controller'],
             oob = oob,
@@ -2267,8 +2267,8 @@ class TestCleaning(unittest.TestCase):
         mappings = dftl.get_mappings()
         cleaner = dftl.get_cleaner()
 
-        victims = ssdbox.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
-        datablockcleaner = ssdbox.dftldes.DataBlockCleaner(
+        victims = wiscsim.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
+        datablockcleaner = wiscsim.dftldes.DataBlockCleaner(
             conf = objs['conf'],
             flash = objs['flash_controller'],
             oob = oob,
@@ -2342,7 +2342,7 @@ class TestCleaning4Channel(unittest.TestCase):
         mappings = dftl.get_mappings()
         cleaner = dftl.get_cleaner()
 
-        victims = ssdbox.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
+        victims = wiscsim.dftldes.VictimBlocks(objs['conf'], block_pool, oob)
 
         n_data_used_blocks = len(block_pool.data_usedblocks)
 
@@ -2397,7 +2397,7 @@ class Experiment(object):
     def __init__(self, para):
         self.para = para
     def setup_config(self):
-        self.conf = ssdbox.dftldes.Config()
+        self.conf = wiscsim.dftldes.Config()
         self.conf['SSDFramework']['ncq_depth'] = 4
 
         self.conf['flash_config']['n_pages_per_block'] = 2
@@ -2491,7 +2491,7 @@ class TestSegmenting(unittest.TestCase):
         conf['stripe_size'] = 1
         objs = create_obj_set(conf)
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         # all lpn in the same segment
@@ -2508,7 +2508,7 @@ class TestSegmenting(unittest.TestCase):
         conf['stripe_size'] = 1
         objs = create_obj_set(conf)
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         # seg 0
@@ -2538,7 +2538,7 @@ class TestFTLSegmentedWrite(unittest.TestCase):
         objs = create_obj_set(conf)
         env = objs['env']
 
-        dftl = ssdbox.dftldes.Ftl(objs['conf'], objs['rec'],
+        dftl = wiscsim.dftldes.Ftl(objs['conf'], objs['rec'],
                 objs['flash_controller'], objs['env'])
 
         env.process(self.proc_test_write(objs, dftl))

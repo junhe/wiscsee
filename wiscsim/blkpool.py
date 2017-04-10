@@ -1,6 +1,6 @@
 from collections import deque
 import sys
-from ssdbox.devblockpool import *
+from wiscsim.devblockpool import *
 from ftlsim_commons import random_channel_id
 
 TDATA = 'TDATA'
