@@ -8,4 +8,7 @@ f2fsgc:
 	mkdir -p bin
 	cd ./foreign && gcc -o forcef2fsgc forcef2fsgc.c && mv forcef2fsgc ../bin/
 
+setup:
+	./setup.env.sh
+
 
