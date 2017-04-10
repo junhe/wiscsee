@@ -1,20 +1,23 @@
-WiscSee is an I/O workload analyzer, which helps you to understand your workload
+WiscSee is an I/O workload analyzer that helps you understand your application
 performance on SSDs. WiscSee comes with a fully functioning trace-driven SSD simulator,
 WiscSim, which supports enhanced versions of multiple well-known FTLs, NCQ, multiple
 channels, garbage collections, wear-leveling, page allocation policies and more.
 WiscSim is implemented as a Discrete-Event Simulator.
 
-WiscSee runs your workload, collects its block trace, and later feeds the trace
+WiscSee runs your application, collects its block I/O trace, and later feeds the trace
 to WiscSim.
 
 WiscSee contains several demos to help you get started quickly. The demos show
 
-- How to only trace your workload
-- How trace a workload and simulate the workload on an SSD
-- How simulate synthetic workloads on an SSD
+- How to run your application in WiscSee
+- How to specify the file system you use
+- How to trace the I/O of your application
+- How to trace an application and simulate the I/O workload on an SSD simulator
+- How to simulate synthetic workloads (operations on LBA) on an SSD simulator
 - How to evaluate whether your workloads conform/violate the rules of the
   unwritten contract of SSDs (see "The Unwritten Contract of Solid State Drives"
   in EuroSys'17)
+
 
 # Download and Setup
 
@@ -35,6 +38,91 @@ make setup
 ```
 make test_all
 ```
+
+# Run Demo
+
+```
+make run_demo
+```
+
+The code of the demos is in `tests/test_demo.py`.
+
+# Tutorial: study your application on an SSD simulator
+
+In this short tutorial, let's assume that the application we study is the Linux `dd`
+command. We also pretend that `/dev/loop0` is an SSD. We will use `dd` to write
+to a file system mounted on `/dev/loop0`. We simulate this workload on an SSD
+simulator.
+
+## Specify your application 
+
+Open `workrunner/workload.py`, add the following code
+
+```
+class LinuxDD(Workload):
+    def __init__(self, confobj, workload_conf_key = None):
+        super(LinuxDD, self).__init__(confobj, workload_conf_key)
+
+    def run(self):
+        mnt = self.conf["fs_mount_point"]
+        cmd = "dd if=/dev/zero of={}/datafile bs=64k count=128".format(mnt)
+        print cmd
+        subprocess.call(cmd, shell=True)
+        subprocess.call("sync")
+
+    def stop(self):
+        pass
+```
+
+
+## Setup Experiment
+
+Open `tests/test_demo.py`, add the following code
+
+```
+class Test_TraceAndSimulateLinuxDD(unittest.TestCase):
+    def test_run(self):
+        class LocalExperiment(experiment.Experiment):
+            def setup_workload(self):
+                self.conf['workload_class'] = "LinuxDD"
+
+        para = experiment.get_shared_nolist_para_dict("test_exp_LinuxDD", 16*MB)
+        para['device_path'] = "/dev/loop0"
+        para['ftl'] = "dftldes"
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        obj = LocalExperiment( Parameters(**para) )
+        obj.main()
+```
+
+
+## Run
+
+```
+./run_testclass.sh tests.test_demo.Test_TraceAndSimulateLinuxDD
+```
+
+## Check Results
+
+WiscSee puts results to `/tmp/results/`. In my case, the results of this
+experiment is in
+`/tmp/results/test_exp_LinuxDD/subexp--3884625007297461212-ext4-04-10-11-48-16-3552120672700940123`.
+In the directory, you will see the following files.
+
+```
+accumulator_table.txt: value of various counters set in the simulator
+app_duration.txt: duration of running application (wall clock time)
+blkparse-events-for-ftlsim-mkfs.txt: 
+blkparse-events-for-ftlsim.txt  
+blkparse-output-mkfs.txt: raw trace of mkfs from blktrace
+blkparse-output.txt: raw trace of running the  application on file system from blktrace
+config.json: the configuration of the experiment
+dumpe2fs.out: dumpe2fs results of ext4  
+recorder.json: various statistics, such as valid ratio distributions, number of flash writes, ...
+recorder.log: no longer used
+```
+
+
+
 
 
 
