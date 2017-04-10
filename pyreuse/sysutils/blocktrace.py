@@ -69,14 +69,14 @@ class BlktraceResult(object):
         return dic
 
     def __parse_and_add_operation(self, row):
-        if row['RWBS'] == 'D':
+        if 'D' in row['RWBS']:
             operation = 'discard'
         elif 'W' in row['RWBS']:
             operation = 'write'
         elif 'R' in row['RWBS']:
             operation = 'read'
         else:
-            raise RuntimeError('unknow operation')
+            raise RuntimeError('unknow operation ' + row['RWBS'])
 
         row['operation'] = operation
 
@@ -143,14 +143,14 @@ class BlktraceResultInMem(object):
         return dic
 
     def __parse_and_add_operation(self, row):
-        if row['RWBS'] == 'D':
+        if 'D' in row['RWBS']:
             operation = 'discard'
         elif 'W' in row['RWBS']:
             operation = 'write'
         elif 'R' in row['RWBS']:
             operation = 'read'
         else:
-            raise RuntimeError('unknow operation')
+            raise RuntimeError('unknow operation ' + row['RWBS'])
 
         row['operation'] = operation
 
