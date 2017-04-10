@@ -38,25 +38,24 @@ class TestRandomChannelID(unittest.TestCase):
 
         self.assertTrue(len(channels) > n/3)
 
+@unittest.skip("Need real device that supports NCQ")
 class TestLinuxNCQDepth(unittest.TestCase):
     def test_ncq_depth_setting(self):
         if not 'wisc.cloudlab.us' in socket.gethostname():
             return
 
         depth = 2
-        utils.set_linux_ncq_depth("loop0", depth)
-        read_depth = utils.get_linux_ncq_depth("loop0")
+        utils.set_linux_ncq_depth("sdc", depth)
+        read_depth = utils.get_linux_ncq_depth("sdc")
         self.assertEqual(depth, read_depth)
 
+@unittest.skip("Need real device that supports setting scheduler")
 class TestSettingScheduler(unittest.TestCase):
     def test_setting(self):
-        if not 'wisc.cloudlab.us' in socket.gethostname():
-            return
-
         scheduler = 'noop'
-        utils.set_linux_io_scheduler("loop0", scheduler)
+        utils.set_linux_io_scheduler("sdc", scheduler)
 
-        read_scheduler = utils.get_linux_io_scheduler("loop0")
+        read_scheduler = utils.get_linux_io_scheduler("sdc")
         self.assertEqual(scheduler, read_scheduler)
 
 
