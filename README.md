@@ -1,44 +1,40 @@
-Release Notes
--------------------------
+WiscSee is an I/O workload analyzer, which helps you to understand your workload
+performance on SSDs. WiscSee comes with a fully functioning trace-driven SSD simulator,
+WiscSim, which supports enhanced versions of multiple well-known FTLs, NCQ, multiple
+channels, garbage collections, wear-leveling, page allocation policies and more.
+WiscSim is implemented as a Discrete-Event Simulator.
 
-Demo
-- Run workload and get traces, without simulation
-- Run workload, get trace, and simulate on dftl
-- Run workload, get trace, and simulate on nkftl
-- Generate LBA workload and simulate
-- Specify trace and simulate on dftl      
-- Specify trace and simulate on nkftl    
-- Specify trace and study request scale  
-- Specify trace and study locality       
-- Specify trace and study alignment      
-- Specify trace and study grouping       
-- Specify trace and study data lifetime  
+WiscSee runs your workload, collects its block trace, and later feeds the trace
+to WiscSim.
 
-TODO:
+WiscSee contains several demos to help you get started quickly. The demos show
 
-- Remove useless workloads
-- Remove useless setup codes
+- How to only trace your workload
+- How trace a workload and simulate the workload on an SSD
+- How simulate synthetic workloads on an SSD
+- How to evaluate whether your workloads conform/violate the rules of the
+  unwritten contract of SSDs (see "The Unwritten Contract of Solid State Drives"
+  in EuroSys'17)
 
+# Download and Setup
 
-Doraemon Manual
--------------------------
+## Option 1: VM Image
 
-Makefile.py is no longer used. I usually start running experiments
-by Makefile.
+## Option 2: Docker Image
 
-Most of the experiments can be run with `make xxxx`. The implementation
-of the experiment setup is in ./benchmarks/appbench.py. Right now there 
-are only a few functions in appbench.py, so it won't be too hard to run.
+## Option 3: Git clone
 
-Breifly, `appmixbench_for_rw()` is for running on real device, for example, 
-doing request scale test on SSDs. `execute_simulation` is for running
-traces on SSD simulator.  
+1. Setup
 
-You can run simulation on multiple nodes by celery. Use `run-celery-on-nodes.py`
-to run celery. Use `./taskpusher-integration.py` to push tasks to workers.
+```
+make setup
+```
 
-The traces needed for simulation are in `datahose/localreults` on the MAC.
+2. Run tests
 
-The current master branch has the latest code that is used for EuroSys submission.
+```
+make test_all
+```
+
 
 
