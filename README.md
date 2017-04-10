@@ -109,16 +109,16 @@ experiment is in
 In the directory, you will see the following files.
 
 ```
-accumulator_table.txt: value of various counters set in the simulator
-app_duration.txt: duration of running application (wall clock time)
-blkparse-events-for-ftlsim-mkfs.txt: 
-blkparse-events-for-ftlsim.txt  
-blkparse-output-mkfs.txt: raw trace of mkfs from blktrace
-blkparse-output.txt: raw trace of running the  application on file system from blktrace
-config.json: the configuration of the experiment
-dumpe2fs.out: dumpe2fs results of ext4  
-recorder.json: various statistics, such as valid ratio distributions, number of flash writes, ...
-recorder.log: no longer used
+accumulator_table.txt                   value of various counters set in the simulator
+app_duration.txt                        duration of running application (wall clock time)
+blkparse-output-mkfs.txt                raw trace of mkfs from blktrace
+blkparse-output.txt                     raw trace of running the  application on file system from blktrace
+blkparse-events-for-ftlsim-mkfs.txt     refined trace
+blkparse-events-for-ftlsim.txt          refined trace 
+config.json                             the configuration of the experiment
+dumpe2fs.out                            dumpe2fs results of ext4  
+recorder.json                           various statistics, such as valid ratio distributions, number of flash writes, ...
+recorder.log                            no longer used
 ```
 
 
