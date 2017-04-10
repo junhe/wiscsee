@@ -119,7 +119,7 @@ class Experiment(object):
         self.setup_ftl()
         self.run()
 
-
+@unittest.skip("Need FIO to create some random workload to create F2FS garbage")
 class TestF2FSGCCall(unittest.TestCase):
     def test(self):
         obj = Experiment()
