@@ -23,8 +23,6 @@ WiscSee contains several demos to help you get started quickly. The demos show
 
 #### Option 1: VM Image
 
-#### Option 2: Docker Image
-
 #### Option 3: Git clone
 
 1. Setup
