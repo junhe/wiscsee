@@ -9,32 +9,22 @@ WiscSim is implemented as a Discrete-Event Simulator.
 WiscSee runs your application, collects its block I/O trace, and later feeds the trace
 to WiscSim.
 
-WiscSee contains several examples to help you get started quickly. The examples show
+In this README file, you will learn
 
-- How to run your application in WiscSee
-- How to specify the file system you use
-- How to trace the I/O of your application
-- How to trace an application and simulate the I/O workload on an SSD simulator
-- How to simulate synthetic workloads (operations on LBA) on an SSD simulator
-- How to evaluate whether your workloads conform/violate the rules of the
-  unwritten contract of SSDs (see "The Unwritten Contract of Solid State Drives"
-  in EuroSys'17)
-
-TODO:
-
-- In this README, you'll learn ....
-- How to generate zombie curves. 
+- How to download and setup WiscSee
+- How to run helpful examples of WiscSee
+- How to quickly start running your application on an SSD simulator
+- How to produce zombie curves (a useful way of studying garbage collection overhead of your applications)
 
 # Download and Setup
 
 ### Option 1: VM Image
 
 We made a VirtualBox VM Image that has the complete environment ready (Ubuntu
-16.04 + WiscSee). You do not need to do any configuration. It is the easiest
+16.04 + WiscSee + dependencies). You do not need to do any configuration. It is the easiest
 option in terms of setting up. It is garanteed to run.
 
-In order to use this option, you need to have VirtualBox
-(https://www.virtualbox.org/) installed. 
+In order to use this option, you need to have VirtualBox (https://www.virtualbox.org/) installed before starting the following steps.
 
 1. Download VirtualBox Image from the following address: 
 
@@ -42,7 +32,7 @@ In order to use this option, you need to have VirtualBox
 http://pages.cs.wisc.edu/~jhe/wiscsee-vm.tar.gz
 ```
 
-The SHA245 sum of the file is:
+The SHA256 sum of the file is:
 
 ```
 80c5f586d525e0fa54266984065b2b727f71c45de8940aafd7247d49db8e0070
@@ -77,7 +67,8 @@ abcabc
 ### Option 2: Git clone
 
 WiscSee was developed in Ubuntu 14.04 with Kernel 4.5.4. Other variants of Linux
-should also work. 
+should also work. But you may need to modify `setup.env.sh` to use different
+Linux package managers.
 
 0. Clone
 
@@ -141,7 +132,7 @@ The examples include:
 11. Analyze Uniform Data Lifetime of existing traces.
 
 
-# Tutorial: study your application on an SSD simulator
+# Tutorial: run your application on an SSD simulator
 
 In this short tutorial, let's assume that the application we study is the Linux `dd`
 command. We also pretend that `/dev/loop0` is an SSD. We will use `dd` to write
@@ -224,6 +215,14 @@ dumpe2fs.out                            dumpe2fs results of ext4
 recorder.json                           various statistics, such as valid ratio distributions, number of flash writes, ...
 recorder.log                            no longer used
 ```
+
+# Producing zombie curves
+
+Zombie curve is a way of characterizing GC overhead of a workload. A zombie curve
+shows the sorted valid ratios (# of valid pages in a block / # of pages in a
+block) of flash blocks with live data. It looks like the one below.
+
+![Zombie Curve](media/zombie-curve.png)
 
 # Notes
 
