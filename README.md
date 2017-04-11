@@ -1,5 +1,3 @@
-FYI, I am currently editting this README....Mon 10 Apr 2017 10:32:58 PM CDT
-
 WiscSee is an I/O workload analyzer that helps you understand your application
 performance on SSDs. WiscSee comes with a fully functioning trace-driven SSD simulator,
 WiscSim, which supports enhanced versions of multiple well-known FTLs, NCQ, multiple
