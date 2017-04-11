@@ -225,8 +225,8 @@ block) of flash blocks with live data. It looks like the one below.
 ![Zombie Curve](media/zombie-curve.png)
 
 Many of the examples in `tests/test_demo.py` produce data for zombie curves. The
-data is stored in `recorder.json`. For example, class `TestGrouping` produce the
-following entry in the `recorder.json`.
+data is stored in `recorder.json`. For example, class `TestGrouping` produces the
+following entry in `recorder.json`.
 
 ```
     "ftl_func_valid_ratios": [
