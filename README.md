@@ -7,6 +7,10 @@ WiscSim is implemented as a Discrete-Event Simulator.
 WiscSee runs your application, collects its block I/O trace, and later feeds the trace
 to WiscSim.
 
+WiscSee is developed for our paper "The Unwritten Contract of Solid State
+Drives" (EuroSys'17) http://pages.cs.wisc.edu/~jhe/eurosys17-he.pdf. You may
+learn more about WiscSee from the paper.
+
 In this README file, you will learn
 
 - How to download and setup WiscSee
