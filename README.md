@@ -72,11 +72,24 @@ abcabc
 
 ### Option 2: Git clone
 
+WiscSee was developed in Ubuntu 14.04 with Kernel 4.5.4. Other variants of Linux
+should also work. 
+
+0. Clone
+
+```
+git clone https://github.com/junhe/wiscsee.git
+```
+
 1. Setup
 
 ```
+cd wiscsee
 make setup
 ```
+
+`make setup` will execute `setup.env.sh`, which installs the dependencies of
+WiscSee. 
 
 2. Run tests
 
@@ -207,6 +220,14 @@ dumpe2fs.out                            dumpe2fs results of ext4
 recorder.json                           various statistics, such as valid ratio distributions, number of flash writes, ...
 recorder.log                            no longer used
 ```
+
+# Notes
+
+The simulation is written with Simpy (https://simpy.readthedocs.io/en/latest/).
+You may want to learn some Simpy before modifying the core simulation code. 
+
+If you have any questions, please open an issue at
+https://github.com/junhe/wiscsee/issues. I'll be happy to help. 
 
 
 
