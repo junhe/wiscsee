@@ -1,3 +1,5 @@
+FYI, I am currently editting this README....Mon 10 Apr 2017 10:32:58 PM CDT
+
 WiscSee is an I/O workload analyzer that helps you understand your application
 performance on SSDs. WiscSee comes with a fully functioning trace-driven SSD simulator,
 WiscSim, which supports enhanced versions of multiple well-known FTLs, NCQ, multiple
@@ -7,7 +9,7 @@ WiscSim is implemented as a Discrete-Event Simulator.
 WiscSee runs your application, collects its block I/O trace, and later feeds the trace
 to WiscSim.
 
-WiscSee contains several demos to help you get started quickly. The demos show
+WiscSee contains several examples to help you get started quickly. The examples show
 
 - How to run your application in WiscSee
 - How to specify the file system you use
@@ -55,7 +57,7 @@ Username: wsee
 Password: abcabc
 ```
 
-5. Run WiscSee tests
+5. Run tests
 
 ```
 cd /home/wsee/workdir/wiscsee
@@ -66,12 +68,6 @@ The root password is:
 
 ```
 abcabc
-```
-
-6. Run DEMOs
-
-```
-make run_demo
 ```
 
 ### Option 2: Git clone
@@ -88,13 +84,45 @@ make setup
 make test_all
 ```
 
-# Run Demo
+# Run Examples
+
+Running and reading the examples is a great way to learn WiscSee. The code of
+the examples is in `tests/test_demo.py`.
+
+To run the examples, run the following command in the WiscSee directory.
 
 ```
 make run_demo
 ```
 
-The code of the demos is in `tests/test_demo.py`.
+The examples include:
+
+1. Collect I/O traces of running an application on a file system. You can use R
+   to directly read the refined trace file for analysis. 
+2. Collect I/O traces and feed the traces to the SSD simulator with DFTLDES (DFTLDES
+   is an FTL based on DFTL. It is implemented as discrete-event simulation and
+   supports multiple channels, NCQ, multiple page allocation strategies, logical
+   space segmentation, ...) The results show various statistis about the
+   internal states of the SSD.
+3. Collect I/O traces and feed the traces to the SSD simulator with NKFTL (NKFTL is
+   a configurable hybrid mapping FTL based on "A reconfigurable FTL (flash
+   translation layer) architecture for NAND flash-based applications" by Chanik
+   Park et al.. I call it "NKFTL" because the authors name the two most
+   important parameters N and K. NKFTL can be configured to act like other FTLs
+   such as FAST. NKFTL is implemented as discrete-event simulation and
+   supports multiple channels, NCQ, multiple page allocation strategies, ...)
+4. Feed synthetic trace to the SSD simulator. This is useful if you want to test
+   customized access patterns on LBA. 
+5. Feed existing I/O traces to the SSD simulator. Doing so avoids running the
+   application for each simulation.
+6. Analyze Request Scale (request size, NCQ depth) of existing traces.
+7. Run an application and analyze its request scale.
+8. Analyze Locality of existing traces.
+9. Analyze Aligned Sequentiality of existing traces.
+10. Analyze Grouping by Death Time of existing traces. By the results, you
+    will be able to plot zombie curves.
+11. Analyze Uniform Data Lifetime of existing traces.
+
 
 # Tutorial: study your application on an SSD simulator
 

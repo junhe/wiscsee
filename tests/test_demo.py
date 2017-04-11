@@ -223,19 +223,19 @@ class TestUniformDataLifetime(unittest.TestCase):
         obj.main()
 
 
-class Test_TraceAndSimulateLinuxDD(unittest.TestCase):
-    def test_run(self):
-        class LocalExperiment(experiment.Experiment):
-            def setup_workload(self):
-                self.conf['workload_class'] = "LinuxDD"
+# class Test_TraceAndSimulateLinuxDD(unittest.TestCase):
+    # def test_run(self):
+        # class LocalExperiment(experiment.Experiment):
+            # def setup_workload(self):
+                # self.conf['workload_class'] = "LinuxDD"
 
-        para = experiment.get_shared_nolist_para_dict("test_exp_LinuxDD", 16*MB)
-        para['device_path'] = "/dev/loop0"
-        para['filesystem'] = "ext4"
-        para['ftl'] = "dftldes"
-        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-        obj = LocalExperiment( Parameters(**para) )
-        obj.main()
+        # para = experiment.get_shared_nolist_para_dict("test_exp_LinuxDD", 16*MB)
+        # para['device_path'] = "/dev/loop0"
+        # para['filesystem'] = "ext4"
+        # para['ftl'] = "dftldes"
+        # Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        # obj = LocalExperiment( Parameters(**para) )
+        # obj.main()
 
 
 if __name__ == '__main__':
