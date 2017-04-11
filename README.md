@@ -21,7 +21,7 @@ WiscSee contains several demos to help you get started quickly. The demos show
 
 # Download and Setup
 
-#### Option 1: VM Image
+### Option 1: VM Image
 
 We made a VirtualBox VM Image that has the complete environment ready (Ubuntu
 16.04 + WiscSee). You do not need to do any configuration. It is the easiest
@@ -74,7 +74,7 @@ abcabc
 make run_demo
 ```
 
-#### Option 2: Git clone
+### Option 2: Git clone
 
 1. Setup
 
