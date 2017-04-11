@@ -62,6 +62,12 @@ cd /home/wsee/workdir/wiscsee
 make test_all
 ```
 
+The root password is:
+
+```
+abcabc
+```
+
 6. Run DEMOs
 
 ```
