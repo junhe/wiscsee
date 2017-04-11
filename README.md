@@ -23,7 +23,52 @@ WiscSee contains several demos to help you get started quickly. The demos show
 
 #### Option 1: VM Image
 
-#### Option 3: Git clone
+We made a VirtualBox VM Image that has the complete environment ready (Ubuntu
+16.04 + WiscSee). You do not need to do any configuration. It is the easiest
+option in terms of setting up. It is garanteed to run.
+
+In order to use this option, you need to have VirtualBox
+(https://www.virtualbox.org/) installed. 
+
+1. Download VirtualBox Image from the following address: 
+
+```
+http://pages.cs.wisc.edu/~jhe/wiscsee-vm.tar.gz
+```
+
+The SHA245 sum of the file is:
+
+```
+80c5f586d525e0fa54266984065b2b727f71c45de8940aafd7247d49db8e0070
+```
+
+2. Untar the downloaded file
+
+3. Open the VM image with VirtualBox. 
+
+This VM image may also work with other VM manager.
+
+4. Login to the guest OS
+
+```
+Username: wsee
+Password: abcabc
+```
+
+5. Run WiscSee tests
+
+```
+cd /home/wsee/workdir/wiscsee
+make test_all
+```
+
+6. Run DEMOs
+
+```
+make run_demo
+```
+
+#### Option 2: Git clone
 
 1. Setup
 
