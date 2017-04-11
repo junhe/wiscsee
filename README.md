@@ -224,6 +224,41 @@ block) of flash blocks with live data. It looks like the one below.
 
 ![Zombie Curve](media/zombie-curve.png)
 
+Many of the examples in `tests/test_demo.py` produce data for zombie curves. The
+data is stored in `recorder.json`. For example, class `TestGrouping` produce the
+following entry in the `recorder.json`.
+
+```
+    "ftl_func_valid_ratios": [
+        {
+            "1.00": 128
+        }, 
+        {
+            "1.00": 240, 
+            "0.91": 4, 
+            "0.92": 12
+        }, 
+        {
+            "0.69": 6, 
+            "1.00": 368, 
+            "0.67": 10
+        }, 
+        {
+            "1.00": 496, 
+            "0.17": 10, 
+            "0.19": 6
+        }, 
+        ...
+    ]
+```
+
+Each `{...}` is a snapshot of the valid ratio counts. For example, `"0.91": 4`
+indicates that there are `4` flash blocks with valid ratio `0.91`. 
+
+Using the data in `ftl_func_valid_ratios`, you can create an animation of how
+the valid ratios change over time. 
+
+
 # Notes
 
 The simulation is written with Simpy (https://simpy.readthedocs.io/en/latest/).
@@ -233,5 +268,19 @@ If you have any questions, please open an issue at
 https://github.com/junhe/wiscsee/issues. I'll be happy to help. 
 
 
+# Citation
+
+Please use the following bib to cite WiscSee:
+
+```
+@InProceedings{He17-Eurosys,
+           title = "{The Unwritten Contract of Solid State Drives}",
+          author = "{Jun He, Sudarsun Kannan, Andrea C. Arpaci-Dusseau, Remzi H. Arpaci-Dusseau}",
+       booktitle = "EuroSys '17",
+           month = "April",
+            year = "2017",
+         address = "Belgrade, Serbia",
+}
+```
 
 
