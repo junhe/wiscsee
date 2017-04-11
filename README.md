@@ -20,6 +20,10 @@ WiscSee contains several examples to help you get started quickly. The examples 
   unwritten contract of SSDs (see "The Unwritten Contract of Solid State Drives"
   in EuroSys'17)
 
+TODO:
+
+- In this README, you'll learn ....
+- How to generate zombie curves. 
 
 # Download and Setup
 
