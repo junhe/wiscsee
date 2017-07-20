@@ -1,6 +1,6 @@
 To run, you need to have R installed first. 
 
-Then do the following in the project directory:
+Then do the following in this directory:
 
 ```
 $ Rscript ./plot-zombie.r
