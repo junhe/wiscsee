@@ -1,5 +1,7 @@
 > Disclaimer: use this software at your own risk. We are not responsible for any data loss. 
 
+> If you have any questions, please open an issue at https://github.com/junhe/wiscsee/issues. I'll be happy to help.
+
 WiscSee is an I/O workload analyzer that helps you understand your application
 performance on SSDs. WiscSee comes with a fully functioning trace-driven SSD simulator,
 WiscSim, which supports enhanced versions of multiple well-known FTLs, NCQ, multiple
@@ -267,10 +269,6 @@ the valid ratios change over time.
 
 The simulation is written with Simpy (https://simpy.readthedocs.io/en/latest/).
 You may want to learn some Simpy before modifying the core simulation code. 
-
-If you have any questions, please open an issue at
-https://github.com/junhe/wiscsee/issues. I'll be happy to help. 
-
 
 # Citation
 
