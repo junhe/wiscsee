@@ -45,11 +45,11 @@ cd $doradir
 sudo apt-get install -y python-bitarray
 
 sudo apt-get install -y python-pip
-sudo pip install bidict
+sudo pip2 install bidict
 
 sudo apt-get install -y blktrace
 
-sudo pip install simpy
+sudo pip2 install simpy
 
 sudo apt-get install -y xfsprogs
 
@@ -57,9 +57,9 @@ sudo apt-get install -y python-dev
 
 sudo apt-get install -y libffi-dev
 
-sudo pip install cffi
+sudo pip2 install cffi
 
-sudo pip install ordereddict
+sudo pip2 install ordereddict
 
 cd ../pyfallocate && python fallocate_build.py 
 
