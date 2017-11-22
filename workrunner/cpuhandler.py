@@ -2,23 +2,11 @@ import glob
 import os
 
 def get_possible_cpus():
-    f = open("/sys/devices/system/cpu/possible", 'r')
-    line = f.readline()
-    f.close()
-
-    # assuming format of 0-2,4,6-63
-    items = line.split(',')
-    cpus = []
-    for item in items:
-        if '-' in item:
-            a,b = item.split('-')
-            a = int(a)
-            b = int(b)
-            cpus.extend(range(a, b+1))
-        else:
-            cpus.append(int(item))
-
-    return cpus
+    cpudirs = get_available_cpu_dirs()
+    # Example path: /sys/devices/system/cpu/cpu89
+    cpuids = [path.strip().split("cpu")[-1] for path in cpudirs]
+    cpuids = [int(s) for s in cpuids]
+    return cpuids
 
 def get_available_cpu_dirs():
     "Counting dirs is more accurate than */cpu/possible, at least on emulab"

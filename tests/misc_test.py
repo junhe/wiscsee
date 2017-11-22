@@ -3,6 +3,7 @@ import unittest
 import time
 import copy
 import pprint
+import subprocess
 
 import workrunner
 import ssdbox
@@ -18,6 +19,13 @@ from benchmarks.filesim import EventFileSets
 from commons import *
 
 class TestCpuhandler(unittest.TestCase):
+    def test_get_possible_cpus(self):
+        possible_cpus = workrunner.cpuhandler.get_possible_cpus()
+
+        hostname = subprocess.check_output(['hostname']).strip()
+        if hostname == "ty29":
+            self.assertListEqual(possible_cpus, range(0, 8))
+
     def test_cpu(self):
         possible_cpus = workrunner.cpuhandler.get_possible_cpus()
         workrunner.cpuhandler.enable_all_cpus()
