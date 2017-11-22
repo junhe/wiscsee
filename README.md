@@ -11,7 +11,7 @@ WiscSim is implemented as a Discrete-Event Simulator.
 WiscSee runs your application, collects its block I/O trace, and later feeds the trace
 to WiscSim.
 
-WiscSee is developed for our paper "The Unwritten Contract of Solid State
+WiscSee was developed for our paper "The Unwritten Contract of Solid State
 Drives" (EuroSys'17) http://pages.cs.wisc.edu/~jhe/eurosys17-he.pdf. You may
 learn more about WiscSee from the paper.
 
@@ -76,13 +76,13 @@ WiscSee was developed in Ubuntu 14.04 with Kernel 4.5.4. Other variants of Linux
 should also work. But you may need to modify `setup.env.sh` to use different
 Linux package managers.
 
-0. Clone
+1. Clone
 
 ```
 git clone https://github.com/junhe/wiscsee.git
 ```
 
-1. Setup
+2. Setup
 
 ```
 cd wiscsee
@@ -92,7 +92,7 @@ make setup
 `make setup` will execute `setup.env.sh`, which installs the dependencies of
 WiscSee. 
 
-2. Run tests
+3. Run tests
 
 ```
 make test_all
