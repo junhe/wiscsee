@@ -101,7 +101,8 @@ make test_all
 # Run Examples
 
 Running and reading the examples is a great way to learn WiscSee. The code of
-the examples is in `tests/test_demo.py`.
+the examples is in `tests/test_demo.py`. (You can also start learning WiscSee
+by the Tutorial below.)
 
 To run the examples, run the following command in the WiscSee directory.
 
@@ -138,89 +139,16 @@ The examples include:
 11. Analyze Uniform Data Lifetime of existing traces.
 
 
-# Tutorial: run your application on an SSD simulator
+# Tutorial: Run your application with WiscSee
 
-In this short tutorial, let's assume that the application we study is the Linux `dd`
-command. We also pretend that `/dev/loop0` is an SSD. We will use `dd` to write
-to a file system mounted on `/dev/loop0`. We simulate this workload on an SSD
-simulator.
+After walking through this tutorial, you will learn the following. 
 
-#### 1. Specify your application 
+- How to run your application with WiscSee and get results for all the rules
+- Where the results are located
+- What are in the results and how to interpret the results
+- How to run a preparation workload before your workload
 
-Open `workrunner/workload.py`, add the following code
-
-```
-class LinuxDD(Workload):
-    def __init__(self, confobj, workload_conf_key = None):
-        super(LinuxDD, self).__init__(confobj, workload_conf_key)
-
-    def run(self):
-        mnt = self.conf["fs_mount_point"]
-        cmd = "dd if=/dev/zero of={}/datafile bs=64k count=128".format(mnt)
-        print cmd
-        subprocess.call(cmd, shell=True)
-        subprocess.call("sync")
-
-    def stop(self):
-        pass
-```
-
-In the next step we will tell WiscSee to use this class.
-
-#### 2. Setup Experiment
-
-Open `tests/test_demo.py`, add the following code
-
-```
-class Test_TraceAndSimulateLinuxDD(unittest.TestCase):
-    def test_run(self):
-        class LocalExperiment(experiment.Experiment):
-            def setup_workload(self):
-                self.conf['workload_class'] = "LinuxDD"
-
-        para = experiment.get_shared_nolist_para_dict("test_exp_LinuxDD", 16*MB)
-        para['device_path'] = "/dev/loop0" 
-        para['filesystem'] = "ext4"
-        para['ftl'] = "dftldes"
-        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
-        obj = LocalExperiment( Parameters(**para) )
-        obj.main()
-```
-
-We implement the experiment as a test for convenience of this tutorial.
-
-`self.conf['workload_class'] = "LinuxDD"` tells WiscSee to use class `LinuxDD`
-to run the application. 
-
-You may check `./config_helper/experiment.py` and `config.py` for more options
-of experiments.
-
-
-#### 3. Run
-
-```
-./run_testclass.sh tests.test_demo.Test_TraceAndSimulateLinuxDD
-```
-
-#### 4. Check Results
-
-WiscSee puts results to `/tmp/results/`. In my case, the results of this
-experiment is in
-`/tmp/results/test_exp_LinuxDD/subexp--3884625007297461212-ext4-04-10-11-48-16-3552120672700940123`.
-In the directory, you will see the following files.
-
-```
-accumulator_table.txt                   value of various counters set in the simulator
-app_duration.txt                        duration of running application (wall clock time)
-blkparse-output-mkfs.txt                raw trace of mkfs from blktrace
-blkparse-output.txt                     raw trace of running the  application on file system from blktrace
-blkparse-events-for-ftlsim-mkfs.txt     refined trace
-blkparse-events-for-ftlsim.txt          refined trace 
-config.json                             the configuration of the experiment
-dumpe2fs.out                            dumpe2fs results of ext4  
-recorder.json                           various statistics, such as valid ratio distributions, number of flash writes, ...
-recorder.log                            no longer used
-```
+The tutorial is located here: https://github.com/junhe/wiscsee/blob/master/TUTORIAL.md
 
 # Producing zombie curves
 
@@ -230,9 +158,10 @@ block) of flash blocks with live data. It looks like the one below.
 
 ![Zombie Curve](media/zombie-curve.png)
 
-Many of the examples in `tests/test_demo.py` produce data for zombie curves. The
-data is stored in `recorder.json`. For example, class `TestGrouping` produces the
-following entry in `recorder.json`.
+Many of the examples in `tests/test_demo.py` produce data for zombie curves.
+The tutorial above also teaches you how to generate data for plotting zombie
+curves.  The data is stored in `recorder.json`. Here is an example.
+
 
 ```
     "ftl_func_valid_ratios": [
