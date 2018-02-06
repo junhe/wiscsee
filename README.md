@@ -28,7 +28,8 @@ In this README file, you will learn
 
 We made a VirtualBox VM Image that has the complete environment ready (Ubuntu
 16.04 + WiscSee + dependencies). You do not need to do any configuration. It is the easiest
-option in terms of setting up. It is garanteed to run.
+option in terms of setting up. It is garanteed to run. But the WiscSee in the
+image may be out-dated. You probably want to replace it with the latest one.
 
 In order to use this option, you need to have VirtualBox (https://www.virtualbox.org/) installed before starting the following steps.
 
@@ -72,9 +73,11 @@ abcabc
 
 ### Option 2: Git clone
 
-WiscSee was developed in Ubuntu 14.04 with Kernel 4.5.4. Other variants of Linux
+WiscSee was developed in Ubuntu 14.04 with kernel 4.5.4. Other variants of Linux
 should also work. But you may need to modify `setup.env.sh` to use different
 Linux package managers.
+
+**I strongly recommand using Ubuntu 14.04 and kernel 4.5.4 as a starting point. There are known issues with other versions. The issues are from blktrace and `/proc/sys/`**
 
 1. Clone
 
