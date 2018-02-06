@@ -3,6 +3,7 @@ After walking throught this tutorial, you will learn the following.
 - How to run your application with WiscSee and get results for all rules
 - Where the results are located
 - What are in the results and how to plot using the results
+- How to run a preparation workload before your workload
 
 In this short tutorial, let's assume that the application we study is the Linux `dd`
 command. We also pretend that `/dev/loop0` is an SSD. We will use `dd` to write
@@ -333,6 +334,101 @@ transient state.
 
 Using the data in `ftl_func_valid_ratios`, you can create an animation of how
 the valid ratios change over time, which enjoy a lot :)
+
+
+# Run a Preparation Workload Before Your Final Workload
+
+Sometimes you may want to run a preparation workload before your workload. 
+For example, in order to get the request scale of a read workload, 
+you must run a write workload to fill your files. This write workload is 
+the preparation workload (we also call it aging workload in WiscSee).
+The read workload is the final workload.
+
+This section of the tutorial introduces how to run `dd` to write a file 
+(the preparation workload) and then run `dd` to read the file (the final
+workload). WiscSee will produce results for `dd` read, since that is what we
+care about in this example.
+
+1. Create the Preparation Workload
+
+We have done this. Class `LinuxDdWrite` in `workload.py` will be our 
+preparation workload.
+
+2. Create the Final Workload
+
+Open `workrunner/workload.py`, add the following code
+
+```
+class LinuxDdRead(Workload):
+    def __init__(self, confobj, workload_conf_key = None):
+        super(LinuxDDRead, self).__init__(confobj, workload_conf_key)
+
+    def run(self):
+        mnt = self.conf["fs_mount_point"]
+        cmd = "dd if={}/datafile of=/dev/zero bs=64k count=128".format(mnt)
+        print cmd
+        subprocess.call(cmd, shell=True)
+        subprocess.call("sync")
+
+    def stop(self):
+        pass
+```
+
+Note that `LinuxDdRead` will read the file we created in `LinuxDdWrite`.
+
+3. Setup the Experiment
+
+
+```
+class TestLinuxDdReadReqscaleAndDataLifetime(unittest.TestCase):
+    def test_run(self):
+        class LocalExperiment(experiment.Experiment):
+            def setup_workload(self):
+                self.conf['age_workload_class'] = "LinuxDdWrite"
+                self.conf['workload_class'] = "LinuxDdRead"
+
+        para = experiment.get_shared_nolist_para_dict(
+                        expname="linux-dd-with-preparation",
+                        lbabytes=1024*MB)
+        para.update(
+            {
+                'device_path': "/dev/loop0",
+                'ftl' : 'ftlcounter',
+                'enable_simulation': True,
+                'dump_ext4_after_workload': True,
+                'only_get_traffic': False,
+                'trace_issue_and_complete': True,
+            })
+
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        obj = LocalExperiment( Parameters(**para) )
+        obj.main()
+```
+
+`self.conf['age_workload_class'] = "LinuxDdWrite"` tells WiscSee to use `LinuxDdWrite` as the preparation workload. `self.conf['workload_class'] = "LinuxDdRead"` tells WiscSee to use `LinuxDdRead` as the final workload.
+
+4. Run the Experiment
+
+```
+./run_testclass.sh tests.test_demo.TestLinuxDdReadReqscaleAndDataLifetime
+```
+
+5. Get the Results
+
+The results are in `/tmp/results/linux-dd-with-preparation`.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
