@@ -159,6 +159,88 @@ class TestRunningWorkloadAndOutputRequestScale(unittest.TestCase):
         obj.main()
 
 
+# This test will run Linux DD for studying request scale and uniform data lifetime.
+# In the produced resulst,
+#  - ncq_depth_timeline.txt has the queue depth.
+#  - lpn.count has the counts of operations on each logical page number.
+class TestLinuxDdReqscaleAndDataLifetime(unittest.TestCase):
+    def test_run(self):
+        class LocalExperiment(experiment.Experiment):
+            def setup_workload(self):
+                self.conf['workload_class'] = "LinuxDD"
+
+        para = experiment.get_shared_nolist_para_dict("Linuxdd-reqscale", 16*MB)
+        para['device_path'] = "/dev/loop0"
+        para.update(
+            {
+                'device_path': "/dev/loop0",
+                'ftl' : 'ftlcounter',
+                'enable_simulation': True,
+                'dump_ext4_after_workload': True,
+                'only_get_traffic': False,
+                'trace_issue_and_complete': True,
+            })
+
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        obj = LocalExperiment( Parameters(**para) )
+        obj.main()
+
+
+
+class TestLinuxDdReqscaleAndDataLifetime(unittest.TestCase):
+    def test_run(self):
+        class LocalExperiment(experiment.Experiment):
+            def setup_workload(self):
+                self.conf['workload_class'] = "LinuxDD"
+
+        para = experiment.get_shared_nolist_para_dict("Linuxdd-reqscale", 16*MB)
+        para['device_path'] = "/dev/loop0"
+        para.update(
+            {
+                'device_path': "/dev/loop0",
+                'ftl' : 'ftlcounter',
+                'enable_simulation': True,
+                'dump_ext4_after_workload': True,
+                'only_get_traffic': False,
+                'trace_issue_and_complete': True,
+            })
+
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        obj = LocalExperiment( Parameters(**para) )
+        obj.main()
+
+
+
+
+# Locality is in recorder.json
+#    "general_accumulator": {
+#        "Mapping_Cache": {
+#            "miss": 9,
+#            "hit": 4137
+#        },
+# This test will automatically try different
+class TestLinuxDdLocality(unittest.TestCase):
+    def test(self):
+        for para in rule_parameter.ParaDict("Linuxdd-locality", ['Linuxdd-reqscale'], "localitylarge"):
+            experiment.execute_simulation(para)
+
+# The results are in recorder.json
+# ['general_accumulator']['FULL.MERGE']
+# ['general_accumulator']['PARTIAL.MERGE']
+class TestLinuxDdAlignment(unittest.TestCase):
+    def test(self):
+        for para in rule_parameter.ParaDict("Linuxdd-alignment", ['Linuxdd-reqscale'], "alignment"):
+            experiment.execute_simulation(para)
+
+
+# The results are in recorder.json
+# ['ftl_func_valid_ratios']
+class TestLinuxDdGrouping(unittest.TestCase):
+    def test(self):
+        for para in rule_parameter.ParaDict("Linuxdd-grouping", ['Linuxdd-reqscale'], "grouping"):
+            experiment.execute_simulation(para)
+
+
 class TestLocality(unittest.TestCase):
     def test(self):
         old_dir = "/tmp/results/sqlitewal-update"
@@ -170,6 +252,7 @@ class TestLocality(unittest.TestCase):
 
         for para in rule_parameter.ParaDict("testexpname", ['sqlitewal-update'], "locality"):
             experiment.execute_simulation(para)
+
 
 class TestAlignment(unittest.TestCase):
     def test(self):
@@ -237,6 +320,19 @@ class TestUniformDataLifetime(unittest.TestCase):
         # obj = LocalExperiment( Parameters(**para) )
         # obj.main()
 
+class Test_TraceAndSimulateLinuxDD(unittest.TestCase):
+    def test_run(self):
+        class LocalExperiment(experiment.Experiment):
+            def setup_workload(self):
+                self.conf['workload_class'] = "LinuxDD"
+
+        para = experiment.get_shared_nolist_para_dict("test_exp_LinuxDD2", 16*MB)
+        para['device_path'] = "/dev/loop0"
+        para['filesystem'] = "ext4"
+        para['ftl'] = "dftldes"
+        Parameters = collections.namedtuple("Parameters", ','.join(para.keys()))
+        obj = LocalExperiment( Parameters(**para) )
+        obj.main()
 
 if __name__ == '__main__':
     unittest.main()
