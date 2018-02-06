@@ -50,7 +50,7 @@ class LinuxDdWrite(Workload):
         pass
 ```
 
-In the next step we will tell WiscSee to use this class.
+In the next step, we will tell WiscSee to use this class.
 
 
 2. Setup the Experiment
@@ -138,7 +138,7 @@ request.  It should be easy for you to parse the file and analyze its data.
 `action` indicates if a request is being issued (`D`) or completed (`C`).
 The other columns are self-explanatory.
 
-You can idenfity a request by its offset. For example, from the sample 
+You can identify a request by its offset. For example, from the sample 
 we can see that the READ request to offset `299008` is issued at the
 first row and then completed at the second row.
 
@@ -155,7 +155,7 @@ lpn read write discard
 The file has multiple columns separated by spaces. Each row represents
 a logical page (usually 2 KB or 4 KB in WiscSee). For example,
 this sample shows that logical page number `1` has been read 1 time, 
-written 4 times, and discarded 0 time.
+written 4 times, and discarded 0 times.
 
 
 Just in case you are interested, here is a list of what each file in
@@ -177,7 +177,7 @@ recorder.log                            no longer used
 # Locality
 
 Because you have already got the traces of your application from the
-previous part of this tutorial, you do not need generate traces for 
+previous part of this tutorial, you do not need to generate traces for 
 studying locality. You can reuse the traces in `/tmp/results/linux-dd-exp`.
 
 To get hit/miss ratios of the translation cache, you will need to do the following.
@@ -265,7 +265,7 @@ and `['general_accumulator']['PARTIAL.MERGE']`, respectively.
 You may not have a particular type of merge presented in the file because
 it is never triggered.
 Note that the write count and the read count of a merge operation are always
-the same, because what has been read will eventually be written. 
+the same because what has been read will eventually be written. 
 The unit of the count is "one page". Since the default page size in WiscSee 
 is 2 KB, the total bytes moved during merges are
 `['FULL.MERGE']['physical_write'] * 2KB + ['PARTIAL.MERGE']['physical_write'] * 2KB`.
@@ -349,7 +349,7 @@ care about.
 
 1. Create the Preparation Workload
 
-We have done this in the beginning of this tutorial. Class `LinuxDdWrite` in `workload.py` will be our preparation workload.
+We have done this at the beginning of this tutorial. Class `LinuxDdWrite` in `workload.py` will be our preparation workload.
 
 2. Create the Final Workload
 
