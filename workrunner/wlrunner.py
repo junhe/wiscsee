@@ -99,6 +99,18 @@ class WorkloadRunner(object):
                         "an entire disk: {}".format(
                         self.conf['device_path']))
             dev_id = int(mo.group())
+
+            if dev_id == 0:
+                raise RuntimeError(
+                        "Disk partition ID (a part of device_path) starts with 1. "
+                        "Example: /dev/sdc1.")
+            if dev_id > 4:
+                raise RuntimeError(
+                        "Only 4 partitions allowed. We will format the whole disk. "
+                        "You probably should just specify the first "
+                        "partition of your disk in device_path."
+                        )
+
             # if dev_id = 3, we will have:
             #    [0 0 0]
             # sdc 1 2 3
