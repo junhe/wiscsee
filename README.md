@@ -77,7 +77,7 @@ WiscSee was developed in Ubuntu 14.04 with kernel 4.5.4. Other variants of Linux
 should also work. But you may need to modify `setup.env.sh` to use different
 Linux package managers.
 
-**I strongly recommand using Ubuntu 14.04 and kernel 4.5.4 as a starting point. There are known issues with other versions. The issues are from blktrace and `/proc/sys/`.**
+**I strongly recommand using Ubuntu 14.04 and kernel 4.5.4 as a starting point. Other versions have known issues (from blktrace and `/proc/sys/`). If you are on Cloudlab.us, you can use profile ubuntu-14.04-linux-4.5.4, which is compatible with WiscSee.**
 
 1. Clone
 
