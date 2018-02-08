@@ -68,7 +68,7 @@ class TestLinuxDdReqscaleAndDataLifetime(unittest.TestCase):
                                                       lbabytes=1024*MB)
         para.update(
             {
-                'device_path': "/dev/loop0",
+                'device_path': "/dev/loop0", # another example: "/dev/sdc1"
                 'ftl' : 'ftlcounter',
                 'enable_simulation': True,
                 'dump_ext4_after_workload': True,
@@ -93,7 +93,10 @@ file systems may not be able to run. For example, F2FS requires at least 256 MB.
 `device_path` is the partition that WiscSee will format
 and mount a file system on. 
 **To get realistic results, you should use a real SSD, which gives
-you realistic queue depths.**
+you realistic queue depths.** (For CS739 students: the SSDs on Cloudlab machines
+are usually at `/dev/sdc`. You should set `device_path: "/dev/sdc1"` to
+the first partition of the SSD. In addition, double check if `/dev/sdc` is
+really an SSD.)
 `ftl` specifies the simulator that WiscSee will
 feed the block traces to. The FTL used here, `ftlcounter`, analyzes the
 traces and produces NCQ depths, request sizes and logical address write counts.
