@@ -6,7 +6,7 @@ After walking through this tutorial, you will learn the following.
 - How to run a preparation workload before your workload
 
 In this tutorial, let's assume that the application we study is the Linux `dd`
-command. We also pretend that `/dev/loop0` is an SSD. We will use `dd` to write
+command. We also _pretend_ that `/dev/loop0` is an SSD. We will use `dd` to write
 to a file system mounted on `/dev/loop0`. The traces of the write workload 
 will be fed to our SSD simulator (WiscSim).
 
@@ -93,7 +93,7 @@ file systems may not be able to run. For example, F2FS requires at least 256 MB.
 `device_path` is the partition that WiscSee will format
 and mount a file system on. 
 **To get realistic results, you should use a real SSD, which gives
-you realistic queue depths.** (For CS739 students: the SSDs on Cloudlab machines
+you realistic queue depths.** (For CS736 students: the SSDs on Cloudlab machines
 are usually `/dev/sdc`. You should set `device_path: "/dev/sdc1"` to use
 the first partition of the SSD. In addition, you should double check if `/dev/sdc` is
 really an SSD.)
