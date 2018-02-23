@@ -1,12 +1,9 @@
 # libraries
 library(ggplot2)
-library(plyr)
 library(dplyr)
+library(plyr)
 library(reshape2)
-library(gridExtra)
 library(jsonlite)
-library(digest)
-library(splitstackshape)
 library(gganimate)
 
 KB = 2^10
@@ -75,7 +72,7 @@ plot <- function(files, names) {
 
     print(head(d))
 
-    # d = subset(d, snapshot_id < 10)
+    d = subset(d, snapshot_id < 100)
     plot_zombie_curves(d)
 }
 
@@ -87,14 +84,15 @@ plot_zombie_curves <- function(d)
       block_location = (as.numeric(blocknum)/GB) * as.numeric(ERASE_BLOCK_SIZE))
 
     p = ggplot(d, aes(frame=snapshot_id)) +
-        geom_line(aes(x=block_location, y=valid_ratio, color=name), size=3) +
+        geom_line(aes(x=block_location, y=valid_ratio, color=name), size=1) +
         ylab('Valid Ratio') +
         xlab('Accumulated Block Size (GB)') 
     gganimate(p, paste('zombie-curve-animation', 'gif', sep='.'), interval=0.1)
 }
 
-
-plot_moving_snake <- function(path)
+# Black area shows valid data
+# Gray area shows the invalid data
+plot_zombie_area <- function(path)
 {
     json_data = read_json(path)
     snap_shots = json_data[['ftl_func_valid_ratios']]
@@ -116,8 +114,13 @@ plot_moving_snake <- function(path)
 
 main <- function()
 {
-    # plot(c("recorder.json"), c("case1"))
-    plot(c("recorder.json", "recorder2.json"), c("test1", "test2"))
+    # plot(c("./recorder-ext4-varmail-small.json", 
+           # "./recorder-f2fs-varmail-small.json"), 
+         # c("Varmail-ext4", "Varmail-f2fs"))
+
+    plot(c("./recorder-ext4-sqlite-rb-rand-nonsegmented.json", 
+           "./recorder-f2fs-sqlite-rb-rand-nonsegmented.json"), 
+         c("SQLite-ext4", "SQLite-f2fs"))
 }
 
 main()
