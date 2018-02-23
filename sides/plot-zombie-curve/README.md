@@ -16,6 +16,7 @@ of pressure to the SSD's garbage collector. The garbage collector
 has to frequently move data to free some blocks.
 
 ![Zombie Curve Animation](http://pages.cs.wisc.edu/~jhe/zombie-curve-animation-sqlite-rb.gif)
+![](http://i.imgur.com/OUkLi.gif)
 
 ## Example: Plot Zombie Curve
 
