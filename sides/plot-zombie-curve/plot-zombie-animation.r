@@ -25,7 +25,7 @@ ERASE_BLOCK_SIZE = 128*KB
 # setwd(WORKDIRECTORY)
 sme <- function()
 {
-    WORKDIRECTORY= "/Users/junhe/workdir/zombie-curve/"
+    WORKDIRECTORY= "/Users/junhe/workdir/zombie-curve/wiscsee/sides/plot-zombie-curve/"
     THISFILE     ='plot-zombie-animation.r'
     setwd(WORKDIRECTORY)
     source(THISFILE)
@@ -58,20 +58,48 @@ set_snake_points_for_a_snapshot <- function(d) {
     d = arrange(d, desc(valid_ratio))
 }
 
-plot <- function() {
-    json_data = read_json("recorder.json")
-    snap_shots = json_data[['ftl_func_valid_ratios']]
-    d = organize_snapshots(snap_shots)
+plot <- function(files, names) {
+    n = length(files)
+    d_list = list()
+    for (i in seq(n)) {
+        print(files[i])
+        print(names[i])
+        json_data = read_json(files[i])
+        snap_shots = json_data[['ftl_func_valid_ratios']]
+        d = organize_snapshots(snap_shots)
+        d$name = names[i]
+        d_list = append(d_list, list(d))
+    }
+
+    d = do.call("rbind", d_list)
 
     print(head(d))
 
     # d = subset(d, snapshot_id < 10)
-    # plot_moving_snake(d)
     plot_zombie_curves(d)
 }
 
-plot_moving_snake <- function(d)
+plot_zombie_curves <- function(d)
 {
+    d = subset(d, valid_ratio > 0)
+    d = ddply(d, .(name, snapshot_id), set_snake_points_for_a_snapshot)
+    d = transform(d, 
+      block_location = (as.numeric(blocknum)/GB) * as.numeric(ERASE_BLOCK_SIZE))
+
+    p = ggplot(d, aes(frame=snapshot_id)) +
+        geom_line(aes(x=block_location, y=valid_ratio, color=name), size=3) +
+        ylab('Valid Ratio') +
+        xlab('Accumulated Block Size (GB)') 
+    gganimate(p, paste('zombie-curve-animation', 'gif', sep='.'), interval=0.1)
+}
+
+
+plot_moving_snake <- function(path)
+{
+    json_data = read_json(path)
+    snap_shots = json_data[['ftl_func_valid_ratios']]
+    d = organize_snapshots(snap_shots)
+
     d = ddply(d, .(snapshot_id), set_moving_snake_points_for_a_snapshot)
     d = transform(d, 
       block_location = (as.numeric(blocknum)/GB) * as.numeric(ERASE_BLOCK_SIZE))
@@ -81,27 +109,15 @@ plot_moving_snake <- function(d)
         geom_ribbon(aes(x=block_location, ymin=0, ymax=valid_ratio), fill='black') +
         ylab('Valid Ratio') +
         xlab('Accumulated Block Size (GB)') 
-    gganimate(p, paste('moving-snake777', 'gif', sep='.'), interval=0.1)
+    gganimate(p, paste('moving-snake', 'gif', sep='.'), interval=0.1)
 }
 
-plot_zombie_curves <- function(d)
-{
-    d = subset(d, valid_ratio > 0)
-    d = ddply(d, .(snapshot_id), set_snake_points_for_a_snapshot)
-    d = transform(d, 
-      block_location = (as.numeric(blocknum)/GB) * as.numeric(ERASE_BLOCK_SIZE))
-
-    p = ggplot(d, aes(frame=snapshot_id)) +
-        geom_line(aes(x=block_location, y=valid_ratio), size=3) +
-        ylab('Valid Ratio') +
-        xlab('Accumulated Block Size (GB)') 
-    gganimate(p, paste('moving-snake777', 'gif', sep='.'), interval=0.1)
-}
 
 
 main <- function()
 {
-    plot()
+    # plot(c("recorder.json"), c("case1"))
+    plot(c("recorder.json", "recorder2.json"), c("test1", "test2"))
 }
 
 main()
