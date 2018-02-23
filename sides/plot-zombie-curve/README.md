@@ -5,6 +5,18 @@ ratios). Then, you can follow the steps below to plot or animate
 zombie curves. You should be able to easily plot or animate using
 other languages/libraries. The code is just an example.
 
+Zombie curves and their animations clearly show a workload's pressure
+to an SSD's garbage collector.
+Here is an example of the animation, which compares the zombie 
+curves of running SQLite-RollBack on ext4 and F2FS. The animation
+shows that the curves of both ext4 and F2FS enter a stable state,
+where the curve of F2FS indicates much more zombie blocks (i.e.,
+blocks with some valid and some invalid data), which give lots 
+of pressure to the SSD's garbage collector. The garbage collector
+has to frequently move data to free some blocks.
+
+![Zombie Curve Animation](http://pages.cs.wisc.edu/~jhe/zombie-curve-animation-sqlite-rb.gif)
+
 ## Example: Plot Zombie Curve
 
 1. Install R
@@ -32,6 +44,7 @@ even if you do not know R.
 
 
 ## Example: Animate Zombie Curves
+
 
 1. Install R
 
