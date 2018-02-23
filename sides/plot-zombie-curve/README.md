@@ -15,8 +15,9 @@ blocks with some valid and some invalid data), which give lots
 of pressure to the SSD's garbage collector. The garbage collector
 has to frequently move data to free some blocks.
 
-![Zombie Curve Animation](http://pages.cs.wisc.edu/~jhe/zombie-curve-animation-sqlite-rb.gif)
+![](http://pages.cs.wisc.edu/~jhe/zombie-curve-animation-sqlite-rb.gif)
 ![](http://i.imgur.com/OUkLi.gif)
+<img src="http://pages.cs.wisc.edu/~jhe/zombie-curve-animation-sqlite-rb.gif" width="40" height="40" />
 
 ## Example: Plot Zombie Curve
 
