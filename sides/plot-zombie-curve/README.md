@@ -7,8 +7,7 @@ other languages/libraries. The code is just an example.
 
 Zombie curves and their animations clearly show a workload's pressure
 to an SSD's garbage collector.
-Here (http://pages.cs.wisc.edu/~jhe/zombie-curve-animation-sqlite-rb.gif) 
-is an example of the animation, which compares the zombie 
+The example below is an animation that compares the zombie 
 curves of running SQLite-RollBack on ext4 and F2FS. The animation
 shows that the curves of both ext4 and F2FS enter a stable state,
 where the curve of F2FS indicates much more zombie blocks (i.e.,
