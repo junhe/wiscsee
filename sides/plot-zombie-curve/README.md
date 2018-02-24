@@ -16,6 +16,8 @@ blocks with some valid and some invalid data), which give lots
 of pressure to the SSD's garbage collector. The garbage collector
 has to frequently move data to free some blocks.
 
+![Alt Text](https://github.com/junhe/wiscsee/raw/zombie-script/sides/plot-zombie-curve/zombie-curve-animation-sqlite-rb.gif)
+
 ## Example: Plot Zombie Curve
 
 1. Install R
